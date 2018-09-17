@@ -28,19 +28,45 @@ fn main() {
     support::run("cs".to_owned(), CLEAR_COLOR, hello_world);
 }
 
-lazy_static! {
-    static ref PRINT_HELLO_WORLD: CodeNode = {
-        let mut args: Vec<CodeNode> = Vec::new();
-        args.push(CodeNode::StringLiteral(StringLiteral { value: "Hello World".to_string()}));
-        CodeNode::FunctionCall(FunctionCall{args: args})
-    };
-
+trait Function {
+    fn call(&self, args: Vec<Value>) -> Value;
 }
 
+struct Print {}
+
+impl Function for Print {
+    fn call(&self, args: Vec<Value>) -> Value {
+        match args.as_slice() {
+            [Value::String(string)] => println!("{}", string),
+            _ => println!("FUCK"),
+        }
+        Value::Null
+    }
+}
 
 enum CodeNode {
     FunctionCall(FunctionCall),
     StringLiteral(StringLiteral),
+}
+
+enum Value {
+    Null,
+    String(String),
+}
+
+impl CodeNode {
+    fn value(&self) -> Value {
+        match self {
+            CodeNode::FunctionCall(function_call) => {
+                let args: Vec<Value> = function_call.args.iter().map(|arg| arg.value()).collect();
+                function_call.function.call(args)
+            }
+            CodeNode::StringLiteral(string_literal) => {
+                // xxx: can i get rid of this clone?
+                Value::String(string_literal.value.clone())
+            }
+        }
+    }
 }
 
 struct StringLiteral {
@@ -48,7 +74,7 @@ struct StringLiteral {
 }
 
 struct FunctionCall {
-    //function: Function,
+    function: Box<Function>,
     args: Vec<CodeNode>,
 }
 
@@ -95,11 +121,17 @@ impl<'a> ImguiRenderer<'a> {
 
 
 fn hello_world<'a>(ui: &Ui<'a>) -> bool {
+    let mut args: Vec<CodeNode> = Vec::new();
+    args.push(CodeNode::StringLiteral(StringLiteral { value: "Hello World".to_string()}));
+    let print_hello_world: CodeNode = CodeNode::FunctionCall(
+        FunctionCall{function: Box::new(Print {}), args: args});
+
+
     let imgui_code_renderer = ImguiRenderer { ui: ui };
     ui.window(im_str!("hw"))
         .size((300.0, 100.0), ImGuiCond::FirstUseEver)
         .build(|| {
-            imgui_code_renderer.render(&PRINT_HELLO_WORLD);
+            imgui_code_renderer.render(&print_hello_world);
         });
     true
 }
