@@ -1,0 +1,13 @@
+[package]
+name = "cs"
+version = "0.1.0"
+authors = ["Sumeet Agarwal <sumeet.a@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+glium = { version = "0.22", default-features = true }
+glutin = "0.18"
+imgui = "0.0.20"
+imgui-glium-renderer = "0.0.20"
+pyo3 = "0.4.1"
+lazy_static = "1.1.0"
