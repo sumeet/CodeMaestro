@@ -30,6 +30,7 @@ fn main() {
 
 trait Function {
     fn call(&self, args: Vec<Value>) -> Value;
+    fn name(&self) -> &str;
 }
 
 struct Print {}
@@ -41,6 +42,10 @@ impl Function for Print {
             _ => println!("FUCK"),
         }
         Value::Null
+    }
+
+    fn name(&self) -> &str {
+        "Print"
     }
 }
 
@@ -96,8 +101,8 @@ impl<'a> ImguiRenderer<'a> {
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) {
-        // XXX: the function name will go here
-        self.draw_button(im_str!("Print"), GREEN_COLOR);
+        let button_text = im_str!("{}", function_call.function.name());
+        self.draw_button(button_text, GREEN_COLOR);
         for code_node in &function_call.args {
             self.draw_next_on_the_same_line();
             self.render(code_node)
