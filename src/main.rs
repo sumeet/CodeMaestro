@@ -23,6 +23,7 @@ use scopeguard::guard;
 use pyo3::prelude::*;
 
 use imgui::*;
+// use std::cell::RefCell;
 
 mod support;
 
@@ -37,11 +38,14 @@ fn main() {
     support::run("cs".to_owned(), CLEAR_COLOR, hello_world);
 }
 
-trait Function {
+trait Function: objekt::Clone {
     fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
     fn name(&self) -> &str;
 }
 
+clone_trait_object!(Function);
+
+#[derive(Clone)]
 struct Print {}
 
 impl Function for Print {
@@ -62,9 +66,10 @@ impl Function for Print {
     }
 }
 
-enum CodeNode<'a> {
-    FunctionCall(&'a FunctionCall<'a>),
-    StringLiteral(&'a StringLiteral),
+#[derive(Clone)]
+enum CodeNode {
+    FunctionCall(FunctionCall),
+    StringLiteral(StringLiteral),
 }
 
 enum Value {
@@ -88,7 +93,7 @@ impl ExecutionEnvironment {
     }
 }
 
-impl <'a> CodeNode<'a> {
+impl CodeNode {
     fn evaluate(&self, env: &mut ExecutionEnvironment) -> Value {
         match self {
             CodeNode::FunctionCall(function_call) => {
@@ -103,13 +108,15 @@ impl <'a> CodeNode<'a> {
     }
 }
 
+#[derive(Clone)]
 struct StringLiteral {
     value: String
 }
 
-struct FunctionCall<'a> {
+#[derive(Clone)]
+struct FunctionCall {
     function: Box<Function>,
-    args: Vec<CodeNode<'a>>,
+    args: Vec<CodeNode>,
 }
 
 struct Controller {
@@ -155,9 +162,11 @@ impl<'a> ImguiRenderer<'a> {
             self.render(code_node)
         }
         self.ui.new_line();
+        let code_node = CodeNode::FunctionCall(function_call.clone());
         self.draw_button(im_str!("Run"), GREY_COLOR, |s| {
             println!("button has been hit!!!!");
-            s.controller.run(&CodeNode::FunctionCall(function_call));
+            //let controller = s.controller.borrow_mut();
+            s.controller.run(&code_node);
         })
     }
 
@@ -208,32 +217,51 @@ impl App {
         }
     }
 
-    fn loaded_code(&self) -> CodeNode {
-        let mut args: Vec<CodeNode> = Vec::new();
-        let string_literal = StringLiteral { value: "Hello World".to_string()};
-        let string_literal_code_node = CodeNode::StringLiteral(&string_literal);
-        args.push(string_literal_code_node);
-        let function_call = FunctionCall{function: Box::new(Print {}), args: args};
-        CodeNode::FunctionCall(&function_call)
-    }
+//    fn loaded_code(&self) -> CodeNode {
+//        let mut args: Vec<CodeNode> = Vec::new();
+//        let string_literal = StringLiteral { value: "Hello World".to_string()};
+//        let string_literal_code_node = CodeNode::StringLiteral(string_literal);
+//        args.push(string_literal_code_node);
+//        let function_call = FunctionCall{function: Box::new(Print {}), args: args};
+//        CodeNode::FunctionCall(function_call)
+//    }
 
-    fn draw(&mut self, ui: &Ui) -> bool {
-        let mut code_renderer =  ImguiRenderer{ ui: ui, controller: self.controller };
-
-        ui.window(im_str!("hw"))
-            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-            .build(|| {
-                code_renderer.render(&self.loaded_code());
-            });
-        ui.window(im_str!("output"))
-            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-            .build(|| {
-                ui.text(self.env.console);
-            });
-        true
-    }
+//    fn draw(self, ui: &Ui) -> bool {
+//        let mut code_renderer =  ImguiRenderer{ ui: ui, controller: self.controller };
+//
+//        ui.window(im_str!("hw"))
+//            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
+//            .build(|| {
+//                code_renderer.render(&self.loaded_code());
+//            });
+//        ui.window(im_str!("output"))
+//            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
+//            .build(|| {
+//                ui.text(&self.env.console);
+//            });
+//        true
+//    }
 }
 
 fn hello_world<'a>(ui: &Ui<'a>) -> bool {
+    let mut args: Vec<CodeNode> = Vec::new();
+    let string_literal = StringLiteral { value: "Hello World".to_string()};
+    args.push(CodeNode::StringLiteral(string_literal));
+    let function_call = FunctionCall{function: Box::new(Print {}), args: args};
+    let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
+
+    let mut imgui_code_renderer = ImguiRenderer { ui: ui, controller: Controller::new() };
+
+    ui.window(im_str!("hw"))
+        .size((300.0, 100.0), ImGuiCond::FirstUseEver)
+        .build(|| {
+            imgui_code_renderer.render(&print_hello_world);
+        });
+
+    ui.window(im_str!("output"))
+        .size((300.0, 100.0), ImGuiCond::FirstUseEver)
+        .build(|| {
+            ui.text(imgui_code_renderer.controller.execution_environment.console);
+        });
     true
 }
