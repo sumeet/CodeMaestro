@@ -189,6 +189,55 @@ struct App {
     controller: Controller,
 }
 
+trait UiToolkit {
+    fn draw_window(&self, window_name: &str, f: &Fn());
+    fn draw_empty_line(&self);
+    fn draw_button(&self, text: &str, color: [f32; 4], f: &Fn());
+    fn draw_next_on_same_line(&mut self);
+}
+
+struct AppRenderer<'a> {
+    ui_toolkit: RefCell<Box<UiToolkit>>,
+    controller: &'a Controller,
+}
+
+impl<'a> AppRenderer<'a> {
+    fn render_code_window(&self, code_node: &CodeNode) {
+        self.ui_toolkit.borrow().draw_window("replace with code node name", &|| {
+            self.render_code(code_node);
+            self.ui_toolkit.borrow().draw_empty_line();
+            self.render_run_button(code_node);
+        })
+    }
+
+    fn render_code(&self, code_node: &CodeNode) {
+        match code_node {
+            CodeNode::FunctionCall(function_call) => {
+                self.render_function_call(&function_call);
+            }
+            CodeNode::StringLiteral(string_literal) => {
+                self.render_string_literal(&string_literal);
+            }
+        }
+    }
+
+    fn render_function_call(&self, function_call: &FunctionCall) {
+        self.ui_toolkit.borrow().draw_button(function_call.function.name(), BLUE_COLOR, &|| {});
+        for code_node in &function_call.args {
+            self.ui_toolkit.borrow_mut().draw_next_on_same_line();
+            self.render_code(code_node)
+        }
+    }
+
+    fn render_string_literal(&self, string_literal: &StringLiteral) {
+        self.ui_toolkit.borrow().draw_button(&string_literal.value, CLEAR_BACKGROUND_COLOR, &|| {});
+    }
+
+    fn render_run_button(&self, code_node: &CodeNode) {
+        self.ui_toolkit.borrow().draw_button("Run", GREY_COLOR, &||{ println!("Run!") })
+    }
+}
+
 impl App {
     fn new() -> App {
         // ee
@@ -206,6 +255,10 @@ impl App {
             loaded_code: print_hello_world,
             controller: Controller::new()
         }
+    }
+
+    fn draw_generic(&self, renderer: &AppRenderer) {
+        renderer.render_code_window(&self.loaded_code);
     }
 
     fn draw(&self, ui: &Ui) -> bool {
