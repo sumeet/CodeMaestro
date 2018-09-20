@@ -1,26 +1,17 @@
 #![feature(unboxed_closures)]
 #![feature(specialization)]
 
-#[macro_use]
-extern crate lazy_static;
-
 extern crate glium;
 
 #[macro_use]
 extern crate imgui;
 
+extern crate imgui_sys;
+
 #[macro_use]
 extern crate objekt;
 
 extern crate imgui_glium_renderer;
-
-extern crate pyo3;
-
-#[macro_use(defer)] extern crate scopeguard;
-
-use scopeguard::guard;
-
-use pyo3::prelude::*;
 
 use imgui::*;
 use std::cell::RefCell;
@@ -31,58 +22,17 @@ const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
 const CLEAR_BACKGROUND_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
-const BLUE: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 
 fn main() {
-    let controller = Controller::new();
+//    let controller = Controller::new();
+    let app = App::new();
 
-    support::run("cs".to_owned(), CLEAR_COLOR, move |ui| {
-        render(&controller, ui);
+    support::run("cs".to_owned(), CLEAR_COLOR, |ui| {
+        app.draw(ui);
         true
     });
 }
-
-fn render(controller: &Controller, ui: &Ui) {
-    let mut args: Vec<CodeNode> = Vec::new();
-    let string_literal = StringLiteral { value: "Hello World".to_string()};
-    args.push(CodeNode::StringLiteral(string_literal));
-    let function_call = FunctionCall{function: Box::new(Print {}), args: args};
-    let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
-
-    let imgui_code_renderer = ImguiRenderer { ui: ui, controller: controller };
-
-    ui.window(im_str!("hw"))
-        .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-        .build(|| {
-            imgui_code_renderer.render(&print_hello_world);
-        });
-
-    ui.window(im_str!("output"))
-        .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-        .build(|| {
-            let env = controller.execution_environment.borrow();
-            ui.text(&env.console);
-        })
-}
-
-//fn hello_world<'a>(ui: &Ui<'a>) -> bool {
-//
-//    let mut imgui_code_renderer = ImguiRenderer { ui: ui, controller: Controller::new() };
-//
-//    ui.window(im_str!("hw"))
-//        .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-//        .build(|| {
-//            imgui_code_renderer.render(&print_hello_world);
-//        });
-//
-//    ui.window(im_str!("output"))
-//        .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-//        .build(|| {
-//            ui.text(imgui_code_renderer.controller.execution_environment.console);
-//        });
-//    true
-//}
 
 trait Function: objekt::Clone {
     fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
@@ -199,7 +149,7 @@ impl<'a> ImguiRenderer<'a> {
 
     fn render_function_call(&self, function_call: &FunctionCall) {
         let button_text = im_str!("{}", function_call.function.name());
-        self.draw_button(button_text, BLUE_COLOR, |s|{});
+        self.draw_button(button_text, BLUE_COLOR, |_s|{});
         for code_node in &function_call.args {
             self.draw_next_on_the_same_line();
             self.render(code_node)
@@ -207,13 +157,15 @@ impl<'a> ImguiRenderer<'a> {
         self.ui.new_line();
         let code_node = CodeNode::FunctionCall(function_call.clone());
         self.draw_button(im_str!("Run"), GREY_COLOR, |s| {
-            //let controller = s.controller.borrow_mut();
             s.controller.run(&code_node);
         })
     }
 
     fn render_string_literal(&self, string_literal: &StringLiteral) {
-        self.draw_button(im_str!("{}", string_literal.value), CLEAR_BACKGROUND_COLOR, |s|{});
+        self.draw_button(
+            im_str!("{}", string_literal.value),
+           CLEAR_BACKGROUND_COLOR,
+           |_s|{});
     }
 
     fn draw_next_on_the_same_line(&self) {
@@ -233,7 +185,7 @@ impl<'a> ImguiRenderer<'a> {
 
 struct App {
     env: ExecutionEnvironment,
-    //loaded_code: CodeNode<'a>,
+    loaded_code: CodeNode,
     controller: Controller,
 }
 
@@ -243,45 +195,33 @@ impl App {
         let env = ExecutionEnvironment::new();
 
         // code
-//        let mut args: Vec<CodeNode> = Vec::new();
-//        let string_literal = StringLiteral { value: "Hello World".to_string()};
-//        args.push(CodeNode::StringLiteral(&string_literal));
-//        let function_call = FunctionCall{function: Box::new(Print {}), args: args};
-//        let print_hello_world: CodeNode = CodeNode::FunctionCall(&function_call);
-
-        // renderer
-        //let imgui_code_renderer = ImguiRenderer { ui: ui, controller: Controller::new() };
+        let mut args: Vec<CodeNode> = Vec::new();
+        let string_literal = StringLiteral { value: "Hello World".to_string()};
+        args.push(CodeNode::StringLiteral(string_literal));
+        let function_call = FunctionCall{function: Box::new(Print {}), args: args};
+        let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
 
         App {
             env: env,
-            //loaded_code: print_hello_world,
+            loaded_code: print_hello_world,
             controller: Controller::new()
         }
     }
 
-//    fn loaded_code(&self) -> CodeNode {
-//        let mut args: Vec<CodeNode> = Vec::new();
-//        let string_literal = StringLiteral { value: "Hello World".to_string()};
-//        let string_literal_code_node = CodeNode::StringLiteral(string_literal);
-//        args.push(string_literal_code_node);
-//        let function_call = FunctionCall{function: Box::new(Print {}), args: args};
-//        CodeNode::FunctionCall(function_call)
-//    }
+    fn draw(&self, ui: &Ui) -> bool {
+        let code_renderer =  ImguiRenderer{ ui: ui, controller: &self.controller };
 
-//    fn draw(self, ui: &Ui) -> bool {
-//        let mut code_renderer =  ImguiRenderer{ ui: ui, controller: self.controller };
-//
-//        ui.window(im_str!("hw"))
-//            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-//            .build(|| {
-//                code_renderer.render(&self.loaded_code());
-//            });
-//        ui.window(im_str!("output"))
-//            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-//            .build(|| {
-//                ui.text(&self.env.console);
-//            });
-//        true
-//    }
+        ui.window(im_str!("hw"))
+            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
+            .build(|| {
+                code_renderer.render(&self.loaded_code);
+            });
+        ui.window(im_str!("output"))
+            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
+            .build(|| {
+                ui.text(&self.env.console);
+                unsafe { imgui_sys::igSetScrollHere(1.0) };
+            });
+        true
+    }
 }
-
