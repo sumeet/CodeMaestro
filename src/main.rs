@@ -14,29 +14,23 @@ extern crate objekt;
 
 extern crate imgui_glium_renderer;
 
-use imgui::*;
 use std::cell::RefCell;
 
-mod support;
+mod imgui_support;
+mod imgui_toolkit;
 mod lang;
 mod env;
 
 use self::env::{ExecutionEnvironment};
 use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral};
 
-const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
 const CLEAR_BACKGROUND_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
-const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 
 fn main() {
     let app = App::new();
-
-    support::run("cs".to_owned(), CLEAR_COLOR, |ui| {
-        app.draw(ui);
-        true
-    });
+    imgui_toolkit::draw_app(&app);
 }
 
 #[derive(Clone)]
@@ -58,7 +52,7 @@ impl Function for Print {
     }
 }
 
-struct Controller {
+pub struct Controller {
     execution_environment: RefCell<ExecutionEnvironment>
 }
 
@@ -80,9 +74,9 @@ impl Controller {
     }
 }
 
-struct App {
-    loaded_code: CodeNode,
-    controller: Controller,
+pub struct App {
+    pub loaded_code: CodeNode,
+    pub controller: Controller,
 }
 
 trait UiToolkit {
@@ -91,46 +85,6 @@ trait UiToolkit {
     fn draw_button(&self, label: &str, color: [f32; 4], f: &Fn());
     fn draw_text_box(&self, text: &str);
     fn draw_next_on_same_line(&self);
-}
-
-struct ImguiToolkit<'a> {
-    ui: &'a Ui<'a>,
-}
-
-impl<'a> ImguiToolkit<'a> {
-    fn new(ui: &'a Ui) -> ImguiToolkit<'a> {
-        ImguiToolkit { ui: ui }
-    }
-}
-
-impl<'a> UiToolkit for ImguiToolkit<'a> {
-    fn draw_window(&self, window_name: &str, f: &Fn()) {
-        self.ui.window(im_str!("{}", window_name))
-            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-            .build(f)
-    }
-
-    fn draw_empty_line(&self) {
-        self.ui.new_line();
-    }
-
-    fn draw_button(&self, label: &str, color: [f32; 4], f: &Fn()) {
-        self.ui.with_color_var(ImGuiCol::Button, color, || {
-            if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
-                f()
-            }
-        });
-    }
-
-    fn draw_next_on_same_line(&self) {
-        self.ui.same_line_spacing(0.0, 1.0);
-    }
-
-    fn draw_text_box(&self, text: &str) {
-        self.ui.text(text);
-        // text box is always scrolled to the bottom
-        unsafe { imgui_sys::igSetScrollHere(1.0) };
-    }
 }
 
 struct AppRenderer<'a> {
@@ -198,15 +152,13 @@ impl App {
         }
     }
 
-    fn draw<'ui>(&self,ui: &'ui Ui) -> bool {
-        let toolkit = ImguiToolkit::new(ui);
+    fn draw<'a>(&self, ui_toolkit: Box<UiToolkit + 'a>) {
         let app_renderer = AppRenderer {
-            ui_toolkit: RefCell::new(Box::new(toolkit)),
+            ui_toolkit: RefCell::new(ui_toolkit),
             controller: &self.controller
         };
 
         app_renderer.render_code_window(&self.loaded_code);
         app_renderer.render_console_window();
-        true
     }
 }

@@ -4,13 +4,15 @@ version = "0.1.0"
 authors = ["Sumeet Agarwal <sumeet.a@gmail.com>"]
 edition = "2018"
 
+[features]
+default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer"]
+
 [dependencies]
-glium = { version = "0.22", default-features = true }
-glutin = "0.18"
-imgui = "0.0.20"
-imgui-sys = "0.0.20"
-imgui-glium-renderer = "0.0.20"
 pyo3 = "0.4.1"
-lazy_static = "1.1.0"
 objekt = "0.1.1"
-scopeguard = "0.3.3"
+
+glium = { version = "0.22", default-features = true, optional = true }
+glutin = { version = "0.18", optional = true }
+imgui = { version = "0.0.20", optional = true }
+imgui-sys = { version = "0.0.20", optional = true }
+imgui-glium-renderer = { version = "0.0.20", optional = true }

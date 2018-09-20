@@ -143,10 +143,8 @@ dependencies = [
  "imgui 0.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui-glium-renderer 0.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui-sys 0.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
- "lazy_static 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "objekt 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "pyo3 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "scopeguard 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
