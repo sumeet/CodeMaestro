@@ -6,9 +6,10 @@ edition = "2018"
 
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer"]
+javascript = ["yew"]
 
 [dependencies]
-pyo3 = "0.4.1"
+#pyo3 = "0.4.1"
 objekt = "0.1.1"
 
 glium = { version = "0.22", default-features = true, optional = true }
@@ -16,3 +17,5 @@ glutin = { version = "0.18", optional = true }
 imgui = { version = "0.0.20", optional = true }
 imgui-sys = { version = "0.0.20", optional = true }
 imgui-glium-renderer = { version = "0.0.20", optional = true }
+
+yew = { git = "https://github.com/DenisKolodin/yew", optional = true }

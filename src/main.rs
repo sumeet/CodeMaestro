@@ -1,23 +1,34 @@
+#![feature(pattern_parentheses)]
 #![feature(unboxed_closures)]
 #![feature(specialization)]
 #![feature(nll)]
 
+#[cfg(feature = "default")]
 extern crate glium;
-
+#[cfg(feature = "default")]
 #[macro_use]
 extern crate imgui;
-
+#[cfg(feature = "default")]
 extern crate imgui_sys;
+#[cfg(feature = "default")]
+extern crate imgui_glium_renderer;
+#[cfg(feature = "default")]
+mod imgui_support;
+#[cfg(feature = "default")]
+mod imgui_toolkit;
+
+#[cfg(feature = "javascript")]
+#[macro_use]
+extern crate yew;
+#[cfg(feature = "javascript")]
+mod yew_toolkit;
 
 #[macro_use]
 extern crate objekt;
 
-extern crate imgui_glium_renderer;
 
 use std::cell::RefCell;
 
-mod imgui_support;
-mod imgui_toolkit;
 mod lang;
 mod env;
 
@@ -28,9 +39,20 @@ const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
 const CLEAR_BACKGROUND_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
+#[cfg(feature = "default")]
+pub fn draw_app(app: &CSApp) {
+    imgui_toolkit::draw_app(app)
+}
+
+#[cfg(feature = "javascript")]
+pub fn draw_app(app: &CSApp) {
+    yew_toolkit::draw_app(app);
+}
+
+
 fn main() {
-    let app = App::new();
-    imgui_toolkit::draw_app(&app);
+    let app = CSApp::new();
+    draw_app(&app);
 }
 
 #[derive(Clone)]
@@ -74,7 +96,7 @@ impl Controller {
     }
 }
 
-pub struct App {
+pub struct CSApp {
     pub loaded_code: CodeNode,
     pub controller: Controller,
 }
@@ -137,16 +159,16 @@ impl<'a> AppRenderer<'a> {
     }
 }
 
-impl App {
-    fn new() -> App {
+impl CSApp {
+    fn new() -> CSApp {
         // code
         let mut args: Vec<CodeNode> = Vec::new();
-        let string_literal = StringLiteral { value: "Hello World".to_string()};
+        let string_literal = StringLiteral { value: "HW".to_string()};
         args.push(CodeNode::StringLiteral(string_literal));
         let function_call = FunctionCall{function: Box::new(Print {}), args: args};
         let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
 
-        App {
+        CSApp {
             loaded_code: print_hello_world,
             controller: Controller::new()
         }

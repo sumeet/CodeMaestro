@@ -1,14 +1,14 @@
-use super::{App,UiToolkit};
+use super::{CSApp, UiToolkit};
 use super::imgui_support;
 use imgui::*;
 
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 
-// XXX: look into why this didn't compile before. remove all the lifetime specificers, AND the
+// XXX: look into why this didn't compile before. remove all the lifetime specifiers, AND the
 // lifetime specifier from the definition in App::draw. that'll get it back to the way i had it
 // before
-pub fn draw_app<'a, 'ui: 'a>(app: &'a App) {
+pub fn draw_app<'a, 'ui: 'a>(app: &'a CSApp) {
     imgui_support::run("cs".to_owned(), CLEAR_COLOR, |ui: &'ui Ui| {
         let toolkit = Box::new(ImguiToolkit::new(ui));
         app.draw(toolkit);
@@ -51,7 +51,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_text_box(&self, text: &str) {
         self.ui.text(text);
-        // text box is always scrolled to the bottom
+        // GHETTO: text box is always scrolled to the bottom
         unsafe { imgui_sys::igSetScrollHere(1.0) };
     }
 }
