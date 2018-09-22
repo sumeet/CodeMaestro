@@ -74,18 +74,19 @@ impl<'a> YewToolkit<'a> {
 
 impl Renderable<Model<'static>> for Model<'static> {
     fn view(&self) -> Html<Self> {
-        if let(Some(app)) = self.app {
-            let tk = YewToolkit::new();
-            app.draw(Box::new(tk));
-            tk.html()
-        } else {
-            html! { <p> {"No app"} </p> }
-        }
+       if let(Some(app)) = self.app {
+           let mut tk = YewToolkit::new();
+           app.draw(&mut tk);
+           tk.html()
+       } else {
+         html! { <p> {"No app"} </p> }
+       }
     }
 }
 
 pub fn draw_app(app: &CSApp) {
+    App::<Model>::new().mount_to_body()
+        .send_message(Msg::SetApp(app));
     yew::initialize();
-    App::<Model>::new().mount_to_body();
     yew::run_loop()
 }

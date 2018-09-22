@@ -109,22 +109,22 @@ trait UiToolkit {
     fn draw_next_on_same_line(&self);
 }
 
-struct AppRenderer<'a> {
-    ui_toolkit: RefCell<Box<UiToolkit + 'a>>,
+struct AppRenderer<'a, T> {
+    ui_toolkit: &'a mut T,
     controller: &'a Controller,
 }
 
-impl<'a> AppRenderer<'a> {
+impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     fn render_console_window(&self) {
-        self.ui_toolkit.borrow().draw_window("Console", &|| {
-            self.ui_toolkit.borrow().draw_text_box(&self.controller.read_console());
+        self.ui_toolkit.draw_window("Console", &|| {
+            self.ui_toolkit.draw_text_box(&self.controller.read_console());
         })
     }
 
     fn render_code_window(&self, code_node: &CodeNode) {
-        self.ui_toolkit.borrow().draw_window(&code_node.description(), &|| {
+        self.ui_toolkit.draw_window(&code_node.description(), &|| {
             self.render_code(code_node);
-            self.ui_toolkit.borrow().draw_empty_line();
+            self.ui_toolkit.draw_empty_line();
             self.render_run_button(code_node);
         })
     }
@@ -141,19 +141,19 @@ impl<'a> AppRenderer<'a> {
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) {
-        self.ui_toolkit.borrow().draw_button(function_call.function.name(), BLUE_COLOR, &|| {});
+        self.ui_toolkit.draw_button(function_call.function.name(), BLUE_COLOR, &|| {});
         for code_node in &function_call.args {
-            self.ui_toolkit.borrow().draw_next_on_same_line();
+            self.ui_toolkit.draw_next_on_same_line();
             self.render_code(code_node)
         }
     }
 
     fn render_string_literal(&self, string_literal: &StringLiteral) {
-        self.ui_toolkit.borrow().draw_button(&string_literal.value, CLEAR_BACKGROUND_COLOR, &|| {});
+        self.ui_toolkit.draw_button(&string_literal.value, CLEAR_BACKGROUND_COLOR, &|| {});
     }
 
     fn render_run_button(&self, code_node: &CodeNode) {
-        self.ui_toolkit.borrow().draw_button("Run", GREY_COLOR, &||{
+        self.ui_toolkit.draw_button("Run", GREY_COLOR, &||{
             self.controller.run(code_node);
         })
     }
@@ -174,9 +174,9 @@ impl CSApp {
         }
     }
 
-    fn draw<'a>(&self, ui_toolkit: Box<UiToolkit + 'a>) {
+    fn draw<T: UiToolkit>(&self, ui_toolkit: &mut T) {
         let app_renderer = AppRenderer {
-            ui_toolkit: RefCell::new(ui_toolkit),
+            ui_toolkit: ui_toolkit,
             controller: &self.controller
         };
 

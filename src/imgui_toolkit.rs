@@ -10,8 +10,8 @@ const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 // before
 pub fn draw_app<'a, 'ui: 'a>(app: &'a CSApp) {
     imgui_support::run("cs".to_owned(), CLEAR_COLOR, |ui: &'ui Ui| {
-        let toolkit = Box::new(ImguiToolkit::new(ui));
-        app.draw(toolkit);
+        let mut toolkit = ImguiToolkit::new(ui);
+        app.draw(&mut toolkit);
         true
     });
 }
