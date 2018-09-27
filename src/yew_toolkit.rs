@@ -1,13 +1,15 @@
 use super::{CSApp, UiToolkit};
 use yew::prelude::*;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct Model {
-    app: Option<CSApp>,
+    app: Option<Rc<CSApp>>,
 }
 
 pub enum Msg {
-    SetApp(CSApp)
+    SetApp(Rc<CSApp>),
+    Redraw,
 }
 
 impl Component for Model {
@@ -20,7 +22,8 @@ impl Component for Model {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::SetApp(app) => self.app = Some(app)
+            Msg::SetApp(app) => self.app = Some(app),
+            Msg::Redraw =>  (),
         }
         true
     }
@@ -48,9 +51,12 @@ impl UiToolkit for YewToolkit {
         self.push_html_into_current_window(html!{ <br />})
     }
 
-    fn draw_button(&self, label: &str, color: [f32; 4], f: &Fn()) {
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], run_on_button_press: F) {
         self.push_html_into_current_window(html! {
-            <button>{ label }</button>
+            <button
+                 onclick=|_| { run_on_button_press(); Msg::Redraw }, >
+            { label }
+            </button>
         })
     }
 
@@ -101,19 +107,19 @@ impl YewToolkit {
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-       if let(Some(app)) = &self.app {
-           let mut tk = YewToolkit::new();
-           app.draw(&mut tk);
-           tk.windows()
-       } else {
-         html! { <p> {"No app"} </p> }
-       }
+        if let(Some(app)) = &self.app {
+            let mut tk = YewToolkit::new();
+            app.draw(&mut tk);
+            tk.windows()
+        } else {
+            html! { <p> {"No app"} </p> }
+        }
     }
 }
 
-pub fn draw_app(app: CSApp) {
+pub fn draw_app(app: Rc<CSApp>) {
     yew::initialize();
-    let msg = Msg::SetApp(app);
+    let msg = Msg::SetApp(app.clone());
     App::<Model>::new().mount_to_body()
         .send_message(msg);
     yew::run_loop()

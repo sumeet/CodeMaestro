@@ -1,6 +1,7 @@
 use super::{CSApp, UiToolkit};
 use super::imgui_support;
 use imgui::*;
+use std::rc::Rc;
 
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
@@ -8,7 +9,7 @@ const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 // XXX: look into why this didn't compile before. remove all the lifetime specifiers, AND the
 // lifetime specifier from the definition in App::draw. that'll get it back to the way i had it
 // before
-pub fn draw_app(app: CSApp) {
+pub fn draw_app(app: Rc<CSApp>) {
     imgui_support::run("cs".to_owned(), CLEAR_COLOR, |ui| {
         let mut toolkit = ImguiToolkit::new(ui);
         app.draw(&mut toolkit);
@@ -37,7 +38,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.new_line();
     }
 
-    fn draw_button(&self, label: &str, color: [f32; 4], f: &Fn()) {
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F) {
         self.ui.with_color_var(ImGuiCol::Button, color, || {
             if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
                 f()

@@ -2,6 +2,7 @@
 #![feature(unboxed_closures)]
 #![feature(specialization)]
 #![feature(nll)]
+#![feature(arbitrary_self_types)]
 
 #[cfg(feature = "default")]
 extern crate glium;
@@ -28,6 +29,7 @@ extern crate objekt;
 
 
 use std::cell::RefCell;
+use std::rc::Rc;
 
 mod lang;
 mod env;
@@ -40,18 +42,18 @@ const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
 const CLEAR_BACKGROUND_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
 #[cfg(feature = "default")]
-pub fn draw_app(app: CSApp) {
-    imgui_toolkit::draw_app(app)
+pub fn draw_app(app: Rc<CSApp>) {
+    imgui_toolkit::draw_app(app.clone())
 }
 
 #[cfg(feature = "javascript")]
-pub fn draw_app(app: CSApp) {
-    yew_toolkit::draw_app(app);
+pub fn draw_app(app: Rc<CSApp>) {
+    yew_toolkit::draw_app(app.clone());
 }
 
 
 fn main() {
-    let app = CSApp::new();
+    let app = Rc::new(CSApp::new());
     draw_app(app);
 }
 
@@ -104,20 +106,22 @@ pub struct CSApp {
 trait UiToolkit {
     fn draw_window(&self, window_name: &str, f: &Fn());
     fn draw_empty_line(&self);
-    fn draw_button(&self, label: &str, color: [f32; 4], f: &Fn());
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F);
     fn draw_text_box(&self, text: &str);
     fn draw_next_on_same_line(&self);
 }
 
 struct AppRenderer<'a, T> {
     ui_toolkit: &'a mut T,
-    controller: &'a Controller,
+    //controller: Rc<Controller>,
+    // probably needs to be Rc<Refcell<>>
+    app: Rc<CSApp>,
 }
 
 impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     fn render_console_window(&self) {
         self.ui_toolkit.draw_window("Console", &|| {
-            self.ui_toolkit.draw_text_box(&self.controller.read_console());
+            self.ui_toolkit.draw_text_box(&self.app.controller.read_console());
         })
     }
 
@@ -125,7 +129,7 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
         self.ui_toolkit.draw_window(&code_node.description(), &|| {
             self.render_code(code_node);
             self.ui_toolkit.draw_empty_line();
-            self.render_run_button(code_node);
+            self.render_run_button();
         })
     }
 
@@ -152,9 +156,10 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
         self.ui_toolkit.draw_button(&string_literal.value, CLEAR_BACKGROUND_COLOR, &|| {});
     }
 
-    fn render_run_button(&self, code_node: &CodeNode) {
-        self.ui_toolkit.draw_button("Run", GREY_COLOR, &||{
-            self.controller.run(code_node);
+    fn render_run_button(&self) {
+        let app = self.app.clone();
+        self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
+            app.controller.run(&app.loaded_code);
         })
     }
 }
@@ -174,10 +179,10 @@ impl CSApp {
         }
     }
 
-    fn draw<T: UiToolkit>(&self, ui_toolkit: &mut T) {
+    fn draw<T: UiToolkit>(self: &Rc<CSApp>, ui_toolkit: &mut T) {
         let app_renderer = AppRenderer {
             ui_toolkit: ui_toolkit,
-            controller: &self.controller
+            app: self.clone(),
         };
 
         app_renderer.render_code_window(&self.loaded_code);
