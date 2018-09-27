@@ -34,6 +34,7 @@ struct YewToolkit {
     windows: RefCell<Vec<Html<Model>>>
 }
 
+// maybe make this mutable?
 impl UiToolkit for YewToolkit {
     fn draw_window(&self, window_name: &str, f: &Fn()) {
         f();
@@ -47,14 +48,16 @@ impl UiToolkit for YewToolkit {
         });
     }
 
+    // BROKEN: currently it's a very tiny line
     fn draw_empty_line(&self) {
         self.push_html_into_current_window(html!{ <br />})
     }
 
-    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], run_on_button_press: F) {
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) {
         self.push_html_into_current_window(html! {
             <button
-                 onclick=|_| { run_on_button_press(); Msg::Redraw }, >
+                 style=format!("background-color: rgba({}, {}, {}, {});", color[0]*255.0, color[1]*255.0, color[2]*255.0, color[3]*255.0),
+                 onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { label }
             </button>
         })
