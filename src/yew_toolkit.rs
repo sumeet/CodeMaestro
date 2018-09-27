@@ -31,19 +31,20 @@ impl Component for Model {
 
 struct YewToolkit {
     current_window: RefCell<Vec<Html<Model>>>,
-    windows: RefCell<Vec<Html<Model>>>
+    windows: RefCell<Vec<Html<Model>>>,
+    draw_next_on_same_line_was_set: RefCell<bool>,
 }
 
 // maybe make this mutable?
 impl UiToolkit for YewToolkit {
-    fn draw_window(&self, window_name: &str, f: &Fn()) {
-        f();
-        let inner = self.gather_html_for_window();
+    fn draw_window(&self, window_name: &str, draw_inside_window: &Fn()) {
+        draw_inside_window();
+        let window_contents = self.gather_html_for_window();
 
         self.add_window(html! {
             <div>
                 <h3>{ window_name }</h3>
-                { inner }
+                { window_contents }
             </div>
         });
     }
@@ -54,6 +55,8 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) {
+        self.draw_newline_if_necessary();
+
         self.push_html_into_current_window(html! {
             <button
                  style=format!("background-color: rgba({}, {}, {}, {});", color[0]*255.0, color[1]*255.0, color[2]*255.0, color[3]*255.0),
@@ -64,13 +67,17 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_text_box(&self, text: &str) {
+        self.draw_newline_if_necessary();
+
         self.push_html_into_current_window(html! {
             <textarea>{ text }</textarea>
         });
     }
 
     fn draw_next_on_same_line(&self) {
+        self.draw_next_on_same_line_was_set.replace(true);
     }
+
 }
 
 impl YewToolkit {
@@ -78,8 +85,22 @@ impl YewToolkit {
         YewToolkit {
             current_window: RefCell::new(Vec::new()),
             windows: RefCell::new(Vec::new()),
+            draw_next_on_same_line_was_set: RefCell::new(false),
         }
     }
+
+    // BROKEN: sometimes it's too big
+    fn draw_newline(&self) {
+        self.push_html_into_current_window(html!{ <br />})
+    }
+
+
+    fn draw_newline_if_necessary(&self) {
+        if !self.draw_next_on_same_line_was_set.replace(false) {
+            self.draw_newline()
+        }
+    }
+
 
     fn push_html_into_current_window(&self, node: Html<Model>) {
         let mut nodes = self.current_window.borrow_mut();
