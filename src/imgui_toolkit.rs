@@ -8,8 +8,8 @@ const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 // XXX: look into why this didn't compile before. remove all the lifetime specifiers, AND the
 // lifetime specifier from the definition in App::draw. that'll get it back to the way i had it
 // before
-pub fn draw_app<'a, 'ui: 'a>(app: &'a CSApp) {
-    imgui_support::run("cs".to_owned(), CLEAR_COLOR, |ui: &'ui Ui| {
+pub fn draw_app(app: CSApp) {
+    imgui_support::run("cs".to_owned(), CLEAR_COLOR, |ui| {
         let mut toolkit = ImguiToolkit::new(ui);
         app.draw(&mut toolkit);
         true

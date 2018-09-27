@@ -40,19 +40,19 @@ const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
 const CLEAR_BACKGROUND_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
 #[cfg(feature = "default")]
-pub fn draw_app(app: &CSApp) {
+pub fn draw_app(app: CSApp) {
     imgui_toolkit::draw_app(app)
 }
 
 #[cfg(feature = "javascript")]
-pub fn draw_app(app: &CSApp) {
+pub fn draw_app(app: CSApp) {
     yew_toolkit::draw_app(app);
 }
 
 
 fn main() {
     let app = CSApp::new();
-    draw_app(&app);
+    draw_app(app);
 }
 
 #[derive(Clone)]
