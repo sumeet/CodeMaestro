@@ -27,8 +27,10 @@ mod yew_toolkit;
 #[macro_use]
 extern crate objekt;
 
+extern crate debug_cell;
+use debug_cell::RefCell;
 
-use std::cell::RefCell;
+//use std::cell::RefCell;
 use std::rc::Rc;
 
 mod lang;
@@ -77,41 +79,46 @@ impl Function for Print {
 }
 
 pub struct Controller {
-    execution_environment: RefCell<ExecutionEnvironment>,
-    selected_node_id: RefCell<Option<ID>>,
+    execution_environment: ExecutionEnvironment,
+    selected_node_id: Option<ID>,
+    loaded_code: Option<CodeNode>,
 }
 
-impl Controller {
+impl<'a> Controller {
     fn new() -> Controller {
         Controller {
-            execution_environment: RefCell::new(ExecutionEnvironment::new()),
-            selected_node_id: RefCell::new(None),
+            execution_environment: ExecutionEnvironment::new(),
+            selected_node_id: None,
+            loaded_code: None,
         }
     }
 
-    fn run(&self, code_node: &CodeNode) {
-        code_node.evaluate( &mut self.execution_environment.borrow_mut());
+    fn load_code(&mut self, code_node: &CodeNode) {
+        self.loaded_code = Some(code_node.clone())
     }
 
-    // idk why i have to clone this, can't i just give away a reference!?!?!?
+    // should run the loaded code node
+    fn run(&mut self, code_node: &CodeNode) {
+        code_node.evaluate( &mut self.execution_environment);
+    }
+
+    // maybe i can do this w/o cloning
     fn read_console(&self) -> String {
-        let env = self.execution_environment.borrow();
-        env.console.clone()
+        self.execution_environment.console.clone()
     }
 
-    fn set_selected_node_id(&self, code_node_id: Option<ID>) {
-        self.selected_node_id.replace(code_node_id);
+    fn set_selected_node_id(&mut self, code_node_id: Option<ID>) {
+        self.selected_node_id = code_node_id;
     }
 
-    fn get_selected_node_id(&self) -> Option<ID> {
-        // TODO: not sure why we have to clone here
-        self.selected_node_id.borrow().clone()
+    fn get_selected_node_id(&self) -> &Option<ID> {
+        &self.selected_node_id
     }
 }
 
 pub struct CSApp {
     pub loaded_code: CodeNode,
-    pub controller: Controller,
+    pub controller: Rc<RefCell<Controller>>,
 }
 
 trait UiToolkit {
@@ -128,22 +135,29 @@ struct AppRenderer<'a, T> {
     ui_toolkit: &'a mut T,
     //controller: Rc<Controller>,
     // probably needs to be Rc<Refcell<>>
-    app: Rc<CSApp>,
+    controller: Rc<RefCell<Controller>>,
 }
 
 impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     fn render_console_window(&self) {
+        let controller = self.controller.clone();
         self.ui_toolkit.draw_window("Console", &|| {
-            self.ui_toolkit.draw_text_box(&self.app.controller.read_console());
+            self.ui_toolkit.draw_text_box(&controller.borrow().read_console());
         })
     }
 
-    fn render_code_window(&self, code_node: &CodeNode) {
-        self.ui_toolkit.draw_window(&code_node.description(), &|| {
-            self.render_code(code_node);
-            self.ui_toolkit.draw_empty_line();
-            self.render_run_button();
-        })
+    fn render_code_window(&self) {
+        let loaded_code = self.controller.borrow().loaded_code.clone();
+        match loaded_code {
+            None => {},
+            Some(ref code) => {
+                self.ui_toolkit.draw_window(&code.description(), &|| {
+                    self.render_code(code);
+                    self.ui_toolkit.draw_empty_line();
+                    self.render_run_button(code);
+                })
+            }
+        }
     }
 
     fn render_code(&self, code_node: &CodeNode) {
@@ -166,7 +180,7 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     }
 
     fn render_string_literal(&self, string_literal: &StringLiteral) {
-        if Some(string_literal.id) != self.app.controller.get_selected_node_id() {
+        if Some(string_literal.id) != *self.controller.borrow().get_selected_node_id() {
             self.render_string_literal_when_unselected_no_editing_intended(string_literal);
         } else {
             self.render_string_literal_inline_for_editing(string_literal)
@@ -174,30 +188,34 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     }
 
     fn render_string_literal_when_unselected_no_editing_intended(&self, string_literal: &StringLiteral) {
-        let app = self.app.clone();
+        let controller = self.controller.clone();
         let id = string_literal.id;
         self.ui_toolkit.draw_button(&string_literal.value, CLEAR_BACKGROUND_COLOR, move || {
-            app.controller.set_selected_node_id(Some(id))
+            let mut controller = controller.borrow_mut();
+            controller.set_selected_node_id(Some(id))
         });
     }
 
     fn render_string_literal_inline_for_editing(&self, string_literal: &StringLiteral) {
-        let app = self.app.clone();
+        let controller = self.controller.clone();
         self.ui_toolkit.draw_text_input(&string_literal.value,
             |new_value| {
                 println!("{:?}", new_value);
 //                app.controller.update()
             },
             move |_|{
-                app.controller.set_selected_node_id(None)
+                let mut controller = controller.borrow_mut();
+                controller.set_selected_node_id(None)
             });
         self.ui_toolkit.focus_last_drawn_element();
     }
 
-    fn render_run_button(&self) {
-        let app = self.app.clone();
+    fn render_run_button(&self, code_node: &CodeNode) {
+        let controller = self.controller.clone();
+        let code_node = code_node.clone();
         self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
-            app.controller.run(&app.loaded_code);
+            let mut controller = controller.borrow_mut();
+            controller.run(&code_node);
         })
     }
 }
@@ -215,19 +233,21 @@ impl CSApp {
         };
         let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
 
-        CSApp {
-            loaded_code: print_hello_world,
-            controller: Controller::new()
-        }
+        let app = CSApp {
+            loaded_code: print_hello_world.clone(),
+            controller: Rc::new(RefCell::new(Controller::new())),
+        };
+        app.controller.borrow_mut().load_code(&print_hello_world);
+        app
     }
 
     fn draw<T: UiToolkit>(self: &Rc<CSApp>, ui_toolkit: &mut T) {
         let app_renderer = AppRenderer {
             ui_toolkit: ui_toolkit,
-            app: self.clone(),
+            controller: self.controller.clone(),
         };
 
-        app_renderer.render_code_window(&self.loaded_code);
+        app_renderer.render_code_window();
         app_renderer.render_console_window();
     }
 }
