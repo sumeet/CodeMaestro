@@ -68,6 +68,27 @@ impl CodeNode {
             }
         }
     }
+
+    pub fn children(&mut self) -> Vec<&mut CodeNode> {
+        match self {
+            CodeNode::FunctionCall(function_call) => {
+                function_call.args.iter_mut().collect()
+            }
+            CodeNode::StringLiteral(_) => {
+                Vec::new()
+            }
+        }
+    }
+
+    pub fn replace(&mut self, code_node: &CodeNode) {
+        if self.id() == code_node.id() {
+            *self = code_node.clone()
+        } else {
+            for child in self.children() {
+                child.replace(code_node)
+            }
+        }
+    }
 }
 
 pub type ID = u64;

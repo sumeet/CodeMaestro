@@ -196,15 +196,17 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     fn render_string_literal_inline_for_editing(&self, string_literal: &StringLiteral) {
         let controller = self.controller.clone();
         let sl = string_literal.clone();
+
+        let controller2 = self.controller.clone();
         self.ui_toolkit.draw_text_input(&string_literal.value,
             move |new_value| {
                 let mut new_node = sl.clone();
                 new_node.value = new_value.to_string();
-                //let mut controller = controller.borrow_mut();
-                //controller.update_node(string_literal.id, new_node)
+                let mut controller = controller.borrow_mut();
+                controller.loaded_code.as_mut().unwrap().replace(&CodeNode::StringLiteral(new_node));
             },
             move |_|{
-                let mut controller = controller.borrow_mut();
+                let mut controller = controller2.borrow_mut();
                 controller.set_selected_node_id(None)
             });
         self.ui_toolkit.focus_last_drawn_element();
