@@ -2,6 +2,7 @@ use super::{CSApp, UiToolkit};
 use super::imgui_support;
 use imgui::*;
 use std::rc::Rc;
+use std::cell::RefCell;
 
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
@@ -17,13 +18,43 @@ pub fn draw_app(app: Rc<CSApp>) {
     });
 }
 
+struct State {
+    editing_text_input_buffer: Option<Rc<RefCell<ImString>>>,
+}
+
+impl State {
+    fn new() -> Self {
+        State { editing_text_input_buffer: None }
+    }
+
+    fn text_input_buffer(&mut self, initial_text: &str) -> Rc<RefCell<ImString>> {
+        if self.editing_text_input_buffer.is_none() {
+            let mut imstr = ImString::with_capacity(100);
+            imstr.push_str(initial_text);
+            self.editing_text_input_buffer = Some(Rc::new(RefCell::new(imstr)))
+        }
+        Rc::clone(&self.editing_text_input_buffer.as_ref().unwrap())
+    }
+}
+
 struct ImguiToolkit<'a> {
     ui: &'a Ui<'a>,
+    state: RefCell<State>,
+}
+
+impl<'a> ImguiToolkit<'a> {
+    fn get_or_initialize_text_input(&self, existing_value: &str) -> Rc<RefCell<ImString>> {
+        let mut state = self.state.borrow_mut();
+        Rc::clone(&state.text_input_buffer(existing_value))
+    }
 }
 
 impl<'a> ImguiToolkit<'a> {
     pub fn new(ui: &'a Ui) -> ImguiToolkit<'a> {
-        ImguiToolkit { ui: ui }
+        ImguiToolkit {
+            ui: ui,
+            state: RefCell::new(State::new()),
+        }
     }
 }
 
@@ -54,5 +85,26 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.text(text);
         // GHETTO: text box is always scrolled to the bottom
         unsafe { imgui_sys::igSetScrollHere(1.0) };
+    }
+
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn(&str) + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
+        let input_rc = self.get_or_initialize_text_input(existing_value);
+        let mut text_input = input_rc.borrow_mut();
+
+        let mut flags = ImGuiInputTextFlags::empty();
+        flags.set(ImGuiInputTextFlags::EnterReturnsTrue, true);
+
+        if text_input.as_ref() as &str != existing_value {
+            onchange(text_input.as_ref())
+        }
+        if self.ui.input_text(im_str!(""), &mut text_input)
+            .flags(flags)
+            .build() {
+            ondone(text_input.as_ref() as &str)
+        }
+    }
+
+    fn focus_last_drawn_element(&self) {
+        unsafe { imgui_sys::igSetKeyboardFocusHere(0) }
     }
 }

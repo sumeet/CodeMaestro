@@ -42,15 +42,32 @@ impl CodeNode {
             }
         }
     }
+
+    // these are just placeholder IDs for now, because for hello world, there's no
+    // need to further disambiguate
+    pub fn id(&self) -> ID {
+        match self {
+            CodeNode::FunctionCall(function_call) => {
+                function_call.id
+            }
+            CodeNode::StringLiteral(string_literal) => {
+                string_literal.id
+            }
+        }
+    }
 }
+
+pub type ID = u64;
 
 #[derive(Clone)]
 pub struct StringLiteral {
-    pub value: String
+    pub value: String,
+    pub id: ID,
 }
 
 #[derive(Clone)]
 pub struct FunctionCall {
     pub function: Box<Function>,
     pub args: Vec<CodeNode>,
+    pub id: ID,
 }

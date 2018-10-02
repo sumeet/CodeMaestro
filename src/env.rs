@@ -13,5 +13,9 @@ impl ExecutionEnvironment {
         self.console.push_str(ln);
         self.console.push_str("\n")
     }
+
+    pub fn read_console(&self) -> &str {
+        &self.console
+    }
 }
 

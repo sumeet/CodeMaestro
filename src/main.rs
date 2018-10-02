@@ -35,7 +35,7 @@ mod lang;
 mod env;
 
 use self::env::{ExecutionEnvironment};
-use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral};
+use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID};
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
@@ -43,12 +43,12 @@ const CLEAR_BACKGROUND_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
 #[cfg(feature = "default")]
 pub fn draw_app(app: Rc<CSApp>) {
-    imgui_toolkit::draw_app(app.clone())
+    imgui_toolkit::draw_app(Rc::clone(&app));
 }
 
 #[cfg(feature = "javascript")]
 pub fn draw_app(app: Rc<CSApp>) {
-    yew_toolkit::draw_app(app.clone());
+    yew_toolkit::draw_app(Rc::clone(&app));
 }
 
 
@@ -77,13 +77,15 @@ impl Function for Print {
 }
 
 pub struct Controller {
-    execution_environment: RefCell<ExecutionEnvironment>
+    execution_environment: RefCell<ExecutionEnvironment>,
+    selected_node_id: RefCell<Option<ID>>,
 }
 
 impl Controller {
     fn new() -> Controller {
         Controller {
-            execution_environment: RefCell::new(ExecutionEnvironment::new())
+            execution_environment: RefCell::new(ExecutionEnvironment::new()),
+            selected_node_id: RefCell::new(None),
         }
     }
 
@@ -95,6 +97,15 @@ impl Controller {
     fn read_console(&self) -> String {
         let env = self.execution_environment.borrow();
         env.console.clone()
+    }
+
+    fn set_selected_node_id(&self, code_node_id: Option<ID>) {
+        self.selected_node_id.replace(code_node_id);
+    }
+
+    fn get_selected_node_id(&self) -> Option<ID> {
+        // TODO: not sure why we have to clone here
+        self.selected_node_id.borrow().clone()
     }
 }
 
@@ -109,6 +120,8 @@ trait UiToolkit {
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F);
     fn draw_text_box(&self, text: &str);
     fn draw_next_on_same_line(&self);
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn(&str) + 'static>(&self, existing_value: &str, onchange: F, ondone: D);
+    fn focus_last_drawn_element(&self);
 }
 
 struct AppRenderer<'a, T> {
@@ -153,7 +166,32 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     }
 
     fn render_string_literal(&self, string_literal: &StringLiteral) {
-        self.ui_toolkit.draw_button(&string_literal.value, CLEAR_BACKGROUND_COLOR, &|| {});
+        if Some(string_literal.id) != self.app.controller.get_selected_node_id() {
+            self.render_string_literal_when_unselected_no_editing_intended(string_literal);
+        } else {
+            self.render_string_literal_inline_for_editing(string_literal)
+        }
+    }
+
+    fn render_string_literal_when_unselected_no_editing_intended(&self, string_literal: &StringLiteral) {
+        let app = self.app.clone();
+        let id = string_literal.id;
+        self.ui_toolkit.draw_button(&string_literal.value, CLEAR_BACKGROUND_COLOR, move || {
+            app.controller.set_selected_node_id(Some(id))
+        });
+    }
+
+    fn render_string_literal_inline_for_editing(&self, string_literal: &StringLiteral) {
+        let app = self.app.clone();
+        self.ui_toolkit.draw_text_input(&string_literal.value,
+            |new_value| {
+                println!("{:?}", new_value);
+                app.controller.update()
+            },
+            move |_|{
+                app.controller.set_selected_node_id(None)
+            });
+        self.ui_toolkit.focus_last_drawn_element();
     }
 
     fn render_run_button(&self) {
@@ -168,9 +206,13 @@ impl CSApp {
     fn new() -> CSApp {
         // code
         let mut args: Vec<CodeNode> = Vec::new();
-        let string_literal = StringLiteral { value: "HW".to_string()};
+        let string_literal = StringLiteral { value: "HW".to_string(), id: 1};
         args.push(CodeNode::StringLiteral(string_literal));
-        let function_call = FunctionCall{function: Box::new(Print {}), args: args};
+        let function_call = FunctionCall{
+            function: Box::new(Print {}),
+            args: args,
+            id: 2,
+        };
         let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
 
         CSApp {
