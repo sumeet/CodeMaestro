@@ -35,7 +35,7 @@ mod lang;
 mod env;
 
 use self::env::{ExecutionEnvironment};
-use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID};
+use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error};
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
@@ -65,10 +65,10 @@ impl Function for Print {
         match args.as_slice() {
             [Value::String(string)] =>  {
                 env.println(string);
+                Value::Null
             }
-            _ => panic!("wrong arguments")
+            _ => Value::Result(Result::Err(Error::ArgumentError))
         }
-        Value::Null
     }
 
     fn name(&self) -> &str {
@@ -186,7 +186,7 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
         self.ui_toolkit.draw_text_input(&string_literal.value,
             |new_value| {
                 println!("{:?}", new_value);
-                app.controller.update()
+//                app.controller.update()
             },
             move |_|{
                 app.controller.set_selected_node_id(None)

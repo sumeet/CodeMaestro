@@ -13,9 +13,14 @@ pub enum CodeNode {
     StringLiteral(StringLiteral),
 }
 
+pub enum Error {
+    ArgumentError
+}
+
 pub enum Value {
     Null,
     String(String),
+    Result(Result<Box<Value>,Error>)
 }
 
 impl CodeNode {
