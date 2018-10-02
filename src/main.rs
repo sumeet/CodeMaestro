@@ -20,6 +20,8 @@ mod imgui_toolkit;
 
 #[cfg(feature = "javascript")]
 #[macro_use]
+extern crate stdweb;
+#[macro_use]
 extern crate yew;
 #[cfg(feature = "javascript")]
 mod yew_toolkit;
@@ -126,7 +128,7 @@ trait UiToolkit {
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F);
     fn draw_text_box(&self, text: &str);
     fn draw_next_on_same_line(&self);
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn(&str) + 'static>(&self, existing_value: &str, onchange: F, ondone: D);
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D);
     fn focus_last_drawn_element(&self);
 }
 
@@ -205,7 +207,7 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
                 let mut controller = controller.borrow_mut();
                 controller.loaded_code.as_mut().unwrap().replace(&CodeNode::StringLiteral(new_node));
             },
-            move |_|{
+            move ||{
                 let mut controller = controller2.borrow_mut();
                 controller.set_selected_node_id(None)
             });

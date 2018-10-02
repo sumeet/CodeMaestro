@@ -78,6 +78,24 @@ impl UiToolkit for YewToolkit {
         self.draw_next_on_same_line_was_set.replace(true);
     }
 
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
+        let id = 123;
+        self.push_html_into_current_window(html! {
+            <input type="text",
+               id=id.to_string(),
+               value=existing_value,
+               oninput=|e| {onchange(&e.value) ; Msg::Redraw},
+               onblur=|_| {ondone(); Msg::Redraw}, />
+        })
+    }
+
+    fn focus_last_drawn_element(&self) {
+//        js! {
+//            console.log("hello");
+//        }
+    }
+
+
 }
 
 impl YewToolkit {

@@ -87,7 +87,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igSetScrollHere(1.0) };
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn(&str) + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
         let input = self.get_or_initialize_text_input(existing_value);
         let mut input = input.borrow_mut();
 
@@ -97,7 +97,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         if self.ui.input_text(im_str!(""), &mut input)
             .flags(flags)
             .build() {
-            ondone(input.as_ref() as &str)
+            ondone()
         } else {
             if input.as_ref() as &str != existing_value {
                 onchange(input.as_ref() as &str)

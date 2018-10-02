@@ -6,7 +6,7 @@ edition = "2018"
 
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer"]
-javascript = ["yew"]
+javascript = ["yew", "stdweb"]
 
 [dependencies]
 #pyo3 = "0.4.1"
@@ -20,3 +20,4 @@ imgui-sys = { version = "0.0.20", optional = true }
 imgui-glium-renderer = { version = "0.0.20", optional = true }
 
 yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
+stdweb = { version = "0.4.9", optional = true }
