@@ -1,3 +1,5 @@
+use std::fmt;
+
 use super::ExecutionEnvironment;
 
 pub trait Function: objekt::Clone {
@@ -5,9 +7,15 @@ pub trait Function: objekt::Clone {
     fn name(&self) -> &str;
 }
 
+impl fmt::Debug for Function {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<Function: {}>", self.name())
+    }
+}
+
 clone_trait_object!(Function);
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub enum CodeNode {
     FunctionCall(FunctionCall),
     StringLiteral(StringLiteral),
@@ -64,13 +72,13 @@ impl CodeNode {
 
 pub type ID = u64;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct StringLiteral {
     pub value: String,
     pub id: ID,
 }
 
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct FunctionCall {
     pub function: Box<Function>,
     pub args: Vec<CodeNode>,

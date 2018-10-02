@@ -102,9 +102,8 @@ impl<'a> Controller {
         code_node.evaluate( &mut self.execution_environment);
     }
 
-    // maybe i can do this w/o cloning
-    fn read_console(&self) -> String {
-        self.execution_environment.console.clone()
+    fn read_console(&self) -> &str {
+        &self.execution_environment.console
     }
 
     fn set_selected_node_id(&mut self, code_node_id: Option<ID>) {
@@ -133,8 +132,6 @@ trait UiToolkit {
 
 struct AppRenderer<'a, T> {
     ui_toolkit: &'a mut T,
-    //controller: Rc<Controller>,
-    // probably needs to be Rc<Refcell<>>
     controller: Rc<RefCell<Controller>>,
 }
 
@@ -142,7 +139,7 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     fn render_console_window(&self) {
         let controller = self.controller.clone();
         self.ui_toolkit.draw_window("Console", &|| {
-            self.ui_toolkit.draw_text_box(&controller.borrow().read_console());
+            self.ui_toolkit.draw_text_box(controller.borrow().read_console());
         })
     }
 
@@ -198,10 +195,13 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
 
     fn render_string_literal_inline_for_editing(&self, string_literal: &StringLiteral) {
         let controller = self.controller.clone();
+        let sl = string_literal.clone();
         self.ui_toolkit.draw_text_input(&string_literal.value,
-            |new_value| {
-                println!("{:?}", new_value);
-//                app.controller.update()
+            move |new_value| {
+                let mut new_node = sl.clone();
+                new_node.value = new_value.to_string();
+                //let mut controller = controller.borrow_mut();
+                //controller.update_node(string_literal.id, new_node)
             },
             move |_|{
                 let mut controller = controller.borrow_mut();

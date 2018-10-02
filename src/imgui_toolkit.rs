@@ -88,19 +88,20 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn(&str) + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
-        let input_rc = self.get_or_initialize_text_input(existing_value);
-        let mut text_input = input_rc.borrow_mut();
+        let input = self.get_or_initialize_text_input(existing_value);
+        let mut input = input.borrow_mut();
 
         let mut flags = ImGuiInputTextFlags::empty();
         flags.set(ImGuiInputTextFlags::EnterReturnsTrue, true);
 
-        if text_input.as_ref() as &str != existing_value {
-            onchange(text_input.as_ref())
-        }
-        if self.ui.input_text(im_str!(""), &mut text_input)
+        if self.ui.input_text(im_str!(""), &mut input)
             .flags(flags)
             .build() {
-            ondone(text_input.as_ref() as &str)
+            ondone(input.as_ref() as &str)
+        } else {
+            if input.as_ref() as &str != existing_value {
+                onchange(input.as_ref() as &str)
+            }
         }
     }
 
