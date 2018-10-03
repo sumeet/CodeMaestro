@@ -21,8 +21,11 @@ mod imgui_toolkit;
 #[cfg(feature = "javascript")]
 #[macro_use]
 extern crate stdweb;
+
+#[cfg(feature = "javascript")]
 #[macro_use]
 extern crate yew;
+
 #[cfg(feature = "javascript")]
 mod yew_toolkit;
 

@@ -33,6 +33,8 @@ struct YewToolkit {
     current_window: RefCell<Vec<Html<Model>>>,
     windows: RefCell<Vec<Html<Model>>>,
     draw_next_on_same_line_was_set: RefCell<bool>,
+    last_drawn_element_id: RefCell<u32>,
+    javascript_to_run_after_render: RefCell<Vec<String>>
 }
 
 // maybe make this mutable?
@@ -42,7 +44,7 @@ impl UiToolkit for YewToolkit {
         let window_contents = self.gather_html_for_window();
 
         self.add_window(html! {
-            <div>
+            <div id={ self.incr_last_drawn_element_id().to_string() },>
                 <h3>{ window_name }</h3>
                 { window_contents }
             </div>
@@ -58,7 +60,7 @@ impl UiToolkit for YewToolkit {
         self.draw_newline_if_necessary();
 
         self.push_html_into_current_window(html! {
-            <button
+            <button id={ self.incr_last_drawn_element_id().to_string() },
                  style=format!("background-color: rgba({}, {}, {}, {});", color[0]*255.0, color[1]*255.0, color[2]*255.0, color[3]*255.0),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { label }
@@ -70,7 +72,7 @@ impl UiToolkit for YewToolkit {
         self.draw_newline_if_necessary();
 
         self.push_html_into_current_window(html! {
-            <textarea>{ text }</textarea>
+            <textarea id={ self.incr_last_drawn_element_id().to_string() },>{ text }</textarea>
         });
     }
 
@@ -79,23 +81,22 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
-        let id = 123;
+        let ondone = Rc::new(ondone);
+        let ondone2 = Rc::clone(&ondone);
         self.push_html_into_current_window(html! {
             <input type="text",
-               id=id.to_string(),
+               id={ self.incr_last_drawn_element_id().to_string() },
                value=existing_value,
                oninput=|e| {onchange(&e.value) ; Msg::Redraw},
-               onblur=|_| {ondone(); Msg::Redraw}, />
+               onkeypress=|e| { if e.key() == "Enter" { ondone() } ; Msg::Redraw },
+               onblur=|_| {ondone2(); Msg::Redraw}, />
         })
     }
 
     fn focus_last_drawn_element(&self) {
-//        js! {
-//            console.log("hello");
-//        }
+        let mut javascripts = self.javascript_to_run_after_render.borrow_mut();
+        javascripts.push(format!("document.getElementById({}).focus();", self.get_last_drawn_element_id()))
     }
-
-
 }
 
 impl YewToolkit {
@@ -104,7 +105,13 @@ impl YewToolkit {
             current_window: RefCell::new(Vec::new()),
             windows: RefCell::new(Vec::new()),
             draw_next_on_same_line_was_set: RefCell::new(false),
+            last_drawn_element_id: RefCell::new(0),
+            javascript_to_run_after_render: RefCell::new(Vec::new())
         }
+    }
+
+    fn after_render_javascripts(&self) -> Vec<String> {
+        self.javascript_to_run_after_render.borrow().clone()
     }
 
     // BROKEN: sometimes it's too big
@@ -112,13 +119,21 @@ impl YewToolkit {
         self.push_html_into_current_window(html!{ <br />})
     }
 
+    fn incr_last_drawn_element_id(&self) -> u32 {
+        let next_id = *self.last_drawn_element_id.borrow() + 1;
+        self.last_drawn_element_id.replace(next_id);
+        next_id
+    }
+
+    fn get_last_drawn_element_id(&self) -> u32 {
+        *self.last_drawn_element_id.borrow()
+    }
 
     fn draw_newline_if_necessary(&self) {
         if !self.draw_next_on_same_line_was_set.replace(false) {
             self.draw_newline()
         }
     }
-
 
     fn push_html_into_current_window(&self, node: Html<Model>) {
         let mut nodes = self.current_window.borrow_mut();
@@ -138,10 +153,13 @@ impl YewToolkit {
         }
     }
 
-    fn windows(&self) -> Html<Model> {
+    fn render_html(&self) -> Html<Model> {
         let nodes = self.windows.replace(Vec::new());
         html! {
             { for nodes.into_iter() }
+            { for self.after_render_javascripts().into_iter().map(|js| html! {
+                <script>{ js }</script>
+            })}
         }
     }
 }
@@ -152,7 +170,8 @@ impl Renderable<Model> for Model {
         if let(Some(app)) = &self.app {
             let mut tk = YewToolkit::new();
             app.draw(&mut tk);
-            tk.windows()
+
+            tk.render_html()
         } else {
             html! { <p> {"No app"} </p> }
         }
