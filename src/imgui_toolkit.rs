@@ -94,14 +94,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let mut flags = ImGuiInputTextFlags::empty();
         flags.set(ImGuiInputTextFlags::EnterReturnsTrue, true);
 
-        if self.ui.input_text(im_str!(""), &mut input)
+        let enter_pressed = self.ui.input_text(im_str!(""), &mut input)
             .flags(flags)
-            .build() {
-            ondone()
-        } else {
-            if input.as_ref() as &str != existing_value {
-                onchange(input.as_ref() as &str)
-            }
+            .build();
+        if enter_pressed {
+            ondone();
+            return
+        }
+        if input.as_ref() as &str != existing_value {
+            onchange(input.as_ref() as &str)
         }
     }
 
