@@ -29,6 +29,9 @@ impl Component for Model {
     }
 }
 
+const WINDOW_BG_COLOR: [f32; 4] = [0.090, 0.090, 0.090, 0.75];
+const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
+
 struct YewToolkit {
     current_window: RefCell<Vec<Html<Model>>>,
     windows: RefCell<Vec<Html<Model>>>,
@@ -44,8 +47,9 @@ impl UiToolkit for YewToolkit {
         let window_contents = self.gather_html_for_window();
 
         self.add_window(html! {
-            <div id={ self.incr_last_drawn_element_id().to_string() },>
-                <h3>{ window_name }</h3>
+            <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+                id={ self.incr_last_drawn_element_id().to_string() }, >
+                <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
                 { window_contents }
             </div>
         });
@@ -61,7 +65,7 @@ impl UiToolkit for YewToolkit {
 
         self.push_html_into_current_window(html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
-                 style=format!("background-color: rgba({}, {}, {}, {});", color[0]*255.0, color[1]*255.0, color[2]*255.0, color[3]*255.0),
+                 style=format!("color: white; background-color: {};", self.rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { label }
             </button>
@@ -108,6 +112,10 @@ impl YewToolkit {
             last_drawn_element_id: RefCell::new(0),
             javascript_to_run_after_render: RefCell::new(Vec::new())
         }
+    }
+
+    fn rgba(&self, color: [f32; 4]) -> String {
+       format!("rgba({}, {}, {}, {})", color[0]*255.0, color[1]*255.0, color[2]*255.0, color[3])
     }
 
     fn after_render_javascripts(&self) -> Vec<String> {

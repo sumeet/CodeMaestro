@@ -46,7 +46,8 @@ use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error,Ass
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
-const CLEAR_BACKGROUND_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
+const PURPLE_COLOR: [f32; 4] = [0.486, 0.353, 0.952, 1.0];
+const CLEAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
 #[cfg(feature = "default")]
 pub fn draw_app(app: Rc<CSApp>) {
@@ -170,9 +171,17 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
                 self.render_string_literal(&string_literal);
             }
             CodeNode::Assignment(assignment) => {
-                //self.
+                self.render_assignment(&assignment);
             }
         }
+    }
+
+    fn render_assignment(&self, assignment: &Assignment) {
+        self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {});
+        self.ui_toolkit.draw_next_on_same_line();
+        self.ui_toolkit.draw_button("=", CLEAR_COLOR, &|| {});
+        self.ui_toolkit.draw_next_on_same_line();
+        self.render_code(assignment.expression.as_ref())
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) {
@@ -194,7 +203,7 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     fn render_string_literal_when_unselected_no_editing_intended(&self, string_literal: &StringLiteral) {
         let controller = self.controller.clone();
         let id = string_literal.id;
-        self.ui_toolkit.draw_button(&string_literal.value, CLEAR_BACKGROUND_COLOR, move || {
+        self.ui_toolkit.draw_button(&string_literal.value, CLEAR_COLOR, move || {
             let mut controller = controller.borrow_mut();
             controller.set_selected_node_id(Some(id))
         });
