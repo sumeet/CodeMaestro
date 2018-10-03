@@ -1,4 +1,5 @@
 use std::fmt;
+use std::borrow::BorrowMut;
 
 use super::ExecutionEnvironment;
 
@@ -19,6 +20,7 @@ clone_trait_object!(Function);
 pub enum CodeNode {
     FunctionCall(FunctionCall),
     StringLiteral(StringLiteral),
+    Assignment(Assignment),
 }
 
 pub enum Error {
@@ -42,6 +44,11 @@ impl CodeNode {
                 // xxx: can i get rid of this clone?
                 Value::String(string_literal.value.clone())
             }
+            CodeNode::Assignment(assignment) => {
+                let value = assignment.expression.evaluate(env);
+                env.set_local_variable(assignment.id, value);
+                Value::Null
+            }
         }
     }
 
@@ -52,6 +59,9 @@ impl CodeNode {
             }
             CodeNode::StringLiteral(string_literal) => {
                 format!("String literal: {}", string_literal.value)
+            }
+            CodeNode::Assignment(assignment) => {
+                format!("Assignment: {}", assignment.name)
             }
         }
     }
@@ -66,6 +76,9 @@ impl CodeNode {
             CodeNode::StringLiteral(string_literal) => {
                 string_literal.id
             }
+            CodeNode::Assignment(assignment) => {
+                assignment.id
+            }
         }
     }
 
@@ -76,6 +89,9 @@ impl CodeNode {
             }
             CodeNode::StringLiteral(_) => {
                 Vec::new()
+            }
+            CodeNode::Assignment(assignment) => {
+                vec![assignment.expression.borrow_mut()]
             }
         }
     }
@@ -103,5 +119,13 @@ pub struct StringLiteral {
 pub struct FunctionCall {
     pub function: Box<Function>,
     pub args: Vec<CodeNode>,
+    pub id: ID,
+}
+
+#[derive(Clone,Debug)]
+pub struct Assignment {
+    pub name: String,
+    // TODO: consider differentiating between CodeNodes and Expressions.
+    pub expression: Box<CodeNode>,
     pub id: ID,
 }

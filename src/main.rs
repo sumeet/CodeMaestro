@@ -42,7 +42,7 @@ mod lang;
 mod env;
 
 use self::env::{ExecutionEnvironment};
-use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error};
+use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error,Assignment};
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
@@ -121,7 +121,6 @@ impl<'a> Controller {
 }
 
 pub struct CSApp {
-    pub loaded_code: CodeNode,
     pub controller: Rc<RefCell<Controller>>,
 }
 
@@ -169,6 +168,9 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
             }
             CodeNode::StringLiteral(string_literal) => {
                 self.render_string_literal(&string_literal);
+            }
+            CodeNode::Assignment(assignment) => {
+                //self.
             }
         }
     }
@@ -229,22 +231,29 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
 
 impl CSApp {
     fn new() -> CSApp {
-        // code
-        let mut args: Vec<CodeNode> = Vec::new();
-        let string_literal = StringLiteral { value: "HW".to_string(), id: 1};
-        args.push(CodeNode::StringLiteral(string_literal));
-        let function_call = FunctionCall{
-            function: Box::new(Print {}),
-            args: args,
-            id: 2,
-        };
-        let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
+//        // code print hello world
+//        let mut args: Vec<CodeNode> = Vec::new();
+//        let string_literal = StringLiteral { value: "HW".to_string(), id: 1};
+//        args.push(CodeNode::StringLiteral(string_literal));
+//        let function_call = FunctionCall {
+//            function: Box::new(Print {}),
+//            args: args,
+//            id: 2,
+//        };
+//        let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
+
+        // code assignment
+        let string_literal = StringLiteral { value: "HW".to_string(), id: 1 };
+        let assignment = CodeNode::Assignment(Assignment {
+            name: "my variable".to_string(),
+            expression: Box::new(CodeNode::StringLiteral(string_literal)),
+            id: 2
+        });
 
         let app = CSApp {
-            loaded_code: print_hello_world.clone(),
             controller: Rc::new(RefCell::new(Controller::new())),
         };
-        app.controller.borrow_mut().load_code(&print_hello_world);
+        app.controller.borrow_mut().load_code(&assignment);
         app
     }
 
