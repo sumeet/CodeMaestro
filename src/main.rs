@@ -32,6 +32,18 @@ mod yew_toolkit;
 #[macro_use]
 extern crate objekt;
 
+#[macro_use]
+extern crate failure;
+
+#[macro_use]
+extern crate serde_derive;
+
+extern crate serde;
+extern crate serde_json;
+
+#[macro_use]
+extern crate erased_serde;
+
 extern crate debug_cell;
 use debug_cell::RefCell;
 
@@ -40,6 +52,7 @@ use std::rc::Rc;
 
 mod lang;
 mod env;
+mod code_loading;
 
 use self::env::{ExecutionEnvironment};
 use self::lang::{
@@ -81,7 +94,7 @@ impl Function for Print {
         }
     }
 
-    fn name(&self) -> &str {
+    fn uuid(&self) -> &str {
         "Print"
     }
 }
@@ -212,7 +225,7 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) {
-        self.ui_toolkit.draw_button(function_call.function.name(), BLUE_COLOR, &|| {});
+        self.ui_toolkit.draw_button(function_call.function.uuid(), BLUE_COLOR, &|| {});
         for code_node in &function_call.args {
             self.ui_toolkit.draw_next_on_same_line();
             self.render_code(code_node)
@@ -304,44 +317,12 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
 
 impl CSApp {
     fn new() -> CSApp {
-//        // code print hello world
-//        let mut args: Vec<CodeNode> = Vec::new();
-//        let string_literal = StringLiteral { value: "HW".to_string(), id: 1};
-//        args.push(CodeNode::StringLiteral(string_literal));
-//        let function_call = FunctionCall {
-//            function: Box::new(Print {}),
-//            args: args,
-//            id: 2,
-//        };
-//        let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
-
-        // code assignment
-        let string_literal = CodeNode::StringLiteral(
-            StringLiteral { value: "HW".to_string(), id: 1 });
-        let assignment = CodeNode::Assignment(Assignment {
-            name: "my variable".to_string(),
-            expression: Box::new(string_literal),
-            id: 2
-        });
-        let variable_reference = CodeNode::VariableReference(VariableReference {
-            assignment_id: assignment.id(),
-            id: 219,
-        });
-        let function_call = CodeNode::FunctionCall(FunctionCall {
-            function: Box::new(Print {}),
-            args: vec![variable_reference],
-            id: 3,
-        });
-        let code_block = CodeNode::Block(Block {
-            expressions: vec![assignment, function_call],
-            id: 4,
-        });
-
-
+        let codestring = include_str!("../codesample");
+        let loaded_code = code_loading::deserialize(codestring).unwrap();
         let app = CSApp {
             controller: Rc::new(RefCell::new(Controller::new())),
         };
-        app.controller.borrow_mut().load_code(&code_block);
+        app.controller.borrow_mut().load_code(&loaded_code);
         app
     }
 

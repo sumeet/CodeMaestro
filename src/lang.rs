@@ -2,22 +2,39 @@ use std::fmt;
 use std::borrow::BorrowMut;
 use std::rc::Rc;
 
+use super::{erased_serde};
+use serde::ser::{Serialize, Serializer, SerializeSeq, SerializeMap};
+
 use super::ExecutionEnvironment;
 
 pub trait Function: objekt::Clone {
     fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
-    fn name(&self) -> &str;
+    fn uuid(&self) -> &str;
 }
 
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<Function: {}>", self.name())
+        write!(f, "<Function: {}>", self.uuid())
+    }
+}
+
+// TODO: this way of serializing functions won't fly. later, figure out how the program should
+// actually reference functions
+impl Serialize for Function {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(1))?;
+        map.serialize_entry("temp_function_by_uuid", self.uuid())?;
+        map.end()
     }
 }
 
 clone_trait_object!(Function);
+//serialize_trait_object!(Function);
 
-#[derive(Clone,Debug)]
+#[derive(Serialize, Clone ,Debug)]
 pub enum CodeNode {
     FunctionCall(FunctionCall),
     StringLiteral(StringLiteral),
@@ -77,7 +94,7 @@ impl CodeNode {
     pub fn description(&self) -> String {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                format!("Function call: {}", function_call.function.name())
+                format!("Function call: {}", function_call.function.uuid())
             }
             CodeNode::StringLiteral(string_literal) => {
                 format!("String literal: {}", string_literal.value)
@@ -162,20 +179,20 @@ impl CodeNode {
 
 pub type ID = u64;
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Clone,Debug)]
 pub struct StringLiteral {
     pub value: String,
     pub id: ID,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Serialize, Clone,Debug)]
 pub struct FunctionCall {
     pub function: Box<Function>,
     pub args: Vec<CodeNode>,
     pub id: ID,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Serialize, Clone,Debug)]
 pub struct Assignment {
     pub name: String,
     // TODO: consider differentiating between CodeNodes and Expressions.
@@ -183,13 +200,13 @@ pub struct Assignment {
     pub id: ID,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Serialize, Clone,Debug)]
 pub struct Block {
     pub expressions: Vec<CodeNode>,
     pub id: ID,
 }
 
-#[derive(Clone,Debug)]
+#[derive(Serialize, Clone,Debug)]
 pub struct VariableReference {
     pub assignment_id: ID,
     pub id: ID,

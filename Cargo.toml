@@ -12,6 +12,11 @@ javascript = ["yew", "stdweb"]
 #pyo3 = "0.4.1"
 objekt = "0.1.1"
 debug-cell = "0.1.1"
+serde = "1.0.79"
+serde_derive = "1.0.79"
+serde_json = "1.0.31"
+erased-serde = "0.3.6"
+failure = "0.1.2"
 
 glium = { version = "0.22", default-features = true, optional = true }
 glutin = { version = "0.18", optional = true }

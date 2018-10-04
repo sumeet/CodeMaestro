@@ -1,0 +1,1 @@
+{"Block":{"expressions":[{"Assignment":{"name":"my variable","expression":{"StringLiteral":{"value":"HW","id":1}},"id":2}},{"FunctionCall":{"function":{"uuid":"ThePrintFunction"},"args":[{"VariableReference":{"assignment_id":2,"id":219}}],"id":3}}],"id":4}}
