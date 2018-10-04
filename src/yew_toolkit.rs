@@ -188,7 +188,7 @@ impl Renderable<Model> for Model {
 
 pub fn draw_app(app: Rc<CSApp>) {
     yew::initialize();
-    let msg = Msg::SetApp(app.clone());
+    let msg = Msg::SetApp(Rc::clone(&app));
     App::<Model>::new().mount_to_body()
         .send_message(msg);
     yew::run_loop()
