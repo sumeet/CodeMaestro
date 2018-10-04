@@ -1,5 +1,6 @@
 use std::fmt;
 use std::borrow::BorrowMut;
+use std::rc::Rc;
 
 use super::ExecutionEnvironment;
 
@@ -21,12 +22,15 @@ pub enum CodeNode {
     FunctionCall(FunctionCall),
     StringLiteral(StringLiteral),
     Assignment(Assignment),
+    Block(Block),
 }
 
+#[derive(Clone)]
 pub enum Error {
     ArgumentError
 }
 
+#[derive(Clone)]
 pub enum Value {
     Null,
     String(String),
@@ -41,12 +45,26 @@ impl CodeNode {
                 function_call.function.call(env, args)
             }
             CodeNode::StringLiteral(string_literal) => {
-                // xxx: can i get rid of this clone?
                 Value::String(string_literal.value.clone())
             }
             CodeNode::Assignment(assignment) => {
                 let value = assignment.expression.evaluate(env);
-                env.set_local_variable(assignment.id, value);
+                // TODO: pretty sure i'll have to return an Rc<Value> in evaluate
+                env.set_local_variable(assignment.id, value.clone());
+                // the result of an assignment is the value being assigned
+                value
+            }
+            CodeNode::Block(block) => {
+                let mut expressions = block.expressions.iter().peekable();
+                while let Some(expression) = expressions.next() {
+                    if expressions.peek().is_some() {
+                        // not the last
+                        expression.evaluate(env);
+                    } else {
+                        return expression.evaluate(env)
+                    }
+                }
+                // if there are no expressions in this block, then it will evaluate to null
                 Value::Null
             }
         }
@@ -62,6 +80,9 @@ impl CodeNode {
             }
             CodeNode::Assignment(assignment) => {
                 format!("Assignment: {}", assignment.name)
+            }
+            CodeNode::Block(block) => {
+                format!("Code block: {}", block.id)
             }
         }
     }
@@ -79,6 +100,9 @@ impl CodeNode {
             CodeNode::Assignment(assignment) => {
                 assignment.id
             }
+            CodeNode::Block(block) => {
+                block.id
+            }
         }
     }
 
@@ -92,6 +116,9 @@ impl CodeNode {
             }
             CodeNode::Assignment(assignment) => {
                 vec![assignment.expression.borrow_mut()]
+            }
+            CodeNode::Block(block) => {
+                block.expressions.iter_mut().collect()
             }
         }
     }
@@ -127,5 +154,11 @@ pub struct Assignment {
     pub name: String,
     // TODO: consider differentiating between CodeNodes and Expressions.
     pub expression: Box<CodeNode>,
+    pub id: ID,
+}
+
+#[derive(Clone,Debug)]
+pub struct Block {
+    pub expressions: Vec<CodeNode>,
     pub id: ID,
 }

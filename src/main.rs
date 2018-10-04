@@ -42,7 +42,7 @@ mod lang;
 mod env;
 
 use self::env::{ExecutionEnvironment};
-use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error,Assignment};
+use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error,Assignment,Block};
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
@@ -173,6 +173,9 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
             CodeNode::Assignment(assignment) => {
                 self.render_assignment(&assignment);
             }
+            CodeNode::Block(block) => {
+                self.render_block(&block)
+            }
         }
     }
 
@@ -182,6 +185,12 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
         self.ui_toolkit.draw_button("=", CLEAR_COLOR, &|| {});
         self.ui_toolkit.draw_next_on_same_line();
         self.render_code(assignment.expression.as_ref())
+    }
+
+    fn render_block(&self, block: &Block) {
+        for expression in &block.expressions {
+            self.render_code(expression)
+        }
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) {
@@ -252,17 +261,30 @@ impl CSApp {
 //        let print_hello_world: CodeNode = CodeNode::FunctionCall(function_call);
 
         // code assignment
-        let string_literal = StringLiteral { value: "HW".to_string(), id: 1 };
+        let string_literal = CodeNode::StringLiteral(
+            StringLiteral { value: "HW".to_string(), id: 1 });
+        let string_literal2 = CodeNode::StringLiteral(
+            StringLiteral { value: "HW".to_string(), id: 100 });
         let assignment = CodeNode::Assignment(Assignment {
             name: "my variable".to_string(),
-            expression: Box::new(CodeNode::StringLiteral(string_literal)),
+            expression: Box::new(string_literal),
             id: 2
         });
+        let function_call = CodeNode::FunctionCall(FunctionCall {
+            function: Box::new(Print {}),
+            args: vec![string_literal2],
+            id: 3,
+        });
+        let code_block = CodeNode::Block(Block {
+            expressions: vec![assignment, function_call],
+            id: 4,
+        });
+
 
         let app = CSApp {
             controller: Rc::new(RefCell::new(Controller::new())),
         };
-        app.controller.borrow_mut().load_code(&assignment);
+        app.controller.borrow_mut().load_code(&code_block);
         app
     }
 
