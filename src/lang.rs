@@ -23,6 +23,7 @@ pub enum CodeNode {
     StringLiteral(StringLiteral),
     Assignment(Assignment),
     Block(Block),
+    VariableReference(VariableReference),
 }
 
 #[derive(Clone)]
@@ -67,6 +68,9 @@ impl CodeNode {
                 // if there are no expressions in this block, then it will evaluate to null
                 Value::Null
             }
+            CodeNode::VariableReference(variable_reference) => {
+                env.get_local_variable(variable_reference.assignment_id).unwrap().clone()
+            }
         }
     }
 
@@ -82,7 +86,10 @@ impl CodeNode {
                 format!("Assignment: {}", assignment.name)
             }
             CodeNode::Block(block) => {
-                format!("Code block: {}", block.id)
+                format!("Code block: ID {}", block.id)
+            }
+            CodeNode::VariableReference(variable_reference) => {
+                format!("Variable reference: Assignment ID {}", variable_reference.assignment_id)
             }
         }
     }
@@ -103,6 +110,9 @@ impl CodeNode {
             CodeNode::Block(block) => {
                 block.id
             }
+            CodeNode::VariableReference(variable_reference) => {
+                variable_reference.id
+            }
         }
     }
 
@@ -120,6 +130,9 @@ impl CodeNode {
             CodeNode::Block(block) => {
                 block.expressions.iter_mut().collect()
             }
+            CodeNode::VariableReference(variable_reference) => {
+                Vec::new()
+            }
         }
     }
 
@@ -130,6 +143,19 @@ impl CodeNode {
             for child in self.children() {
                 child.replace(code_node)
             }
+        }
+    }
+
+    pub fn find_node(&mut self, id: ID) -> Option<&CodeNode> {
+        if self.id() == id {
+            Some(self)
+        } else {
+            for child in self.children() {
+                if let(Some(found_node)) = child.find_node(id) {
+                    return Some(found_node)
+                }
+            }
+            None
         }
     }
 }
@@ -160,5 +186,11 @@ pub struct Assignment {
 #[derive(Clone,Debug)]
 pub struct Block {
     pub expressions: Vec<CodeNode>,
+    pub id: ID,
+}
+
+#[derive(Clone,Debug)]
+pub struct VariableReference {
+    pub assignment_id: ID,
     pub id: ID,
 }

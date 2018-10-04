@@ -42,7 +42,9 @@ mod lang;
 mod env;
 
 use self::env::{ExecutionEnvironment};
-use self::lang::{Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error,Assignment,Block};
+use self::lang::{
+    Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error,Assignment,Block,
+    VariableReference};
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
@@ -176,15 +178,31 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
             CodeNode::Block(block) => {
                 self.render_block(&block)
             }
+            CodeNode::VariableReference(variable_reference) => {
+                self.render_variable_reference(&variable_reference)
+            }
         }
     }
 
     fn render_assignment(&self, assignment: &Assignment) {
-        self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {});
+        self.render_inline_editable_button(
+            &assignment.name,
+            PURPLE_COLOR,
+            &CodeNode::Assignment(assignment.clone())
+        );
         self.ui_toolkit.draw_next_on_same_line();
         self.ui_toolkit.draw_button("=", CLEAR_COLOR, &|| {});
         self.ui_toolkit.draw_next_on_same_line();
         self.render_code(assignment.expression.as_ref())
+    }
+
+    fn render_variable_reference(&self, variable_reference: &VariableReference) {
+        let mut controller = self.controller.borrow_mut();
+        let loaded_code = controller.loaded_code.as_mut().unwrap();
+        let assignment = loaded_code.find_node(variable_reference.assignment_id);
+        if let(Some(CodeNode::Assignment(assignment))) = assignment {
+            self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {});
+        }
     }
 
     fn render_block(&self, block: &Block) {
@@ -202,39 +220,11 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     }
 
     fn render_string_literal(&self, string_literal: &StringLiteral) {
-        if Some(string_literal.id) != *self.controller.borrow().get_selected_node_id() {
-            self.render_string_literal_when_unselected_no_editing_intended(string_literal);
-        } else {
-            self.render_string_literal_inline_for_editing(string_literal)
-        }
-    }
-
-    fn render_string_literal_when_unselected_no_editing_intended(&self, string_literal: &StringLiteral) {
-        let controller = self.controller.clone();
-        let id = string_literal.id;
-        self.ui_toolkit.draw_button(&string_literal.value, CLEAR_COLOR, move || {
-            let mut controller = controller.borrow_mut();
-            controller.set_selected_node_id(Some(id))
-        });
-    }
-
-    fn render_string_literal_inline_for_editing(&self, string_literal: &StringLiteral) {
-        let controller = self.controller.clone();
-        let sl = string_literal.clone();
-
-        let controller2 = self.controller.clone();
-        self.ui_toolkit.draw_text_input(&string_literal.value,
-            move |new_value| {
-                let mut new_node = sl.clone();
-                new_node.value = new_value.to_string();
-                let mut controller = controller.borrow_mut();
-                controller.loaded_code.as_mut().unwrap().replace(&CodeNode::StringLiteral(new_node));
-            },
-            move ||{
-                let mut controller = controller2.borrow_mut();
-                controller.set_selected_node_id(None)
-            });
-        self.ui_toolkit.focus_last_drawn_element();
+        self.render_inline_editable_button(
+            &string_literal.value,
+            CLEAR_COLOR,
+            &CodeNode::StringLiteral(string_literal.clone())
+        )
     }
 
     fn render_run_button(&self, code_node: &CodeNode) {
@@ -244,6 +234,71 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
             let mut controller = controller.borrow_mut();
             controller.run(&code_node);
         })
+    }
+
+    fn render_inline_editable_button(&self, label: &str, color: [f32; 4], code_node: &CodeNode) {
+        if Some(code_node.id()) != *self.controller.borrow().get_selected_node_id() {
+            self.render_inline_editable_button_when_not_editing(label, color, code_node);
+        } else {
+            self.render_inline_editable_button_when_editing(code_node);
+        }
+    }
+
+    fn render_inline_editable_button_when_not_editing(&self, label: &str, color: [f32; 4], code_node: &CodeNode) {
+        let controller = self.controller.clone();
+        let id = code_node.id();
+        self.ui_toolkit.draw_button(label, color, move || {
+            let mut controller = controller.borrow_mut();
+            controller.set_selected_node_id(Some(id))
+        });
+    }
+
+
+    fn render_inline_editable_button_when_editing(&self, code_node: &CodeNode) {
+        self.draw_inline_editor(code_node);
+        self.ui_toolkit.focus_last_drawn_element();
+    }
+
+    fn draw_inline_editor(&self, code_node: &CodeNode) {
+        match code_node {
+            CodeNode::StringLiteral(string_literal) => {
+                let sl = string_literal.clone();
+                self.draw_inline_text_editor(
+                    &string_literal.value,
+                    move |new_value| {
+                        let mut new_literal = sl.clone();
+                        new_literal.value = new_value.to_string();
+                        CodeNode::StringLiteral(new_literal)
+                    })
+            },
+            CodeNode::Assignment(assignment) => {
+                let a = assignment.clone();
+                self.draw_inline_text_editor(
+                    &assignment.name,
+                    move |new_value| {
+                        let mut new_assignment = a.clone();
+                        new_assignment.name = new_value.to_string();
+                        CodeNode::Assignment(new_assignment)
+                    })
+            },
+            _ => panic!("unsupported inline editor for {:?}", code_node)
+        }
+    }
+
+    fn draw_inline_text_editor<F: Fn(&str) -> CodeNode + 'static>(&self, initial_value: &str, new_node_fn: F) {
+        let controller = Rc::clone(&self.controller);
+        let controller2 = Rc::clone(&self.controller);
+        self.ui_toolkit.draw_text_input(
+            initial_value,
+            move |new_value| {
+                let new_node = new_node_fn(new_value);
+                controller.borrow_mut().loaded_code.as_mut().unwrap().replace(&new_node)
+            },
+            move || {
+                controller2.borrow_mut().set_selected_node_id(None)
+            }
+
+        )
     }
 }
 
@@ -263,16 +318,18 @@ impl CSApp {
         // code assignment
         let string_literal = CodeNode::StringLiteral(
             StringLiteral { value: "HW".to_string(), id: 1 });
-        let string_literal2 = CodeNode::StringLiteral(
-            StringLiteral { value: "HW".to_string(), id: 100 });
         let assignment = CodeNode::Assignment(Assignment {
             name: "my variable".to_string(),
             expression: Box::new(string_literal),
             id: 2
         });
+        let variable_reference = CodeNode::VariableReference(VariableReference {
+            assignment_id: assignment.id(),
+            id: 219,
+        });
         let function_call = CodeNode::FunctionCall(FunctionCall {
             function: Box::new(Print {}),
-            args: vec![string_literal2],
+            args: vec![variable_reference],
             id: 3,
         });
         let code_block = CodeNode::Block(Block {
