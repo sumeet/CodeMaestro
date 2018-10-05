@@ -41,6 +41,12 @@ pub enum CodeNode {
     Assignment(Assignment),
     Block(Block),
     VariableReference(VariableReference),
+    FunctionReference(FunctionReference),
+    FunctionDefinition(FunctionDefinition),
+}
+
+pub trait BuiltinFunction {
+    fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
 }
 
 #[derive(Clone)]
@@ -88,6 +94,8 @@ impl CodeNode {
             CodeNode::VariableReference(variable_reference) => {
                 env.get_local_variable(variable_reference.assignment_id).unwrap().clone()
             }
+            CodeNode::FunctionReference(_) => { Value::Null }
+            CodeNode::FunctionDefinition(_) => { Value::Null }
         }
     }
 
@@ -107,6 +115,12 @@ impl CodeNode {
             }
             CodeNode::VariableReference(variable_reference) => {
                 format!("Variable reference: Assignment ID {}", variable_reference.assignment_id)
+            }
+            CodeNode::FunctionReference(function_reference) => {
+                format!("Function reference: {:?}", function_reference)
+            }
+            CodeNode::FunctionDefinition(function_definition) => {
+                format!("Function reference: Name {}", function_definition.name)
             }
         }
     }
@@ -130,6 +144,12 @@ impl CodeNode {
             CodeNode::VariableReference(variable_reference) => {
                 variable_reference.id
             }
+            CodeNode::FunctionDefinition(function_definition) => {
+                function_definition.id
+            }
+            CodeNode::FunctionReference(function_reference) => {
+                function_reference.id
+            }
         }
     }
 
@@ -147,7 +167,13 @@ impl CodeNode {
             CodeNode::Block(block) => {
                 block.expressions.iter_mut().collect()
             }
-            CodeNode::VariableReference(variable_reference) => {
+            CodeNode::VariableReference(_) => {
+                Vec::new()
+            }
+            CodeNode::FunctionDefinition(_) => {
+                Vec::new()
+            }
+            CodeNode::FunctionReference(_) => {
                 Vec::new()
             }
         }
@@ -209,5 +235,18 @@ pub struct Block {
 #[derive(Serialize, Clone,Debug)]
 pub struct VariableReference {
     pub assignment_id: ID,
+    pub id: ID,
+}
+
+
+#[derive(Serialize, Clone, Debug)]
+pub struct FunctionReference {
+    function_id: ID,
+    id: ID,
+}
+
+#[derive(Serialize, Clone,Debug)]
+pub struct FunctionDefinition {
+    pub name: String,
     pub id: ID,
 }

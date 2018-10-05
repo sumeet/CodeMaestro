@@ -194,6 +194,12 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
             CodeNode::VariableReference(variable_reference) => {
                 self.render_variable_reference(&variable_reference)
             }
+            CodeNode::FunctionDefinition(function_definition) => {
+                // TODO: implement this
+            }
+            CodeNode::FunctionReference(function_reference) => {
+                // TODO: implement this
+            }
         }
     }
 
