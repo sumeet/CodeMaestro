@@ -96,6 +96,10 @@ impl Function for Print {
         }
     }
 
+    fn name(&self) -> &str {
+        "Print"
+    }
+
     fn id(&self) -> ID {
         uuid::Uuid::parse_str("b5c18d63-f9a0-4f08-8ee7-e35b3db9122d").unwrap()
     }
@@ -122,7 +126,8 @@ impl<'a> Controller {
 
     // should run the loaded code node
     fn run(&mut self, code_node: &CodeNode) {
-        code_node.evaluate( &mut self.execution_environment);
+        // TODO:  handle errors and surface them in an error window
+        self.execution_environment.evaluate(code_node);
     }
 
     fn read_console(&self) -> &str {
@@ -233,7 +238,8 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) {
-        self.ui_toolkit.draw_button(&format!("{}", function_call.function.id()), BLUE_COLOR, &|| {});
+        // TODO: look up the actual function name somewhere
+        self.ui_toolkit.draw_button(&format!("{}", function_call.function_reference.function_id), BLUE_COLOR, &|| {});
         for code_node in &function_call.args {
             self.ui_toolkit.draw_next_on_same_line();
             self.render_code(code_node)

@@ -9,6 +9,7 @@ use super::uuid::Uuid;
 
 pub trait Function: objekt::Clone {
     fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
+    fn name(&self) -> &str;
     fn id(&self) -> ID;
 }
 
@@ -33,7 +34,7 @@ impl Serialize for Function {
 
 clone_trait_object!(Function);
 
-#[derive(Serialize, Clone ,Debug)]
+#[derive(Deserialize, Serialize, Clone ,Debug)]
 pub enum CodeNode {
     FunctionCall(FunctionCall),
     StringLiteral(StringLiteral),
@@ -50,7 +51,8 @@ pub trait BuiltinFunction {
 
 #[derive(Clone)]
 pub enum Error {
-    ArgumentError
+    ArgumentError,
+    UndefinedFunctionError(ID),
 }
 
 #[derive(Clone)]
@@ -61,47 +63,10 @@ pub enum Value {
 }
 
 impl CodeNode {
-    pub fn evaluate(&self, env: &mut ExecutionEnvironment) -> Value {
-        match self {
-            CodeNode::FunctionCall(function_call) => {
-                let args: Vec<Value> = function_call.args.iter().map(|arg| arg.evaluate(env)).collect();
-                function_call.function.call(env, args)
-            }
-            CodeNode::StringLiteral(string_literal) => {
-                Value::String(string_literal.value.clone())
-            }
-            CodeNode::Assignment(assignment) => {
-                let value = assignment.expression.evaluate(env);
-                // TODO: pretty sure i'll have to return an Rc<Value> in evaluate
-                env.set_local_variable(assignment.id, value.clone());
-                // the result of an assignment is the value being assigned
-                value
-            }
-            CodeNode::Block(block) => {
-                let mut expressions = block.expressions.iter().peekable();
-                while let Some(expression) = expressions.next() {
-                    if expressions.peek().is_some() {
-                        // not the last
-                        expression.evaluate(env);
-                    } else {
-                        return expression.evaluate(env)
-                    }
-                }
-                // if there are no expressions in this block, then it will evaluate to null
-                Value::Null
-            }
-            CodeNode::VariableReference(variable_reference) => {
-                env.get_local_variable(variable_reference.assignment_id).unwrap().clone()
-            }
-            CodeNode::FunctionReference(_) => { Value::Null }
-            CodeNode::FunctionDefinition(_) => { Value::Null }
-        }
-    }
-
     pub fn description(&self) -> String {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                format!("Function call: {}", function_call.function.id())
+                format!("Function call: {}", function_call.id)
             }
             CodeNode::StringLiteral(string_literal) => {
                 format!("String literal: {}", string_literal.value)
@@ -204,20 +169,20 @@ impl CodeNode {
 
 pub type ID = Uuid;
 
-#[derive(Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct StringLiteral {
     pub value: String,
     pub id: ID,
 }
 
-#[derive(Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct FunctionCall {
-    pub function: Box<Function>,
+    pub function_reference: FunctionReference,
     pub args: Vec<CodeNode>,
     pub id: ID,
 }
 
-#[derive(Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct Assignment {
     pub name: String,
     // TODO: consider differentiating between CodeNodes and Expressions.
@@ -225,26 +190,26 @@ pub struct Assignment {
     pub id: ID,
 }
 
-#[derive(Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct Block {
     pub expressions: Vec<CodeNode>,
     pub id: ID,
 }
 
-#[derive(Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct VariableReference {
     pub assignment_id: ID,
     pub id: ID,
 }
 
 
-#[derive(Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 pub struct FunctionReference {
-    function_id: ID,
-    id: ID,
+    pub function_id: ID,
+    pub id: ID,
 }
 
-#[derive(Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct FunctionDefinition {
     pub name: String,
     pub id: ID,
