@@ -65,6 +65,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build(f)
     }
 
+    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
+        let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
+        self.ui.child_frame(im_str!(""), (0.0, -frame_height))
+            .build(draw_content_fn);
+        draw_bottom_bar_fn()
+    }
+
     fn draw_empty_line(&self) {
         self.ui.new_line();
     }

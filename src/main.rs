@@ -169,6 +169,7 @@ pub struct CSApp {
 
 trait UiToolkit {
     fn draw_window(&self, window_name: &str, f: &Fn());
+    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn());
     fn draw_empty_line(&self);
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F);
     fn draw_text_box(&self, text: &str);
@@ -177,12 +178,12 @@ trait UiToolkit {
     fn focus_last_drawn_element(&self);
 }
 
-struct AppRenderer<'a, T> {
+struct Renderer<'a, T> {
     ui_toolkit: &'a mut T,
     controller: Rc<RefCell<Controller>>,
 }
 
-impl<'a, T: UiToolkit> AppRenderer<'a, T> {
+impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_console_window(&self) {
         let controller = self.controller.clone();
         self.ui_toolkit.draw_window("Console", &|| {
@@ -207,10 +208,10 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
             // the run button at the bottom, like in this example: https://github.com/ocornut/imgui/issues/425
             Some(ref code) => {
                 self.ui_toolkit.draw_window(&code.description(), &|| {
-                    self.render_code(code);
-                    self.ui_toolkit.draw_empty_line();
-                    self.render_run_button(code);
-                })
+                    self.ui_toolkit.draw_layout_with_bottom_bar(
+                        &||{ self.render_code(code); },
+                        &||{ self.render_run_button(code); }
+                    )})
             }
         }
     }
@@ -385,7 +386,7 @@ impl CSApp {
     }
 
     fn draw<T: UiToolkit>(self: &Rc<CSApp>, ui_toolkit: &mut T) {
-        let app_renderer = AppRenderer {
+        let app_renderer = Renderer {
             ui_toolkit: ui_toolkit,
             controller: self.controller.clone(),
         };

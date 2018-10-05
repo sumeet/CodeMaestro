@@ -55,6 +55,14 @@ impl UiToolkit for YewToolkit {
         });
     }
 
+    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
+        // TODO: this is super jank. i think i can use a stack to properly implement returns via
+        // interior mutability
+        draw_content_fn();
+        self.draw_empty_line();
+        draw_bottom_bar_fn();
+    }
+
     // BROKEN: currently it's a very tiny line
     fn draw_empty_line(&self) {
         self.push_html_into_current_window(html!{ <br />})
