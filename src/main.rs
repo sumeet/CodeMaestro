@@ -32,6 +32,8 @@ mod yew_toolkit;
 #[macro_use]
 extern crate objekt;
 
+extern crate uuid;
+
 #[macro_use]
 extern crate failure;
 
@@ -94,8 +96,8 @@ impl Function for Print {
         }
     }
 
-    fn uuid(&self) -> &str {
-        "Print"
+    fn id(&self) -> ID {
+        uuid::Uuid::parse_str("b5c18d63-f9a0-4f08-8ee7-e35b3db9122d").unwrap()
     }
 }
 
@@ -231,7 +233,7 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) {
-        self.ui_toolkit.draw_button(function_call.function.uuid(), BLUE_COLOR, &|| {});
+        self.ui_toolkit.draw_button(&format!("{}", function_call.function.id()), BLUE_COLOR, &|| {});
         for code_node in &function_call.args {
             self.ui_toolkit.draw_next_on_same_line();
             self.render_code(code_node)

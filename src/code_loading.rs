@@ -3,6 +3,7 @@ use super::lang::CodeNode;
 use super::{Print};
 use super::failure::{Error,err_msg};
 use super::serde_json;
+use super::uuid::Uuid;
 
 
 //fn load(filename: &str) -> Result<CodeNode,Error> {
@@ -114,7 +115,7 @@ fn read_code_nodes(value: &serde_json::Value, field_name: &str) -> Result<Vec<la
 
 fn read_id(value: &serde_json::Value, field_name: &str) -> Result<lang::ID, Error> {
     match value.get(field_name) {
-        Some(serde_json::Value::Number(number)) => Ok(number.as_u64().unwrap()),
-        _ => Err(err_msg(format!("no ID field found")))
+        Some(serde_json::Value::String(string)) => Ok(Uuid::parse_str(string)?),
+        _ => Err(err_msg(format!("no ID field found in {:?}", value)))
     }
 }

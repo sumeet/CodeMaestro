@@ -1,1 +1,35 @@
-{"Block":{"expressions":[{"Assignment":{"name":"my variable","expression":{"StringLiteral":{"value":"HW","id":1}},"id":2}},{"FunctionCall":{"function":{"uuid":"ThePrintFunction"},"args":[{"VariableReference":{"assignment_id":2,"id":219}}],"id":3}}],"id":4}}
+{
+    "Block": {
+        "expressions": [
+            {
+                "Assignment": {
+                    "name": "my variable",
+                    "expression": {
+                        "StringLiteral": {
+                            "value": "HW",
+                            "id": "4ef63614-a462-4de5-ae68-7671bb03ac4e"
+                        }
+                    },
+                    "id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e"
+                }
+            },
+            {
+                "FunctionCall": {
+                    "function": {
+                        "uuid": "ThePrintFunction"
+                    },
+                    "args": [
+                        {
+                            "VariableReference": {
+                                "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                                "id": "2b80cbcd-835d-4ba7-910b-bbfecf8a33db"
+                            }
+                        }
+                    ],
+                    "id": "b702d87f-28bb-4c2c-b22a-318c342dbaa3"
+                }
+            }
+        ],
+        "id": "b702d87f-28bb-4c2c-b22a-318c342dbaa3"
+    }
+}

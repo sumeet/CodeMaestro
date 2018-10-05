@@ -2,19 +2,19 @@ use std::fmt;
 use std::borrow::BorrowMut;
 use std::rc::Rc;
 
-use super::{erased_serde};
 use serde::ser::{Serialize, Serializer, SerializeSeq, SerializeMap};
 
 use super::ExecutionEnvironment;
+use super::uuid::Uuid;
 
 pub trait Function: objekt::Clone {
     fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
-    fn uuid(&self) -> &str;
+    fn id(&self) -> ID;
 }
 
 impl fmt::Debug for Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<Function: {}>", self.uuid())
+        write!(f, "<Function: {}>", self.id())
     }
 }
 
@@ -26,13 +26,12 @@ impl Serialize for Function {
             S: Serializer,
     {
         let mut map = serializer.serialize_map(Some(1))?;
-        map.serialize_entry("temp_function_by_uuid", self.uuid())?;
+        map.serialize_entry("temp_function_by_uuid", &self.id().to_string())?;
         map.end()
     }
 }
 
 clone_trait_object!(Function);
-//serialize_trait_object!(Function);
 
 #[derive(Serialize, Clone ,Debug)]
 pub enum CodeNode {
@@ -102,7 +101,7 @@ impl CodeNode {
     pub fn description(&self) -> String {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                format!("Function call: {}", function_call.function.uuid())
+                format!("Function call: {}", function_call.function.id())
             }
             CodeNode::StringLiteral(string_literal) => {
                 format!("String literal: {}", string_literal.value)
@@ -203,7 +202,7 @@ impl CodeNode {
     }
 }
 
-pub type ID = u64;
+pub type ID = Uuid;
 
 #[derive(Serialize, Clone,Debug)]
 pub struct StringLiteral {
