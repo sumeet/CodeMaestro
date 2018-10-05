@@ -62,6 +62,7 @@ use self::lang::{
     VariableReference};
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
+const RED_COLOR: [f32; 4] = [0.858, 0.180, 0.180, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
 const PURPLE_COLOR: [f32; 4] = [0.486, 0.353, 0.952, 1.0];
 const CLEAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
@@ -120,6 +121,14 @@ impl<'a> Controller {
             loaded_code: None,
             error_console: String::new(),
         }
+    }
+
+    fn load_function(&mut self, function: Box<Function>) {
+        self.execution_environment.add_function(function.clone())
+    }
+
+    fn find_function(&self, id: ID) -> Option<&Box<Function>> {
+        self.execution_environment.find_function(id)
     }
 
     fn load_code(&mut self, code_node: &CodeNode) {
@@ -191,7 +200,11 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     fn render_code_window(&self) {
         let loaded_code = self.controller.borrow().loaded_code.clone();
         match loaded_code {
-            None => {},
+            None => {
+                self.ui_toolkit.draw_button("No code loaded", CLEAR_COLOR, &||{})
+            },
+            // TODO this just looks weird now. we should put the code in a child frame, and
+            // the run button at the bottom, like in this example: https://github.com/ocornut/imgui/issues/425
             Some(ref code) => {
                 self.ui_toolkit.draw_window(&code.description(), &|| {
                     self.render_code(code);
@@ -256,8 +269,20 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) {
-        // TODO: look up the actual function name somewhere
-        self.ui_toolkit.draw_button(&format!("{}", function_call.function_reference.function_id), BLUE_COLOR, &|| {});
+        let function_id = function_call.function_reference.function_id;
+
+        // TODO: don't do validation in here. this is just so i can see what this error looks
+        // like visually. for realz, i would probably be better off having a separate validation
+        // step. and THEN show the errors in here. or maybe overlay something on the codenode that
+        // contains the error
+        let mut color = RED_COLOR;
+        let mut function_name = format!("Error: function ID {} not found", function_id);
+
+        if let(Some(function)) = self.controller.borrow_mut().find_function(function_id) {
+            color = BLUE_COLOR;
+            function_name = function.name().to_string();
+        }
+        self.ui_toolkit.draw_button(&function_name, color, &|| {});
         for code_node in &function_call.args {
             self.ui_toolkit.draw_next_on_same_line();
             self.render_code(code_node)
@@ -355,6 +380,7 @@ impl CSApp {
             controller: Rc::new(RefCell::new(Controller::new())),
         };
         app.controller.borrow_mut().load_code(&loaded_code);
+        app.controller.borrow_mut().load_function(Box::new(Print{}));
         app
     }
 

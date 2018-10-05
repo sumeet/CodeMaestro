@@ -17,6 +17,10 @@ impl ExecutionEnvironment {
         }
     }
 
+    pub fn add_function(&mut self, function: Box<lang::Function>) {
+        self.functions.insert(function.id(), function);
+    }
+
     pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> lang::Value {
         match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
@@ -72,11 +76,7 @@ impl ExecutionEnvironment {
     }
 
     pub fn get_local_variable(&self, id: lang::ID) -> Option<&lang::Value> {
-        if self.locals.contains_key(&id) {
-            Some(&self.locals[&id])
-        } else {
-            None
-        }
+        self.locals.get(&id)
 
     }
 
