@@ -19,19 +19,6 @@ impl fmt::Debug for Function {
     }
 }
 
-// TODO: this way of serializing functions won't fly. later, figure out how the program should
-// actually reference functions
-impl Serialize for Function {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-    {
-        let mut map = serializer.serialize_map(Some(1))?;
-        map.serialize_entry("temp_function_by_uuid", &self.id().to_string())?;
-        map.end()
-    }
-}
-
 clone_trait_object!(Function);
 
 #[derive(Deserialize, Serialize, Clone ,Debug)]
@@ -49,7 +36,7 @@ pub trait BuiltinFunction {
     fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Error {
     ArgumentError,
     UndefinedFunctionError(ID),

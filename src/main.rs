@@ -109,6 +109,7 @@ pub struct Controller {
     execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
     loaded_code: Option<CodeNode>,
+    error_console: String,
 }
 
 impl<'a> Controller {
@@ -117,6 +118,7 @@ impl<'a> Controller {
             execution_environment: ExecutionEnvironment::new(),
             selected_node_id: None,
             loaded_code: None,
+            error_console: String::new(),
         }
     }
 
@@ -126,12 +128,21 @@ impl<'a> Controller {
 
     // should run the loaded code node
     fn run(&mut self, code_node: &CodeNode) {
-        // TODO:  handle errors and surface them in an error window
-        self.execution_environment.evaluate(code_node);
+        match self.execution_environment.evaluate(code_node) {
+            Value::Result(Err(e)) => {
+                self.error_console.push_str(&format!("{:?}", e));
+                self.error_console.push_str("\n");
+            }
+            _ => { }
+        }
     }
 
     fn read_console(&self) -> &str {
         &self.execution_environment.console
+    }
+
+    fn read_error_console(&self) -> &str {
+        &self.error_console
     }
 
     fn set_selected_node_id(&mut self, code_node_id: Option<ID>) {
@@ -167,6 +178,13 @@ impl<'a, T: UiToolkit> AppRenderer<'a, T> {
         let controller = self.controller.clone();
         self.ui_toolkit.draw_window("Console", &|| {
             self.ui_toolkit.draw_text_box(controller.borrow().read_console());
+        })
+    }
+
+    fn render_error_window(&self) {
+        let controller = self.controller.clone();
+        self.ui_toolkit.draw_window("Errors", &|| {
+            self.ui_toolkit.draw_text_box(controller.borrow().read_error_console());
         })
     }
 
@@ -348,5 +366,6 @@ impl CSApp {
 
         app_renderer.render_code_window();
         app_renderer.render_console_window();
+        app_renderer.render_error_window();
     }
 }
