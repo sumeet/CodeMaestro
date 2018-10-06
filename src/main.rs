@@ -147,6 +147,9 @@ impl<'a> Controller {
             Key::W => {
                 self.try_select_forward_one_node()
             },
+            Key::C => {
+                self.editing = true
+            }
             _ => {},
         }
     }
@@ -318,6 +321,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_code(&self, code_node: &CodeNode) {
+        if self.is_editing(code_node) {
+            self.draw_inline_editor(code_node);
+            // TODO: should we always focus the last drawn element, even if there isn't any editor
+            // for that code node type?
+            self.ui_toolkit.focus_last_drawn_element();
+            return
+        }
         let draw = ||{
             match code_node {
                 CodeNode::FunctionCall(function_call) => {
@@ -416,14 +426,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_inline_editable_button(&self, label: &str, color: [f32; 4], code_node: &CodeNode) {
-        if self.is_editing(code_node) {
-            self.render_inline_editable_button_when_editing(code_node);
-        } else {
-            self.render_inline_editable_button_when_not_editing(label, color, code_node);
-        }
-    }
-
-    fn render_inline_editable_button_when_not_editing(&self, label: &str, color: [f32; 4], code_node: &CodeNode) {
         let controller = self.controller.clone();
         let id = code_node.id();
         self.ui_toolkit.draw_button(label, color, move || {
@@ -431,11 +433,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             controller.set_selected_node_id(Some(id));
             controller.editing = true;
         });
-    }
-
-    fn render_inline_editable_button_when_editing(&self, code_node: &CodeNode) {
-        self.draw_inline_editor(code_node);
-        self.ui_toolkit.focus_last_drawn_element();
     }
 
     fn is_selected(&self, code_node: &CodeNode) -> bool {
@@ -468,7 +465,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         CodeNode::Assignment(new_assignment)
                     })
             },
-            _ => panic!("unsupported inline editor for {:?}", code_node)
+            _ => {
+                self.controller.borrow_mut().editing = false
+            }
         }
     }
 
