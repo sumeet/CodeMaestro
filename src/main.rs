@@ -36,6 +36,8 @@ extern crate uuid;
 
 #[macro_use]
 extern crate failure;
+use failure::{err_msg};
+use failure::Error as Error;
 
 #[macro_use]
 extern crate serde_derive;
@@ -58,7 +60,7 @@ mod code_loading;
 
 use self::env::{ExecutionEnvironment};
 use self::lang::{
-    Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error,Assignment,Block,
+    Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error as LangError,Assignment,Block,
     VariableReference};
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
@@ -93,7 +95,7 @@ impl Function for Print {
                 env.println(string);
                 Value::Null
             }
-            _ => Value::Result(Result::Err(Error::ArgumentError))
+            _ => Value::Result(Result::Err(LangError::ArgumentError))
         }
     }
 
@@ -136,7 +138,89 @@ impl<'a> Controller {
     }
 
     fn handle_key_press(&mut self, key: Key) {
-        println!("{:?}", key)
+        // don't perform any commands when in edit mode
+        if self.editing { return }
+        match key {
+            Key::B => {
+                self.try_select_back_one_node()
+            },
+            Key::W => {
+                self.try_select_forward_one_node()
+            },
+            _ => {},
+        }
+    }
+
+    fn try_select_back_one_node(&mut self) {
+        let root_node_was_selected = self.select_loaded_code_if_nothing_selected();
+        if root_node_was_selected.is_err() || root_node_was_selected.unwrap() {
+            // if nothing was selected, and we selected the root node, then our job is done.
+            return
+        }
+
+        let selected_node_id = self.get_selected_node_id().unwrap();
+        let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
+        let parent = loaded_code.find_parent(selected_node_id);
+        if parent.is_none() {
+            return
+        }
+        let mut parent = parent.unwrap();
+
+        // first try selecting the previous sibling
+        if let(Some(mut previous_sibling)) = parent.previous_child(selected_node_id) {
+            // but since we're going back, if the previous sibling has children, then let's
+            // select the last one. that feels more ergonomic while moving backwards
+            let children = previous_sibling.children();
+            if children.len() > 0 {
+                self.set_selected_node_id(Some(children[0].id()))
+            } else {
+                self.set_selected_node_id(Some(previous_sibling.id()));
+            }
+            return
+        }
+
+        // if there is no previous sibling, select the parent
+        self.set_selected_node_id(Some(parent.id()));
+    }
+
+    fn try_select_forward_one_node(&mut self) {
+        let root_node_was_selected = self.select_loaded_code_if_nothing_selected();
+        if root_node_was_selected.is_err() || root_node_was_selected.unwrap() {
+            // if nothing was selected, and we selected the root node, then our job is done.
+            return
+        }
+
+        let selected_node_id = self.get_selected_node_id().unwrap();
+        let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
+
+        let mut selected_code = loaded_code.find_node(selected_node_id).as_mut().unwrap().clone();
+        let children = selected_code.children();
+        let first_child = children.get(0);
+
+        if let(Some(first_child)) = first_child {
+            self.set_selected_node_id(Some(first_child.id()));
+            return
+        }
+
+        let parent = loaded_code.find_parent(selected_node_id);
+        if parent.is_none() {
+            return
+        }
+        let parent = parent.unwrap();
+        if let(Some(next_sibling)) = loaded_code.next_child(parent.id()) {
+            self.set_selected_node_id(Some(next_sibling.id()));
+            return
+        }
+    }
+
+    fn select_loaded_code_if_nothing_selected(&mut self) -> Result<bool,Error> {
+        if self.loaded_code.is_none() { return Err(err_msg("No code loaded")) }
+        let loaded_code = self.loaded_code.as_ref().unwrap().clone();
+        if self.get_selected_node_id().is_none() {
+            self.set_selected_node_id(Some(loaded_code.id()));
+            return Ok(true)
+        }
+        Ok(false)
     }
 
     fn load_function(&mut self, function: Box<Function>) {

@@ -104,6 +104,32 @@ impl CodeNode {
         }
     }
 
+
+    pub fn previous_child(&mut self, node_id: ID) -> Option<CodeNode> {
+        let children = self.children();
+        let position = children.iter().position(|n| n.id() == node_id);
+        if let(Some(position)) = position {
+            if position > 0 {
+                if let (Some(next)) = children.get(position - 1) {
+                    return Some((*next).clone())
+                }
+            }
+        }
+        None
+    }
+
+    pub fn next_child(&mut self, node_id: ID) -> Option<CodeNode> {
+        let children = self.children();
+        let length = children.len();
+        let position = children.iter().position(|n| n.id() == node_id);
+        if let(Some(position)) = position {
+            if let (Some(next)) = children.get(position + 1) {
+                return Some((*next).clone())
+            }
+        }
+        None
+    }
+
     pub fn children(&mut self) -> Vec<&mut CodeNode> {
         match self {
             CodeNode::FunctionCall(function_call) => {
@@ -151,6 +177,25 @@ impl CodeNode {
             }
             None
         }
+    }
+
+    pub fn find_parent(&mut self, id: ID) -> Option<CodeNode> {
+        if self.id() == id {
+            return None
+        } else {
+            let children = self.children();
+            for child in children {
+                if child.id() == id {
+                    return Some(self.clone())
+                } else {
+                    let found_parent = child.find_parent(id);
+                    if let(Some(code_node)) = found_parent {
+                        return Some(code_node)
+                    }
+                }
+            }
+        }
+        None
     }
 }
 

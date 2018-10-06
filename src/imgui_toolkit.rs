@@ -79,7 +79,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_border_around(&self, draw_fn: &Fn()) {
-        self.ui.with_style_var(StyleVar::FrameBorderSize(2.0), draw_fn)
+        self.ui.with_style_var(StyleVar::FrameBorderSize(4.0), draw_fn)
     }
 
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
