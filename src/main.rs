@@ -123,7 +123,8 @@ pub enum Key {
     C,
     D,
     W,
-    X
+    X,
+    R
 }
 
 impl<'a> Controller {
@@ -149,6 +150,9 @@ impl<'a> Controller {
             },
             Key::C => {
                 self.editing = true
+            },
+            Key::R => {
+                self.run(&self.loaded_code.as_ref().unwrap().clone())
             }
             _ => {},
         }

@@ -264,6 +264,7 @@ fn map_key(key: Key) -> Option<AppKey> {
         Key::D => Some(AppKey::D),
         Key::W => Some(AppKey::W),
         Key::X => Some(AppKey::X),
+        Key::R => Some(AppKey::R),
         _ => None
     }
 }
