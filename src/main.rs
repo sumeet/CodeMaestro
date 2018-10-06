@@ -109,8 +109,19 @@ impl Function for Print {
 pub struct Controller {
     execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
+    editing: bool,
     loaded_code: Option<CodeNode>,
     error_console: String,
+}
+
+#[derive(Debug)]
+pub enum Key {
+    A,
+    B,
+    C,
+    D,
+    W,
+    X
 }
 
 impl<'a> Controller {
@@ -120,7 +131,12 @@ impl<'a> Controller {
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
+            editing: false,
         }
+    }
+
+    fn handle_key_press(&mut self, key: Key) {
+        println!("{:?}", key)
     }
 
     fn load_function(&mut self, function: Box<Function>) {
@@ -175,6 +191,7 @@ trait UiToolkit {
     fn draw_text_box(&self, text: &str);
     fn draw_next_on_same_line(&self);
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D);
+    fn draw_border_around(&self, draw_fn: &Fn());
     fn focus_last_drawn_element(&self);
 }
 
@@ -217,28 +234,35 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_code(&self, code_node: &CodeNode) {
-        match code_node {
-            CodeNode::FunctionCall(function_call) => {
-                self.render_function_call(&function_call);
+        let draw = ||{
+            match code_node {
+                CodeNode::FunctionCall(function_call) => {
+                    self.render_function_call(&function_call);
+                }
+                CodeNode::StringLiteral(string_literal) => {
+                    self.render_string_literal(&string_literal);
+                }
+                CodeNode::Assignment(assignment) => {
+                    self.render_assignment(&assignment);
+                }
+                CodeNode::Block(block) => {
+                    self.render_block(&block)
+                }
+                CodeNode::VariableReference(variable_reference) => {
+                    self.render_variable_reference(&variable_reference)
+                }
+                CodeNode::FunctionDefinition(function_definition) => {
+                    // TODO: implement this
+                }
+                CodeNode::FunctionReference(function_reference) => {
+                    // TODO: implement this
+                }
             }
-            CodeNode::StringLiteral(string_literal) => {
-                self.render_string_literal(&string_literal);
-            }
-            CodeNode::Assignment(assignment) => {
-                self.render_assignment(&assignment);
-            }
-            CodeNode::Block(block) => {
-                self.render_block(&block)
-            }
-            CodeNode::VariableReference(variable_reference) => {
-                self.render_variable_reference(&variable_reference)
-            }
-            CodeNode::FunctionDefinition(function_definition) => {
-                // TODO: implement this
-            }
-            CodeNode::FunctionReference(function_reference) => {
-                // TODO: implement this
-            }
+        };
+        if self.is_selected(code_node) {
+            self.ui_toolkit.draw_border_around(&draw)
+        } else {
+            draw()
         }
     }
 
@@ -308,10 +332,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_inline_editable_button(&self, label: &str, color: [f32; 4], code_node: &CodeNode) {
-        if Some(code_node.id()) != *self.controller.borrow().get_selected_node_id() {
-            self.render_inline_editable_button_when_not_editing(label, color, code_node);
-        } else {
+        if self.is_editing(code_node) {
             self.render_inline_editable_button_when_editing(code_node);
+        } else {
+            self.render_inline_editable_button_when_not_editing(label, color, code_node);
         }
     }
 
@@ -320,14 +344,22 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let id = code_node.id();
         self.ui_toolkit.draw_button(label, color, move || {
             let mut controller = controller.borrow_mut();
-            controller.set_selected_node_id(Some(id))
+            controller.set_selected_node_id(Some(id));
+            controller.editing = true;
         });
     }
-
 
     fn render_inline_editable_button_when_editing(&self, code_node: &CodeNode) {
         self.draw_inline_editor(code_node);
         self.ui_toolkit.focus_last_drawn_element();
+    }
+
+    fn is_selected(&self, code_node: &CodeNode) -> bool {
+        Some(code_node.id()) == *self.controller.borrow().get_selected_node_id()
+    }
+
+    fn is_editing(&self, code_node: &CodeNode) -> bool {
+        self.is_selected(code_node) && self.controller.borrow().editing
     }
 
     fn draw_inline_editor(&self, code_node: &CodeNode) {
@@ -366,7 +398,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 controller.borrow_mut().loaded_code.as_mut().unwrap().replace(&new_node)
             },
             move || {
-                controller2.borrow_mut().set_selected_node_id(None)
+                controller2.borrow_mut().editing = false
             }
 
         )

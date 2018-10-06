@@ -1,5 +1,13 @@
 use imgui::{FontGlyphRange, FrameSize, ImFontConfig, ImGui, ImGuiMouseCursor, Ui};
 use std::time::Instant;
+use glium::glutin::ElementState::Pressed;
+use glium::glutin::WindowEvent::*;
+use glium::glutin::{Event, MouseButton, MouseScrollDelta, TouchPhase};
+use glium::glutin::VirtualKeyCode as Key;
+
+use super::Key as AppKey;
+
+
 
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
 struct MouseState {
@@ -8,7 +16,7 @@ struct MouseState {
     wheel: f32,
 }
 
-pub fn run<F: FnMut(&Ui) -> bool>(title: String, clear_color: [f32; 4], mut run_ui: F) {
+pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f32; 4], mut run_ui: F, on_key_press: D) {
     use glium::glutin;
     use glium::{Display, Surface};
     use imgui_glium_renderer::Renderer;
@@ -71,16 +79,10 @@ pub fn run<F: FnMut(&Ui) -> bool>(title: String, clear_color: [f32; 4], mut run_
 
     loop {
         events_loop.poll_events(|event| {
-            use glium::glutin::ElementState::Pressed;
-            use glium::glutin::WindowEvent::*;
-            use glium::glutin::{Event, MouseButton, MouseScrollDelta, TouchPhase};
-
             if let Event::WindowEvent { event, .. } = event {
                 match event {
                     CloseRequested => quit = true,
                     KeyboardInput { input, .. } => {
-                        use glium::glutin::VirtualKeyCode as Key;
-
                         let pressed = input.state == Pressed;
                         match input.virtual_keycode {
                             Some(Key::Tab) => imgui.set_key(0, pressed),
@@ -109,6 +111,16 @@ pub fn run<F: FnMut(&Ui) -> bool>(title: String, clear_color: [f32; 4], mut run_
                             Some(Key::LAlt) | Some(Key::RAlt) => imgui.set_key_alt(pressed),
                             Some(Key::LWin) | Some(Key::RWin) => imgui.set_key_super(pressed),
                             _ => {}
+                        }
+                        if pressed {
+                            match input.virtual_keycode {
+                                Some(key) => {
+                                    if let (Some(key)) = map_key(key) {
+                                        on_key_press(key)
+                                    }
+                                }
+                                _ => {}
+                            }
                         }
                     }
                     CursorMoved { position: pos, .. } => {
@@ -242,4 +254,16 @@ fn update_mouse(imgui: &mut ImGui, mouse_state: &mut MouseState) {
     ]);
     imgui.set_mouse_wheel(mouse_state.wheel);
     mouse_state.wheel = 0.0;
+}
+
+fn map_key(key: Key) -> Option<AppKey> {
+    match key {
+        Key::A => Some(AppKey::A),
+        Key::B => Some(AppKey::B),
+        Key::C => Some(AppKey::C),
+        Key::D => Some(AppKey::D),
+        Key::W => Some(AppKey::W),
+        Key::X => Some(AppKey::X),
+        _ => None
+    }
 }

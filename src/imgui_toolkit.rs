@@ -1,4 +1,4 @@
-use super::{CSApp, UiToolkit};
+use super::{CSApp, UiToolkit,Key};
 use super::imgui_support;
 use imgui::*;
 use std::rc::Rc;
@@ -11,11 +11,14 @@ const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 // lifetime specifier from the definition in App::draw. that'll get it back to the way i had it
 // before
 pub fn draw_app(app: Rc<CSApp>) {
-    imgui_support::run("cs".to_owned(), CLEAR_COLOR, |ui| {
-        let mut toolkit = ImguiToolkit::new(ui);
-        app.draw(&mut toolkit);
-        true
-    });
+    imgui_support::run("cs".to_owned(), CLEAR_COLOR,
+        |ui| {
+            let mut toolkit = ImguiToolkit::new(ui);
+            app.draw(&mut toolkit);
+            true
+        },
+        |key| { app.controller.borrow_mut().handle_key_press(key) },
+    );
 }
 
 struct State {
@@ -64,7 +67,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .size((300.0, 100.0), ImGuiCond::FirstUseEver)
             .build(f)
     }
-
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
         self.ui.child_frame(im_str!(""), (0.0, -frame_height))
@@ -76,12 +78,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.new_line();
     }
 
-    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F) {
-        self.ui.with_color_var(ImGuiCol::Button, color, || {
-            if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
-                f()
-            }
-        });
+    fn draw_border_around(&self, draw_fn: &Fn()) {
+        self.ui.with_style_var(StyleVar::FrameBorderSize(2.0), draw_fn)
+    }
+
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
+            self.ui.with_color_var(ImGuiCol::Button, color, || {
+                if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
+                    on_button_activate()
+                }
+            });
     }
 
     fn draw_next_on_same_line(&self) {
