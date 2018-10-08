@@ -1,4 +1,4 @@
-use super::{CSApp, UiToolkit,UiToolkit2,Key as AppKey};
+use super::{CSApp, UiToolkit,Key as AppKey};
 use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -69,7 +69,7 @@ struct YewToolkit {
     javascript_to_run_after_render: RefCell<Vec<String>>,
 }
 
-impl UiToolkit2 for YewToolkit {
+impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult {

@@ -275,7 +275,7 @@ pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,
 }
 
-trait UiToolkit2 {
+trait UiToolkit {
     type DrawResult;
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
@@ -290,24 +290,12 @@ trait UiToolkit2 {
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
 }
 
-trait UiToolkit {
-    fn draw_window(&self, window_name: &str, f: &Fn());
-    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn());
-    fn draw_empty_line(&self);
-    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F);
-    fn draw_text_box(&self, text: &str);
-    fn draw_next_on_same_line(&self);
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D);
-    fn draw_border_around(&self, draw_fn: &Fn());
-    fn focus_last_drawn_element(&self);
-}
-
 struct Renderer<'a, T> {
     ui_toolkit: &'a mut T,
     controller: Rc<RefCell<Controller>>,
 }
 
-impl<'a, T: UiToolkit2> Renderer<'a, T> {
+impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_app(&self) -> T::DrawResult {
         self.ui_toolkit.draw_all(vec![
             self.render_code_window(),
@@ -552,7 +540,7 @@ impl CSApp {
         app
     }
 
-    fn draw<T: UiToolkit2>(self: &Rc<CSApp>, ui_toolkit: &mut T) -> T::DrawResult {
+    fn draw<T: UiToolkit>(self: &Rc<CSApp>, ui_toolkit: &mut T) -> T::DrawResult {
         let renderer = Renderer {
             ui_toolkit: ui_toolkit,
             controller: self.controller.clone(),

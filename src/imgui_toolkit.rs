@@ -62,6 +62,29 @@ impl<'a> ImguiToolkit<'a> {
 }
 
 impl<'a> UiToolkit for ImguiToolkit<'a> {
+    type DrawResult = ();
+
+    // XXX: these should be draw funcs....
+    fn draw_all(&self, _draw_results: Vec<()>) {
+    }
+
+    fn focused(&self, draw_fn: &Fn()) {
+        draw_fn();
+        unsafe { imgui_sys::igSetKeyboardFocusHere(0) }
+    }
+
+    fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn()>) {
+        let draw_fns = draw_fns.as_slice();
+        if draw_fns.is_empty() { return; }
+        let last_index = draw_fns.len() - 1;
+        let last_draw_fn = draw_fns[last_index];
+        for draw_fn in &draw_fns[0..last_index] {
+            draw_fn();
+            self.ui.same_line_spacing(0.0, 1.0);
+        }
+        last_draw_fn();
+    }
+
     fn draw_window(&self, window_name: &str, f: &Fn()) {
         self.ui.window(im_str!("{}", window_name))
             .size((300.0, 100.0), ImGuiCond::FirstUseEver)
@@ -90,10 +113,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             });
     }
 
-    fn draw_next_on_same_line(&self) {
-        self.ui.same_line_spacing(0.0, 1.0);
-    }
-
     fn draw_text_box(&self, text: &str) {
         self.ui.text(text);
         // GHETTO: text box is always scrolled to the bottom
@@ -117,9 +136,5 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         if input.as_ref() as &str != existing_value {
             onchange(input.as_ref() as &str)
         }
-    }
-
-    fn focus_last_drawn_element(&self) {
-        unsafe { imgui_sys::igSetKeyboardFocusHere(0) }
     }
 }
