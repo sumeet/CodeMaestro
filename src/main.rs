@@ -3,6 +3,7 @@
 #![feature(specialization)]
 #![feature(nll)]
 #![feature(arbitrary_self_types)]
+#![feature(slice_concat_ext)]
 
 #[cfg(feature = "default")]
 extern crate glium;
@@ -60,7 +61,7 @@ mod code_loading;
 
 use self::env::{ExecutionEnvironment};
 use self::lang::{
-    Value,CodeNode,Function,FunctionCall,StringLiteral,ID,Error as LangError,Assignment,Block,
+    Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Error as LangError,Assignment,Block,
     VariableReference};
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
@@ -274,6 +275,21 @@ pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,
 }
 
+trait UiToolkit2 {
+    type DrawResult;
+
+    fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
+    fn draw_window(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_empty_line(&self) -> Self::DrawResult;
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F) -> Self::DrawResult;
+    fn draw_text_box(&self, text: &str) -> Self::DrawResult;
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
+    fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
+    fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+}
+
 trait UiToolkit {
     fn draw_window(&self, window_name: &str, f: &Fn());
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn());
@@ -291,22 +307,30 @@ struct Renderer<'a, T> {
     controller: Rc<RefCell<Controller>>,
 }
 
-impl<'a, T: UiToolkit> Renderer<'a, T> {
-    fn render_console_window(&self) {
+impl<'a, T: UiToolkit2> Renderer<'a, T> {
+    fn render_app(&self) -> T::DrawResult {
+        self.ui_toolkit.draw_all(vec![
+            self.render_code_window(),
+            self.render_console_window(),
+            self.render_error_window(),
+        ])
+    }
+
+    fn render_console_window(&self) -> T::DrawResult {
         let controller = self.controller.clone();
         self.ui_toolkit.draw_window("Console", &|| {
-            self.ui_toolkit.draw_text_box(controller.borrow().read_console());
+            self.ui_toolkit.draw_text_box(controller.borrow().read_console())
         })
     }
 
-    fn render_error_window(&self) {
+    fn render_error_window(&self) -> T::DrawResult {
         let controller = self.controller.clone();
         self.ui_toolkit.draw_window("Errors", &|| {
-            self.ui_toolkit.draw_text_box(controller.borrow().read_error_console());
+            self.ui_toolkit.draw_text_box(controller.borrow().read_error_console())
         })
     }
 
-    fn render_code_window(&self) {
+    fn render_code_window(&self) -> T::DrawResult {
         let loaded_code = self.controller.borrow().loaded_code.clone();
         match loaded_code {
             None => {
@@ -317,31 +341,27 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             Some(ref code) => {
                 self.ui_toolkit.draw_window(&code.description(), &|| {
                     self.ui_toolkit.draw_layout_with_bottom_bar(
-                        &||{ self.render_code(code); },
-                        &||{ self.render_run_button(code); }
+                        &||{ self.render_code(code) },
+                        &||{ self.render_run_button(code) }
                     )})
             }
         }
     }
 
-    fn render_code(&self, code_node: &CodeNode) {
+    fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
         if self.is_editing(code_node) {
-            self.draw_inline_editor(code_node);
-            // TODO: should we always focus the last drawn element, even if there isn't any editor
-            // for that code node type?
-            self.ui_toolkit.focus_last_drawn_element();
-            return
+            return self.ui_toolkit.focused(&|| { self.draw_inline_editor(code_node) })
         }
         let draw = ||{
             match code_node {
                 CodeNode::FunctionCall(function_call) => {
-                    self.render_function_call(&function_call);
+                    self.render_function_call(&function_call)
                 }
                 CodeNode::StringLiteral(string_literal) => {
-                    self.render_string_literal(&string_literal);
+                    self.render_string_literal(&string_literal)
                 }
                 CodeNode::Assignment(assignment) => {
-                    self.render_assignment(&assignment);
+                    self.render_assignment(&assignment)
                 }
                 CodeNode::Block(block) => {
                     self.render_block(&block)
@@ -350,10 +370,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.render_variable_reference(&variable_reference)
                 }
                 CodeNode::FunctionDefinition(function_definition) => {
-                    // TODO: implement this
+                    self.ui_toolkit.draw_button(
+                        &"Function defs are unimplemented",
+                        RED_COLOR,
+                        ||{}
+                    )
                 }
                 CodeNode::FunctionReference(function_reference) => {
-                    // TODO: implement this
+                    self.render_function_reference(&function_reference)
+//                    self.ui_toolkit.draw_button(
+//                        &"Function refs are unimplemented",
+//                        RED_COLOR,
+//                        ||{}
+//                    )
                 }
             }
         };
@@ -364,35 +393,38 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
     }
 
-    fn render_assignment(&self, assignment: &Assignment) {
-        self.render_inline_editable_button(
-            &assignment.name,
-            PURPLE_COLOR,
-            &CodeNode::Assignment(assignment.clone())
-        );
-        self.ui_toolkit.draw_next_on_same_line();
-        self.ui_toolkit.draw_button("=", CLEAR_COLOR, &|| {});
-        self.ui_toolkit.draw_next_on_same_line();
-        self.render_code(assignment.expression.as_ref())
+    fn render_assignment(&self, assignment: &Assignment) -> T::DrawResult {
+        self.ui_toolkit.draw_all_on_same_line(vec![
+            &|| {
+                self.render_inline_editable_button(
+                    &assignment.name,
+                    PURPLE_COLOR,
+                    &CodeNode::Assignment(assignment.clone())
+                )
+            },
+            &|| { self.ui_toolkit.draw_button("=", CLEAR_COLOR, &|| {}) },
+            &|| { self.render_code(assignment.expression.as_ref()) }
+        ])
     }
 
-    fn render_variable_reference(&self, variable_reference: &VariableReference) {
+    fn render_variable_reference(&self, variable_reference: &VariableReference) -> T::DrawResult {
         let mut controller = self.controller.borrow_mut();
         let loaded_code = controller.loaded_code.as_mut().unwrap();
         let assignment = loaded_code.find_node(variable_reference.assignment_id);
         if let(Some(CodeNode::Assignment(assignment))) = assignment {
-            self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {});
+            self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {})
+        } else {
+            self.ui_toolkit.draw_button("Variable reference not found", RED_COLOR, &|| {})
         }
     }
 
-    fn render_block(&self, block: &Block) {
-        for expression in &block.expressions {
-            self.render_code(expression)
-        }
+    fn render_block(&self, block: &Block) -> T::DrawResult {
+        self.ui_toolkit.draw_all(
+            block.expressions.iter().map(|code| self.render_code(code)).collect())
     }
 
-    fn render_function_call(&self, function_call: &FunctionCall) {
-        let function_id = function_call.function_reference.function_id;
+    fn render_function_reference(&self, function_reference: &FunctionReference) -> T::DrawResult {
+        let function_id = function_reference.function_id;
 
         // TODO: don't do validation in here. this is just so i can see what this error looks
         // like visually. for realz, i would probably be better off having a separate validation
@@ -405,14 +437,29 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             color = BLUE_COLOR;
             function_name = function.name().to_string();
         }
-        self.ui_toolkit.draw_button(&function_name, color, &|| {});
-        for code_node in &function_call.args {
-            self.ui_toolkit.draw_next_on_same_line();
-            self.render_code(code_node)
-        }
+        self.ui_toolkit.draw_button(&function_name, color, &|| {})
     }
 
-    fn render_string_literal(&self, string_literal: &StringLiteral) {
+    fn render_function_call(&self, function_call: &FunctionCall) -> T::DrawResult {
+        let render_function_reference_fn = || {
+            self.render_function_reference(&function_call.function_reference)
+        };
+
+        let mut arg_renderers : Vec<Box<Fn() -> T::DrawResult>> = vec![Box::new(render_function_reference_fn)];
+        let args = function_call.args.clone();
+        for arg in args {
+            let render_fn = move || { self.render_code(&arg) };
+            arg_renderers.push(Box::new(render_fn));
+        }
+        self.ui_toolkit.draw_all_on_same_line(
+            arg_renderers.iter()
+                .map(|b| {
+                    b.as_ref()
+                })
+                .collect())
+    }
+
+    fn render_string_literal(&self, string_literal: &StringLiteral) -> T::DrawResult {
         self.render_inline_editable_button(
             &string_literal.value,
             CLEAR_COLOR,
@@ -420,7 +467,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         )
     }
 
-    fn render_run_button(&self, code_node: &CodeNode) {
+    fn render_run_button(&self, code_node: &CodeNode) -> T::DrawResult {
         let controller = self.controller.clone();
         let code_node = code_node.clone();
         self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
@@ -429,14 +476,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    fn render_inline_editable_button(&self, label: &str, color: [f32; 4], code_node: &CodeNode) {
+    fn render_inline_editable_button(&self, label: &str, color: [f32; 4], code_node: &CodeNode) -> T::DrawResult {
         let controller = self.controller.clone();
         let id = code_node.id();
         self.ui_toolkit.draw_button(label, color, move || {
             let mut controller = controller.borrow_mut();
             controller.set_selected_node_id(Some(id));
             controller.editing = true;
-        });
+        })
     }
 
     fn is_selected(&self, code_node: &CodeNode) -> bool {
@@ -447,7 +494,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.is_selected(code_node) && self.controller.borrow().editing
     }
 
-    fn draw_inline_editor(&self, code_node: &CodeNode) {
+    fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
         match code_node {
             CodeNode::StringLiteral(string_literal) => {
                 let sl = string_literal.clone();
@@ -470,12 +517,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     })
             },
             _ => {
-                self.controller.borrow_mut().editing = false
+                self.controller.borrow_mut().editing = false;
+                self.ui_toolkit.draw_button(&format!("Not possible to edit {:?}", code_node), RED_COLOR, &||{})
             }
         }
     }
 
-    fn draw_inline_text_editor<F: Fn(&str) -> CodeNode + 'static>(&self, initial_value: &str, new_node_fn: F) {
+    fn draw_inline_text_editor<F: Fn(&str) -> CodeNode + 'static>(&self, initial_value: &str, new_node_fn: F) -> T::DrawResult {
         let controller = Rc::clone(&self.controller);
         let controller2 = Rc::clone(&self.controller);
         self.ui_toolkit.draw_text_input(
@@ -504,14 +552,11 @@ impl CSApp {
         app
     }
 
-    fn draw<T: UiToolkit>(self: &Rc<CSApp>, ui_toolkit: &mut T) {
-        let app_renderer = Renderer {
+    fn draw<T: UiToolkit2>(self: &Rc<CSApp>, ui_toolkit: &mut T) -> T::DrawResult {
+        let renderer = Renderer {
             ui_toolkit: ui_toolkit,
             controller: self.controller.clone(),
         };
-
-        app_renderer.render_code_window();
-        app_renderer.render_console_window();
-        app_renderer.render_error_window();
+        renderer.render_app()
     }
 }

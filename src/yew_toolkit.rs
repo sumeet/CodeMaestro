@@ -1,7 +1,8 @@
-use super::{CSApp, UiToolkit};
+use super::{CSApp, UiToolkit,UiToolkit2};
 use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::slice::SliceConcatExt;
 
 pub struct Model {
     app: Option<Rc<CSApp>>,
@@ -40,76 +41,189 @@ struct YewToolkit {
     javascript_to_run_after_render: RefCell<Vec<String>>
 }
 
-// maybe make this mutable?
-impl UiToolkit for YewToolkit {
-    fn draw_window(&self, window_name: &str, draw_inside_window: &Fn()) {
-        draw_inside_window();
-        let window_contents = self.gather_html_for_window();
+impl UiToolkit2 for YewToolkit {
+    type DrawResult = Html<Model>;
 
-        self.add_window(html! {
+    fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult {
+        html! {
+            { for draw_results.into_iter() }
+            { for self.after_render_javascripts().into_iter().map(|js| html! {
+                <script>{ js }</script>
+            })}
+        }
+    }
+
+    fn draw_window(&self, window_name: &str, f: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
             <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
                 id={ self.incr_last_drawn_element_id().to_string() }, >
                 <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
-                { window_contents }
+                { f() }
             </div>
-        });
+        }
     }
 
-    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
-        // TODO: this is super jank. i think i can use a stack to properly implement returns via
-        // interior mutability
-        draw_content_fn();
-        self.draw_empty_line();
-        draw_bottom_bar_fn();
+    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        // JANK, make it better
+        html! {
+            <div id={ self.incr_last_drawn_element_id().to_string() }, >
+                { draw_content_fn() }
+                { self.draw_empty_line() }
+                { self.draw_empty_line() }
+                { draw_bottom_bar_fn() }
+            </div>
+        }
     }
 
-    // BROKEN: currently it's a very tiny line
-    fn draw_empty_line(&self) {
-        self.push_html_into_current_window(html!{ <br />})
+    fn draw_empty_line(&self) -> Self::DrawResult {
+        html! {
+            <br id={ self.incr_last_drawn_element_id().to_string() }, />
+        }
     }
 
-    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) {
-        self.draw_newline_if_necessary();
-
-        self.push_html_into_current_window(html! {
-            <button id={ self.incr_last_drawn_element_id().to_string() },
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) -> Self::DrawResult {
+        html! {
+            <button style={"display: block;"}, id={ self.incr_last_drawn_element_id().to_string() },
                  style=format!("color: white; background-color: {};", self.rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { label }
             </button>
-        })
+        }
     }
 
-    fn draw_text_box(&self, text: &str) {
-        self.draw_newline_if_necessary();
-
-        self.push_html_into_current_window(html! {
+    fn draw_text_box(&self, text: &str) -> Self::DrawResult {
+        html! {
             <textarea id={ self.incr_last_drawn_element_id().to_string() },>{ text }</textarea>
-        });
+        }
     }
 
-    fn draw_next_on_same_line(&self) {
-        self.draw_next_on_same_line_was_set.replace(true);
+    fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult {
+        html! {
+            <div id={ self.incr_last_drawn_element_id().to_string() },
+                 style={"display: flex;"}, >
+                { for draw_fns.into_iter().map(|draw_fn| html! {
+                    <div>
+                        { draw_fn() }
+                    </div>
+                })}
+            </div>
+        }
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult {
         let ondone = Rc::new(ondone);
         let ondone2 = Rc::clone(&ondone);
-        self.push_html_into_current_window(html! {
+        html! {
             <input type="text",
                id={ self.incr_last_drawn_element_id().to_string() },
                value=existing_value,
                oninput=|e| {onchange(&e.value) ; Msg::Redraw},
                onkeypress=|e| { if e.key() == "Enter" { ondone() } ; Msg::Redraw },
                onblur=|_| {ondone2(); Msg::Redraw}, />
-        })
+        }
     }
 
-    fn focus_last_drawn_element(&self) {
-        let mut javascripts = self.javascript_to_run_after_render.borrow_mut();
-        javascripts.push(format!("document.getElementById({}).focus();", self.get_last_drawn_element_id()))
+    fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        let mut html = draw_fn();
+        match html {
+            yew::virtual_dom::VNode::VTag(mut vtag) => {
+                let default = &"".to_string();
+                let style = vtag.attributes.get(&"style".to_string()).unwrap_or(default);
+                vtag.add_attribute(
+                    &"style".to_string(),
+                    &format!("{}; border: 1px solid black;", style)
+                );
+                yew::virtual_dom::VNode::VTag(vtag)
+            }
+            _ => html
+        }
+    }
+
+    fn focused(&self, draw_fn: &Fn() -> Html<Model>) -> Self::DrawResult {
+        let html = draw_fn();
+        self.focus_last_drawn_element();
+        html
+//        match html {
+//            yew::virtual_dom::VNode::VTag(mut vtag) => {
+//                vtag.add_class(&"focused");
+//                yew::virtual_dom::VNode::VTag(vtag)
+//            }
+//            _ => html
+//        }
     }
 }
+
+//// maybe make this mutable?
+//impl UiToolkit for YewToolkit {
+//    fn draw_window(&self, window_name: &str, draw_inside_window: &Fn()) {
+//        draw_inside_window();
+//        let window_contents = self.gather_html_for_window();
+//
+//        self.add_window(html! {
+//            <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+//                id={ self.incr_last_drawn_element_id().to_string() }, >
+//                <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
+//                { window_contents }
+//            </div>
+//        });
+//    }
+//
+//    fn draw_border_around(&self, draw_fn: &Fn()) {
+//        draw_fn();
+//        self.draw_border_around_last_drawn_element()
+//    }
+//
+//    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
+//        // TODO: this is super jank. i think i can use a stack to properly implement returns via
+//        // interior mutability
+//        draw_content_fn();
+//        self.draw_empty_line();
+//        draw_bottom_bar_fn();
+//    }
+//
+//    // BROKEN: currently it's a very tiny line
+//    fn draw_empty_line(&self) {
+//        self.push_html_into_current_window(html!{ <br />})
+//    }
+//
+//    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) {
+//        self.draw_newline_if_necessary();
+//
+//        self.push_html_into_current_window(html! {
+//            <button id={ self.incr_last_drawn_element_id().to_string() },
+//                 style=format!("color: white; background-color: {};", self.rgba(color)),
+//                 onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
+//            { label }
+//            </button>
+//        })
+//    }
+//
+//    fn draw_text_box(&self, text: &str) {
+//        self.draw_newline_if_necessary();
+//
+//        self.push_html_into_current_window(html! {
+//            <textarea id={ self.incr_last_drawn_element_id().to_string() },>{ text }</textarea>
+//        });
+//    }
+//
+//    fn draw_next_on_same_line(&self) {
+//        self.draw_next_on_same_line_was_set.replace(true);
+//    }
+//
+//    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
+//        let ondone = Rc::new(ondone);
+//        let ondone2 = Rc::clone(&ondone);
+//        self.push_html_into_current_window(html! {
+//            <input type="text",
+//               id={ self.incr_last_drawn_element_id().to_string() },
+//               value=existing_value,
+//               oninput=|e| {onchange(&e.value) ; Msg::Redraw},
+//               onkeypress=|e| { if e.key() == "Enter" { ondone() } ; Msg::Redraw },
+//               onblur=|_| {ondone2(); Msg::Redraw}, />
+//        })
+//    }
+//
+//}
 
 impl YewToolkit {
     fn new() -> Self {
@@ -122,17 +236,17 @@ impl YewToolkit {
         }
     }
 
-    fn rgba(&self, color: [f32; 4]) -> String {
-       format!("rgba({}, {}, {}, {})", color[0]*255.0, color[1]*255.0, color[2]*255.0, color[3])
+    fn focus_last_drawn_element(&self) {
+        let mut javascripts = self.javascript_to_run_after_render.borrow_mut();
+        javascripts.push(format!("document.getElementById({}).focus();", self.get_last_drawn_element_id()))
     }
 
     fn after_render_javascripts(&self) -> Vec<String> {
         self.javascript_to_run_after_render.borrow().clone()
     }
 
-    // BROKEN: sometimes it's too big
-    fn draw_newline(&self) {
-        self.push_html_into_current_window(html!{ <br />})
+    fn rgba(&self, color: [f32; 4]) -> String {
+       format!("rgba({}, {}, {}, {})", color[0]*255.0, color[1]*255.0, color[2]*255.0, color[3])
     }
 
     fn incr_last_drawn_element_id(&self) -> u32 {
@@ -144,40 +258,6 @@ impl YewToolkit {
     fn get_last_drawn_element_id(&self) -> u32 {
         *self.last_drawn_element_id.borrow()
     }
-
-    fn draw_newline_if_necessary(&self) {
-        if !self.draw_next_on_same_line_was_set.replace(false) {
-            self.draw_newline()
-        }
-    }
-
-    fn push_html_into_current_window(&self, node: Html<Model>) {
-        let mut nodes = self.current_window.borrow_mut();
-        nodes.push(node);
-    }
-
-    fn add_window(&self, node: Html<Model>) {
-        let mut nodes = self.windows.borrow_mut();
-        nodes.push(node);
-    }
-
-    // XXX: mutates YewToolkit.html_nodes, gathering up any rendering that's been already done
-    fn gather_html_for_window(&self) -> Html<Model> {
-        let nodes = self.current_window.replace(Vec::new());
-        html! {
-            { for nodes.into_iter() }
-        }
-    }
-
-    fn render_html(&self) -> Html<Model> {
-        let nodes = self.windows.replace(Vec::new());
-        html! {
-            { for nodes.into_iter() }
-            { for self.after_render_javascripts().into_iter().map(|js| html! {
-                <script>{ js }</script>
-            })}
-        }
-    }
 }
 
 
@@ -185,9 +265,7 @@ impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         if let(Some(app)) = &self.app {
             let mut tk = YewToolkit::new();
-            app.draw(&mut tk);
-
-            tk.render_html()
+            app.draw(&mut tk)
         } else {
             html! { <p> {"No app"} </p> }
         }
