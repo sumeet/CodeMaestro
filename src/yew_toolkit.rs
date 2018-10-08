@@ -1,11 +1,13 @@
-use super::{CSApp, UiToolkit,UiToolkit2};
+use super::{CSApp, UiToolkit,UiToolkit2,Key as AppKey};
 use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::slice::SliceConcatExt;
+use stdweb::Value;
 
 pub struct Model {
     app: Option<Rc<CSApp>>,
+    link: Rc<RefCell<ComponentLink<Model>>>,
 }
 
 pub enum Msg {
@@ -17,14 +19,17 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
-        Model { app: None }
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+        Model { app: None, link: Rc::new(RefCell::new(link)) }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::SetApp(app) => self.app = Some(app),
-            Msg::Redraw =>  (),
+            Msg::SetApp(app) => {
+                self.app = Some(app);
+            }
+            Msg::Redraw =>   {
+            }
         }
         true
     }
@@ -38,7 +43,8 @@ struct YewToolkit {
     windows: RefCell<Vec<Html<Model>>>,
     draw_next_on_same_line_was_set: RefCell<bool>,
     last_drawn_element_id: RefCell<u32>,
-    javascript_to_run_after_render: RefCell<Vec<String>>
+    javascript_to_run_after_render: RefCell<Vec<String>>,
+    keyboard_input_service: KeyboardInputService,
 }
 
 impl UiToolkit2 for YewToolkit {
@@ -46,10 +52,12 @@ impl UiToolkit2 for YewToolkit {
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult {
         html! {
-            { for draw_results.into_iter() }
-            { for self.after_render_javascripts().into_iter().map(|js| html! {
-                <script>{ js }</script>
-            })}
+            <div>
+                { for draw_results.into_iter() }
+                { for self.after_render_javascripts().into_iter().map(|js| html! {
+                    <script>{ js }</script>
+                })}
+            </div>
         }
     }
 
@@ -143,96 +151,23 @@ impl UiToolkit2 for YewToolkit {
         let html = draw_fn();
         self.focus_last_drawn_element();
         html
-//        match html {
-//            yew::virtual_dom::VNode::VTag(mut vtag) => {
-//                vtag.add_class(&"focused");
-//                yew::virtual_dom::VNode::VTag(vtag)
-//            }
-//            _ => html
-//        }
     }
 }
 
-//// maybe make this mutable?
-//impl UiToolkit for YewToolkit {
-//    fn draw_window(&self, window_name: &str, draw_inside_window: &Fn()) {
-//        draw_inside_window();
-//        let window_contents = self.gather_html_for_window();
-//
-//        self.add_window(html! {
-//            <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
-//                id={ self.incr_last_drawn_element_id().to_string() }, >
-//                <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
-//                { window_contents }
-//            </div>
-//        });
-//    }
-//
-//    fn draw_border_around(&self, draw_fn: &Fn()) {
-//        draw_fn();
-//        self.draw_border_around_last_drawn_element()
-//    }
-//
-//    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
-//        // TODO: this is super jank. i think i can use a stack to properly implement returns via
-//        // interior mutability
-//        draw_content_fn();
-//        self.draw_empty_line();
-//        draw_bottom_bar_fn();
-//    }
-//
-//    // BROKEN: currently it's a very tiny line
-//    fn draw_empty_line(&self) {
-//        self.push_html_into_current_window(html!{ <br />})
-//    }
-//
-//    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) {
-//        self.draw_newline_if_necessary();
-//
-//        self.push_html_into_current_window(html! {
-//            <button id={ self.incr_last_drawn_element_id().to_string() },
-//                 style=format!("color: white; background-color: {};", self.rgba(color)),
-//                 onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
-//            { label }
-//            </button>
-//        })
-//    }
-//
-//    fn draw_text_box(&self, text: &str) {
-//        self.draw_newline_if_necessary();
-//
-//        self.push_html_into_current_window(html! {
-//            <textarea id={ self.incr_last_drawn_element_id().to_string() },>{ text }</textarea>
-//        });
-//    }
-//
-//    fn draw_next_on_same_line(&self) {
-//        self.draw_next_on_same_line_was_set.replace(true);
-//    }
-//
-//    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
-//        let ondone = Rc::new(ondone);
-//        let ondone2 = Rc::clone(&ondone);
-//        self.push_html_into_current_window(html! {
-//            <input type="text",
-//               id={ self.incr_last_drawn_element_id().to_string() },
-//               value=existing_value,
-//               oninput=|e| {onchange(&e.value) ; Msg::Redraw},
-//               onkeypress=|e| { if e.key() == "Enter" { ondone() } ; Msg::Redraw },
-//               onblur=|_| {ondone2(); Msg::Redraw}, />
-//        })
-//    }
-//
-//}
-
 impl YewToolkit {
-    fn new() -> Self {
+    fn new(on_key_press: Rc<Fn(String)>) -> Self {
+        let mut keyboard_input_service = KeyboardInputService::new();
+        let callback = move |key| {
+            on_key_press(key);
+        };
+        keyboard_input_service.register(Callback::from(callback));
         YewToolkit {
             current_window: RefCell::new(Vec::new()),
             windows: RefCell::new(Vec::new()),
             draw_next_on_same_line_was_set: RefCell::new(false),
             last_drawn_element_id: RefCell::new(0),
-            javascript_to_run_after_render: RefCell::new(Vec::new())
+            javascript_to_run_after_render: RefCell::new(Vec::new()),
+            keyboard_input_service: keyboard_input_service,
         }
     }
 
@@ -263,12 +198,36 @@ impl YewToolkit {
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-        if let(Some(app)) = &self.app {
-            let mut tk = YewToolkit::new();
+        if let(Some(ref app)) = self.app {
+            let app2 = Rc::clone(&app);
+            let link = Rc::clone(&self.link);
+
+            let mut tk = YewToolkit::new(Rc::new(move |key_press_event| {
+                js! { console.log(@{format!("{:?}", key_press_event)}) }
+                if let (Some(key)) = map_key(&key_press_event) {
+                    app2.controller.borrow_mut().handle_key_press(key);
+                    let cb = link.borrow_mut().send_back(
+                        |_: ()| {Msg::Redraw});
+                    cb.emit(());
+                }
+            }));
             app.draw(&mut tk)
         } else {
             html! { <p> {"No app"} </p> }
         }
+    }
+}
+
+fn map_key(key: &str) -> Option<AppKey> {
+    match key.as_ref() {
+        "a" => Some(AppKey::A),
+        "b" => Some(AppKey::B),
+        "c" => Some(AppKey::C),
+        "d" => Some(AppKey::D),
+        "w" => Some(AppKey::W),
+        "x" => Some(AppKey::X),
+        "r" => Some(AppKey::R),
+        _ => None
     }
 }
 
@@ -278,4 +237,44 @@ pub fn draw_app(app: Rc<CSApp>) {
     App::<Model>::new().mount_to_body()
         .send_message(msg);
     yew::run_loop()
+}
+
+
+// copied from https://github.com/DenisKolodin/yew/issues/333#issuecomment-407585000
+pub struct KeyboardInputService {}
+
+pub struct KeyboardInputTask(Option<Value>);
+
+impl KeyboardInputService {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn register(&mut self, callback: Callback<(String)>) -> KeyboardInputTask {
+        let callback = move |key| {
+            callback.emit(key);
+        };
+        let handle = js! {
+            console.log("registering callback");
+            var callback = @{callback};
+            var action = function(e) {
+                callback(e.key || "NOT FOUND");
+            };
+            return window.addEventListener("keyup", action);
+        };
+        return KeyboardInputTask(Some(handle))
+    }
+}
+
+impl Drop for KeyboardInputTask {
+    fn drop(&mut self) {
+        let handle = self.0.take().expect("Keyboard input task already empty.");
+        js! {
+            @(no_return)
+            var handle = @{handle};
+            if (handle) {
+                handle.callback.drop();
+            }
+        }
+    }
 }
