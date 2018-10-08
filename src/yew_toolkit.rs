@@ -8,10 +8,12 @@ use stdweb::Value;
 pub struct Model {
     app: Option<Rc<CSApp>>,
     link: Rc<RefCell<ComponentLink<Model>>>,
+    keyboard_input_service: KeyboardInputService,
 }
 
 pub enum Msg {
     SetApp(Rc<CSApp>),
+    SetKeypressHandler(Rc<Fn(AppKey)>),
     Redraw,
 }
 
@@ -20,13 +22,34 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
-        Model { app: None, link: Rc::new(RefCell::new(link)) }
+        Model {
+            app: None,
+            link: Rc::new(RefCell::new(link)),
+            keyboard_input_service: KeyboardInputService::new(),
+        }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
             Msg::SetApp(app) => {
                 self.app = Some(app);
+            }
+            Msg::SetKeypressHandler(keypress_handler) => {
+                let app = self.app.as_ref();
+                if app.is_none() {
+                    return true;
+                }
+                let app2 = Rc::clone(app.unwrap());
+                let link2 = Rc::clone(&self.link);
+                let callback = move |keystring : String| {
+                    let key = map_key(&keystring);
+                    if let(Some(key)) = key {
+                        keypress_handler(key)
+                    }
+                    let cb = link2.borrow_mut().send_back(|_: ()| {Msg::Redraw});
+                    cb.emit(());
+                };
+                self.keyboard_input_service.register(Callback::from(callback));
             }
             Msg::Redraw =>   {
             }
@@ -44,7 +67,6 @@ struct YewToolkit {
     draw_next_on_same_line_was_set: RefCell<bool>,
     last_drawn_element_id: RefCell<u32>,
     javascript_to_run_after_render: RefCell<Vec<String>>,
-    keyboard_input_service: KeyboardInputService,
 }
 
 impl UiToolkit2 for YewToolkit {
@@ -156,18 +178,12 @@ impl UiToolkit2 for YewToolkit {
 
 impl YewToolkit {
     fn new(on_key_press: Rc<Fn(String)>) -> Self {
-        let mut keyboard_input_service = KeyboardInputService::new();
-        let callback = move |key| {
-            on_key_press(key);
-        };
-        keyboard_input_service.register(Callback::from(callback));
         YewToolkit {
             current_window: RefCell::new(Vec::new()),
             windows: RefCell::new(Vec::new()),
             draw_next_on_same_line_was_set: RefCell::new(false),
             last_drawn_element_id: RefCell::new(0),
             javascript_to_run_after_render: RefCell::new(Vec::new()),
-            keyboard_input_service: keyboard_input_service,
         }
     }
 
@@ -200,17 +216,7 @@ impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         if let(Some(ref app)) = self.app {
             let app2 = Rc::clone(&app);
-            let link = Rc::clone(&self.link);
-
-            let mut tk = YewToolkit::new(Rc::new(move |key_press_event| {
-                js! { console.log(@{format!("{:?}", key_press_event)}) }
-                if let (Some(key)) = map_key(&key_press_event) {
-                    app2.controller.borrow_mut().handle_key_press(key);
-                    let cb = link.borrow_mut().send_back(
-                        |_: ()| {Msg::Redraw});
-                    cb.emit(());
-                }
-            }));
+            let mut tk = YewToolkit::new(Rc::new(move |_| {}));
             app.draw(&mut tk)
         } else {
             html! { <p> {"No app"} </p> }
@@ -233,14 +239,20 @@ fn map_key(key: &str) -> Option<AppKey> {
 
 pub fn draw_app(app: Rc<CSApp>) {
     yew::initialize();
-    let msg = Msg::SetApp(Rc::clone(&app));
-    App::<Model>::new().mount_to_body()
-        .send_message(msg);
+    let mut yew_app = App::<Model>::new().mount_to_body();
+    yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
+    let app2 = Rc::clone(&app);
+    yew_app.send_message(Msg::SetKeypressHandler(Rc::new(move |key| {
+        app2.controller.borrow_mut().handle_key_press(key)
+    })));
     yew::run_loop()
 }
 
 
 // copied from https://github.com/DenisKolodin/yew/issues/333#issuecomment-407585000
+//
+// the example there uses a Drop to undo the binding, but i don't think we'll need that.
+// pretty sure we'll be fine here if we just register once
 pub struct KeyboardInputService {}
 
 pub struct KeyboardInputTask(Option<Value>);
@@ -254,27 +266,16 @@ impl KeyboardInputService {
         let callback = move |key| {
             callback.emit(key);
         };
-        let handle = js! {
+        let listener = js! {
             console.log("registering callback");
             var callback = @{callback};
-            var action = function(e) {
+            var listener = function(e) {
                 callback(e.key || "NOT FOUND");
             };
-            return window.addEventListener("keyup", action);
+            window.addEventListener("keyup", listener);
+            return listener;
         };
-        return KeyboardInputTask(Some(handle))
+        return KeyboardInputTask(Some(listener))
     }
 }
 
-impl Drop for KeyboardInputTask {
-    fn drop(&mut self) {
-        let handle = self.0.take().expect("Keyboard input task already empty.");
-        js! {
-            @(no_return)
-            var handle = @{handle};
-            if (handle) {
-                handle.callback.drop();
-            }
-        }
-    }
-}
