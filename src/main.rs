@@ -366,11 +366,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 }
                 CodeNode::FunctionReference(function_reference) => {
                     self.render_function_reference(&function_reference)
-//                    self.ui_toolkit.draw_button(
-//                        &"Function refs are unimplemented",
-//                        RED_COLOR,
-//                        ||{}
-//                    )
                 }
             }
         };
