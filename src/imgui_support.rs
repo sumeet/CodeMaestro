@@ -5,7 +5,7 @@ use glium::glutin::WindowEvent::*;
 use glium::glutin::{Event, MouseButton, MouseScrollDelta, TouchPhase};
 use glium::glutin::VirtualKeyCode as Key;
 
-use super::Key as AppKey;
+use super::editor::Key as AppKey;
 
 
 

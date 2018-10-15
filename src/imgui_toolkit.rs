@@ -1,4 +1,6 @@
-use super::{CSApp, UiToolkit,Key};
+use super::{CSApp};
+use super::editor::{UiToolkit};
+use super::editor::{Key};
 use super::imgui_support;
 use imgui::*;
 use std::rc::Rc;
@@ -7,9 +9,6 @@ use std::cell::RefCell;
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 
-// XXX: look into why this didn't compile before. remove all the lifetime specifiers, AND the
-// lifetime specifier from the definition in App::draw. that'll get it back to the way i had it
-// before
 pub fn draw_app(app: Rc<CSApp>) {
     imgui_support::run("cs".to_owned(), CLEAR_COLOR,
         |ui| {
@@ -64,7 +63,7 @@ impl<'a> ImguiToolkit<'a> {
 impl<'a> UiToolkit for ImguiToolkit<'a> {
     type DrawResult = ();
 
-    // XXX: these should be draw funcs....
+    // TODO: these should be draw funcs that we execute in here
     fn draw_all(&self, _draw_results: Vec<()>) {
     }
 
