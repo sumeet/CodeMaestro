@@ -15,16 +15,22 @@ const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
 const PURPLE_COLOR: [f32; 4] = [0.486, 0.353, 0.952, 1.0];
 const CLEAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
-
 pub struct Controller {
     execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
     editing: bool,
+    insertion_point: Option<InsertionPoint>,
     loaded_code: Option<CodeNode>,
     error_console: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
+pub enum InsertionPoint {
+    Before(ID),
+    After(ID),
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Key {
     A,
     B,
@@ -32,7 +38,9 @@ pub enum Key {
     D,
     W,
     X,
-    R
+    R,
+    O,
+    Escape,
 }
 
 impl<'a> Controller {
@@ -42,18 +50,25 @@ impl<'a> Controller {
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
+            insertion_point: None,
             editing: false,
         }
     }
 
     pub fn handle_key_press(&mut self, key: Key) {
+        if key == Key::Escape {
+            self.handle_cancel();
+            return
+        }
         // don't perform any commands when in edit mode
         if self.editing { return }
         match key {
             Key::B => {
+                self.execution_environment.println("trying to select back a node");
                 self.try_select_back_one_node()
             },
             Key::W => {
+                self.execution_environment.println("trying to select forward a node");
                 self.try_select_forward_one_node()
             },
             Key::C => {
@@ -61,8 +76,29 @@ impl<'a> Controller {
             },
             Key::R => {
                 self.run(&self.loaded_code.as_ref().unwrap().clone())
+            },
+            Key::O => {
+                self.set_insertion_point()
             }
             _ => {},
+        }
+    }
+
+    fn handle_cancel(&mut self) {
+        self.editing = false;
+        match self.insertion_point {
+            None => (),
+            Some(InsertionPoint::After(id)) => self.selected_node_id = Some(id),
+            Some(InsertionPoint::Before(id)) => self.selected_node_id = Some(id)
+        }
+        self.insertion_point = None
+    }
+
+    fn set_insertion_point(&mut self) {
+        if let(Some(selected_node_id)) = self.selected_node_id {
+            self.editing = true;
+            self.selected_node_id = None;
+            self.insertion_point = Some(InsertionPoint::After(selected_node_id))
         }
     }
 
@@ -277,11 +313,30 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 }
             }
         };
+
         if self.is_selected(code_node) {
             self.ui_toolkit.draw_border_around(&draw)
         } else {
-            draw()
+            let insertion_point = self.controller.borrow().insertion_point;
+            match insertion_point {
+                Some(InsertionPoint::After(code_node_id)) if code_node_id == code_node.id() => {
+                    self.ui_toolkit.draw_all(vec![
+                        draw(),
+                        self.render_insert_code_node(),
+                    ])
+                },
+                _ => { draw() }
+            }
         }
+    }
+
+    fn render_insert_code_node(&self) -> T::DrawResult {
+        self.ui_toolkit.focused(&||{
+            let controller = Rc::clone(&self.controller);
+            self.ui_toolkit.draw_text_input("", |_|{}, move ||{
+                controller.borrow_mut().handle_cancel()
+            })
+        })
     }
 
     fn render_assignment(&self, assignment: &Assignment) -> T::DrawResult {

@@ -1,4 +1,5 @@
-use super::{CSApp, UiToolkit,Key as AppKey};
+use super::{CSApp, UiToolkit};
+use super::editor::{Key as AppKey};
 use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -233,6 +234,7 @@ fn map_key(key: &str) -> Option<AppKey> {
         "w" => Some(AppKey::W),
         "x" => Some(AppKey::X),
         "r" => Some(AppKey::R),
+        "o" => Some(AppKey::O),
         _ => None
     }
 }
