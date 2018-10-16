@@ -106,7 +106,7 @@ impl CodeNode {
 
 
     pub fn previous_child(&mut self, node_id: ID) -> Option<CodeNode> {
-        let children = self.children();
+        let children = self.children_mut();
         let position = children.iter().position(|n| n.id() == node_id);
         if let(Some(position)) = position {
             if position > 0 {
@@ -119,7 +119,7 @@ impl CodeNode {
     }
 
     pub fn next_child(&mut self, node_id: ID) -> Option<CodeNode> {
-        let children = self.children();
+        let children = self.children_mut();
         let length = children.len();
         let position = children.iter().position(|n| n.id() == node_id);
         if let(Some(position)) = position {
@@ -130,7 +130,7 @@ impl CodeNode {
         None
     }
 
-    pub fn children(&mut self) -> Vec<&mut CodeNode> {
+    pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
         match self {
             CodeNode::FunctionCall(function_call) => {
                 function_call.args.iter_mut().collect()
@@ -160,7 +160,7 @@ impl CodeNode {
         if self.id() == code_node.id() {
             *self = code_node.clone()
         } else {
-            for child in self.children() {
+            for child in self.children_mut() {
                 child.replace(code_node)
             }
         }
@@ -170,7 +170,7 @@ impl CodeNode {
         if self.id() == id {
             Some(self)
         } else {
-            for child in self.children() {
+            for child in self.children_mut() {
                 if let(Some(found_node)) = child.find_node(id) {
                     return Some(found_node)
                 }
@@ -183,7 +183,7 @@ impl CodeNode {
         if self.id() == id {
             return None
         } else {
-            let children = self.children();
+            let children = self.children_mut();
             for child in children {
                 if child.id() == id {
                     return Some(self.clone())

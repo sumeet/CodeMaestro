@@ -64,14 +64,13 @@ impl<'a> Controller {
         if self.editing { return }
         match key {
             Key::B => {
-                self.execution_environment.println("trying to select back a node");
                 self.try_select_back_one_node()
             },
             Key::W => {
-                self.execution_environment.println("trying to select forward a node");
                 self.try_select_forward_one_node()
             },
             Key::C => {
+                // TODO: pry need more logic here
                 self.editing = true
             },
             Key::R => {
@@ -95,10 +94,31 @@ impl<'a> Controller {
     }
 
     fn set_insertion_point(&mut self) {
-        if let(Some(selected_node_id)) = self.selected_node_id {
+        if let(Some(expression_id)) = self.currently_focused_block_expression() {
+            self.insertion_point = Some(InsertionPoint::After(expression_id));
             self.editing = true;
             self.selected_node_id = None;
-            self.insertion_point = Some(InsertionPoint::After(selected_node_id))
+        } else {
+            self.insertion_point = None
+        }
+    }
+
+    fn currently_focused_block_expression(&self) -> Option<ID> {
+        if self.selected_node_id.is_none() {
+            return None
+        }
+        let selected_node_id = self.selected_node_id.unwrap();
+        self.find_expression_in_block_containing(selected_node_id)
+    }
+
+    fn find_expression_in_block_containing(&self, node_id: ID) -> Option<ID> {
+        if self.loaded_code.is_none() { return None }
+        let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
+        let parent = loaded_code.find_parent(node_id);
+        match parent {
+            Some(CodeNode::Block(_)) => Some(node_id),
+            Some(parent_node) => self.find_expression_in_block_containing(parent_node.id()),
+            None => None
         }
     }
 
@@ -121,7 +141,7 @@ impl<'a> Controller {
         if let(Some(mut previous_sibling)) = parent.previous_child(selected_node_id) {
             // but since we're going back, if the previous sibling has children, then let's
             // select the last one. that feels more ergonomic while moving backwards
-            let children = previous_sibling.children();
+            let children = previous_sibling.children_mut();
             if children.len() > 0 {
                 self.set_selected_node_id(Some(children[0].id()))
             } else {
@@ -145,7 +165,7 @@ impl<'a> Controller {
         let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
 
         let mut selected_code = loaded_code.find_node(selected_node_id).as_mut().unwrap().clone();
-        let children = selected_code.children();
+        let children = selected_code.children_mut();
         let first_child = children.get(0);
 
         if let(Some(first_child)) = first_child {
@@ -334,6 +354,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.focused(&||{
             let controller = Rc::clone(&self.controller);
             self.ui_toolkit.draw_text_input("", |_|{}, move ||{
+                // TODO: this will actually insert a code node
                 controller.borrow_mut().handle_cancel()
             })
         })
