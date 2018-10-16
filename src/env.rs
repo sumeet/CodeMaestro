@@ -21,6 +21,10 @@ impl ExecutionEnvironment {
         self.functions.insert(function.id(), function);
     }
 
+    pub fn list_functions(&self) -> Vec<Box<lang::Function>> {
+        self.functions.iter().map(|(_, func)| func.clone()).collect()
+    }
+
     pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> lang::Value {
         match code_node {
             lang::CodeNode::FunctionCall(function_call) => {

@@ -106,6 +106,28 @@ impl Function for Print {
     }
 }
 
+#[derive(Clone)]
+struct Capitalize {}
+
+impl Function for Capitalize {
+    fn call(&self, _env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value {
+        match args.as_slice() {
+            [Value::String(string)] => {
+                Value::String(string.to_uppercase())
+            },
+            _ => Value::Result(Result::Err(LangError::ArgumentError))
+        }
+    }
+
+    fn name(&self) -> &str {
+        "Capitalize"
+    }
+
+    fn id(&self) -> ID {
+        uuid::Uuid::parse_str("86ae2a51-5538-436f-b48e-3aa6c873b189").unwrap()
+    }
+}
+
 pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,
 }
@@ -119,6 +141,7 @@ impl CSApp {
         };
         app.controller.borrow_mut().load_code(&loaded_code);
         app.controller.borrow_mut().load_function(Box::new(Print{}));
+        app.controller.borrow_mut().load_function(Box::new(Capitalize{}));
         app
     }
 

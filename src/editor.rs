@@ -1,8 +1,10 @@
 use debug_cell::RefCell;
 use std::rc::Rc;
+use super::uuid::Uuid;
 
 use failure::{err_msg};
 use failure::Error as Error;
+use super::code_loading::{serialize};
 use super::env::{ExecutionEnvironment};
 use super::lang::{
     Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Error as LangError,Assignment,Block,
@@ -10,16 +12,44 @@ use super::lang::{
 
 
 const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
+const BLACK_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
 const RED_COLOR: [f32; 4] = [0.858, 0.180, 0.180, 1.0];
 const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
 const PURPLE_COLOR: [f32; 4] = [0.486, 0.353, 0.952, 1.0];
 const CLEAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
 
+
+#[derive(Clone)]
+struct InsertCodeNodeMenu {
+    functions: Vec<Box<Function>>,
+    selected_fn_id: ID,
+    insertion_point: InsertionPoint,
+}
+
+impl InsertCodeNodeMenu {
+    fn new(insertion_point: InsertionPoint, functions: Vec<Box<Function>>) -> Self {
+        // there should always be at least one function!!!!
+        let selected_fn_id = functions.get(0).unwrap().id();
+        Self { functions, selected_fn_id, insertion_point }
+    }
+
+    fn new_function_call_with_selected_function(&self) -> FunctionCall {
+        FunctionCall {
+            id: Uuid::new_v4(),
+            function_reference: FunctionReference {
+                id: Uuid::new_v4(),
+                function_id: self.selected_fn_id,
+            },
+            args: vec![],
+        }
+    }
+}
+
 pub struct Controller {
     execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
     editing: bool,
-    insertion_point: Option<InsertionPoint>,
+    insert_code_node_menu: Option<InsertCodeNodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
 }
@@ -28,6 +58,15 @@ pub struct Controller {
 pub enum InsertionPoint {
     Before(ID),
     After(ID),
+}
+
+impl InsertionPoint {
+    fn node_id(&self) -> ID {
+        match *self {
+            InsertionPoint::Before(id) => id,
+            InsertionPoint::After(id) => id,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -50,8 +89,51 @@ impl<'a> Controller {
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
-            insertion_point: None,
+            insert_code_node_menu: None,
             editing: false,
+        }
+    }
+
+    // TODO: return a result instead of returning nothing? it seems like there might be places this
+    // thing can error
+    fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
+        if self.loaded_code.is_none() {
+            panic!("why would we try to insert any code and there isn't any loaded?!")
+        }
+        let mut loaded_code = self.loaded_code.as_mut().unwrap();
+        let parent = loaded_code.find_parent(insertion_point.node_id());
+        match parent {
+            Some(CodeNode::Block(mut block)) => {
+                let insertion_point_in_block_exprs = block.expressions.iter()
+                    .enumerate()
+                    .find(|(i, exp)| exp.id() == insertion_point.node_id());
+                if insertion_point_in_block_exprs.is_none() { return }
+                let insertion_point_in_block_exprs = insertion_point_in_block_exprs.unwrap().0;
+
+                match insertion_point {
+                    InsertionPoint::Before(_) => {
+                        block.expressions.insert(insertion_point_in_block_exprs, code_node)
+                    },
+                    InsertionPoint::After(_) => {
+                        block.expressions.insert(insertion_point_in_block_exprs + 1, code_node)
+                    },
+                }
+
+                self.loaded_code.as_mut().unwrap().replace(&CodeNode::Block(block));
+            },
+            _ => panic!("unable to insert new code")
+        }
+    }
+
+    fn hide_insert_code_menu(&mut self) {
+        self.insert_code_node_menu = None;
+        self.editing = false
+    }
+
+    pub fn insertion_point(&self) -> Option<InsertionPoint> {
+        match self.insert_code_node_menu.as_ref() {
+            None => None,
+            Some(menu) => Some(menu.insertion_point),
         }
     }
 
@@ -85,21 +167,25 @@ impl<'a> Controller {
 
     fn handle_cancel(&mut self) {
         self.editing = false;
-        match self.insertion_point {
-            None => (),
-            Some(InsertionPoint::After(id)) => self.selected_node_id = Some(id),
-            Some(InsertionPoint::Before(id)) => self.selected_node_id = Some(id)
+        if self.insert_code_node_menu.is_none() { return }
+
+        match self.insert_code_node_menu.as_ref().unwrap().insertion_point {
+            InsertionPoint::After(id) => self.selected_node_id = Some(id),
+            InsertionPoint::Before(id) => self.selected_node_id = Some(id)
         }
-        self.insertion_point = None
+        self.hide_insert_code_menu()
     }
 
     fn set_insertion_point(&mut self) {
         if let(Some(expression_id)) = self.currently_focused_block_expression() {
-            self.insertion_point = Some(InsertionPoint::After(expression_id));
+            self.insert_code_node_menu = Some(InsertCodeNodeMenu::new(
+                InsertionPoint::After(expression_id),
+                self.execution_environment.list_functions()
+            ));
             self.editing = true;
             self.selected_node_id = None;
         } else {
-            self.insertion_point = None
+            self.hide_insert_code_menu()
         }
     }
 
@@ -108,16 +194,17 @@ impl<'a> Controller {
             return None
         }
         let selected_node_id = self.selected_node_id.unwrap();
-        self.find_expression_in_block_containing(selected_node_id)
+        self.find_expression_inside_block_that_contains(selected_node_id)
     }
 
-    fn find_expression_in_block_containing(&self, node_id: ID) -> Option<ID> {
+    fn find_expression_inside_block_that_contains(&self, node_id: ID) -> Option<ID> {
         if self.loaded_code.is_none() { return None }
         let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
         let parent = loaded_code.find_parent(node_id);
         match parent {
             Some(CodeNode::Block(_)) => Some(node_id),
-            Some(parent_node) => self.find_expression_in_block_containing(parent_node.id()),
+            Some(parent_node) => self.find_expression_inside_block_that_contains(
+                parent_node.id()),
             None => None
         }
     }
@@ -173,14 +260,14 @@ impl<'a> Controller {
             return
         }
 
-        let parent = loaded_code.find_parent(selected_node_id);
-        if parent.is_none() {
-            return
-        }
-        let parent = parent.unwrap();
-        if let(Some(next_sibling)) = loaded_code.next_child(parent.id()) {
-            self.set_selected_node_id(Some(next_sibling.id()));
-            return
+        let mut node_id_to_find_next_sibling_of = selected_node_id;
+        while let(Some(mut parent))= loaded_code.find_parent(node_id_to_find_next_sibling_of) {
+            if let(Some(next_sibling)) = parent.next_child(node_id_to_find_next_sibling_of) {
+                self.set_selected_node_id(Some(next_sibling.id()));
+                return
+            }
+            // if there is no sibling, then try going to the next sibling of the parent, recursively
+            node_id_to_find_next_sibling_of = parent.id()
         }
     }
 
@@ -242,8 +329,9 @@ pub trait UiToolkit {
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F) -> Self::DrawResult;
+    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F) -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: FnOnce() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -337,27 +425,65 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         if self.is_selected(code_node) {
             self.ui_toolkit.draw_border_around(&draw)
         } else {
-            let insertion_point = self.controller.borrow().insertion_point;
-            match insertion_point {
-                Some(InsertionPoint::After(code_node_id)) if code_node_id == code_node.id() => {
-                    self.ui_toolkit.draw_all(vec![
-                        draw(),
-                        self.render_insert_code_node(),
-                    ])
-                },
-                _ => { draw() }
+            let mut drawn : Vec<T::DrawResult> = vec![];
+            drawn.push(draw());
+            if self.is_insertion_pointer_immediately_after(code_node.id()) {
+                drawn.push(self.render_insert_code_node())
             }
+            self.ui_toolkit.draw_all(drawn)
+        }
+    }
+
+    fn is_insertion_pointer_immediately_after(&self, id: ID) -> bool {
+        let insertion_point = self.controller.borrow().insertion_point();
+        match insertion_point {
+            Some(InsertionPoint::After(code_node_id)) if code_node_id == id => {
+                true
+            }
+            _ => false
         }
     }
 
     fn render_insert_code_node(&self) -> T::DrawResult {
+        let menu = self.controller.borrow().insert_code_node_menu.as_ref().unwrap().clone();
+
         self.ui_toolkit.focused(&||{
             let controller = Rc::clone(&self.controller);
+            let insertion_point = menu.insertion_point.clone();
+            let new_function_call = CodeNode::FunctionCall(menu.new_function_call_with_selected_function());
             self.ui_toolkit.draw_text_input("", |_|{}, move ||{
-                // TODO: this will actually insert a code node
-                controller.borrow_mut().handle_cancel()
+                let mut cont2 = controller.borrow_mut();
+                let id = new_function_call.id();
+                cont2.hide_insert_code_menu();
+                cont2.insert_code(new_function_call, insertion_point);
+                cont2.set_selected_node_id(Some(id))
             })
-        })
+        });
+
+        self.render_menu_bar_with_options(menu)
+    }
+
+    fn render_menu_bar_with_options(&self, menu: InsertCodeNodeMenu) -> <T as UiToolkit>::DrawResult {
+        let mut function_line: Vec<Box<Fn() -> T::DrawResult>> = vec![];
+        for function in menu.functions {
+            let is_option_selected = menu.selected_fn_id == function.id();
+            let button_color = if is_option_selected { RED_COLOR } else { BLACK_COLOR };
+            function_line.push(Box::new(move || {
+                let draw = || {
+                    self.ui_toolkit.draw_small_button(&function.name(), button_color, &|| {})
+                };
+                if is_option_selected {
+                    self.ui_toolkit.draw_border_around(&draw)
+                } else {
+                    draw()
+                }
+            }))
+        }
+        let mut function_line_refs = vec![];
+        for func in function_line.iter() {
+            function_line_refs.push(func.as_ref())
+        }
+        self.ui_toolkit.draw_all_on_same_line(function_line_refs)
     }
 
     fn render_assignment(&self, assignment: &Assignment) -> T::DrawResult {
@@ -502,7 +628,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             move || {
                 controller2.borrow_mut().editing = false
             }
-
         )
     }
 }

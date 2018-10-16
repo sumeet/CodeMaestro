@@ -112,13 +112,21 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             });
     }
 
+    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
+        self.ui.with_color_var(ImGuiCol::Button, color, || {
+            if self.ui.small_button(im_str!("{}", label)) {
+                on_button_activate()
+            }
+        });
+    }
+
     fn draw_text_box(&self, text: &str) {
         self.ui.text(text);
         // GHETTO: text box is always scrolled to the bottom
         unsafe { imgui_sys::igSetScrollHere(1.0) };
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: FnOnce() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
         let input = self.get_or_initialize_text_input(existing_value);
         let mut input = input.borrow_mut();
 

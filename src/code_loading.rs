@@ -12,7 +12,7 @@ use super::uuid::Uuid;
 
 
 pub fn serialize(code_node: &CodeNode) -> Result<String,Error> {
-    match serde_json::to_string(&code_node) {
+    match serde_json::to_string_pretty(&code_node) {
        Ok(string) => Ok(string),
        Err(e) => Err(Error::from(e)),
     }
