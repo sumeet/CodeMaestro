@@ -1,16 +1,36 @@
 use std::fmt;
+use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use std::rc::Rc;
+use std::collections::HashMap;
 
 use serde::ser::{Serialize, Serializer, SerializeSeq, SerializeMap};
 
 use super::ExecutionEnvironment;
 use super::uuid::Uuid;
 
+lazy_static! {
+    pub static ref NULL_TYPE: Type = Type {
+        readable_name: "Null".to_string(),
+        id: uuid::Uuid::parse_str(&"daa07233-b887-4512-b06e-d6a53d415213").unwrap(),
+    };
+
+    pub static ref STRING_TYPE: Type = Type {
+        readable_name: "String".to_string(),
+        id: uuid::Uuid::parse_str("e0e8271e-5f94-4d00-bad9-46a2ce4d6568").unwrap(),
+    };
+
+    pub static ref RESULT_TYPE: Type = Type {
+        readable_name: "Result".to_string(),
+        id: uuid::Uuid::parse_str("0613664d-eead-4d83-99a0-9759a5023887").unwrap(),
+    };
+}
+
 pub trait Function: objekt::Clone {
-    fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
+    fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID,Value>) -> Value;
     fn name(&self) -> &str;
     fn id(&self) -> ID;
+    fn takes_args(&self) -> Vec<ArgumentDefinition>;
 }
 
 impl fmt::Debug for Function {
@@ -32,21 +52,33 @@ pub enum CodeNode {
     FunctionDefinition(FunctionDefinition),
 }
 
-pub trait BuiltinFunction {
-    fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value;
-}
-
 #[derive(Clone, Debug)]
 pub enum Error {
     ArgumentError,
     UndefinedFunctionError(ID),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Value {
     Null,
     String(String),
     Result(Result<Box<Value>,Error>)
+}
+
+impl Value {
+    pub fn get_type(&self) -> &'static Type {
+        match self {
+            Value::Null => &NULL_TYPE,
+            Value::String(_) => &STRING_TYPE,
+            Value::Result(_) => &RESULT_TYPE,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug)]
+pub struct Type {
+    readable_name: String,
+    id: ID,
 }
 
 impl CodeNode {
@@ -129,10 +161,36 @@ impl CodeNode {
         None
     }
 
+    pub fn children(&self) -> Vec<&CodeNode> {
+        match self {
+            CodeNode::FunctionCall(function_call) => {
+                function_call.args.iter().map(|arg| &arg.expr).collect()
+            }
+            CodeNode::StringLiteral(_) => {
+                Vec::new()
+            }
+            CodeNode::Assignment(assignment) => {
+                vec![assignment.expression.borrow()]
+            }
+            CodeNode::Block(block) => {
+                block.expressions.iter().collect()
+            }
+            CodeNode::VariableReference(_) => {
+                Vec::new()
+            }
+            CodeNode::FunctionDefinition(_) => {
+                Vec::new()
+            }
+            CodeNode::FunctionReference(_) => {
+                Vec::new()
+            }
+        }
+    }
+
     pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                function_call.args.iter_mut().collect()
+                function_call.args.iter_mut().map(|arg| &mut arg.expr).collect()
             }
             CodeNode::StringLiteral(_) => {
                 Vec::new()
@@ -209,7 +267,7 @@ pub struct StringLiteral {
 #[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct FunctionCall {
     pub function_reference: FunctionReference,
-    pub args: Vec<CodeNode>,
+    pub args: Vec<Argument>,
     pub id: ID,
 }
 
@@ -244,4 +302,24 @@ pub struct FunctionReference {
 pub struct FunctionDefinition {
     pub name: String,
     pub id: ID,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug)]
+pub struct ArgumentDefinition {
+    pub id: ID,
+    pub arg_type: Type,
+    pub short_name: String,
+}
+
+impl ArgumentDefinition {
+    pub fn new(id: ID, arg_type: Type, short_name: String) -> ArgumentDefinition {
+        ArgumentDefinition { id, short_name, arg_type }
+    }
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug)]
+pub struct Argument {
+    pub id: ID,
+    pub argument_definition_id: ID,
+    pub expr: CodeNode,
 }

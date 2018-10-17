@@ -28,17 +28,7 @@ impl ExecutionEnvironment {
     pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> lang::Value {
         match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
-                let args: Vec<lang::Value> = function_call.args.iter().map(|arg| self.evaluate(arg)).collect();
-                let function_id = function_call.function_reference.function_id;
-                let function = self.find_function(function_id);
-                match function {
-                    Some(function) => {
-                        function.clone().call(self, args)
-                    }
-                    None => {
-                        lang::Value::Result(Err(lang::Error::UndefinedFunctionError(function_id)))
-                    }
-                }
+                self.evaluate_function_call(function_call)
             }
             lang::CodeNode::StringLiteral(string_literal) => {
                 lang::Value::String(string_literal.value.clone())
@@ -68,6 +58,21 @@ impl ExecutionEnvironment {
             }
             lang::CodeNode::FunctionReference(_) => { lang::Value::Null }
             lang::CodeNode::FunctionDefinition(_) => { lang::Value::Null }
+        }
+    }
+
+    fn evaluate_function_call(&mut self, function_call: &lang::FunctionCall) -> lang::Value {
+        let args: HashMap<lang::ID,lang::Value> = function_call.args.iter()
+            .map(|arg| (arg.argument_definition_id, self.evaluate(&arg.expr)))
+            .collect();
+        let function_id = function_call.function_reference.function_id;
+        match self.find_function(function_id) {
+            Some(function) => {
+                function.clone().call(self, args)
+            }
+            None => {
+                lang::Value::Result(Err(lang::Error::UndefinedFunctionError(function_id)))
+            }
         }
     }
 

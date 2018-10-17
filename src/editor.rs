@@ -1,22 +1,27 @@
 use debug_cell::RefCell;
 use std::rc::Rc;
+use std::collections::HashMap;
 use super::uuid::Uuid;
 
 use failure::{err_msg};
 use failure::Error as Error;
 use super::code_loading::{serialize};
 use super::env::{ExecutionEnvironment};
+use super::editor_views::{FunctionCallView};
+use super::lang;
 use super::lang::{
     Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Error as LangError,Assignment,Block,
     VariableReference};
 
 
-const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
-const BLACK_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-const RED_COLOR: [f32; 4] = [0.858, 0.180, 0.180, 1.0];
-const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
-const PURPLE_COLOR: [f32; 4] = [0.486, 0.353, 0.952, 1.0];
-const CLEAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
+pub const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
+pub const BLACK_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+pub const RED_COLOR: [f32; 4] = [0.858, 0.180, 0.180, 1.0];
+pub const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
+pub const PURPLE_COLOR: [f32; 4] = [0.486, 0.353, 0.952, 1.0];
+pub const CLEAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
+
+pub type Color = [f32; 4];
 
 
 #[derive(Clone)]
@@ -105,10 +110,9 @@ impl<'a> Controller {
         match parent {
             Some(CodeNode::Block(mut block)) => {
                 let insertion_point_in_block_exprs = block.expressions.iter()
-                    .enumerate()
-                    .find(|(i, exp)| exp.id() == insertion_point.node_id());
+                    .position(|exp| exp.id() == insertion_point.node_id());
                 if insertion_point_in_block_exprs.is_none() { return }
-                let insertion_point_in_block_exprs = insertion_point_in_block_exprs.unwrap().0;
+                let insertion_point_in_block_exprs = insertion_point_in_block_exprs.unwrap();
 
                 match insertion_point {
                     InsertionPoint::Before(_) => {
@@ -516,6 +520,21 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             block.expressions.iter().map(|code| self.render_code(code)).collect())
     }
 
+    fn render_function_call(&self, function_call: &FunctionCall) -> T::DrawResult {
+        let render_function_reference_fn = || {
+            self.render_function_reference(&function_call.function_reference)
+        };
+
+        let mut renderers : Vec<Box<Fn() -> T::DrawResult>> = vec![Box::new(render_function_reference_fn)];
+        renderers.push(Box::new(move || {
+            self.render_function_call_arguments(function_call.function_reference.function_id, &function_call.args)
+        }));
+        self.ui_toolkit.draw_all_on_same_line(
+            renderers.iter()
+                .map(|b| b.as_ref())
+                .collect())
+    }
+
     fn render_function_reference(&self, function_reference: &FunctionReference) -> T::DrawResult {
         let function_id = function_reference.function_id;
 
@@ -533,23 +552,38 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_button(&function_name, color, &|| {})
     }
 
-    fn render_function_call(&self, function_call: &FunctionCall) -> T::DrawResult {
-        let render_function_reference_fn = || {
-            self.render_function_reference(&function_call.function_reference)
-        };
-
-        let mut arg_renderers : Vec<Box<Fn() -> T::DrawResult>> = vec![Box::new(render_function_reference_fn)];
-        let args = function_call.args.clone();
-        for arg in args {
-            let render_fn = move || { self.render_code(&arg) };
-            arg_renderers.push(Box::new(render_fn));
+    fn render_function_call_arguments(&self, function_id: ID, args: &Vec<lang::Argument>) -> T::DrawResult {
+        match self.controller.borrow_mut().find_function(function_id) {
+            Some(function) => {
+                self.render_args_for_found_function(function.clone(), args)
+            },
+            None => {
+                self.render_args_for_missing_function(args)
+            }
         }
-        self.ui_toolkit.draw_all_on_same_line(
-            arg_renderers.iter()
-                .map(|b| {
-                    b.as_ref()
-                })
-                .collect())
+    }
+
+    fn render_args_for_found_function(&self, function: Box<Function>, args: &Vec<lang::Argument>) -> T::DrawResult {
+        let provided_arg_by_definition_id : HashMap<ID,&lang::Argument> = args.iter()
+            .map(|arg| (arg.argument_definition_id, arg)).collect();
+        let expected_args = function.takes_args();
+
+        let draw_results = expected_args.iter().map(|expected_arg| {
+            // TODO: display the argument name somewhere in here?
+            if let(Some(provided_arg)) = provided_arg_by_definition_id.get(&expected_arg.id) {
+                self.render_code(&provided_arg.expr)
+            } else {
+                self.ui_toolkit.draw_all(vec![])
+            }
+        }).collect();
+
+        // TODO: implement this
+        self.ui_toolkit.draw_all(draw_results)
+    }
+
+    fn render_args_for_missing_function(&self, args: &Vec<lang::Argument>) -> T::DrawResult {
+        // TODO: implement this
+        self.ui_toolkit.draw_all(vec![])
     }
 
     fn render_string_literal(&self, string_literal: &StringLiteral) -> T::DrawResult {

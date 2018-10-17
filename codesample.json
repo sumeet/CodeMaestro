@@ -21,9 +21,13 @@
                     },
                     "args": [
                         {
-                            "VariableReference": {
-                                "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
-                                "id": "2b80cbcd-835d-4ba7-910b-bbfecf8a33db"
+                            "id": "294b7fd8-dc64-42a7-93d4-0543a86ddcc0",
+                            "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df",
+                            "expr": {
+                                "VariableReference": {
+                                    "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                                    "id": "2b80cbcd-835d-4ba7-910b-bbfecf8a33db"
+                              }
                             }
                         }
                     ],

@@ -36,6 +36,9 @@ extern crate objekt;
 extern crate uuid;
 
 #[macro_use]
+extern crate lazy_static;
+
+#[macro_use]
 extern crate failure;
 use failure::{err_msg};
 use failure::Error as Error;
@@ -54,11 +57,14 @@ use debug_cell::RefCell;
 
 //use std::cell::RefCell;
 use std::rc::Rc;
+use std::collections::HashMap;
 
 mod lang;
 mod env;
 mod code_loading;
 mod editor;
+mod editor_views;
+mod validation;
 
 
 use self::editor::{Controller,Renderer,UiToolkit};
@@ -87,13 +93,13 @@ fn main() {
 struct Print {}
 
 impl Function for Print {
-    fn call(&self, env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value {
-        match args.as_slice() {
-            [Value::String(string)] =>  {
+    fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID, Value>) -> Value {
+        match args.get(&self.takes_args()[0].id) {
+            Some(Value::String(ref string)) =>  {
                 env.println(string);
                 Value::Null
             }
-            _ => Value::Result(Result::Err(LangError::ArgumentError))
+            _ => Value::Result(Err(LangError::ArgumentError))
         }
     }
 
@@ -104,18 +110,28 @@ impl Function for Print {
     fn id(&self) -> ID {
         uuid::Uuid::parse_str("b5c18d63-f9a0-4f08-8ee7-e35b3db9122d").unwrap()
     }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![
+            lang::ArgumentDefinition::new(
+                uuid::Uuid::parse_str("feff08f0-7319-4b47-964e-1f470eca81df").unwrap(),
+                lang::STRING_TYPE.clone(),
+                "String to print".to_string()
+            )
+        ]
+    }
 }
 
 #[derive(Clone)]
 struct Capitalize {}
 
 impl Function for Capitalize {
-    fn call(&self, _env: &mut ExecutionEnvironment, args: Vec<Value>) -> Value {
-        match args.as_slice() {
-            [Value::String(string)] => {
+    fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID, Value>) -> Value {
+        match args.get(&self.takes_args()[0].id) {
+            Some(Value::String(ref string)) =>  {
                 Value::String(string.to_uppercase())
-            },
-            _ => Value::Result(Result::Err(LangError::ArgumentError))
+            }
+            _ => Value::Result(Err(LangError::ArgumentError))
         }
     }
 
@@ -126,6 +142,16 @@ impl Function for Capitalize {
     fn id(&self) -> ID {
         uuid::Uuid::parse_str("86ae2a51-5538-436f-b48e-3aa6c873b189").unwrap()
     }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![
+            lang::ArgumentDefinition::new(
+                uuid::Uuid::parse_str("94e81ddc-843b-426d-847e-a215125c9593").unwrap(),
+                lang::STRING_TYPE.clone(),
+                "String to capitalize".to_string()
+            )
+        ]
+    }
 }
 
 pub struct CSApp {
@@ -134,7 +160,7 @@ pub struct CSApp {
 
 impl CSApp {
     fn new() -> CSApp {
-        let codestring = include_str!("../codesample");
+        let codestring = include_str!("../codesample.json");
         let loaded_code = code_loading::deserialize(codestring).unwrap();
         let app = CSApp {
             controller: Rc::new(RefCell::new(Controller::new())),
