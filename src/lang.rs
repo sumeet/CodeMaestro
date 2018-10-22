@@ -77,8 +77,8 @@ impl Value {
 
 #[derive(Deserialize, Serialize, Clone ,Debug)]
 pub struct Type {
-    readable_name: String,
-    id: ID,
+    pub readable_name: String,
+    pub id: ID,
 }
 
 impl CodeNode {
@@ -223,6 +223,7 @@ impl CodeNode {
         }
     }
 
+    // XXX: absolutely insane that find() requires a mutable reference. fix this.
     pub fn find_node(&mut self, id: ID) -> Option<&CodeNode> {
         if self.id() == id {
             Some(self)

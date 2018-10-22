@@ -37,11 +37,64 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     let hidpi_factor = window.get_hidpi_factor().round();
 
     let font_size = (13.0 * hidpi_factor) as f32;
+    let icon_font_size = (7.0 * hidpi_factor) as f32;
+
+    imgui.fonts().add_default_font_with_config(
+        ImFontConfig::new()
+            .oversample_h(1)
+            .pixel_snap_h(true)
+            .size_pixels(font_size),
+    );
+
+    imgui.fonts().add_font_with_config(
+        include_bytes!("./NanumGothic.ttf"),
+        ImFontConfig::new()
+            .oversample_h(1)
+            .pixel_snap_h(true)
+            .size_pixels(font_size)
+            .merge_mode(true)
+            .rasterizer_multiply(1.75),
+        &FontGlyphRange::korean(),
+    );
+
+    let range = FontGlyphRange::from_slice(&[
+        0xf004, 0xf5c8, // the range for font awesome regular
+        0,
+    ]);
+    imgui.fonts().add_font_with_config(
+        include_bytes!("./fa-regular-400.ttf"),
+        ImFontConfig::new()
+            .glyph_offset((0.0, -5.0))
+            .oversample_h(1)
+            .pixel_snap_h(true)
+            .size_pixels(icon_font_size)
+            .merge_mode(true)
+            .rasterizer_multiply(1.75),
+        &range,
+    );
+
+
+    let range = FontGlyphRange::from_slice(&[
+        0xf000, 0xf72f, // the range for font awesome regular
+        0,
+    ]);
+    imgui.fonts().add_font_with_config(
+        include_bytes!("./fa-solid-900.ttf"),
+        ImFontConfig::new()
+            .glyph_offset((0.0, -5.0))
+            .oversample_h(1)
+            .pixel_snap_h(true)
+            .size_pixels(icon_font_size)
+            .merge_mode(true)
+            .rasterizer_multiply(1.75),
+        &range,
+    );
 
     imgui.fonts().add_font_with_config(
         include_bytes!("./calibri.ttf"),
         ImFontConfig::new()
             .oversample_h(1)
+            .merge_mode(true)
             .pixel_snap_h(true)
             .size_pixels(font_size)
             .rasterizer_multiply(1.75),
@@ -49,23 +102,6 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     );
 
 
-    imgui.fonts().add_font_with_config(
-        include_bytes!("./calibri.ttf"),
-        ImFontConfig::new()
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(font_size)
-            .rasterizer_multiply(1.75),
-        &FontGlyphRange::korean(),
-    );
-
-    imgui.fonts().add_default_font_with_config(
-        ImFontConfig::new()
-            .merge_mode(true)
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(font_size),
-    );
 
     imgui.set_font_global_scale((1.0 / hidpi_factor) as f32);
 

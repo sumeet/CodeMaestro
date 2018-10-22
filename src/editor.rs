@@ -553,9 +553,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_arguments(&self, function_id: ID, args: &Vec<lang::Argument>) -> T::DrawResult {
-        match self.controller.borrow_mut().find_function(function_id) {
+        let function = self.controller.borrow_mut().find_function(function_id)
+            .map(|func| func.clone());
+        match function {
             Some(function) => {
-                self.render_args_for_found_function(function.clone(), args)
+                self.render_args_for_found_function(&*function, args)
             },
             None => {
                 self.render_args_for_missing_function(args)
@@ -563,7 +565,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
     }
 
-    fn render_args_for_found_function(&self, function: Box<Function>, args: &Vec<lang::Argument>) -> T::DrawResult {
+    fn render_args_for_found_function(&self, function: &Function, args: &Vec<lang::Argument>) -> T::DrawResult {
         let provided_arg_by_definition_id : HashMap<ID,&lang::Argument> = args.iter()
             .map(|arg| (arg.argument_definition_id, arg)).collect();
         let expected_args = function.takes_args();
@@ -573,12 +575,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             if let(Some(provided_arg)) = provided_arg_by_definition_id.get(&expected_arg.id) {
                 self.render_code(&provided_arg.expr)
             } else {
-                self.ui_toolkit.draw_all(vec![])
+                self.render_missing_function_argument(expected_arg)
             }
         }).collect();
 
         // TODO: implement this
         self.ui_toolkit.draw_all(draw_results)
+    }
+
+    fn render_missing_function_argument(&self, arg: &lang::ArgumentDefinition) -> T::DrawResult {
+        let mut r = RED_COLOR;
+        r[3] = 0.4;
+        self.ui_toolkit.draw_button( &format!("{} \u{F5C8}", arg.short_name),
+            r,
+            &|| {})
     }
 
     fn render_args_for_missing_function(&self, args: &Vec<lang::Argument>) -> T::DrawResult {
@@ -588,7 +598,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_string_literal(&self, string_literal: &StringLiteral) -> T::DrawResult {
         self.render_inline_editable_button(
-            &string_literal.value,
+            &format!("\u{F10D} {} \u{F10E}", string_literal.value),
             CLEAR_COLOR,
             &CodeNode::StringLiteral(string_literal.clone())
         )
