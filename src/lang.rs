@@ -9,6 +9,7 @@ use serde::ser::{Serialize, Serializer, SerializeSeq, SerializeMap};
 use super::ExecutionEnvironment;
 use super::uuid::Uuid;
 
+
 lazy_static! {
     pub static ref NULL_TYPE: Type = Type {
         readable_name: "Null".to_string(),
@@ -44,11 +45,12 @@ clone_trait_object!(Function);
 #[derive(Deserialize, Serialize, Clone ,Debug)]
 pub enum CodeNode {
     FunctionCall(FunctionCall),
+    FunctionReference(FunctionReference),
+    Argument(Argument),
     StringLiteral(StringLiteral),
     Assignment(Assignment),
     Block(Block),
     VariableReference(VariableReference),
-    FunctionReference(FunctionReference),
     FunctionDefinition(FunctionDefinition),
 }
 
@@ -105,6 +107,9 @@ impl CodeNode {
             CodeNode::FunctionDefinition(function_definition) => {
                 format!("Function reference: Name {}", function_definition.name)
             }
+            CodeNode::Argument(argument) => {
+                format!("Argument: ID {}", argument.id)
+            }
         }
     }
 
@@ -133,11 +138,14 @@ impl CodeNode {
             CodeNode::FunctionReference(function_reference) => {
                 function_reference.id
             }
+            CodeNode::Argument(argument) => {
+                argument.id
+            }
         }
     }
 
-    pub fn previous_child(&mut self, node_id: ID) -> Option<CodeNode> {
-        let children = self.children_mut();
+    pub fn previous_child(&self, node_id: ID) -> Option<CodeNode> {
+        let children = self.children();
         let position = children.iter().position(|n| n.id() == node_id);
         if let(Some(position)) = position {
             if position > 0 {
@@ -149,8 +157,8 @@ impl CodeNode {
         None
     }
 
-    pub fn next_child(&mut self, node_id: ID) -> Option<CodeNode> {
-        let children = self.children_mut();
+    pub fn next_child(&self, node_id: ID) -> Option<CodeNode> {
+        let children = self.children();
         let position = children.iter()
             .position(|n| n.id() == node_id);
         if let(Some(position)) = position {
@@ -163,8 +171,9 @@ impl CodeNode {
 
     pub fn children(&self) -> Vec<&CodeNode> {
         match self {
+            // TODO: include function Arguments in children, so navigation is possible
             CodeNode::FunctionCall(function_call) => {
-                function_call.args.iter().map(|arg| &arg.expr).collect()
+                function_call.args.iter().map(|arg| arg.expr.as_ref()).collect()
             }
             CodeNode::StringLiteral(_) => {
                 Vec::new()
@@ -184,13 +193,17 @@ impl CodeNode {
             CodeNode::FunctionReference(_) => {
                 Vec::new()
             }
+            CodeNode::Argument(argument) => {
+                vec![argument.expr.borrow()]
+            }
         }
     }
 
     pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
         match self {
+            // TODO: include function Arguments in children, so navigation is possible
             CodeNode::FunctionCall(function_call) => {
-                function_call.args.iter_mut().map(|arg| &mut arg.expr).collect()
+                function_call.args.iter_mut().map(|arg| arg.expr.as_mut()).collect()
             }
             CodeNode::StringLiteral(_) => {
                 Vec::new()
@@ -210,6 +223,9 @@ impl CodeNode {
             CodeNode::FunctionReference(_) => {
                 Vec::new()
             }
+            CodeNode::Argument(argument) => {
+                vec![argument.expr.borrow_mut()]
+            }
         }
     }
 
@@ -223,12 +239,11 @@ impl CodeNode {
         }
     }
 
-    // XXX: absolutely insane that find() requires a mutable reference. fix this.
-    pub fn find_node(&mut self, id: ID) -> Option<&CodeNode> {
+    pub fn find_node(&self, id: ID) -> Option<&CodeNode> {
         if self.id() == id {
             Some(self)
         } else {
-            for child in self.children_mut() {
+            for child in self.children() {
                 if let(Some(found_node)) = child.find_node(id) {
                     return Some(found_node)
                 }
@@ -237,11 +252,11 @@ impl CodeNode {
         }
     }
 
-    pub fn find_parent(&mut self, id: ID) -> Option<CodeNode> {
+    pub fn find_parent(&self, id: ID) -> Option<CodeNode> {
         if self.id() == id {
             return None
         } else {
-            let children = self.children_mut();
+            let children = self.children();
             for child in children {
                 if child.id() == id {
                     return Some(self.clone())
@@ -322,5 +337,5 @@ impl ArgumentDefinition {
 pub struct Argument {
     pub id: ID,
     pub argument_definition_id: ID,
-    pub expr: CodeNode,
+    pub expr: Box<CodeNode>,
 }

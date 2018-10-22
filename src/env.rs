@@ -1,6 +1,7 @@
 use super::{lang};
 
 use std::collections::HashMap;
+use std::borrow::Borrow;
 
 pub struct ExecutionEnvironment {
     pub console: String,
@@ -29,6 +30,9 @@ impl ExecutionEnvironment {
         match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
                 self.evaluate_function_call(function_call)
+            }
+            lang::CodeNode::Argument(argument) => {
+                self.evaluate(argument.expr.borrow())
             }
             lang::CodeNode::StringLiteral(string_literal) => {
                 lang::Value::String(string_literal.value.clone())

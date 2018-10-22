@@ -64,7 +64,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     imgui.fonts().add_font_with_config(
         include_bytes!("./fa-regular-400.ttf"),
         ImFontConfig::new()
-            .glyph_offset((0.0, -5.0))
+            .glyph_offset((0.0, -9.0))
             .oversample_h(1)
             .pixel_snap_h(true)
             .size_pixels(icon_font_size)
@@ -81,7 +81,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     imgui.fonts().add_font_with_config(
         include_bytes!("./fa-solid-900.ttf"),
         ImFontConfig::new()
-            .glyph_offset((0.0, -5.0))
+            .glyph_offset((0.0, -9.0))
             .oversample_h(1)
             .pixel_snap_h(true)
             .size_pixels(icon_font_size)

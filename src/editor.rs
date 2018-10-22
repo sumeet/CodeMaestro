@@ -125,7 +125,7 @@ impl<'a> Controller {
 
                 self.loaded_code.as_mut().unwrap().replace(&CodeNode::Block(block));
             },
-            _ => panic!("unable to insert new code")
+            _ => panic!("unable to insert new code, couldn't find Block to insert into")
         }
     }
 
@@ -229,10 +229,10 @@ impl<'a> Controller {
         let mut parent = parent.unwrap();
 
         // first try selecting the previous sibling
-        if let(Some(mut previous_sibling)) = parent.previous_child(selected_node_id) {
+        if let(Some(previous_sibling)) = parent.previous_child(selected_node_id) {
             // but since we're going back, if the previous sibling has children, then let's
             // select the last one. that feels more ergonomic while moving backwards
-            let children = previous_sibling.children_mut();
+            let children = previous_sibling.children();
             if children.len() > 0 {
                 self.set_selected_node_id(Some(children[0].id()))
             } else {
@@ -255,8 +255,8 @@ impl<'a> Controller {
         let selected_node_id = self.get_selected_node_id().unwrap();
         let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
 
-        let mut selected_code = loaded_code.find_node(selected_node_id).as_mut().unwrap().clone();
-        let children = selected_code.children_mut();
+        let selected_code = loaded_code.find_node(selected_node_id).as_mut().unwrap().clone();
+        let children = selected_code.children();
         let first_child = children.get(0);
 
         if let(Some(first_child)) = first_child {
@@ -423,18 +423,40 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 CodeNode::FunctionReference(function_reference) => {
                     self.render_function_reference(&function_reference)
                 }
+                CodeNode::Argument(argument) => {
+                    // TODO: implementing this should be possible after implementing the code index
+                    self.ui_toolkit.draw_all(vec![])
+                }
             }
         };
 
         if self.is_selected(code_node) {
             self.ui_toolkit.draw_border_around(&draw)
         } else {
-            let mut drawn : Vec<T::DrawResult> = vec![];
-            drawn.push(draw());
-            if self.is_insertion_pointer_immediately_after(code_node.id()) {
-                drawn.push(self.render_insert_code_node())
+            self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
+        }
+    }
+
+    fn draw_code_node_and_insertion_point_if_before_or_after(&self, code_node: &CodeNode, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
+        let mut drawn: Vec<T::DrawResult> = vec![];
+        if self.is_insertion_pointer_immediately_before(code_node.id()) {
+            drawn.push(self.render_insert_code_node())
+        }
+        drawn.push(draw());
+        if self.is_insertion_pointer_immediately_after(code_node.id()) {
+            drawn.push(self.render_insert_code_node())
+        }
+        self.ui_toolkit.draw_all(drawn)
+    }
+
+
+    fn is_insertion_pointer_immediately_before(&self, id: ID) -> bool {
+        let insertion_point = self.controller.borrow().insertion_point();
+        match insertion_point {
+            Some(InsertionPoint::Before(code_node_id)) if code_node_id == id => {
+                true
             }
-            self.ui_toolkit.draw_all(drawn)
+            _ => false
         }
     }
 
@@ -676,3 +698,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 }
 
+struct CodeIndex<'a> {
+    code: CodeNode,
+    code_by_id: HashMap<ID, &'a mut CodeNode>,
+}

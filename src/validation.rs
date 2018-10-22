@@ -44,6 +44,10 @@ impl<'a> Validator<'a> {
             lang::CodeNode::FunctionDefinition(function_definition) => {
                 vec![]
             }
+            // TODO: i don't think we want a catchall in here, but this entire validation
+            // module is dead atm, so i don't want to have to keep coming in here and updating
+            // it
+            _ => { vec![] }
         }
     }
 
