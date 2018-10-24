@@ -84,6 +84,13 @@ pub struct Type {
 }
 
 impl CodeNode {
+    pub fn into_argument(&self) -> &Argument {
+        match self {
+            CodeNode::Argument(argument) => argument,
+            _ => panic!("tried converting into argument but this ain't an argument")
+        }
+    }
+
     pub fn description(&self) -> String {
         match self {
             CodeNode::FunctionCall(function_call) => {
@@ -146,7 +153,8 @@ impl CodeNode {
 
     pub fn previous_child(&self, node_id: ID) -> Option<CodeNode> {
         let children = self.children();
-        let position = children.iter().position(|n| n.id() == node_id);
+        let position = children.iter()
+            .position(|n| n.id() == node_id);
         if let(Some(position)) = position {
             if position > 0 {
                 if let (Some(next)) = children.get(position - 1) {
@@ -171,9 +179,8 @@ impl CodeNode {
 
     pub fn children(&self) -> Vec<&CodeNode> {
         match self {
-            // TODO: include function Arguments in children, so navigation is possible
             CodeNode::FunctionCall(function_call) => {
-                function_call.args.iter().map(|arg| arg.expr.as_ref()).collect()
+                function_call.args.iter().map(|arg| arg.as_ref()).collect()
             }
             CodeNode::StringLiteral(_) => {
                 Vec::new()
@@ -201,9 +208,11 @@ impl CodeNode {
 
     pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
         match self {
-            // TODO: include function Arguments in children, so navigation is possible
             CodeNode::FunctionCall(function_call) => {
-                function_call.args.iter_mut().map(|arg| arg.expr.as_mut()).collect()
+                function_call.args
+                    .iter_mut()
+                    .map(|arg| arg.as_mut())
+                    .collect()
             }
             CodeNode::StringLiteral(_) => {
                 Vec::new()
@@ -283,7 +292,7 @@ pub struct StringLiteral {
 #[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct FunctionCall {
     pub function_reference: FunctionReference,
-    pub args: Vec<Argument>,
+    pub args: Vec<Box<CodeNode>>,
     pub id: ID,
 }
 

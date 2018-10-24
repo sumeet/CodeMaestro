@@ -549,7 +549,12 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
         let mut renderers : Vec<Box<Fn() -> T::DrawResult>> = vec![Box::new(render_function_reference_fn)];
         renderers.push(Box::new(move || {
-            self.render_function_call_arguments(function_call.function_reference.function_id, &function_call.args)
+            self.render_function_call_arguments(
+                function_call.function_reference.function_id,
+                function_call.args.iter()
+                    .map(|code_node| code_node.into_argument())
+                    .collect()
+            )
         }));
         self.ui_toolkit.draw_all_on_same_line(
             renderers.iter()
@@ -574,7 +579,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_button(&function_name, color, &|| {})
     }
 
-    fn render_function_call_arguments(&self, function_id: ID, args: &Vec<lang::Argument>) -> T::DrawResult {
+    fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> T::DrawResult {
         let function = self.controller.borrow_mut().find_function(function_id)
             .map(|func| func.clone());
         match function {
@@ -587,8 +592,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
     }
 
-    fn render_args_for_found_function(&self, function: &Function, args: &Vec<lang::Argument>) -> T::DrawResult {
-        let provided_arg_by_definition_id : HashMap<ID,&lang::Argument> = args.iter()
+    fn render_args_for_found_function(&self, function: &Function, args: Vec<&lang::Argument>) -> T::DrawResult {
+        let provided_arg_by_definition_id : HashMap<ID,&lang::Argument> = args.into_iter()
             .map(|arg| (arg.argument_definition_id, arg)).collect();
         let expected_args = function.takes_args();
 
@@ -613,7 +618,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {})
     }
 
-    fn render_args_for_missing_function(&self, args: &Vec<lang::Argument>) -> T::DrawResult {
+    fn render_args_for_missing_function(&self, args: Vec<&lang::Argument>) -> T::DrawResult {
         // TODO: implement this
         self.ui_toolkit.draw_all(vec![])
     }
@@ -696,9 +701,4 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             }
         )
     }
-}
-
-struct CodeIndex<'a> {
-    code: CodeNode,
-    code_by_id: HashMap<ID, &'a mut CodeNode>,
 }

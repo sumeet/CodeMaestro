@@ -38,6 +38,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
 
     let font_size = (13.0 * hidpi_factor) as f32;
     let icon_font_size = (7.0 * hidpi_factor) as f32;
+    let icon_y_offset = (-3.0 * hidpi_factor) as f32;
 
     imgui.fonts().add_default_font_with_config(
         ImFontConfig::new()
@@ -64,7 +65,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     imgui.fonts().add_font_with_config(
         include_bytes!("./fa-regular-400.ttf"),
         ImFontConfig::new()
-            .glyph_offset((0.0, -9.0))
+            .glyph_offset((0.0, icon_y_offset))
             .oversample_h(1)
             .pixel_snap_h(true)
             .size_pixels(icon_font_size)
@@ -81,7 +82,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     imgui.fonts().add_font_with_config(
         include_bytes!("./fa-solid-900.ttf"),
         ImFontConfig::new()
-            .glyph_offset((0.0, -9.0))
+            .glyph_offset((0.0, icon_y_offset))
             .oversample_h(1)
             .pixel_snap_h(true)
             .size_pixels(icon_font_size)

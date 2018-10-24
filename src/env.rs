@@ -67,6 +67,7 @@ impl ExecutionEnvironment {
 
     fn evaluate_function_call(&mut self, function_call: &lang::FunctionCall) -> lang::Value {
         let args: HashMap<lang::ID,lang::Value> = function_call.args.iter()
+            .map(|code_node| code_node.into_argument())
             .map(|arg| (arg.argument_definition_id, self.evaluate(&arg.expr)))
             .collect();
         let function_id = function_call.function_reference.function_id;
