@@ -10,7 +10,7 @@ pub struct FunctionCallView<'a> {
 
 impl<'a> FunctionCallView<'a> {
     pub fn new(function_call: &'a lang::FunctionCall, env: &'a env::ExecutionEnvironment) -> Self {
-        let function = env.find_function(function_call.function_reference.function_id)
+        let function = env.find_function(function_call.function_reference().function_id)
             .map(|func| &**func);
         FunctionCallView { function_call, env, function }
     }
@@ -31,6 +31,6 @@ impl<'a> FunctionCallView<'a> {
     }
 
     fn function_id(&self) -> lang::ID {
-        self.function_call.function_reference.function_id
+        self.function_call.function_reference().function_id
     }
 }

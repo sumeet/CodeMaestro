@@ -70,7 +70,7 @@ impl ExecutionEnvironment {
             .map(|code_node| code_node.into_argument())
             .map(|arg| (arg.argument_definition_id, self.evaluate(&arg.expr)))
             .collect();
-        let function_id = function_call.function_reference.function_id;
+        let function_id = function_call.function_reference().function_id;
         match self.find_function(function_id) {
             Some(function) => {
                 function.clone().call(self, args)

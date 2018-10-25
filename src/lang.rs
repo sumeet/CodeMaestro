@@ -180,7 +180,9 @@ impl CodeNode {
     pub fn children(&self) -> Vec<&CodeNode> {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                function_call.args.iter().map(|arg| arg.as_ref()).collect()
+                let mut children : Vec<&CodeNode> = function_call.args.iter().collect();
+                children.insert(0, function_call.function_reference.as_ref());
+                children
             }
             CodeNode::StringLiteral(_) => {
                 Vec::new()
@@ -209,10 +211,11 @@ impl CodeNode {
     pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                function_call.args
+                let mut children : Vec<&mut CodeNode> = function_call.args
                     .iter_mut()
-                    .map(|arg| arg.as_mut())
-                    .collect()
+                    .collect();
+                children.insert(0, &mut function_call.function_reference);
+                children
             }
             CodeNode::StringLiteral(_) => {
                 Vec::new()
@@ -291,9 +294,22 @@ pub struct StringLiteral {
 
 #[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct FunctionCall {
-    pub function_reference: FunctionReference,
-    pub args: Vec<Box<CodeNode>>,
+    pub function_reference: Box<CodeNode>,
+    pub args: Vec<CodeNode>,
     pub id: ID,
+}
+
+impl FunctionCall {
+    pub fn function_reference(&self) -> &FunctionReference {
+        match *self.function_reference {
+            CodeNode::FunctionReference(ref function_reference) => function_reference,
+            _ => panic!("tried converting into argument but this ain't an argument")
+        }
+    }
+
+    pub fn args(&self) -> Vec<&Argument> {
+        self.args.iter().map(|arg| arg.into_argument()).collect()
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone,Debug)]

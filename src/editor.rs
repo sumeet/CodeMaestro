@@ -41,10 +41,10 @@ impl InsertCodeNodeMenu {
     fn new_function_call_with_selected_function(&self) -> FunctionCall {
         FunctionCall {
             id: Uuid::new_v4(),
-            function_reference: FunctionReference {
+            function_reference: Box::new(CodeNode::FunctionReference(FunctionReference {
                 id: Uuid::new_v4(),
                 function_id: self.selected_fn_id,
-            },
+            })),
             args: vec![],
         }
     }
@@ -424,8 +424,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.render_function_reference(&function_reference)
                 }
                 CodeNode::Argument(argument) => {
-                    // TODO: implementing this should be possible after implementing the code index
-                    self.ui_toolkit.draw_all(vec![])
+                    self.render_function_call_argument(&argument)
                 }
             }
         };
@@ -544,18 +543,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_function_call(&self, function_call: &FunctionCall) -> T::DrawResult {
         let render_function_reference_fn = || {
-            self.render_function_reference(&function_call.function_reference)
+            self.render_function_reference(&function_call.function_reference())
         };
 
         let mut renderers : Vec<Box<Fn() -> T::DrawResult>> = vec![Box::new(render_function_reference_fn)];
         renderers.push(Box::new(move || {
             self.render_function_call_arguments(
-                function_call.function_reference.function_id,
-                function_call.args.iter()
-                    .map(|code_node| code_node.into_argument())
-                    .collect()
-            )
-        }));
+                function_call.function_reference().function_id,
+                function_call.args())}));
         self.ui_toolkit.draw_all_on_same_line(
             renderers.iter()
                 .map(|b| b.as_ref())
@@ -580,7 +575,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> T::DrawResult {
-        let function = self.controller.borrow_mut().find_function(function_id)
+        let function = self.controller.borrow().find_function(function_id)
             .map(|func| func.clone());
         match function {
             Some(function) => {
@@ -592,26 +587,32 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
     }
 
+    fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
+        self.render_code(argument.expr.as_ref())
+    }
+
     fn render_args_for_found_function(&self, function: &Function, args: Vec<&lang::Argument>) -> T::DrawResult {
-        let provided_arg_by_definition_id : HashMap<ID,&lang::Argument> = args.into_iter()
-            .map(|arg| (arg.argument_definition_id, arg)).collect();
+        let provided_arg_by_definition_id : HashMap<ID,lang::Argument> = args.into_iter()
+            .map(|arg| (arg.argument_definition_id, arg.clone())).collect();
         let expected_args = function.takes_args();
 
         let draw_results = expected_args.iter().map(|expected_arg| {
             // TODO: display the argument name somewhere in here?
             if let(Some(provided_arg)) = provided_arg_by_definition_id.get(&expected_arg.id) {
-                self.render_code(&provided_arg.expr)
+                self.render_code(&CodeNode::Argument(provided_arg.clone()))
             } else {
                 self.render_missing_function_argument(expected_arg)
             }
         }).collect();
 
         // TODO: implement this
+        // UHHH: what was this^ TODO for?
         self.ui_toolkit.draw_all(draw_results)
     }
 
     fn render_missing_function_argument(&self, arg: &lang::ArgumentDefinition) -> T::DrawResult {
         let mut r = RED_COLOR;
+        // XXX: mess around w/ some transparency
         r[3] = 0.4;
         self.ui_toolkit.draw_button( &format!("{} \u{F5C8}", arg.short_name),
             r,

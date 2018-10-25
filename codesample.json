@@ -16,8 +16,10 @@
             {
                 "FunctionCall": {
                     "function_reference": {
-                        "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
-                        "id": "c039dfc9-1e13-4222-833e-0d44c8aa9257"
+                        "FunctionReference":  {
+                            "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
+                            "id": "c039dfc9-1e13-4222-833e-0d44c8aa9257"
+                        }
                     },
                     "args": [
                         {
