@@ -14,12 +14,12 @@ use super::lang::{
     VariableReference};
 
 
-pub const BLUE_COLOR: [f32; 4] = [0.196, 0.584, 0.721, 1.0];
-pub const BLACK_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
-pub const RED_COLOR: [f32; 4] = [0.858, 0.180, 0.180, 1.0];
-pub const GREY_COLOR: [f32; 4] = [0.521, 0.521, 0.521, 1.0];
-pub const PURPLE_COLOR: [f32; 4] = [0.486, 0.353, 0.952, 1.0];
-pub const CLEAR_COLOR: [f32; 4] = [0.0, 0.0, 0.0, 0.0];
+pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
+pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
+pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
+pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
+pub const PURPLE_COLOR: Color = [0.486, 0.353, 0.952, 1.0];
+pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
 
 pub type Color = [f32; 4];
 
@@ -38,15 +38,34 @@ impl InsertCodeNodeMenu {
         Self { functions, selected_fn_id, insertion_point }
     }
 
-    fn new_code_node_using_selection(&self) -> CodeNode {
+    pub fn new_code_node_using_selection(&self) -> CodeNode {
+        let args = self.selected_fn().takes_args().iter()
+            .map(|arg_def| {
+                CodeNode::Argument(lang::Argument {
+                    id: lang::new_id(),
+                    argument_definition_id: arg_def.id,
+                    expr: Box::new(CodeNode::Placeholder(lang::Placeholder {
+                        id: lang::new_id(),
+                        description: arg_def.short_name.clone(),
+                    }))
+                })
+            })
+            .collect();
         CodeNode::FunctionCall(FunctionCall {
-            id: Uuid::new_v4(),
+            id: lang::new_id(),
             function_reference: Box::new(CodeNode::FunctionReference(FunctionReference {
-                id: Uuid::new_v4(),
+                id: lang::new_id(),
                 function_id: self.selected_fn_id,
             })),
-            args: vec![],
+            args: args,
         })
+    }
+
+    fn selected_fn(&self) -> &Function {
+        self.functions.iter()
+            .find(|func| func.id() == self.selected_fn_id)
+            .map(|func| func.as_ref())
+            .unwrap()
     }
 }
 
@@ -332,8 +351,8 @@ pub trait UiToolkit {
     fn draw_window(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
-    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F) -> Self::DrawResult;
-    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], f: F) -> Self::DrawResult;
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
+    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: FnOnce() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
@@ -425,6 +444,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 }
                 CodeNode::Argument(argument) => {
                     self.render_function_call_argument(&argument)
+                }
+                CodeNode::Placeholder(placeholder) => {
+                    self.render_placeholder(&placeholder)
                 }
             }
         };
@@ -616,12 +638,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_missing_function_argument(&self, arg: &lang::ArgumentDefinition) -> T::DrawResult {
+        self.ui_toolkit.draw_button(
+            "this shouldn't have happened, you've got a missing function arg somehow",
+            RED_COLOR,
+            &|| {})
+    }
+
+    fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
         let mut r = RED_COLOR;
         // LOL: mess around w/ some transparency
         r[3] = 0.4;
-        self.ui_toolkit.draw_button( &format!("{} \u{F140}", arg.short_name),
-            r,
-            &|| {})
+        self.ui_toolkit.draw_button( &format!("\u{F140} {}", placeholder.description),
+                                     r,
+                                     &|| {})
     }
 
     fn render_args_for_missing_function(&self, args: Vec<&lang::Argument>) -> T::DrawResult {
@@ -646,7 +675,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    fn render_inline_editable_button(&self, label: &str, color: [f32; 4], code_node: &CodeNode) -> T::DrawResult {
+    fn render_inline_editable_button(&self, label: &str, color: Color, code_node: &CodeNode) -> T::DrawResult {
         let controller = self.controller.clone();
         let id = code_node.id();
         self.ui_toolkit.draw_button(label, color, move || {

@@ -38,7 +38,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
 
     let font_size = (13.0 * hidpi_factor) as f32;
     let icon_font_size = (7.0 * hidpi_factor) as f32;
-    let icon_y_offset = (-3.0 * hidpi_factor) as f32;
+    let icon_y_offset = (-2.0 * hidpi_factor) as f32;
 
     imgui.fonts().add_default_font_with_config(
         ImFontConfig::new()

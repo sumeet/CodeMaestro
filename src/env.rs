@@ -62,6 +62,9 @@ impl ExecutionEnvironment {
             }
             lang::CodeNode::FunctionReference(_) => { lang::Value::Null }
             lang::CodeNode::FunctionDefinition(_) => { lang::Value::Null }
+            // TODO: trying to evaluate a placeholder should probably panic... but we don't have a
+            // concept of panic yet
+            lang::CodeNode::Placeholder(_) => { lang::Value::Null }
         }
     }
 

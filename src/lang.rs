@@ -52,6 +52,7 @@ pub enum CodeNode {
     Block(Block),
     VariableReference(VariableReference),
     FunctionDefinition(FunctionDefinition),
+    Placeholder(Placeholder),
 }
 
 #[derive(Clone, Debug)]
@@ -117,6 +118,9 @@ impl CodeNode {
             CodeNode::Argument(argument) => {
                 format!("Argument: ID {}", argument.id)
             }
+            CodeNode::Placeholder(placeholder) => {
+                format!("Placeholder: {}", placeholder.description)
+            }
         }
     }
 
@@ -147,6 +151,9 @@ impl CodeNode {
             }
             CodeNode::Argument(argument) => {
                 argument.id
+            }
+            CodeNode::Placeholder(placeholder) => {
+                placeholder.id
             }
         }
     }
@@ -194,16 +201,19 @@ impl CodeNode {
                 block.expressions.iter().collect()
             }
             CodeNode::VariableReference(_) => {
-                Vec::new()
+                vec![]
             }
             CodeNode::FunctionDefinition(_) => {
-                Vec::new()
+                vec![]
             }
             CodeNode::FunctionReference(_) => {
-                Vec::new()
+                vec![]
             }
             CodeNode::Argument(argument) => {
                 vec![argument.expr.borrow()]
+            }
+            CodeNode::Placeholder(placeholder) => {
+                vec![]
             }
         }
     }
@@ -237,6 +247,9 @@ impl CodeNode {
             }
             CodeNode::Argument(argument) => {
                 vec![argument.expr.borrow_mut()]
+            }
+            CodeNode::Placeholder(placeholder) => {
+                vec![]
             }
         }
     }
@@ -285,6 +298,10 @@ impl CodeNode {
 }
 
 pub type ID = Uuid;
+
+pub fn new_id() -> ID {
+    Uuid::new_v4()
+}
 
 #[derive(Deserialize, Serialize, Clone,Debug)]
 pub struct StringLiteral {
@@ -363,4 +380,10 @@ pub struct Argument {
     pub id: ID,
     pub argument_definition_id: ID,
     pub expr: Box<CodeNode>,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug)]
+pub struct Placeholder {
+    pub id: ID,
+    pub description: String,
 }
