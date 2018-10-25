@@ -38,15 +38,15 @@ impl InsertCodeNodeMenu {
         Self { functions, selected_fn_id, insertion_point }
     }
 
-    fn new_function_call_with_selected_function(&self) -> FunctionCall {
-        FunctionCall {
+    fn new_code_node_using_selection(&self) -> CodeNode {
+        CodeNode::FunctionCall(FunctionCall {
             id: Uuid::new_v4(),
             function_reference: Box::new(CodeNode::FunctionReference(FunctionReference {
                 id: Uuid::new_v4(),
                 function_id: self.selected_fn_id,
             })),
             args: vec![],
-        }
+        })
     }
 }
 
@@ -475,13 +475,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.focused(&||{
             let controller = Rc::clone(&self.controller);
             let insertion_point = menu.insertion_point.clone();
-            let new_function_call = CodeNode::FunctionCall(menu.new_function_call_with_selected_function());
+            let new_code_node = menu.new_code_node_using_selection();
+
             self.ui_toolkit.draw_text_input("", |_|{}, move ||{
-                let mut cont2 = controller.borrow_mut();
-                let id = new_function_call.id();
-                cont2.hide_insert_code_menu();
-                cont2.insert_code(new_function_call, insertion_point);
-                cont2.set_selected_node_id(Some(id))
+                let mut controller = controller.borrow_mut();
+                let id = new_code_node.id();
+                controller.hide_insert_code_menu();
+                controller.insert_code(new_code_node, insertion_point);
+                controller.set_selected_node_id(Some(id))
             })
         });
 
@@ -543,11 +544,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_function_call(&self, function_call: &FunctionCall) -> T::DrawResult {
         let render_function_reference_fn = || {
-            self.render_function_reference(&function_call.function_reference())
+            self.render_code(&function_call.function_reference)
         };
 
         let mut renderers : Vec<Box<Fn() -> T::DrawResult>> = vec![Box::new(render_function_reference_fn)];
-        renderers.push(Box::new(move || {
+        renderers.push(Box::new(|| {
             self.render_function_call_arguments(
                 function_call.function_reference().function_id,
                 function_call.args())}));
@@ -564,6 +565,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         // like visually. for realz, i would probably be better off having a separate validation
         // step. and THEN show the errors in here. or maybe overlay something on the codenode that
         // contains the error
+        //
+        // UPDATE: so i tried that, but figured i still needed to have this code here. i guess maybe
+        // there's gonna be no avoiding doing double validation in some situations, and that's ok
+        // i think
         let mut color = RED_COLOR;
         let mut function_name = format!("Error: function ID {} not found", function_id);
 
@@ -612,9 +617,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_missing_function_argument(&self, arg: &lang::ArgumentDefinition) -> T::DrawResult {
         let mut r = RED_COLOR;
-        // XXX: mess around w/ some transparency
+        // LOL: mess around w/ some transparency
         r[3] = 0.4;
-        self.ui_toolkit.draw_button( &format!("{} \u{F5C8}", arg.short_name),
+        self.ui_toolkit.draw_button( &format!("{} \u{F140}", arg.short_name),
             r,
             &|| {})
     }
