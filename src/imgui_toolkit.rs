@@ -8,6 +8,8 @@ use std::cell::RefCell;
 
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
+const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 25.0);
+const INITIAL_WINDOW_SIZE: (f32, f32) = (300.0, 200.0);
 
 pub fn draw_app(app: Rc<CSApp>) {
     imgui_support::run("cs".to_owned(), CLEAR_COLOR,
@@ -22,11 +24,17 @@ pub fn draw_app(app: Rc<CSApp>) {
 
 struct State {
     editing_text_input_buffer: Option<Rc<RefCell<ImString>>>,
+    prev_window_size: (f32, f32),
+    prev_window_pos: (f32, f32),
 }
 
 impl State {
     fn new() -> Self {
-        State { editing_text_input_buffer: None }
+        State {
+            editing_text_input_buffer: None,
+            prev_window_pos: FIRST_WINDOW_PADDING,
+            prev_window_size: (0.0, 0.0),
+        }
     }
 
     fn text_input_buffer(&mut self, initial_text: &str) -> Rc<RefCell<ImString>> {
@@ -131,10 +139,19 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_window(&self, window_name: &str, f: &Fn()) {
+        let prev_window_size = self.state.borrow().prev_window_size;
+        let prev_window_pos = self.state.borrow().prev_window_pos;
         self.ui.window(im_str!("{}", window_name))
-            .size((300.0, 100.0), ImGuiCond::FirstUseEver)
-            .build(f)
+            .size(INITIAL_WINDOW_SIZE, ImGuiCond::FirstUseEver)
+            .scrollable(true)
+            .position((prev_window_pos.0, prev_window_size.1 + prev_window_pos.1), ImGuiCond::FirstUseEver)
+            .build(&|| {
+                f();
+                self.state.borrow_mut().prev_window_size = self.ui.get_window_size();
+                self.state.borrow_mut().prev_window_pos = self.ui.get_window_pos();
+            });
     }
+
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
         self.ui.child_frame(im_str!(""), (0.0, -frame_height))

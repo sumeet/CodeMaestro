@@ -22,9 +22,9 @@ lazy_static = "1.1.0"
 
 glium = { version = "0.22", default-features = true, optional = true }
 glutin = { version = "0.18", optional = true }
-imgui = { version = "0.0.20", optional = true }
-imgui-sys = { version = "0.0.20", optional = true }
-imgui-glium-renderer = { version = "0.0.20", optional = true }
+imgui = { version = "0.0.21", optional = true }
+imgui-sys = { version = "0.0.21", optional = true }
+imgui-glium-renderer = { version = "0.0.21", optional = true }
 
 yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
 stdweb = { version = "0.4.9", optional = true }
