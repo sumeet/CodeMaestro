@@ -218,6 +218,15 @@ impl CodeNode {
         }
     }
 
+    pub fn all_children_dfs(&self) -> Vec<&CodeNode> {
+        let mut all_children = vec![];
+        for child in self.children() {
+            all_children.push(child);
+            all_children.extend(child.all_children_dfs().iter())
+        }
+        all_children
+    }
+
     pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
         match self {
             CodeNode::FunctionCall(function_call) => {

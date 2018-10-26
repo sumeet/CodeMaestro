@@ -72,6 +72,52 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igSetKeyboardFocusHere(0) }
     }
 
+    fn draw_statusbar(&self, draw_fn: &Fn()) {
+//        float status_height = (10.0f + ImGui::GetFontSize());
+//
+//        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4.0f, 3.0f));
+//        ImGui::SetNextWindowPos(ImVec2{0, io.DisplaySize.y - status_height});
+//        ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, status_height));
+
+        let x_padding = 4.0;
+        let y_padding = 5.0;
+        let font_size = unsafe { imgui_sys::igGetFontSize() };
+        // cribbed status bar implementation from
+        // https://github.com/ocornut/imgui/issues/741#issuecomment-233288320
+        let status_height = (y_padding * 2.0) + font_size;
+
+        let display_size = self.ui.imgui().display_size();
+        let window_pos = (0.0, display_size.1 - status_height);
+        let window_size = (display_size.0, status_height);
+
+        self.ui.with_style_vars(
+            &[
+                StyleVar::WindowRounding(0.0),
+                StyleVar::WindowPadding(ImVec2::new(x_padding, y_padding))
+            ],
+            &|| {
+                self.ui.window(im_str!("statusbar"))
+                    .collapsible(false)
+                    .horizontal_scrollbar(false)
+                    .scroll_bar(false)
+                    .scrollable(false)
+                    .resizable(false)
+                    .always_auto_resize(false)
+                    .title_bar(false)
+                    .no_focus_on_appearing(true)
+                    .movable(false)
+                    .no_bring_to_front_on_focus(true)
+                    .position(window_pos, ImGuiCond::Always)
+                    .size(window_size, ImGuiCond::Always)
+                    .build(draw_fn);
+            }
+        )
+    }
+
+    fn draw_text(&self, text: &str) {
+        self.ui.text(text)
+    }
+
     fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn()>) {
         let draw_fns = draw_fns.as_slice();
         if draw_fns.is_empty() { return; }

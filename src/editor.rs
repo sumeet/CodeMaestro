@@ -240,20 +240,20 @@ impl<'a> Controller {
         }
 
         let selected_node_id = self.get_selected_node_id().unwrap();
-        let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
+        let loaded_code = self.loaded_code.as_ref().unwrap().clone();
         let parent = loaded_code.find_parent(selected_node_id);
         if parent.is_none() {
             return
         }
-        let mut parent = parent.unwrap();
+        let parent = parent.unwrap();
 
         // first try selecting the previous sibling
         if let(Some(previous_sibling)) = parent.previous_child(selected_node_id) {
             // but since we're going back, if the previous sibling has children, then let's
             // select the last one. that feels more ergonomic while moving backwards
-            let children = previous_sibling.children();
+            let children = previous_sibling.all_children_dfs();
             if children.len() > 0 {
-                self.set_selected_node_id(Some(children[0].id()))
+                self.set_selected_node_id(Some(children[children.len() - 1].id()))
             } else {
                 self.set_selected_node_id(Some(previous_sibling.id()));
             }
@@ -272,9 +272,9 @@ impl<'a> Controller {
         }
 
         let selected_node_id = self.get_selected_node_id().unwrap();
-        let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
+        let loaded_code = self.loaded_code.as_ref().unwrap().clone();
 
-        let selected_code = loaded_code.find_node(selected_node_id).as_mut().unwrap().clone();
+        let selected_code = loaded_code.find_node(selected_node_id).as_ref().unwrap().clone();
         let children = selected_code.children();
         let first_child = children.get(0);
 
@@ -284,7 +284,7 @@ impl<'a> Controller {
         }
 
         let mut node_id_to_find_next_sibling_of = selected_node_id;
-        while let(Some(mut parent))= loaded_code.find_parent(node_id_to_find_next_sibling_of) {
+        while let(Some(parent))= loaded_code.find_parent(node_id_to_find_next_sibling_of) {
             if let(Some(next_sibling)) = parent.next_child(node_id_to_find_next_sibling_of) {
                 self.set_selected_node_id(Some(next_sibling.id()));
                 return
@@ -342,6 +342,10 @@ impl<'a> Controller {
     pub fn get_selected_node_id(&self) -> &Option<ID> {
         &self.selected_node_id
     }
+
+    pub fn get_selected_node(&self) -> Option<&CodeNode> {
+        self.loaded_code.as_ref()?.find_node(self.selected_node_id?)
+    }
 }
 
 pub trait UiToolkit {
@@ -351,12 +355,14 @@ pub trait UiToolkit {
     fn draw_window(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
+    fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: FnOnce() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
 }
 
@@ -378,7 +384,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_code_window(),
             self.render_console_window(),
             self.render_error_window(),
+            self.render_status_bar()
         ])
+    }
+
+    fn render_status_bar(&self) -> T::DrawResult {
+        self.ui_toolkit.draw_statusbar(&|| {
+            if let(Some(node)) = self.controller.borrow().get_selected_node() {
+                self.ui_toolkit.draw_text(
+                    &format!("SELECTED: {}", node.description())
+                )
+            } else {
+                self.ui_toolkit.draw_all(vec![])
+            }
+        })
     }
 
     fn render_console_window(&self) -> T::DrawResult {
