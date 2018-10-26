@@ -8,7 +8,7 @@ use std::cell::RefCell;
 
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
-const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 25.0);
+const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 50.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (300.0, 200.0);
 
 pub fn draw_app(app: Rc<CSApp>) {
@@ -177,10 +177,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
         self.ui.with_color_var(ImGuiCol::Button, color, || {
-            if self.ui.small_button(im_str!("{}", label)) {
+            if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
                 on_button_activate()
             }
-        });
+        })
     }
 
     fn draw_text_box(&self, text: &str) {

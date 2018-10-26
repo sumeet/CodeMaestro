@@ -32,6 +32,7 @@ pub trait Function: objekt::Clone {
     fn name(&self) -> &str;
     fn id(&self) -> ID;
     fn takes_args(&self) -> Vec<ArgumentDefinition>;
+    fn returns(&self) -> &Type;
 }
 
 impl fmt::Debug for Function {

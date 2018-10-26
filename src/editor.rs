@@ -15,6 +15,7 @@ use super::lang::{
 
 
 pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
+pub const YELLOW_COLOR: Color = [253.0 / 255.0, 159.0 / 255.0, 19.0 / 255.0, 1.0];
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
@@ -76,6 +77,7 @@ pub struct Controller {
     insert_code_node_menu: Option<InsertCodeNodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
+    type_by_id: HashMap<ID, lang::Type>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -115,7 +117,16 @@ impl<'a> Controller {
             error_console: String::new(),
             insert_code_node_menu: None,
             editing: false,
+            type_by_id: Self::build_types()
         }
+    }
+
+    fn build_types() -> HashMap<ID, lang::Type> {
+        let mut type_by_id : HashMap<ID, lang::Type> = HashMap::new();
+        type_by_id.insert(lang::NULL_TYPE.id, lang::NULL_TYPE.clone());
+        type_by_id.insert(lang::STRING_TYPE.id, lang::STRING_TYPE.clone());
+        type_by_id.insert(lang::RESULT_TYPE.id, lang::RESULT_TYPE.clone());
+        type_by_id
     }
 
     // TODO: return a result instead of returning nothing? it seems like there might be places this
@@ -346,6 +357,49 @@ impl<'a> Controller {
     pub fn get_selected_node(&self) -> Option<&CodeNode> {
         self.loaded_code.as_ref()?.find_node(self.selected_node_id?)
     }
+
+    // XXX: lang doesn't really use the Type. should we move it from the lang into the editor....?
+    pub fn guess_type(&self, code_node: &CodeNode) -> &lang::Type {
+        match code_node {
+            CodeNode::FunctionCall(function_call) => {
+                let func_id = function_call.function_reference().function_id;
+                match self.find_function(func_id) {
+                    Some(func) => func.returns(),
+                    None => &lang::NULL_TYPE
+                }
+            }
+            CodeNode::StringLiteral(string_literal) => {
+                &lang::STRING_TYPE
+            }
+            CodeNode::Assignment(assignment) => {
+                self.guess_type(&assignment.expression)
+            }
+            CodeNode::Block(block) => {
+                if block.expressions.len() > 0 {
+                    let last_expression_in_block= &block.expressions[block.expressions.len() - 1];
+                    self.guess_type(last_expression_in_block)
+                } else {
+                    &lang::NULL_TYPE
+                }
+            }
+            CodeNode::VariableReference(variable_reference) => {
+                &lang::NULL_TYPE
+            }
+            CodeNode::FunctionReference(function_reference) => {
+                &lang::NULL_TYPE
+            }
+            CodeNode::FunctionDefinition(function_definition) => {
+                &lang::NULL_TYPE
+            }
+            CodeNode::Argument(argument) => {
+                &lang::NULL_TYPE
+            }
+            CodeNode::Placeholder(placeholder) => {
+                &lang::NULL_TYPE
+            }
+        }
+    }
+
 }
 
 pub trait UiToolkit {
@@ -489,7 +543,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(drawn)
     }
 
-
     fn is_insertion_pointer_immediately_before(&self, id: ID) -> bool {
         let insertion_point = self.controller.borrow().insertion_point();
         match insertion_point {
@@ -512,7 +565,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_insert_code_node(&self) -> T::DrawResult {
         let menu = self.controller.borrow().insert_code_node_menu.as_ref().unwrap().clone();
-
         self.ui_toolkit.focused(&||{
             let controller = Rc::clone(&self.controller);
             let insertion_point = menu.insertion_point.clone();
@@ -634,7 +686,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
-        self.render_code(argument.expr.as_ref())
+        self.ui_toolkit.draw_all_on_same_line(vec![
+            &|| {
+                self.ui_toolkit.draw_small_button("\u{F10D}", BLACK_COLOR, &||{})
+            },
+            &|| {
+                self.render_code(argument.expr.as_ref())
+            },
+        ])
     }
 
     fn render_args_for_found_function(&self, function: &Function, args: Vec<&lang::Argument>) -> T::DrawResult {
@@ -664,12 +723,15 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
-        let mut r = RED_COLOR;
+        let mut r = YELLOW_COLOR;
         // LOL: mess around w/ some transparency
         r[3] = 0.4;
-        self.ui_toolkit.draw_button( &format!("\u{F140} {}", placeholder.description),
-                                     r,
-                                     &|| {})
+        // TODO: maybe use the traffic cone instead of the exclamation triangle,
+        // which is kinda hard to see
+        self.ui_toolkit.draw_button(
+            &format!("\u{F071} {}", placeholder.description),
+            r,
+            &|| {})
     }
 
     fn render_args_for_missing_function(&self, args: Vec<&lang::Argument>) -> T::DrawResult {
@@ -734,6 +796,18 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         CodeNode::Assignment(new_assignment)
                     })
             },
+            CodeNode::Argument(argument) => {
+                let arg = argument.clone();
+                self.ui_toolkit.draw_all(vec![
+                    self.draw_inline_text_editor(
+                        &"",
+                        move |new_value| {
+                            let mut new_arg = arg.clone();
+                            CodeNode::Argument(new_arg)
+                        }
+                    ),
+                ])
+            }
             _ => {
                 self.controller.borrow_mut().editing = false;
                 self.ui_toolkit.draw_button(&format!("Not possible to edit {:?}", code_node), RED_COLOR, &||{})

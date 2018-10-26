@@ -22,6 +22,10 @@ impl ExecutionEnvironment {
         self.functions.insert(function.id(), function);
     }
 
+    pub fn find_function(&self, id: lang::ID) -> Option<&Box<lang::Function>> {
+        self.functions.get(&id)
+    }
+
     pub fn list_functions(&self) -> Vec<Box<lang::Function>> {
         self.functions.iter().map(|(_, func)| func.clone()).collect()
     }
@@ -82,10 +86,6 @@ impl ExecutionEnvironment {
                 lang::Value::Result(Err(lang::Error::UndefinedFunctionError(function_id)))
             }
         }
-    }
-
-    pub fn find_function(&self, id: lang::ID) -> Option<&Box<lang::Function>> {
-        self.functions.get(&id)
     }
 
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {

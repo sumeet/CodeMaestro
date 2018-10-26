@@ -120,6 +120,10 @@ impl Function for Print {
             )
         ]
     }
+
+    fn returns(&self) -> &lang::Type {
+        &lang::NULL_TYPE
+    }
 }
 
 #[derive(Clone)]
@@ -151,6 +155,10 @@ impl Function for Capitalize {
                 "String to capitalize".to_string()
             )
         ]
+    }
+
+    fn returns(&self) -> &lang::Type {
+        &lang::STRING_TYPE
     }
 }
 
