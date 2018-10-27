@@ -14,16 +14,19 @@ lazy_static! {
     pub static ref NULL_TYPE: Type = Type {
         readable_name: "Null".to_string(),
         id: uuid::Uuid::parse_str(&"daa07233-b887-4512-b06e-d6a53d415213").unwrap(),
+        symbol: "\u{f192}".to_string(),
     };
 
     pub static ref STRING_TYPE: Type = Type {
         readable_name: "String".to_string(),
         id: uuid::Uuid::parse_str("e0e8271e-5f94-4d00-bad9-46a2ce4d6568").unwrap(),
+        symbol: "\u{f10d}".to_string(),
     };
 
     pub static ref RESULT_TYPE: Type = Type {
         readable_name: "Result".to_string(),
         id: uuid::Uuid::parse_str("0613664d-eead-4d83-99a0-9759a5023887").unwrap(),
+        symbol: "\u{f493}".to_string(),
     };
 }
 
@@ -83,6 +86,7 @@ impl Value {
 pub struct Type {
     pub readable_name: String,
     pub id: ID,
+    pub symbol: String,
 }
 
 impl CodeNode {

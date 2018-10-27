@@ -70,16 +70,6 @@ impl InsertCodeNodeMenu {
     }
 }
 
-pub struct Controller {
-    execution_environment: ExecutionEnvironment,
-    selected_node_id: Option<ID>,
-    editing: bool,
-    insert_code_node_menu: Option<InsertCodeNodeMenu>,
-    loaded_code: Option<CodeNode>,
-    error_console: String,
-    type_by_id: HashMap<ID, lang::Type>,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum InsertionPoint {
     Before(ID),
@@ -106,6 +96,52 @@ pub enum Key {
     R,
     O,
     Escape,
+}
+
+pub struct CodeGenie<'a> {
+    code: &'a CodeNode,
+    env: &'a ExecutionEnvironment,
+}
+
+impl<'a> CodeGenie<'a> {
+    fn new(code_node: &'a CodeNode, env: &'a ExecutionEnvironment) -> Self {
+        Self { code: code_node, env }
+    }
+
+    fn find_expression_inside_block_that_contains(&self, node_id: ID) -> Option<ID> {
+        let parent = self.code.find_parent(node_id);
+        match parent {
+            Some(CodeNode::Block(_)) => Some(node_id),
+            Some(parent_node) => self.find_expression_inside_block_that_contains(
+                parent_node.id()),
+            None => None
+        }
+    }
+
+    fn get_type_for_arg(&self, argument_definition_id: ID) -> Option<lang::Type> {
+        for function in self.all_functions() {
+            for arg_def in function.takes_args() {
+                if arg_def.id == argument_definition_id {
+                    return Some(arg_def.arg_type)
+                }
+            }
+        }
+        None
+    }
+
+    fn all_functions(&self) -> Vec<Box<Function>> {
+        self.env.list_functions()
+    }
+}
+
+pub struct Controller {
+    execution_environment: ExecutionEnvironment,
+    selected_node_id: Option<ID>,
+    editing: bool,
+    insert_code_node_menu: Option<InsertCodeNodeMenu>,
+    loaded_code: Option<CodeNode>,
+    error_console: String,
+    type_by_id: HashMap<ID, lang::Type>,
 }
 
 impl<'a> Controller {
@@ -224,23 +260,15 @@ impl<'a> Controller {
     }
 
     fn currently_focused_block_expression(&self) -> Option<ID> {
-        if self.selected_node_id.is_none() {
-            return None
-        }
-        let selected_node_id = self.selected_node_id.unwrap();
-        self.find_expression_inside_block_that_contains(selected_node_id)
+        self.code_genie()?
+            .find_expression_inside_block_that_contains(self.selected_node_id?)
     }
 
-    fn find_expression_inside_block_that_contains(&self, node_id: ID) -> Option<ID> {
-        if self.loaded_code.is_none() { return None }
-        let mut loaded_code = self.loaded_code.as_ref().unwrap().clone();
-        let parent = loaded_code.find_parent(node_id);
-        match parent {
-            Some(CodeNode::Block(_)) => Some(node_id),
-            Some(parent_node) => self.find_expression_inside_block_that_contains(
-                parent_node.id()),
-            None => None
-        }
+    fn code_genie(&'a self) -> Option<CodeGenie> {
+        Some(CodeGenie::new(
+            self.loaded_code.as_ref()?,
+            &self.execution_environment
+        ))
     }
 
     pub fn try_select_back_one_node(&mut self) {
@@ -399,7 +427,6 @@ impl<'a> Controller {
             }
         }
     }
-
 }
 
 pub trait UiToolkit {
@@ -686,9 +713,24 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
+        let mut type_symbol = "".to_string();
+        {
+            let controller = self.controller.borrow();
+            let genie = controller.code_genie().unwrap();
+            type_symbol = match genie.get_type_for_arg(argument.argument_definition_id) {
+                Some(arg_type) => arg_type.symbol.clone(),
+                None => "\u{f059}".to_string(),
+            };
+        }
         self.ui_toolkit.draw_all_on_same_line(vec![
             &|| {
-                self.ui_toolkit.draw_small_button("\u{F10D}", BLACK_COLOR, &||{})
+                let cont2 = Rc::clone(&self.controller);
+                let node_id_to_select = argument.id;
+                self.ui_toolkit.draw_small_button(&type_symbol, BLACK_COLOR, move ||{
+                    let mut controller = cont2.borrow_mut();
+                    controller.set_selected_node_id(Some(node_id_to_select));
+                    controller.editing = true;
+                })
             },
             &|| {
                 self.render_code(argument.expr.as_ref())
