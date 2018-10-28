@@ -9,6 +9,7 @@ use super::code_loading::{serialize};
 use super::env::{ExecutionEnvironment};
 use super::editor_views::{FunctionCallView};
 use super::lang;
+use super::code_generation;
 use super::lang::{
     Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Error as LangError,Assignment,Block,
     VariableReference};
@@ -24,6 +25,110 @@ pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
 
 pub type Color = [f32; 4];
 
+// 1: variable
+// 2: function call to capitalize
+// 3: new string literal
+// 4: placeholder
+
+#[derive(Clone)]
+struct NewInsertCodeMenu {
+    option_generators: Vec<Box<InsertCodeMenuOptionGenerator>>,
+    selected_option_index: usize,
+    search_params: CodeSearchParams,
+    insertion_point: InsertionPoint,
+}
+
+impl NewInsertCodeMenu {
+    fn new_expression_inside_code_block(insertion_point: InsertionPoint, env: &ExecutionEnvironment) -> Self {
+        NewInsertCodeMenu {
+            // TODO: should probably be able to insert new assignment expressions as well
+            option_generators: vec![Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions() })],
+            selected_option_index: 0,
+            search_params: CodeSearchParams::empty(),
+            insertion_point,
+        }
+    }
+
+    fn selected_option_code(&self) -> CodeNode {
+        self.list_options()[self.selected_option_index].new_node.clone()
+    }
+
+    fn select_next(&mut self) {
+        if self.selected_option_index < self.option_generators.len() - 1 {
+            self.selected_option_index += 1;
+        } else {
+            self.selected_option_index = 0;
+        }
+    }
+
+    fn set_search_str(&mut self, str: &str) {
+        self.search_params.input_str = str.to_string()
+    }
+
+    // TODO: i think the selected option index can get out of sync with this generated list, leading
+    // to a panic, say if someone types something and changes the number of options without changing
+    // the selected index.
+    fn list_options(&self) -> Vec<InsertCodeMenuOption> {
+        let mut all_options : Vec<InsertCodeMenuOption> = self.option_generators
+            .iter()
+            .map(|generator| generator.options(&self.search_params))
+            .flatten()
+            .collect();
+        all_options[self.selected_option_index].is_selected = true;
+        all_options
+    }
+}
+
+trait InsertCodeMenuOptionGenerator : objekt::Clone {
+    fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption>;
+}
+
+clone_trait_object!(InsertCodeMenuOptionGenerator);
+
+#[derive(Clone)]
+struct CodeSearchParams {
+    return_type: Option<lang::Type>,
+    input_str: String,
+}
+
+impl CodeSearchParams {
+    fn empty() -> Self {
+        Self { return_type: None, input_str: "".to_string() }
+    }
+}
+
+struct InsertCodeMenuOption {
+    label: String,
+    new_node: CodeNode,
+    is_selected: bool,
+}
+
+#[derive(Clone)]
+struct InsertFunctionOptionGenerator {
+    all_funcs: Vec<Box<Function>>,
+}
+
+impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
+    fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
+        let mut functions = self.all_funcs.clone();
+        let input_str = search_params.input_str.trim().to_lowercase();
+        if !input_str.is_empty() {
+            functions = functions.into_iter()
+                .filter(|f| f.name().to_lowercase().contains(&input_str)).collect()
+        }
+        if let(Some(ref return_type)) = search_params.return_type {
+            functions = functions.into_iter()
+                .filter(|f| f.returns().id == return_type.id).collect()
+        }
+        functions.into_iter().map(|func| {
+            InsertCodeMenuOption {
+                label: func.name().to_string(),
+                new_node: code_generation::new_function_call_with_placeholder_args(func.as_ref()),
+                is_selected: false,
+            }
+        }).collect()
+    }
+}
 
 #[derive(Clone)]
 struct InsertCodeNodeMenu {
@@ -40,26 +145,7 @@ impl InsertCodeNodeMenu {
     }
 
     pub fn new_code_node_using_selection(&self) -> CodeNode {
-        let args = self.selected_fn().takes_args().iter()
-            .map(|arg_def| {
-                CodeNode::Argument(lang::Argument {
-                    id: lang::new_id(),
-                    argument_definition_id: arg_def.id,
-                    expr: Box::new(CodeNode::Placeholder(lang::Placeholder {
-                        id: lang::new_id(),
-                        description: arg_def.short_name.clone(),
-                    }))
-                })
-            })
-            .collect();
-        CodeNode::FunctionCall(FunctionCall {
-            id: lang::new_id(),
-            function_reference: Box::new(CodeNode::FunctionReference(FunctionReference {
-                id: lang::new_id(),
-                function_id: self.selected_fn_id,
-            })),
-            args: args,
-        })
+        code_generation::new_function_call_with_placeholder_args(self.selected_fn())
     }
 
     fn selected_fn(&self) -> &Function {
@@ -74,6 +160,7 @@ impl InsertCodeNodeMenu {
 pub enum InsertionPoint {
     Before(ID),
     After(ID),
+    Argument(ID),
 }
 
 impl InsertionPoint {
@@ -81,6 +168,7 @@ impl InsertionPoint {
         match *self {
             InsertionPoint::Before(id) => id,
             InsertionPoint::After(id) => id,
+            InsertionPoint::Argument(id) => id,
         }
     }
 }
@@ -129,6 +217,12 @@ impl<'a> CodeGenie<'a> {
         None
     }
 
+    fn get_functions_returning_type(&self, t: &lang::Type) -> Vec<Box<Function>> {
+        self.all_functions().into_iter()
+            .filter(|func| func.returns().id == t.id)
+            .collect()
+    }
+
     fn all_functions(&self) -> Vec<Box<Function>> {
         self.env.list_functions()
     }
@@ -139,6 +233,7 @@ pub struct Controller {
     selected_node_id: Option<ID>,
     editing: bool,
     insert_code_node_menu: Option<InsertCodeNodeMenu>,
+    new_insert_code_menu: Option<NewInsertCodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
     type_by_id: HashMap<ID, lang::Type>,
@@ -152,6 +247,7 @@ impl<'a> Controller {
             loaded_code: None,
             error_console: String::new(),
             insert_code_node_menu: None,
+            new_insert_code_menu: None,
             editing: false,
             type_by_id: Self::build_types()
         }
@@ -173,8 +269,32 @@ impl<'a> Controller {
         }
         let mut loaded_code = self.loaded_code.as_mut().unwrap();
         let parent = loaded_code.find_parent(insertion_point.node_id());
+        if parent.is_none() {
+            panic!("unable to insert new code, couldn't find parent to insert into")
+
+        }
+        let parent = parent.unwrap();
+        match insertion_point {
+            InsertionPoint::Before(_) | InsertionPoint::After(_) => {
+                self.insert_new_expression_in_block(code_node, insertion_point, parent)
+            }
+            InsertionPoint::Argument(argument_id) => {
+                self.insert_expression_into_argument(code_node, argument_id)
+            }
+        }
+    }
+
+    // TODO: error handling
+    fn insert_expression_into_argument(&mut self, code_node: CodeNode, argument_id: ID) {
+        let mut loaded_code = self.loaded_code.as_mut().unwrap();
+        let mut argument = loaded_code.find_node(argument_id).unwrap().into_argument().clone();
+        argument.expr = Box::new(code_node);
+        loaded_code.replace(&CodeNode::Argument(argument));
+    }
+
+    fn insert_new_expression_in_block(&mut self, code_node: CodeNode, insertion_point: InsertionPoint, parent: CodeNode) {
         match parent {
-            Some(CodeNode::Block(mut block)) => {
+            CodeNode::Block(mut block) => {
                 let insertion_point_in_block_exprs = block.expressions.iter()
                     .position(|exp| exp.id() == insertion_point.node_id());
                 if insertion_point_in_block_exprs.is_none() { return }
@@ -187,21 +307,23 @@ impl<'a> Controller {
                     InsertionPoint::After(_) => {
                         block.expressions.insert(insertion_point_in_block_exprs + 1, code_node)
                     },
+                    _ => panic!("bad insertion point type for a block: {:?}", insertion_point)
                 }
 
                 self.loaded_code.as_mut().unwrap().replace(&CodeNode::Block(block));
             },
-            _ => panic!("unable to insert new code, couldn't find Block to insert into")
+            _ => panic!("should be inserting into type parent, got {:?} instead", parent)
         }
     }
 
     fn hide_insert_code_menu(&mut self) {
         self.insert_code_node_menu = None;
+        self.new_insert_code_menu = None;
         self.editing = false
     }
 
     pub fn insertion_point(&self) -> Option<InsertionPoint> {
-        match self.insert_code_node_menu.as_ref() {
+        match self.new_insert_code_menu.as_ref() {
             None => None,
             Some(menu) => Some(menu.insertion_point),
         }
@@ -229,7 +351,7 @@ impl<'a> Controller {
                 self.run(&self.loaded_code.as_ref().unwrap().clone())
             },
             Key::O => {
-                self.set_insertion_point()
+                self.set_insertion_point_on_next_line_in_block()
             }
             _ => {},
         }
@@ -237,20 +359,25 @@ impl<'a> Controller {
 
     fn handle_cancel(&mut self) {
         self.editing = false;
-        if self.insert_code_node_menu.is_none() { return }
+        if self.new_insert_code_menu.is_none() { return }
 
-        match self.insert_code_node_menu.as_ref().unwrap().insertion_point {
+        match self.new_insert_code_menu.as_ref().unwrap().insertion_point {
             InsertionPoint::After(id) => self.selected_node_id = Some(id),
-            InsertionPoint::Before(id) => self.selected_node_id = Some(id)
+            InsertionPoint::Before(id) => self.selected_node_id = Some(id),
+            InsertionPoint::Argument(id) => self.selected_node_id = Some(id),
         }
         self.hide_insert_code_menu()
     }
 
-    fn set_insertion_point(&mut self) {
+    fn set_insertion_point_on_next_line_in_block(&mut self) {
         if let(Some(expression_id)) = self.currently_focused_block_expression() {
             self.insert_code_node_menu = Some(InsertCodeNodeMenu::new(
                 InsertionPoint::After(expression_id),
-                self.execution_environment.list_functions()
+                self.execution_environment.list_functions(),
+            ));
+            self.new_insert_code_menu = Some(NewInsertCodeMenu::new_expression_inside_code_block(
+                InsertionPoint::After(expression_id),
+                &self.execution_environment,
             ));
             self.editing = true;
             self.selected_node_id = None;
@@ -267,7 +394,7 @@ impl<'a> Controller {
     fn code_genie(&'a self) -> Option<CodeGenie> {
         Some(CodeGenie::new(
             self.loaded_code.as_ref()?,
-            &self.execution_environment
+            &self.execution_environment,
         ))
     }
 
@@ -387,17 +514,17 @@ impl<'a> Controller {
     }
 
     // XXX: lang doesn't really use the Type. should we move it from the lang into the editor....?
-    pub fn guess_type(&self, code_node: &CodeNode) -> &lang::Type {
+    pub fn guess_type(&self, code_node: &CodeNode) -> lang::Type {
         match code_node {
             CodeNode::FunctionCall(function_call) => {
                 let func_id = function_call.function_reference().function_id;
                 match self.find_function(func_id) {
-                    Some(func) => func.returns(),
-                    None => &lang::NULL_TYPE
+                    Some(ref func) => func.returns().clone(),
+                    None => lang::NULL_TYPE.clone()
                 }
             }
             CodeNode::StringLiteral(string_literal) => {
-                &lang::STRING_TYPE
+                lang::STRING_TYPE.clone()
             }
             CodeNode::Assignment(assignment) => {
                 self.guess_type(&assignment.expression)
@@ -407,23 +534,23 @@ impl<'a> Controller {
                     let last_expression_in_block= &block.expressions[block.expressions.len() - 1];
                     self.guess_type(last_expression_in_block)
                 } else {
-                    &lang::NULL_TYPE
+                    lang::NULL_TYPE.clone()
                 }
             }
             CodeNode::VariableReference(variable_reference) => {
-                &lang::NULL_TYPE
+                lang::NULL_TYPE.clone()
             }
             CodeNode::FunctionReference(function_reference) => {
-                &lang::NULL_TYPE
+                lang::NULL_TYPE.clone()
             }
             CodeNode::FunctionDefinition(function_definition) => {
-                &lang::NULL_TYPE
+                lang::NULL_TYPE.clone()
             }
             CodeNode::Argument(argument) => {
-                &lang::NULL_TYPE
+                lang::NULL_TYPE.clone()
             }
             CodeNode::Placeholder(placeholder) => {
-                &lang::NULL_TYPE
+                lang::NULL_TYPE.clone()
             }
         }
     }
@@ -591,11 +718,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_insert_code_node(&self) -> T::DrawResult {
-        let menu = self.controller.borrow().insert_code_node_menu.as_ref().unwrap().clone();
+        let menu = self.controller.borrow().new_insert_code_menu.as_ref().unwrap().clone();
         self.ui_toolkit.focused(&||{
             let controller = Rc::clone(&self.controller);
             let insertion_point = menu.insertion_point.clone();
-            let new_code_node = menu.new_code_node_using_selection();
+            let new_code_node = menu.selected_option_code();
 
             self.ui_toolkit.draw_text_input("", |_|{}, move ||{
                 let mut controller = controller.borrow_mut();
@@ -606,19 +733,18 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             })
         });
 
-        self.render_menu_bar_with_options(menu)
+        self.render_insertion_options(&menu)
     }
 
-    fn render_menu_bar_with_options(&self, menu: InsertCodeNodeMenu) -> <T as UiToolkit>::DrawResult {
+    fn render_insertion_options(&self, menu: &NewInsertCodeMenu) -> <T as UiToolkit>::DrawResult {
         let mut function_line: Vec<Box<Fn() -> T::DrawResult>> = vec![];
-        for function in menu.functions {
-            let is_option_selected = menu.selected_fn_id == function.id();
-            let button_color = if is_option_selected { RED_COLOR } else { BLACK_COLOR };
+        for option in menu.list_options() {
+            let button_color = if option.is_selected { RED_COLOR } else { BLACK_COLOR };
             function_line.push(Box::new(move || {
                 let draw = || {
-                    self.ui_toolkit.draw_small_button(&function.name(), button_color, &|| {})
+                    self.ui_toolkit.draw_small_button(&option.label, button_color, &|| {})
                 };
-                if is_option_selected {
+                if option.is_selected {
                     self.ui_toolkit.draw_border_around(&draw)
                 } else {
                     draw()

@@ -65,6 +65,7 @@ mod code_loading;
 mod editor;
 mod editor_views;
 mod validation;
+mod code_generation;
 
 
 use self::editor::{Controller,Renderer,UiToolkit};
