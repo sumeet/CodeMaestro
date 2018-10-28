@@ -25,6 +25,7 @@ pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
 
 pub type Color = [f32; 4];
 
+// TODO: types of insert code generators
 // 1: variable
 // 2: function call to capitalize
 // 3: new string literal
@@ -49,12 +50,12 @@ impl NewInsertCodeMenu {
         }
     }
 
-    fn selected_option_code(&self) -> CodeNode {
-        self.list_options()[self.selected_option_index].new_node.clone()
+    fn selected_option_code(&self) -> Option<CodeNode> {
+        Some(self.list_options().get(self.selected_option_index)?.new_node.clone())
     }
 
     fn select_next(&mut self) {
-        if self.selected_option_index < self.option_generators.len() - 1 {
+        if self.selected_option_index < self.list_options().len() - 1 {
             self.selected_option_index += 1;
         } else {
             self.selected_option_index = 0;
@@ -62,7 +63,8 @@ impl NewInsertCodeMenu {
     }
 
     fn set_search_str(&mut self, str: &str) {
-        self.search_params.input_str = str.to_string()
+        self.search_params.input_str = str.to_string();
+        self.selected_option_index = 0;
     }
 
     // TODO: i think the selected option index can get out of sync with this generated list, leading
@@ -74,7 +76,8 @@ impl NewInsertCodeMenu {
             .map(|generator| generator.options(&self.search_params))
             .flatten()
             .collect();
-        all_options[self.selected_option_index].is_selected = true;
+        all_options.get_mut(self.selected_option_index).as_mut()
+            .map(|option| option.is_selected = true);
         all_options
     }
 }
@@ -130,32 +133,6 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
     }
 }
 
-#[derive(Clone)]
-struct InsertCodeNodeMenu {
-    functions: Vec<Box<Function>>,
-    selected_fn_id: ID,
-    insertion_point: InsertionPoint,
-}
-
-impl InsertCodeNodeMenu {
-    fn new(insertion_point: InsertionPoint, functions: Vec<Box<Function>>) -> Self {
-        // there should always be at least one function!!!!
-        let selected_fn_id = functions.get(0).unwrap().id();
-        Self { functions, selected_fn_id, insertion_point }
-    }
-
-    pub fn new_code_node_using_selection(&self) -> CodeNode {
-        code_generation::new_function_call_with_placeholder_args(self.selected_fn())
-    }
-
-    fn selected_fn(&self) -> &Function {
-        self.functions.iter()
-            .find(|func| func.id() == self.selected_fn_id)
-            .map(|func| func.as_ref())
-            .unwrap()
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum InsertionPoint {
     Before(ID),
@@ -183,6 +160,7 @@ pub enum Key {
     X,
     R,
     O,
+    Tab,
     Escape,
 }
 
@@ -232,7 +210,6 @@ pub struct Controller {
     execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
     editing: bool,
-    insert_code_node_menu: Option<InsertCodeNodeMenu>,
     new_insert_code_menu: Option<NewInsertCodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
@@ -246,7 +223,6 @@ impl<'a> Controller {
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
-            insert_code_node_menu: None,
             new_insert_code_menu: None,
             editing: false,
             type_by_id: Self::build_types()
@@ -317,7 +293,6 @@ impl<'a> Controller {
     }
 
     fn hide_insert_code_menu(&mut self) {
-        self.insert_code_node_menu = None;
         self.new_insert_code_menu = None;
         self.editing = false
     }
@@ -335,23 +310,26 @@ impl<'a> Controller {
             return
         }
         // don't perform any commands when in edit mode
-        if self.editing { return }
-        match key {
-            Key::B => {
+        match (self.editing, key) {
+            (false, Key::B) => {
                 self.try_select_back_one_node()
             },
-            Key::W => {
+            (false, Key::W) => {
                 self.try_select_forward_one_node()
             },
-            Key::C => {
+            (false, Key::C) => {
                 // TODO: pry need more logic here
                 self.editing = true
             },
-            Key::R => {
+            (false, Key::R) => {
                 self.run(&self.loaded_code.as_ref().unwrap().clone())
             },
-            Key::O => {
+            (false, Key::O) => {
                 self.set_insertion_point_on_next_line_in_block()
+            },
+            (_, Key::Tab) => {
+                self.new_insert_code_menu.as_mut()
+                    .map(|menu| menu.select_next());
             }
             _ => {},
         }
@@ -371,10 +349,6 @@ impl<'a> Controller {
 
     fn set_insertion_point_on_next_line_in_block(&mut self) {
         if let(Some(expression_id)) = self.currently_focused_block_expression() {
-            self.insert_code_node_menu = Some(InsertCodeNodeMenu::new(
-                InsertionPoint::After(expression_id),
-                self.execution_environment.list_functions(),
-            ));
             self.new_insert_code_menu = Some(NewInsertCodeMenu::new_expression_inside_code_block(
                 InsertionPoint::After(expression_id),
                 &self.execution_environment,
@@ -720,16 +694,29 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_insert_code_node(&self) -> T::DrawResult {
         let menu = self.controller.borrow().new_insert_code_menu.as_ref().unwrap().clone();
         self.ui_toolkit.focused(&||{
-            let controller = Rc::clone(&self.controller);
+            let controller_1 = Rc::clone(&self.controller);
+            let controller_2 = Rc::clone(&self.controller);
             let insertion_point = menu.insertion_point.clone();
             let new_code_node = menu.selected_option_code();
 
-            self.ui_toolkit.draw_text_input("", |_|{}, move ||{
-                let mut controller = controller.borrow_mut();
-                let id = new_code_node.id();
-                controller.hide_insert_code_menu();
-                controller.insert_code(new_code_node, insertion_point);
-                controller.set_selected_node_id(Some(id))
+            self.ui_toolkit.draw_text_input(
+                "",
+                move |input|{
+                    controller_1.borrow_mut().new_insert_code_menu.as_mut()
+                        .map(|m| {
+                            m.set_search_str(input)
+                        });
+                },
+                move ||{
+                    let mut controller = controller_2.borrow_mut();
+                    if let(Some(new_code_node)) = new_code_node {
+                        let id = new_code_node.id();
+                        controller.hide_insert_code_menu();
+                        controller.insert_code(new_code_node, insertion_point);
+                        controller.set_selected_node_id(Some(id))
+                    } else {
+                        controller.hide_insert_code_menu();
+                    }
             })
         });
 

@@ -203,8 +203,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             ondone();
             return
         }
-        if input.as_ref() as &str != existing_value {
-            onchange(input.as_ref() as &str)
-        }
+        onchange(input.as_ref() as &str)
     }
 }
