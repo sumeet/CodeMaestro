@@ -97,6 +97,13 @@ impl CodeNode {
         }
     }
 
+    pub fn into_assignment(&self) -> Option<&Assignment> {
+        match self {
+            CodeNode::Assignment(assignment) => Some(assignment),
+            _ => None,
+        }
+    }
+
     pub fn description(&self) -> String {
         match self {
             CodeNode::FunctionCall(function_call) => {

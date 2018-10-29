@@ -57,7 +57,15 @@ impl InsertCodeMenu {
         }
         let arg_type = arg_type.unwrap();
         Self {
-            option_generators: vec![Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions() })],
+            option_generators: vec![
+                Box::new(InsertVariableReferenceOptionGenerator {
+                    assignments: genie.find_assignments_that_come_before_code(argument.id)
+                        .into_iter()
+                        .map(|assignment| assignment.clone())
+                        .collect()
+                }),
+                Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions() }),
+            ],
             selected_option_index: 0,
             search_params: CodeSearchParams::with_type(&arg_type),
             insertion_point: InsertionPoint::Argument(argument.id),
@@ -138,7 +146,9 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
         let input_str = search_params.input_str.trim().to_lowercase();
         if !input_str.is_empty() {
             functions = functions.into_iter()
-                .filter(|f| f.name().to_lowercase().contains(&input_str)).collect()
+                .filter(|f| {
+                    f.name().to_lowercase().contains(&input_str)
+                }).collect()
         }
         if let(Some(ref return_type)) = search_params.return_type {
             functions = functions.into_iter()
@@ -148,6 +158,32 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
             InsertCodeMenuOption {
                 label: func.name().to_string(),
                 new_node: code_generation::new_function_call_with_placeholder_args(func.as_ref()),
+                is_selected: false,
+            }
+        }).collect()
+    }
+}
+
+#[derive(Clone)]
+struct InsertVariableReferenceOptionGenerator {
+    assignments: Vec<Assignment>,
+}
+
+impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
+    fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
+        let mut assignments = self.assignments.clone();
+        let input_str = search_params.input_str.trim().to_lowercase();
+        if !input_str.is_empty() {
+            assignments = assignments.into_iter()
+                .filter(|assignment| {
+                    assignment.name.to_lowercase().contains(&input_str)
+                }).collect()
+        }
+
+        assignments.into_iter().map(|assignment| {
+            InsertCodeMenuOption {
+                label: assignment.name.to_string(),
+                new_node: code_generation::new_variable_reference(&assignment),
                 is_selected: false,
             }
         }).collect()
@@ -193,6 +229,33 @@ pub struct CodeGenie<'a> {
 impl<'a> CodeGenie<'a> {
     fn new(code_node: &'a CodeNode, env: &'a ExecutionEnvironment) -> Self {
         Self { code: code_node, env }
+    }
+
+    fn find_assignments_that_come_before_code(&self, node_id: ID) -> Vec<&Assignment> {
+        let block_expression_id = self.find_expression_inside_block_that_contains(node_id);
+        if block_expression_id.is_none() {
+            return vec![]
+        }
+        let block_expression_id = block_expression_id.unwrap();
+        match self.find_parent(block_expression_id) {
+            Some(CodeNode::Block(block)) => {
+                // if this dies, it means we found a block that's a parent of a block expression,
+                // but then when we looked inside the block it didn't contain that expression. this
+                // really shouldn't happen
+                let position_in_block = block.expressions.iter()
+                    .position(|code| code.id() == block_expression_id)
+                    .unwrap();
+
+                block.expressions.iter()
+                    // position in the block is 0 indexed, so this will take every node up TO it
+                    .take(position_in_block)
+                    .map(|code| code.into_assignment())
+                    .filter(|opt| opt.is_some())
+                    .map(|opt| opt.unwrap())
+                    .collect()
+            },
+            _ => vec![]
+        }
     }
 
     fn find_expression_inside_block_that_contains(&self, node_id: ID) -> Option<ID> {
