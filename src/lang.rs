@@ -291,14 +291,14 @@ impl CodeNode {
         }
     }
 
-    pub fn find_parent(&self, id: ID) -> Option<CodeNode> {
+    pub fn find_parent(&self, id: ID) -> Option<&CodeNode> {
         if self.id() == id {
             return None
         } else {
             let children = self.children();
             for child in children {
                 if child.id() == id {
-                    return Some(self.clone())
+                    return Some(self)
                 } else {
                     let found_parent = child.find_parent(id);
                     if let(Some(code_node)) = found_parent {

@@ -1,7 +1,6 @@
 use debug_cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
-use super::uuid::Uuid;
 
 use failure::{err_msg};
 use failure::Error as Error;
@@ -32,21 +31,36 @@ pub type Color = [f32; 4];
 // 4: placeholder
 
 #[derive(Clone)]
-struct NewInsertCodeMenu {
+struct InsertCodeMenu {
     option_generators: Vec<Box<InsertCodeMenuOptionGenerator>>,
     selected_option_index: usize,
     search_params: CodeSearchParams,
     insertion_point: InsertionPoint,
 }
 
-impl NewInsertCodeMenu {
+impl InsertCodeMenu {
     fn new_expression_inside_code_block(insertion_point: InsertionPoint, env: &ExecutionEnvironment) -> Self {
-        NewInsertCodeMenu {
+        Self {
             // TODO: should probably be able to insert new assignment expressions as well
             option_generators: vec![Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions() })],
             selected_option_index: 0,
             search_params: CodeSearchParams::empty(),
             insertion_point,
+        }
+    }
+
+    fn fill_in_argument(argument: &lang::Argument, env: &ExecutionEnvironment, root_node: &CodeNode) -> Self {
+        let genie = CodeGenie::new(root_node, env);
+        let arg_type = genie.get_type_for_arg(argument.argument_definition_id);
+        if arg_type.is_none() {
+            panic!("h000000what. couldn't find the argument definition for this thing!")
+        }
+        let arg_type = arg_type.unwrap();
+        Self {
+            option_generators: vec![Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions() })],
+            selected_option_index: 0,
+            search_params: CodeSearchParams::with_type(&arg_type),
+            insertion_point: InsertionPoint::Argument(argument.id),
         }
     }
 
@@ -62,9 +76,11 @@ impl NewInsertCodeMenu {
         }
     }
 
-    fn set_search_str(&mut self, str: &str) {
-        self.search_params.input_str = str.to_string();
-        self.selected_option_index = 0;
+    fn set_search_str(&mut self, input_str: &str) {
+        if input_str != self.search_params.input_str {
+            self.search_params.input_str = input_str.to_string();
+            self.selected_option_index = 0;
+        }
     }
 
     // TODO: i think the selected option index can get out of sync with this generated list, leading
@@ -98,8 +114,13 @@ impl CodeSearchParams {
     fn empty() -> Self {
         Self { return_type: None, input_str: "".to_string() }
     }
+
+    fn with_type(t: &lang::Type) -> Self {
+        Self { return_type: Some(t.clone()), input_str: "".to_string() }
+    }
 }
 
+#[derive(Clone)]
 struct InsertCodeMenuOption {
     label: String,
     new_node: CodeNode,
@@ -201,6 +222,14 @@ impl<'a> CodeGenie<'a> {
             .collect()
     }
 
+    fn find_node(&self, id: ID) -> Option<&CodeNode> {
+        self.code.find_node(id)
+    }
+
+    fn find_parent(&self, id: ID) -> Option<&CodeNode> {
+        self.code.find_parent(id)
+    }
+
     fn all_functions(&self) -> Vec<Box<Function>> {
         self.env.list_functions()
     }
@@ -210,7 +239,7 @@ pub struct Controller {
     execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
     editing: bool,
-    new_insert_code_menu: Option<NewInsertCodeMenu>,
+    insert_code_menu: Option<InsertCodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
     type_by_id: HashMap<ID, lang::Type>,
@@ -223,7 +252,7 @@ impl<'a> Controller {
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
-            new_insert_code_menu: None,
+            insert_code_menu: None,
             editing: false,
             type_by_id: Self::build_types()
         }
@@ -240,19 +269,17 @@ impl<'a> Controller {
     // TODO: return a result instead of returning nothing? it seems like there might be places this
     // thing can error
     fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
-        if self.loaded_code.is_none() {
-            panic!("why would we try to insert any code and there isn't any loaded?!")
-        }
-        let mut loaded_code = self.loaded_code.as_mut().unwrap();
-        let parent = loaded_code.find_parent(insertion_point.node_id());
-        if parent.is_none() {
+        let genie = self.code_genie();
+        let parent = genie.as_ref()
+            .map(|genie| genie.find_parent(insertion_point.node_id()));
+        if parent.is_none() || parent.unwrap().is_none() {
             panic!("unable to insert new code, couldn't find parent to insert into")
 
         }
-        let parent = parent.unwrap();
+        let parent = parent.unwrap().unwrap();
         match insertion_point {
             InsertionPoint::Before(_) | InsertionPoint::After(_) => {
-                self.insert_new_expression_in_block(code_node, insertion_point, parent)
+                self.insert_new_expression_in_block(code_node, insertion_point, parent.clone())
             }
             InsertionPoint::Argument(argument_id) => {
                 self.insert_expression_into_argument(code_node, argument_id)
@@ -262,7 +289,7 @@ impl<'a> Controller {
 
     // TODO: error handling
     fn insert_expression_into_argument(&mut self, code_node: CodeNode, argument_id: ID) {
-        let mut loaded_code = self.loaded_code.as_mut().unwrap();
+        let loaded_code = self.loaded_code.as_mut().unwrap();
         let mut argument = loaded_code.find_node(argument_id).unwrap().into_argument().clone();
         argument.expr = Box::new(code_node);
         loaded_code.replace(&CodeNode::Argument(argument));
@@ -293,12 +320,12 @@ impl<'a> Controller {
     }
 
     fn hide_insert_code_menu(&mut self) {
-        self.new_insert_code_menu = None;
+        self.insert_code_menu = None;
         self.editing = false
     }
 
     pub fn insertion_point(&self) -> Option<InsertionPoint> {
-        match self.new_insert_code_menu.as_ref() {
+        match self.insert_code_menu.as_ref() {
             None => None,
             Some(menu) => Some(menu.insertion_point),
         }
@@ -318,8 +345,9 @@ impl<'a> Controller {
                 self.try_select_forward_one_node()
             },
             (false, Key::C) => {
-                // TODO: pry need more logic here
-                self.editing = true
+                if let(Some(id)) = self.selected_node_id {
+                    self.mark_as_editing(id)
+                }
             },
             (false, Key::R) => {
                 self.run(&self.loaded_code.as_ref().unwrap().clone())
@@ -328,7 +356,7 @@ impl<'a> Controller {
                 self.set_insertion_point_on_next_line_in_block()
             },
             (_, Key::Tab) => {
-                self.new_insert_code_menu.as_mut()
+                self.insert_code_menu.as_mut()
                     .map(|menu| menu.select_next());
             }
             _ => {},
@@ -337,9 +365,9 @@ impl<'a> Controller {
 
     fn handle_cancel(&mut self) {
         self.editing = false;
-        if self.new_insert_code_menu.is_none() { return }
+        if self.insert_code_menu.is_none() { return }
 
-        match self.new_insert_code_menu.as_ref().unwrap().insertion_point {
+        match self.insert_code_menu.as_ref().unwrap().insertion_point {
             InsertionPoint::After(id) => self.selected_node_id = Some(id),
             InsertionPoint::Before(id) => self.selected_node_id = Some(id),
             InsertionPoint::Argument(id) => self.selected_node_id = Some(id),
@@ -349,7 +377,7 @@ impl<'a> Controller {
 
     fn set_insertion_point_on_next_line_in_block(&mut self) {
         if let(Some(expression_id)) = self.currently_focused_block_expression() {
-            self.new_insert_code_menu = Some(NewInsertCodeMenu::new_expression_inside_code_block(
+            self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
                 InsertionPoint::After(expression_id),
                 &self.execution_environment,
             ));
@@ -358,6 +386,26 @@ impl<'a> Controller {
         } else {
             self.hide_insert_code_menu()
         }
+    }
+
+    fn mark_as_editing(&mut self, node_id: ID) {
+        let genie = self.code_genie();
+        if genie.is_none() {
+            return
+        }
+        let genie = genie.unwrap();
+        match genie.find_node(node_id) {
+            Some(CodeNode::Argument(argument)) => {
+                self.insert_code_menu = Some(
+                    InsertCodeMenu::fill_in_argument(
+                        argument,
+                        &self.execution_environment,
+                        self.loaded_code.as_ref().unwrap()));
+            }
+            _ => ()
+        }
+        self.selected_node_id = Some(node_id);
+        self.editing = true;
     }
 
     fn currently_focused_block_expression(&self) -> Option<ID> {
@@ -692,7 +740,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_insert_code_node(&self) -> T::DrawResult {
-        let menu = self.controller.borrow().new_insert_code_menu.as_ref().unwrap().clone();
+        let menu = self.controller.borrow().insert_code_menu.as_ref().unwrap().clone();
         self.ui_toolkit.focused(&||{
             let controller_1 = Rc::clone(&self.controller);
             let controller_2 = Rc::clone(&self.controller);
@@ -702,7 +750,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.ui_toolkit.draw_text_input(
                 "",
                 move |input|{
-                    controller_1.borrow_mut().new_insert_code_menu.as_mut()
+                    controller_1.borrow_mut().insert_code_menu.as_mut()
                         .map(|m| {
                             m.set_search_str(input)
                         });
@@ -723,7 +771,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.render_insertion_options(&menu)
     }
 
-    fn render_insertion_options(&self, menu: &NewInsertCodeMenu) -> <T as UiToolkit>::DrawResult {
+    fn render_insertion_options(&self, menu: &InsertCodeMenu) -> <T as UiToolkit>::DrawResult {
         let mut function_line: Vec<Box<Fn() -> T::DrawResult>> = vec![];
         for option in menu.list_options() {
             let button_color = if option.is_selected { RED_COLOR } else { BLACK_COLOR };
@@ -761,7 +809,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_variable_reference(&self, variable_reference: &VariableReference) -> T::DrawResult {
         let mut controller = self.controller.borrow_mut();
-        let loaded_code = controller.loaded_code.as_mut().unwrap();
+        let loaded_code = controller.loaded_code.as_ref().unwrap();
         let assignment = loaded_code.find_node(variable_reference.assignment_id);
         if let(Some(CodeNode::Assignment(assignment))) = assignment {
             self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {})
@@ -841,8 +889,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let node_id_to_select = argument.id;
                 self.ui_toolkit.draw_small_button(&type_symbol, BLACK_COLOR, move ||{
                     let mut controller = cont2.borrow_mut();
-                    controller.set_selected_node_id(Some(node_id_to_select));
-                    controller.editing = true;
+                    controller.mark_as_editing(node_id_to_select);
                 })
             },
             &|| {
@@ -916,8 +963,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let id = code_node.id();
         self.ui_toolkit.draw_button(label, color, move || {
             let mut controller = controller.borrow_mut();
-            controller.set_selected_node_id(Some(id));
-            controller.editing = true;
+            controller.mark_as_editing(id);
         })
     }
 
@@ -952,16 +998,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     })
             },
             CodeNode::Argument(argument) => {
-                let arg = argument.clone();
-                self.ui_toolkit.draw_all(vec![
-                    self.draw_inline_text_editor(
-                        &"",
-                        move |new_value| {
-                            let mut new_arg = arg.clone();
-                            CodeNode::Argument(new_arg)
-                        }
-                    ),
-                ])
+                self.render_insert_code_node()
+//                let arg = argument.clone();
+//                self.ui_toolkit.draw_all(vec![
+//                    self.draw_inline_text_editor(
+//                        &"",
+//                        move |new_value| {
+//                            let mut new_arg = arg.clone();
+//                            CodeNode::Argument(new_arg)
+//                        }
+//                    ),
+//                ])
             }
             _ => {
                 self.controller.borrow_mut().editing = false;
