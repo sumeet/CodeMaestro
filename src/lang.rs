@@ -407,4 +407,9 @@ pub struct Argument {
 pub struct Placeholder {
     pub id: ID,
     pub description: String,
+    // ok this is weird. it looks like i only need an ID here for the type... but in other places,
+    // like the ArgumentDefinition, i store the entire type. i'm pretty sure i can go back into the
+    // ArgumentDefinition and change that into a type ID instead of the entire type. there's just
+    // this inconsistency.
+    pub type_id: ID,
 }

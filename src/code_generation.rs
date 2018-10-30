@@ -9,6 +9,7 @@ pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::C
                 expr: Box::new(lang::CodeNode::Placeholder(lang::Placeholder {
                     id: lang::new_id(),
                     description: arg_def.short_name.clone(),
+                    type_id: arg_def.arg_type.id
                 }))
             })
         })
@@ -34,5 +35,13 @@ pub fn new_string_literal(string: &str) -> lang::CodeNode {
     lang::CodeNode::StringLiteral(lang::StringLiteral {
         value: string.to_string(),
         id: lang::new_id(),
+    })
+}
+
+pub fn new_placeholder(description: &str, type_id: lang::ID) -> lang::CodeNode {
+    lang::CodeNode::Placeholder(lang::Placeholder {
+        id: lang::new_id(),
+        description: description.to_string(),
+        type_id,
     })
 }

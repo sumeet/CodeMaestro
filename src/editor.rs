@@ -23,6 +23,8 @@ pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
 pub const PURPLE_COLOR: Color = [0.486, 0.353, 0.952, 1.0];
 pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
 
+pub const PLACEHOLDER_ICON: &str = "\u{F071}";
+
 pub type Color = [f32; 4];
 
 // TODO: types of insert code generators
@@ -224,7 +226,18 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                         is_selected: false,
                         new_node: code_generation::new_string_literal(input_str)
                     }
-                )
+                );
+                // design decision made here: all placeholders have types. therefore, it is now
+                // required for a placeholder node to have a type, meaning we need to know what the
+                // type of a placeholder is to create it. under current conditions that's ok, but i
+                // think we can make this less restrictive in the future if we need to
+                options.push(
+                    InsertCodeMenuOption {
+                        label: format!("{} {}", PLACEHOLDER_ICON, input_str),
+                        is_selected: false,
+                        new_node: code_generation::new_placeholder(input_str, return_type.id),
+                    }
+                );
             }
         }
         options
@@ -1039,7 +1052,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         // TODO: maybe use the traffic cone instead of the exclamation triangle,
         // which is kinda hard to see
         self.ui_toolkit.draw_button(
-            &format!("\u{F071} {}", placeholder.description),
+            &format!("{} {}", PLACEHOLDER_ICON, placeholder.description),
             r,
             &|| {})
     }
@@ -1107,16 +1120,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             },
             CodeNode::Argument(argument) => {
                 self.render_insert_code_node()
-//                let arg = argument.clone();
-//                self.ui_toolkit.draw_all(vec![
-//                    self.draw_inline_text_editor(
-//                        &"",
-//                        move |new_value| {
-//                            let mut new_arg = arg.clone();
-//                            CodeNode::Argument(new_arg)
-//                        }
-//                    ),
-//                ])
             }
             _ => {
                 self.controller.borrow_mut().editing = false;
