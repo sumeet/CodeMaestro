@@ -122,6 +122,16 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) -> Self::DrawResult {
+        html! {
+            <button id={ self.incr_last_drawn_element_id().to_string() },
+                 style=format!("display: block; font-size: 75%; color: white; background-color: {};", self.rgba(color)),
+                 onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
+            { label }
+            </button>
+        }
+    }
+
     fn draw_text_box(&self, text: &str) -> Self::DrawResult {
         html! {
             <textarea id={ self.incr_last_drawn_element_id().to_string() },>{ text }</textarea>
@@ -141,7 +151,7 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: FnOnce() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult {
         let ondone = Rc::new(ondone);
         let ondone2 = Rc::clone(&ondone);
         html! {
@@ -170,10 +180,24 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn draw_text(&self, text: &str) -> Self::DrawResult {
+        html! {
+            <span>{ text }</span>
+        }
+    }
+
     fn focused(&self, draw_fn: &Fn() -> Html<Model>) -> Self::DrawResult {
         let html = draw_fn();
         self.focus_last_drawn_element();
         html
+    }
+
+    fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div style="position: fixed; line-height: 1; width: 100%; bottom: 0; left: 0;",>
+                {{ draw_fn() }}
+            </div>
+        }
     }
 }
 
