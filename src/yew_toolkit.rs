@@ -1,3 +1,4 @@
+use super::lang;
 use super::{CSApp, UiToolkit};
 use super::editor::{Key as AppKey};
 use yew::prelude::*;
@@ -151,7 +152,7 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: FnOnce() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult {
         let ondone = Rc::new(ondone);
         let ondone2 = Rc::clone(&ondone);
         html! {
@@ -159,8 +160,8 @@ impl UiToolkit for YewToolkit {
                id={ self.incr_last_drawn_element_id().to_string() },
                value=existing_value,
                oninput=|e| {onchange(&e.value) ; Msg::Redraw},
-               onkeypress=|e| { if e.key() == "Enter" { ondone() } ; Msg::Redraw },
-               onblur=|_| {ondone2(); Msg::Redraw}, />
+               onkeypress=|e| { if e.key() == "Enter" { ondone2() } ; Msg::Redraw },
+               onblur=|_| {ondone(); Msg::Redraw}, />
         }
     }
 
@@ -214,7 +215,7 @@ impl YewToolkit {
 
     fn focus_last_drawn_element(&self) {
         let mut javascripts = self.javascript_to_run_after_render.borrow_mut();
-        javascripts.push(format!("document.getElementById({}).focus();", self.get_last_drawn_element_id()))
+        javascripts.push(format!("var el = document.getElementById({}) ; el && el.focus();", self.get_last_drawn_element_id()))
     }
 
     fn after_render_javascripts(&self) -> Vec<String> {

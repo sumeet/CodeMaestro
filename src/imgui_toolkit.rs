@@ -189,7 +189,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igSetScrollHere(1.0) };
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: FnOnce() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
         let input = self.get_or_initialize_text_input(existing_value);
         let mut input = input.borrow_mut();
 

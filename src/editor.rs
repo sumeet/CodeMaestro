@@ -710,7 +710,7 @@ pub trait UiToolkit {
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: FnOnce() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -862,34 +862,36 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_insert_code_node(&self) -> T::DrawResult {
         let menu = self.controller.borrow().insert_code_menu.as_ref().unwrap().clone();
-        self.ui_toolkit.focused(&||{
-            let controller_1 = Rc::clone(&self.controller);
-            let controller_2 = Rc::clone(&self.controller);
-            let insertion_point = menu.insertion_point.clone();
-            let new_code_node = menu.selected_option_code();
 
-            self.ui_toolkit.draw_text_input(
-                "",
-                move |input|{
-                    controller_1.borrow_mut().insert_code_menu.as_mut()
-                        .map(|m| {
-                            m.set_search_str(input)
-                        });
-                },
-                move ||{
-                    let mut controller = controller_2.borrow_mut();
-                    if let(Some(new_code_node)) = new_code_node {
-                        let id = new_code_node.id();
-                        controller.hide_insert_code_menu();
-                        controller.insert_code(new_code_node, insertion_point);
-                        controller.set_selected_node_id(Some(id))
-                    } else {
-                        controller.hide_insert_code_menu();
-                    }
-            })
-        });
+        self.ui_toolkit.draw_all(vec![
+            self.ui_toolkit.focused(&||{
+                let controller_1 = Rc::clone(&self.controller);
+                let controller_2 = Rc::clone(&self.controller);
+                let insertion_point = menu.insertion_point.clone();
+                let new_code_node = menu.selected_option_code();
 
-        self.render_insertion_options(&menu)
+                self.ui_toolkit.draw_text_input(
+                    "",
+                    move |input|{
+                        controller_1.borrow_mut().insert_code_menu.as_mut()
+                            .map(|m| {
+                                m.set_search_str(input)
+                            });
+                    },
+                    move ||{
+                        let mut controller = controller_2.borrow_mut();
+                        if let(Some(ref new_code_node)) = new_code_node {
+                            let id = new_code_node.id();
+                            controller.hide_insert_code_menu();
+                            controller.insert_code(new_code_node.clone(), insertion_point);
+                            controller.set_selected_node_id(Some(id))
+                        } else {
+                            controller.hide_insert_code_menu();
+                        }
+                    })
+            }),
+            self.render_insertion_options(&menu)
+        ])
     }
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> <T as UiToolkit>::DrawResult {

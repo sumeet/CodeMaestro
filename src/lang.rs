@@ -320,8 +320,21 @@ impl CodeNode {
 
 pub type ID = Uuid;
 
+#[cfg(feature = "default")]
 pub fn new_id() -> ID {
     Uuid::new_v4()
+}
+
+// this is weird. without this, we get an error about RNG not being available in the browser. got
+// this browser uuid implementation utilizing crypto from https://stackoverflow.com/a/2117523/149987
+#[cfg(feature = "javascript")]
+pub fn new_id() -> ID {
+    let uuid = js! {
+        return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(new RegExp("[018]", "g"), c =>
+            (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+        );
+    };
+    Uuid::parse_str(&uuid.into_string().unwrap()).unwrap()
 }
 
 #[derive(Deserialize, Serialize, Clone,Debug)]
