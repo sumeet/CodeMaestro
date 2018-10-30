@@ -12,6 +12,7 @@ use super::code_generation;
 use super::lang::{
     Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Error as LangError,Assignment,Block,
     VariableReference};
+use super::itertools::Itertools;
 
 
 pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
@@ -56,15 +57,22 @@ impl InsertCodeMenu {
             panic!("h000000what. couldn't find the argument definition for this thing!")
         }
         let arg_type = arg_type.unwrap();
+
+        let assignments_by_type_id = genie.find_assignments_that_come_before_code(argument.id)
+            .into_iter()
+            .group_by(|assignment| {
+                let assignment : Assignment = (**assignment).clone();
+                genie.guess_type(&CodeNode::Assignment(assignment)).id
+            })
+            .into_iter()
+            .map(|(id, assignments)| (id, assignments.cloned().collect::<Vec<Assignment>>()))
+            .collect();
+
         Self {
             option_generators: vec![
-                Box::new(InsertVariableReferenceOptionGenerator {
-                    assignments: genie.find_assignments_that_come_before_code(argument.id)
-                        .into_iter()
-                        .map(|assignment| assignment.clone())
-                        .collect()
-                }),
+                Box::new(InsertVariableReferenceOptionGenerator { assignments_by_type_id }),
                 Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions() }),
+                Box::new(InsertLiteralOptionGenerator {}),
             ],
             selected_option_index: 0,
             search_params: CodeSearchParams::with_type(&arg_type),
@@ -97,8 +105,7 @@ impl InsertCodeMenu {
     fn list_options(&self) -> Vec<InsertCodeMenuOption> {
         let mut all_options : Vec<InsertCodeMenuOption> = self.option_generators
             .iter()
-            .map(|generator| generator.options(&self.search_params))
-            .flatten()
+            .flat_map(|generator| generator.options(&self.search_params))
             .collect();
         all_options.get_mut(self.selected_option_index).as_mut()
             .map(|option| option.is_selected = true);
@@ -166,12 +173,24 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
 
 #[derive(Clone)]
 struct InsertVariableReferenceOptionGenerator {
-    assignments: Vec<Assignment>,
+    assignments_by_type_id: HashMap<ID, Vec<Assignment>>,
 }
 
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
-        let mut assignments = self.assignments.clone();
+        let mut assignments = if let(Some(search_type)) = &search_params.return_type {
+            self.assignments_by_type_id.get(&search_type.id).map_or_else(
+                || vec![],
+                |assignments| assignments.iter()
+                    .map(|assignment| assignment.clone()).collect()
+            )
+        } else {
+            self.assignments_by_type_id.iter()
+                .flat_map(|(_id, assignments)| assignments)
+                .map(|assignment| assignment.clone())
+                .collect()
+        };
+
         let input_str = search_params.input_str.trim().to_lowercase();
         if !input_str.is_empty() {
             assignments = assignments.into_iter()
@@ -187,6 +206,28 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
                 is_selected: false,
             }
         }).collect()
+    }
+}
+
+#[derive(Clone)]
+struct InsertLiteralOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
+    fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
+        let mut options = vec![];
+        let input_str = &search_params.input_str;
+        if let(Some(ref return_type)) = search_params.return_type {
+            if return_type.id == lang::STRING_TYPE.id {
+                options.push(
+                    InsertCodeMenuOption {
+                        label: format!("\u{f10d}{}\u{f10e}", input_str),
+                        is_selected: false,
+                        new_node: code_generation::new_string_literal(input_str)
+                    }
+                )
+            }
+        }
+        options
     }
 }
 
@@ -293,8 +334,53 @@ impl<'a> CodeGenie<'a> {
         self.code.find_parent(id)
     }
 
+    fn find_function(&self, id: ID) -> Option<&Box<Function>> {
+        self.env.find_function(id)
+    }
+
     fn all_functions(&self) -> Vec<Box<Function>> {
         self.env.list_functions()
+    }
+
+    pub fn guess_type(&self, code_node: &CodeNode) -> lang::Type {
+        match code_node {
+            CodeNode::FunctionCall(function_call) => {
+                let func_id = function_call.function_reference().function_id;
+                match self.find_function(func_id) {
+                    Some(ref func) => func.returns().clone(),
+                    None => lang::NULL_TYPE.clone()
+                }
+            }
+            CodeNode::StringLiteral(string_literal) => {
+                lang::STRING_TYPE.clone()
+            }
+            CodeNode::Assignment(assignment) => {
+                self.guess_type(&assignment.expression)
+            }
+            CodeNode::Block(block) => {
+                if block.expressions.len() > 0 {
+                    let last_expression_in_block= &block.expressions[block.expressions.len() - 1];
+                    self.guess_type(last_expression_in_block)
+                } else {
+                    lang::NULL_TYPE.clone()
+                }
+            }
+            CodeNode::VariableReference(variable_reference) => {
+                lang::NULL_TYPE.clone()
+            }
+            CodeNode::FunctionReference(function_reference) => {
+                lang::NULL_TYPE.clone()
+            }
+            CodeNode::FunctionDefinition(function_definition) => {
+                lang::NULL_TYPE.clone()
+            }
+            CodeNode::Argument(argument) => {
+                lang::NULL_TYPE.clone()
+            }
+            CodeNode::Placeholder(placeholder) => {
+                lang::NULL_TYPE.clone()
+            }
+        }
     }
 }
 
@@ -598,47 +684,6 @@ impl<'a> Controller {
         self.loaded_code.as_ref()?.find_node(self.selected_node_id?)
     }
 
-    // XXX: lang doesn't really use the Type. should we move it from the lang into the editor....?
-    pub fn guess_type(&self, code_node: &CodeNode) -> lang::Type {
-        match code_node {
-            CodeNode::FunctionCall(function_call) => {
-                let func_id = function_call.function_reference().function_id;
-                match self.find_function(func_id) {
-                    Some(ref func) => func.returns().clone(),
-                    None => lang::NULL_TYPE.clone()
-                }
-            }
-            CodeNode::StringLiteral(string_literal) => {
-                lang::STRING_TYPE.clone()
-            }
-            CodeNode::Assignment(assignment) => {
-                self.guess_type(&assignment.expression)
-            }
-            CodeNode::Block(block) => {
-                if block.expressions.len() > 0 {
-                    let last_expression_in_block= &block.expressions[block.expressions.len() - 1];
-                    self.guess_type(last_expression_in_block)
-                } else {
-                    lang::NULL_TYPE.clone()
-                }
-            }
-            CodeNode::VariableReference(variable_reference) => {
-                lang::NULL_TYPE.clone()
-            }
-            CodeNode::FunctionReference(function_reference) => {
-                lang::NULL_TYPE.clone()
-            }
-            CodeNode::FunctionDefinition(function_definition) => {
-                lang::NULL_TYPE.clone()
-            }
-            CodeNode::Argument(argument) => {
-                lang::NULL_TYPE.clone()
-            }
-            CodeNode::Placeholder(placeholder) => {
-                lang::NULL_TYPE.clone()
-            }
-        }
-    }
 }
 
 pub trait UiToolkit {

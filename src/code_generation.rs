@@ -29,3 +29,10 @@ pub fn new_variable_reference(assignment: &lang::Assignment) -> lang::CodeNode {
         id: lang::new_id(),
     })
 }
+
+pub fn new_string_literal(string: &str) -> lang::CodeNode {
+    lang::CodeNode::StringLiteral(lang::StringLiteral {
+        value: string.to_string(),
+        id: lang::new_id(),
+    })
+}

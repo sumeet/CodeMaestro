@@ -52,6 +52,10 @@ extern crate serde_json;
 #[macro_use]
 extern crate erased_serde;
 
+#[macro_use] extern crate itertools;
+
+use itertools::Itertools;
+
 extern crate debug_cell;
 use debug_cell::RefCell;
 
