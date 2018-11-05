@@ -783,7 +783,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
         if self.is_editing(code_node) {
-            return self.ui_toolkit.focused(&|| { self.draw_inline_editor(code_node) })
+            return self.draw_inline_editor(code_node)
         }
         let draw = ||{
             match code_node {
@@ -1099,26 +1099,33 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
+        // this is kind of a mess. render_insert_code_node() does `focus` inside of
+        // it. the other parts of the branch need to be wrapped in focus() but not
+        // render_insert_code_node()
         match code_node {
             CodeNode::StringLiteral(string_literal) => {
-                let sl = string_literal.clone();
-                self.draw_inline_text_editor(
-                    &string_literal.value,
-                    move |new_value| {
-                        let mut new_literal = sl.clone();
-                        new_literal.value = new_value.to_string();
-                        CodeNode::StringLiteral(new_literal)
-                    })
+                self.ui_toolkit.focused(&move ||{
+                    let new_literal = string_literal.clone();
+                    self.draw_inline_text_editor(
+                        &string_literal.value,
+                        move |new_value| {
+                            let mut sl = new_literal.clone();
+                            sl.value = new_value.to_string();
+                            CodeNode::StringLiteral(sl)
+                        })
+                })
             },
             CodeNode::Assignment(assignment) => {
-                let a = assignment.clone();
-                self.draw_inline_text_editor(
-                    &assignment.name,
-                    move |new_value| {
-                        let mut new_assignment = a.clone();
-                        new_assignment.name = new_value.to_string();
-                        CodeNode::Assignment(new_assignment)
-                    })
+                self.ui_toolkit.focused(&|| {
+                    let a = assignment.clone();
+                    self.draw_inline_text_editor(
+                        &assignment.name,
+                        move |new_value| {
+                            let mut new_assignment = a.clone();
+                            new_assignment.name = new_value.to_string();
+                            CodeNode::Assignment(new_assignment)
+                        })
+                })
             },
             CodeNode::Argument(argument) => {
                 self.render_insert_code_node()

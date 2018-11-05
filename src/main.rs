@@ -4,6 +4,8 @@
 #![feature(nll)]
 #![feature(arbitrary_self_types)]
 #![feature(slice_concat_ext)]
+#![recursion_limit="128"]
+
 
 #[cfg(feature = "default")]
 extern crate glium;

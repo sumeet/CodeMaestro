@@ -17,6 +17,7 @@ pub enum Msg {
     SetApp(Rc<CSApp>),
     SetKeypressHandler(Rc<Fn(AppKey)>),
     Redraw,
+    // FocusS,
 }
 
 impl Component for Model {
@@ -35,11 +36,12 @@ impl Component for Model {
         match msg {
             Msg::SetApp(app) => {
                 self.app = Some(app);
+                true
             }
             Msg::SetKeypressHandler(keypress_handler) => {
                 let app = self.app.as_ref();
                 if app.is_none() {
-                    return true;
+                    return false;
                 }
                 let app2 = Rc::clone(app.unwrap());
                 let link2 = Rc::clone(&self.link);
@@ -52,11 +54,12 @@ impl Component for Model {
                     cb.emit(());
                 };
                 self.keyboard_input_service.register(Callback::from(callback));
+                false
             }
             Msg::Redraw =>   {
+                true
             }
         }
-        true
     }
 }
 
@@ -68,7 +71,6 @@ struct YewToolkit {
     windows: RefCell<Vec<Html<Model>>>,
     draw_next_on_same_line_was_set: RefCell<bool>,
     last_drawn_element_id: RefCell<u32>,
-    javascript_to_run_after_render: RefCell<Vec<String>>,
 }
 
 impl UiToolkit for YewToolkit {
@@ -78,9 +80,6 @@ impl UiToolkit for YewToolkit {
         html! {
             <div>
                 { for draw_results.into_iter() }
-                { for self.after_render_javascripts().into_iter().map(|js| html! {
-                    <script>{ js }</script>
-                })}
             </div>
         }
     }
@@ -203,23 +202,19 @@ impl UiToolkit for YewToolkit {
 }
 
 impl YewToolkit {
-    fn new(on_key_press: Rc<Fn(String)>) -> Self {
+    fn new() -> Self {
         YewToolkit {
             current_window: RefCell::new(Vec::new()),
             windows: RefCell::new(Vec::new()),
             draw_next_on_same_line_was_set: RefCell::new(false),
             last_drawn_element_id: RefCell::new(0),
-            javascript_to_run_after_render: RefCell::new(Vec::new()),
         }
     }
 
     fn focus_last_drawn_element(&self) {
-        let mut javascripts = self.javascript_to_run_after_render.borrow_mut();
-        javascripts.push(format!("var el = document.getElementById({}) ; el && el.focus();", self.get_last_drawn_element_id()))
-    }
-
-    fn after_render_javascripts(&self) -> Vec<String> {
-        self.javascript_to_run_after_render.borrow().clone()
+        js! {
+            document.body.setAttribute("data-focused-id", @{self.get_last_drawn_element_id()});
+        }
     }
 
     fn rgba(&self, color: [f32; 4]) -> String {
@@ -242,7 +237,7 @@ impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         if let(Some(ref app)) = self.app {
             let app2 = Rc::clone(&app);
-            let mut tk = YewToolkit::new(Rc::new(move |_| {}));
+            let mut tk = YewToolkit::new();
             app.draw(&mut tk)
         } else {
             html! { <p> {"No app"} </p> }
@@ -266,6 +261,23 @@ fn map_key(key: &str) -> Option<AppKey> {
 
 pub fn draw_app(app: Rc<CSApp>) {
     yew::initialize();
+
+    js! {
+        var callback = function() {
+            var focusedId = document.body.getAttribute("data-focused-id");
+            console.log("focusedID: " + JSON.stringify(focusedId));
+            if (focusedId) {
+                var el = document.getElementById(focusedId);
+                if (el) {
+                   el.focus();
+                }
+            }
+        };
+        var observer = new MutationObserver(callback);
+        var config = {childList: true, subtree: true};
+        observer.observe(window.document.documentElement, config);
+    }
+
     let mut yew_app = App::<Model>::new().mount_to_body();
     yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
     let app2 = Rc::clone(&app);
@@ -294,7 +306,6 @@ impl KeyboardInputService {
             callback.emit(key);
         };
         let listener = js! {
-            console.log("registering callback");
             var callback = @{callback};
             var listener = function(e) {
                 callback(e.key || "NOT FOUND");
