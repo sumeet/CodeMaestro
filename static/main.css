@@ -1,0 +1,37 @@
+/* font ranges cribbed from imgui:
+ * https://github.com/ocornut/imgui/blob/master/imgui_draw.cpp
+ */
+
+@font-face {
+  font-family: Maestro;
+  src: url('/fonts/calibri.ttf');
+  unicode-range: U+0020-00FF; [> Basic Latin + Latin Supplement <]
+}
+
+@font-face {
+  font-family: Maestro;
+  src: url('/fonts/NanumGothic.ttf');
+  /* Korean alphabets + Korean characters */
+  unicode-range: U+3131-3163, U+AC00-D79D;
+}
+
+/* TODO: symbols in browser look too big. maybe we could use JS and go
+ * through and after-process them, LOOOL
+ */
+@font-face {
+  font-family: Maestro;
+  src: url('/fonts/fa-regular-400.ttf');
+  /* Font Awesome Regular 400 */
+  unicode-range: U+F004-F5C8;
+}
+
+@font-face {
+  font-family: Maestro;
+  src: url('/fonts/fa-solid-900.ttf');
+  /* Font Awesome Solid 900 */
+  unicode-range: U+F000-F72F;
+}
+
+* {
+  font-family: 'Maestro';
+}

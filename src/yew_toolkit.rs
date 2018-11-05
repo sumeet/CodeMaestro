@@ -114,8 +114,8 @@ impl UiToolkit for YewToolkit {
 
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) -> Self::DrawResult {
         html! {
-            <button style={"display: block;"}, id={ self.incr_last_drawn_element_id().to_string() },
-                 style=format!("color: white; background-color: {};", self.rgba(color)),
+            <button id={ self.incr_last_drawn_element_id().to_string() },
+                 style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", self.rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { label }
             </button>
@@ -125,7 +125,7 @@ impl UiToolkit for YewToolkit {
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
-                 style=format!("display: block; font-size: 75%; color: white; background-color: {};", self.rgba(color)),
+                 style=format!("display: block; font-size: 75%; color: white; background-color: {}; border: none; outline: none;", self.rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { label }
             </button>
