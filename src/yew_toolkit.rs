@@ -255,6 +255,7 @@ fn map_key(key: &str) -> Option<AppKey> {
         "x" => Some(AppKey::X),
         "r" => Some(AppKey::R),
         "o" => Some(AppKey::O),
+        "Tab" => Some(AppKey::Tab),
         _ => None
     }
 }
@@ -307,6 +308,17 @@ impl KeyboardInputService {
         };
         let listener = js! {
             var callback = @{callback};
+
+            // browsers usually implement tab key navigation on keydown instead of keyup. so we stop
+            // that from doing anything in here
+            window.addEventListener("keydown", function(e) {
+                if (e.key == "Tab") {
+                    console.log("preventing tab from doing anything");
+                    e.preventDefault();
+                }
+            });
+
+            // for the rest of the keys
             var listener = function(e) {
                 callback(e.key || "NOT FOUND");
             };
