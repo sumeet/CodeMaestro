@@ -1,6 +1,6 @@
 use super::lang;
 use super::{CSApp, UiToolkit};
-use super::editor::{Key as AppKey};
+use super::editor::{Key as AppKey,Keypress};
 use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -15,10 +15,12 @@ pub struct Model {
 
 pub enum Msg {
     SetApp(Rc<CSApp>),
-    SetKeypressHandler(Rc<Fn(AppKey)>),
+    SetKeypressHandler(Rc<Fn(Keypress)>),
     Redraw,
     // FocusS,
 }
+
+//type MyFn = Fn((String, bool, bool));
 
 impl Component for Model {
     type Message = Msg;
@@ -45,10 +47,14 @@ impl Component for Model {
                 }
                 let app2 = Rc::clone(app.unwrap());
                 let link2 = Rc::clone(&self.link);
-                let callback = move |keystring : String| {
+                let callback = move |keydata: (String, bool, bool)| {
+                    let keystring = keydata.0;
+                    let ctrl = keydata.1;
+                    let shift = keydata.2 || was_shift_key_pressed(&keystring);
                     let key = map_key(&keystring);
                     if let(Some(key)) = key {
-                        keypress_handler(key)
+                        let keypress = Keypress::new(key, ctrl, shift);
+                        keypress_handler(keypress)
                     }
                     let cb = link2.borrow_mut().send_back(|_: ()| {Msg::Redraw});
                     cb.emit(());
@@ -246,7 +252,7 @@ impl Renderable<Model> for Model {
 }
 
 fn map_key(key: &str) -> Option<AppKey> {
-    match key.as_ref() {
+    match key.to_lowercase().as_ref() {
         "a" => Some(AppKey::A),
         "b" => Some(AppKey::B),
         "c" => Some(AppKey::C),
@@ -255,9 +261,13 @@ fn map_key(key: &str) -> Option<AppKey> {
         "x" => Some(AppKey::X),
         "r" => Some(AppKey::R),
         "o" => Some(AppKey::O),
-        "Tab" => Some(AppKey::Tab),
+        "tab" => Some(AppKey::Tab),
         _ => None
     }
+}
+
+fn was_shift_key_pressed(key: &str) -> bool {
+    key.len() == 1 && key.chars().next().unwrap().is_uppercase()
 }
 
 pub fn draw_app(app: Rc<CSApp>) {
@@ -283,7 +293,7 @@ pub fn draw_app(app: Rc<CSApp>) {
     yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
     let app2 = Rc::clone(&app);
     yew_app.send_message(Msg::SetKeypressHandler(Rc::new(move |key| {
-        app2.controller.borrow_mut().handle_key_press(key)
+        app2.controller.borrow_mut().handle_keypress(key)
     })));
     yew::run_loop()
 }
@@ -302,12 +312,12 @@ impl KeyboardInputService {
         Self {}
     }
 
-    pub fn register(&mut self, callback: Callback<(String)>) -> KeyboardInputTask {
-        let callback = move |key| {
-            callback.emit(key);
+    pub fn register(&mut self, callback: Callback<(String, bool, bool)>) -> KeyboardInputTask {
+        let cb = move |key, ctrl, shift| {
+            callback.emit((key, ctrl, shift));
         };
         let listener = js! {
-            var callback = @{callback};
+            var callback = @{cb};
 
             // browsers usually implement tab key navigation on keydown instead of keyup. so we stop
             // that from doing anything in here
@@ -320,7 +330,9 @@ impl KeyboardInputService {
 
             // for the rest of the keys
             var listener = function(e) {
-                callback(e.key || "NOT FOUND");
+                var keystring = e.key;
+                console.log("keystring pressed: " + keystring);
+                callback(keystring, e.ctrlKey, e.shiftKey);
             };
             window.addEventListener("keyup", listener);
             return listener;

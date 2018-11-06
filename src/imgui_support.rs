@@ -5,7 +5,7 @@ use glium::glutin::WindowEvent::*;
 use glium::glutin::{Event, MouseButton, MouseScrollDelta, TouchPhase};
 use glium::glutin::VirtualKeyCode as Key;
 
-use super::editor::Key as AppKey;
+use super::editor::{Key as AppKey,Keypress};
 
 
 
@@ -16,7 +16,7 @@ struct MouseState {
     wheel: f32,
 }
 
-pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f32; 4], mut run_ui: F, on_key_press: D) {
+pub fn run<F: FnMut(&Ui) -> bool, D: Fn(Keypress)>(title: String, clear_color: [f32; 4], mut run_ui: F, on_keypress: D) {
     use glium::glutin;
     use glium::{Display, Surface};
     use imgui_glium_renderer::Renderer;
@@ -37,7 +37,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     let hidpi_factor = window.get_hidpi_factor().round();
 
     let font_size = (13.0 * hidpi_factor) as f32;
-    let icon_font_size = (7.0 * hidpi_factor) as f32;
+    let icon_font_size = font_size / 1.75;
     let icon_y_offset = (-2.0 * hidpi_factor) as f32;
 
     imgui.fonts().add_default_font_with_config(
@@ -48,7 +48,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     );
 
     imgui.fonts().add_font_with_config(
-        include_bytes!("./NanumGothic.ttf"),
+        include_bytes!("../fonts/NanumGothic.ttf"),
         ImFontConfig::new()
             .oversample_h(1)
             .pixel_snap_h(true)
@@ -59,11 +59,11 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     );
 
     let range = FontGlyphRange::from_slice(&[
-        0xf004, 0xf5c8, // the range for font awesome regular
+        0xf004, 0xf5c8, // the range for font awesome regular 400
         0,
     ]);
     imgui.fonts().add_font_with_config(
-        include_bytes!("./fa-regular-400.ttf"),
+        include_bytes!("../fonts/fa-regular-400.ttf"),
         ImFontConfig::new()
             .glyph_offset((0.0, icon_y_offset))
             .oversample_h(1)
@@ -76,11 +76,11 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
 
 
     let range = FontGlyphRange::from_slice(&[
-        0xf000, 0xf72f, // the range for font awesome regular
+        0xf000, 0xf72f, // the range for font awesome solid 900
         0,
     ]);
     imgui.fonts().add_font_with_config(
-        include_bytes!("./fa-solid-900.ttf"),
+        include_bytes!("../fonts/fa-solid-900.ttf"),
         ImFontConfig::new()
             .glyph_offset((0.0, icon_y_offset))
             .oversample_h(1)
@@ -92,7 +92,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
     );
 
     imgui.fonts().add_font_with_config(
-        include_bytes!("./calibri.ttf"),
+        include_bytes!("../fonts/calibri.ttf"),
         ImFontConfig::new()
             .oversample_h(1)
             .merge_mode(true)
@@ -153,7 +153,9 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(AppKey)>(title: String, clear_color: [f3
                             match input.virtual_keycode {
                                 Some(key) => {
                                     if let (Some(key)) = map_key(key) {
-                                        on_key_press(key)
+                                        let keypress = Keypress::new(
+                                            key, imgui.key_ctrl(), imgui.key_shift());
+                                        on_keypress(keypress)
                                     }
                                 }
                                 _ => {}

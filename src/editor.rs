@@ -261,6 +261,19 @@ impl InsertionPoint {
     }
 }
 
+#[derive(Debug)]
+pub struct Keypress {
+    pub key: Key,
+    pub ctrl: bool,
+    pub shift: bool,
+}
+
+impl Keypress {
+    pub fn new(key: Key, ctrl: bool, shift: bool) -> Keypress {
+        Keypress { key, ctrl, shift }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Key {
     A,
@@ -493,13 +506,13 @@ impl<'a> Controller {
         }
     }
 
-    pub fn handle_key_press(&mut self, key: Key) {
-        if key == Key::Escape {
+    pub fn handle_keypress(&mut self, keypress: Keypress) {
+        if keypress.key == Key::Escape {
             self.handle_cancel();
             return
         }
         // don't perform any commands when in edit mode
-        match (self.editing, key) {
+        match (self.editing, keypress.key) {
             (false, Key::B) => {
                 self.try_select_back_one_node()
             },
@@ -515,7 +528,11 @@ impl<'a> Controller {
                 self.run(&self.loaded_code.as_ref().unwrap().clone())
             },
             (false, Key::O) => {
-                self.set_insertion_point_on_next_line_in_block()
+                if keypress.shift {
+                    self.set_insertion_point_on_previous_line_in_block()
+                } else {
+                    self.set_insertion_point_on_next_line_in_block()
+                }
             },
             (_, Key::Tab) => {
                 self.insert_code_menu.as_mut()
@@ -535,6 +552,19 @@ impl<'a> Controller {
             InsertionPoint::Argument(id) => self.selected_node_id = Some(id),
         }
         self.hide_insert_code_menu()
+    }
+
+    fn set_insertion_point_on_previous_line_in_block(&mut self) {
+        if let(Some(expression_id)) = self.currently_focused_block_expression() {
+            self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
+                InsertionPoint::Before(expression_id),
+                &self.execution_environment,
+            ));
+            self.editing = true;
+            self.selected_node_id = None;
+        } else {
+            self.hide_insert_code_menu()
+        }
     }
 
     fn set_insertion_point_on_next_line_in_block(&mut self) {

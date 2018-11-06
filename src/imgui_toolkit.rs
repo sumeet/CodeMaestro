@@ -13,12 +13,12 @@ const INITIAL_WINDOW_SIZE: (f32, f32) = (300.0, 200.0);
 
 pub fn draw_app(app: Rc<CSApp>) {
     imgui_support::run("cs".to_owned(), CLEAR_COLOR,
-        |ui| {
+       |ui| {
             let mut toolkit = ImguiToolkit::new(ui);
             app.draw(&mut toolkit);
             true
         },
-        |key| { app.controller.borrow_mut().handle_key_press(key) },
+       |keypress| { app.controller.borrow_mut().handle_keypress(keypress) },
     );
 }
 
