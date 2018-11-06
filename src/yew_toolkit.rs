@@ -17,10 +17,7 @@ pub enum Msg {
     SetApp(Rc<CSApp>),
     SetKeypressHandler(Rc<Fn(Keypress)>),
     Redraw,
-    // FocusS,
 }
-
-//type MyFn = Fn((String, bool, bool));
 
 impl Component for Model {
     type Message = Msg;
@@ -165,8 +162,7 @@ impl UiToolkit for YewToolkit {
                id={ self.incr_last_drawn_element_id().to_string() },
                value=existing_value,
                oninput=|e| {onchange(&e.value) ; Msg::Redraw},
-               onkeypress=|e| { if e.key() == "Enter" { ondone2() } ; Msg::Redraw },
-               onblur=|_| {ondone(); Msg::Redraw}, />
+               onkeypress=|e| { if e.key() == "Enter" { ondone2() } ; Msg::Redraw }, />
         }
     }
 
@@ -329,6 +325,8 @@ impl KeyboardInputService {
             });
 
             // for the rest of the keys
+            // BUG: right now you have to keep shift pressed while releasing a key, or else it won't
+            // register as shift being pressed.
             var listener = function(e) {
                 var keystring = e.key;
                 console.log("keystring pressed: " + keystring);
