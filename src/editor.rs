@@ -280,12 +280,16 @@ pub enum Key {
     B,
     C,
     D,
+    H,
+    L,
     W,
     X,
     R,
     O,
     Tab,
     Escape,
+    LeftArrow,
+    RightArrow,
 }
 
 pub struct CodeGenie<'a> {
@@ -513,10 +517,10 @@ impl<'a> Controller {
         }
         // don't perform any commands when in edit mode
         match (self.editing, keypress.key) {
-            (false, Key::B) => {
+            (false, Key::B) | (false, Key::LeftArrow) | (false, Key::H) => {
                 self.try_select_back_one_node()
             },
-            (false, Key::W) => {
+            (false, Key::W) | (false, Key::RightArrow) | (false, Key::L) => {
                 self.try_select_forward_one_node()
             },
             (false, Key::C) => {

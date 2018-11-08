@@ -301,12 +301,16 @@ fn map_key(key: Key) -> Option<AppKey> {
         Key::B => Some(AppKey::B),
         Key::C => Some(AppKey::C),
         Key::D => Some(AppKey::D),
+        Key::H => Some(AppKey::H),
+        Key::L => Some(AppKey::L),
         Key::W => Some(AppKey::W),
         Key::X => Some(AppKey::X),
         Key::R => Some(AppKey::R),
         Key::O => Some(AppKey::O),
         Key::Escape => Some(AppKey::Escape),
         Key::Tab => Some(AppKey::Tab),
+        Key::Left => Some(AppKey::LeftArrow),
+        Key::Right => Some(AppKey::RightArrow),
         _ => None
     }
 }
