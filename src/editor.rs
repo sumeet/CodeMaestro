@@ -356,6 +356,10 @@ impl<'a> CodeGenie<'a> {
             .collect()
     }
 
+    fn root(&self) -> &CodeNode {
+        self.code
+    }
+
     fn find_node(&self, id: ID) -> Option<&CodeNode> {
         self.code.find_node(id)
     }
@@ -409,6 +413,109 @@ impl<'a> CodeGenie<'a> {
             }
             CodeNode::Placeholder(placeholder) => {
                 lang::NULL_TYPE.clone()
+            }
+        }
+    }
+}
+
+pub struct Navigation<'a> {
+    code_genie: &'a CodeGenie<'a>,
+}
+
+impl<'a> Navigation<'a> {
+    pub fn new(code_genie: &'a CodeGenie) -> Self {
+        Self { code_genie }
+    }
+
+    pub fn navigate_back_from(&self, code_node_id: Option<ID>) -> Option<ID> {
+        if code_node_id.is_none() {
+            return None
+        }
+        let mut go_back_from_id = code_node_id.unwrap();
+        while let(Some(prev_node)) = self.prev_node_from(go_back_from_id) {
+           if self.is_navigatable(prev_node) {
+               return Some(prev_node.id())
+           } else {
+               go_back_from_id = prev_node.id()
+           }
+        }
+        None
+    }
+
+    pub fn prev_node_from(&self, code_node_id: ID) -> Option<&CodeNode> {
+        let parent = self.code_genie.find_parent(code_node_id);
+        if parent.is_none() {
+            return None
+        }
+        let parent = parent.unwrap();
+        // first try the previous sibling
+        if let(Some(previous_sibling)) = parent.previous_child(code_node_id) {
+            // but since we're going back, if the previous sibling has children, then let's
+            // select the last one. that feels more ergonomic while moving backwards
+            let children = previous_sibling.all_children_dfs();
+            if children.len() > 0 {
+                return Some(children[children.len() - 1])
+            } else {
+                return Some(previous_sibling)
+            }
+        }
+
+        // if there is no previous sibling, try the parent
+        Some(parent)
+    }
+
+    pub fn navigate_forward_from(&self, code_node_id: Option<ID>) -> Option<ID> {
+        let mut go_back_from_id = code_node_id;
+        while let(Some(prev_node)) = self.next_node_from(go_back_from_id) {
+            if self.is_navigatable(prev_node) {
+                return Some(prev_node.id())
+            } else {
+                go_back_from_id = Some(prev_node.id())
+            }
+        }
+        None
+    }
+
+    pub fn next_node_from(&self, code_node_id: Option<ID>) -> Option<&CodeNode> {
+        if code_node_id.is_none() {
+            return Some(self.code_genie.root())
+        }
+
+        let selected_node_id = code_node_id.unwrap();
+        let selected_code = self.code_genie.find_node(selected_node_id).unwrap();
+        let children = selected_code.children();
+        let first_child = children.get(0);
+
+        // if the selected node has children, then return the first child. depth first
+        if let(Some(first_child)) = first_child {
+            return Some(first_child)
+        }
+
+        let mut node_id_to_find_next_sibling_of = selected_node_id;
+        while let(Some(parent))= self.code_genie.find_parent(node_id_to_find_next_sibling_of) {
+            if let(Some(next_sibling)) = parent.next_child(node_id_to_find_next_sibling_of) {
+                return Some(next_sibling)
+            }
+            // if there is no sibling, then try going to the next sibling of the parent, recursively
+            node_id_to_find_next_sibling_of = parent.id()
+        }
+        None
+    }
+    // don't navigate to either blocks, or direct children of blocks
+    fn is_navigatable(&self, code_node: &CodeNode) -> bool {
+        match code_node {
+            CodeNode::Block(_) => false,
+            CodeNode::Assignment(_) => true,
+            _ => {
+                let parent = self.code_genie.find_parent(code_node.id());
+                if parent.is_none() {
+                    return false
+                }
+                let parent = parent.unwrap();
+                match parent {
+                    CodeNode::Block(_) => false,
+                    _ => true,
+                }
             }
         }
     }
@@ -617,65 +724,21 @@ impl<'a> Controller {
     }
 
     pub fn try_select_back_one_node(&mut self) {
-        let root_node_was_selected = self.select_loaded_code_if_nothing_selected();
-        if root_node_was_selected.is_err() || root_node_was_selected.unwrap() {
-            // if nothing was selected, and we selected the root node, then our job is done.
-            return
+        let genie = self.code_genie();
+        let navigation = Navigation::new(genie.as_ref().unwrap());
+        if let(Some(node_id)) = navigation.navigate_back_from(self.selected_node_id) {
+            self.set_selected_node_id(Some(node_id))
         }
-
-        let selected_node_id = self.get_selected_node_id().unwrap();
-        let loaded_code = self.loaded_code.as_ref().unwrap().clone();
-        let parent = loaded_code.find_parent(selected_node_id);
-        if parent.is_none() {
-            return
-        }
-        let parent = parent.unwrap();
-
-        // first try selecting the previous sibling
-        if let(Some(previous_sibling)) = parent.previous_child(selected_node_id) {
-            // but since we're going back, if the previous sibling has children, then let's
-            // select the last one. that feels more ergonomic while moving backwards
-            let children = previous_sibling.all_children_dfs();
-            if children.len() > 0 {
-                self.set_selected_node_id(Some(children[children.len() - 1].id()))
-            } else {
-                self.set_selected_node_id(Some(previous_sibling.id()));
-            }
-            return
-        }
-
-        // if there is no previous sibling, select the parent
-        self.set_selected_node_id(Some(parent.id()));
     }
 
     pub fn try_select_forward_one_node(&mut self) {
-        let root_node_was_selected = self.select_loaded_code_if_nothing_selected();
-        if root_node_was_selected.is_err() || root_node_was_selected.unwrap() {
-            // if nothing was selected, and we selected the root node, then our job is done.
-            return
+        let genie = self.code_genie();
+        let navigation = Navigation::new(genie.as_ref().unwrap());
+        if let(Some(node_id)) = navigation.navigate_forward_from(self.selected_node_id) {
+            self.set_selected_node_id(Some(node_id))
         }
 
-        let selected_node_id = self.get_selected_node_id().unwrap();
-        let loaded_code = self.loaded_code.as_ref().unwrap().clone();
 
-        let selected_code = loaded_code.find_node(selected_node_id).as_ref().unwrap().clone();
-        let children = selected_code.children();
-        let first_child = children.get(0);
-
-        if let(Some(first_child)) = first_child {
-            self.set_selected_node_id(Some(first_child.id()));
-            return
-        }
-
-        let mut node_id_to_find_next_sibling_of = selected_node_id;
-        while let(Some(parent))= loaded_code.find_parent(node_id_to_find_next_sibling_of) {
-            if let(Some(next_sibling)) = parent.next_child(node_id_to_find_next_sibling_of) {
-                self.set_selected_node_id(Some(next_sibling.id()));
-                return
-            }
-            // if there is no sibling, then try going to the next sibling of the parent, recursively
-            node_id_to_find_next_sibling_of = parent.id()
-        }
     }
 
     pub fn select_loaded_code_if_nothing_selected(&mut self) -> Result<bool,Error> {

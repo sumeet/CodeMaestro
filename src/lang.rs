@@ -170,27 +170,27 @@ impl CodeNode {
         }
     }
 
-    pub fn previous_child(&self, node_id: ID) -> Option<CodeNode> {
+    pub fn previous_child(&self, node_id: ID) -> Option<&CodeNode> {
         let children = self.children();
         let position = children.iter()
             .position(|n| n.id() == node_id);
         if let(Some(position)) = position {
             if position > 0 {
                 if let (Some(next)) = children.get(position - 1) {
-                    return Some((*next).clone())
+                    return Some(next)
                 }
             }
         }
         None
     }
 
-    pub fn next_child(&self, node_id: ID) -> Option<CodeNode> {
+    pub fn next_child(&self, node_id: ID) -> Option<&CodeNode> {
         let children = self.children();
         let position = children.iter()
             .position(|n| n.id() == node_id);
         if let(Some(position)) = position {
             if let (Some(next)) = children.get(position + 1) {
-                return Some((*next).clone())
+                return Some(next)
             }
         }
         None
