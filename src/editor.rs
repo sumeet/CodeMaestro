@@ -286,6 +286,7 @@ pub enum Key {
     X,
     R,
     O,
+    V,
     Tab,
     Escape,
     LeftArrow,
@@ -529,6 +530,7 @@ pub struct Controller {
     loaded_code: Option<CodeNode>,
     error_console: String,
     type_by_id: HashMap<ID, lang::Type>,
+    mutation_master: MutationMaster,
 }
 
 impl<'a> Controller {
@@ -540,7 +542,8 @@ impl<'a> Controller {
             error_console: String::new(),
             insert_code_menu: None,
             editing: false,
-            type_by_id: Self::build_types()
+            type_by_id: Self::build_types(),
+            mutation_master: MutationMaster::new()
         }
     }
 
@@ -556,52 +559,29 @@ impl<'a> Controller {
     // thing can error
     fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
         let genie = self.code_genie();
-        let parent = genie.as_ref()
-            .map(|genie| genie.find_parent(insertion_point.node_id()));
-        if parent.is_none() || parent.unwrap().is_none() {
-            panic!("unable to insert new code, couldn't find parent to insert into")
-
-        }
-        let parent = parent.unwrap().unwrap();
-        match insertion_point {
-            InsertionPoint::Before(_) | InsertionPoint::After(_) => {
-                self.insert_new_expression_in_block(code_node, insertion_point, parent.clone())
-            }
-            InsertionPoint::Argument(argument_id) => {
-                self.insert_expression_into_argument(code_node, argument_id)
-            }
-        }
+        let new_code = self.mutation_master.insert_code(
+            code_node, insertion_point, genie.as_ref().unwrap());
+        self.loaded_code.as_mut().unwrap().replace(&new_code);
     }
 
-    // TODO: error handling
-    fn insert_expression_into_argument(&mut self, code_node: CodeNode, argument_id: ID) {
-        let loaded_code = self.loaded_code.as_mut().unwrap();
-        let mut argument = loaded_code.find_node(argument_id).unwrap().into_argument().clone();
-        argument.expr = Box::new(code_node);
-        loaded_code.replace(&CodeNode::Argument(argument));
+    fn delete_selected_code(&mut self) {
+        let node_to_delete = self.get_selected_node().cloned().unwrap();
+
+        let genie = self.code_genie();
+        let new_code = self.mutation_master.delete_code(
+            &node_to_delete, genie.as_ref().unwrap());
+        self.loaded_code.as_mut().unwrap().replace(&new_code);
     }
 
-    fn insert_new_expression_in_block(&mut self, code_node: CodeNode, insertion_point: InsertionPoint, parent: CodeNode) {
-        match parent {
-            CodeNode::Block(mut block) => {
-                let insertion_point_in_block_exprs = block.expressions.iter()
-                    .position(|exp| exp.id() == insertion_point.node_id());
-                if insertion_point_in_block_exprs.is_none() { return }
-                let insertion_point_in_block_exprs = insertion_point_in_block_exprs.unwrap();
-
-                match insertion_point {
-                    InsertionPoint::Before(_) => {
-                        block.expressions.insert(insertion_point_in_block_exprs, code_node)
-                    },
-                    InsertionPoint::After(_) => {
-                        block.expressions.insert(insertion_point_in_block_exprs + 1, code_node)
-                    },
-                    _ => panic!("bad insertion point type for a block: {:?}", insertion_point)
-                }
-
-                self.loaded_code.as_mut().unwrap().replace(&CodeNode::Block(block));
-            },
-            _ => panic!("should be inserting into type parent, got {:?} instead", parent)
+    fn select_current_line(&mut self) {
+        let genie = self.code_genie();
+        if genie.is_none() || self.selected_node_id.is_none() {
+            return
+        }
+        let genie = genie.unwrap();
+        let selected_id = self.selected_node_id.unwrap();
+        if let(Some(code_id)) = genie.find_expression_inside_block_that_contains(selected_id) {
+            self.set_selected_node_id(Some(code_id))
         }
     }
 
@@ -635,6 +615,9 @@ impl<'a> Controller {
                     self.mark_as_editing(id)
                 }
             },
+            (false, Key::D) => {
+                self.delete_selected_code()
+            },
             (false, Key::R) => {
                 self.run(&self.loaded_code.as_ref().unwrap().clone())
             },
@@ -644,6 +627,9 @@ impl<'a> Controller {
                 } else {
                     self.set_insertion_point_on_next_line_in_block()
                 }
+            },
+            (false, Key::V) if keypress.shift => {
+                self.select_current_line()
             },
             (_, Key::Tab) => {
                 self.insert_code_menu.as_mut()
@@ -1247,5 +1233,126 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 controller2.borrow_mut().editing = false
             }
         )
+    }
+}
+
+// need to use interior mutability for the undo / redo list
+struct MutationMaster {}
+
+impl MutationMaster {
+    fn new() -> Self {
+        MutationMaster {}
+    }
+
+    fn insert_code(
+        &self, node_to_insert: CodeNode, insertion_point: InsertionPoint, genie: &CodeGenie
+    ) -> CodeNode {
+        let parent = genie.find_parent(insertion_point.node_id());
+        if parent.is_none() {
+            panic!("unable to insert new code, couldn't find parent to insert into")
+
+        }
+        let parent = parent.unwrap();
+        match insertion_point {
+            InsertionPoint::Before(_) | InsertionPoint::After(_) => {
+                self.insert_new_expression_in_block(node_to_insert, insertion_point, parent.clone(), genie)
+            }
+            InsertionPoint::Argument(argument_id) => {
+                self.insert_expression_into_argument(node_to_insert, argument_id, genie)
+            }
+        }
+    }
+
+    fn insert_expression_into_argument(&self, code_node: CodeNode, argument_id: ID, genie: &CodeGenie) -> CodeNode {
+        let mut argument = genie.find_node(argument_id).unwrap().into_argument().clone();
+        argument.expr = Box::new(code_node);
+        let mut root = genie.root().clone();
+        root.replace(&CodeNode::Argument(argument));
+        root
+    }
+
+    fn insert_new_expression_in_block(&self, code_node: CodeNode, insertion_point: InsertionPoint, parent: CodeNode, genie: &CodeGenie) -> CodeNode {
+        match parent {
+            CodeNode::Block(mut block) => {
+                let insertion_point_in_block_exprs = block.expressions.iter()
+                    .position(|exp| exp.id() == insertion_point.node_id());
+                if insertion_point_in_block_exprs.is_none() {
+                    panic!("when the fuck does this happen?")
+                }
+                let insertion_point_in_block_exprs = insertion_point_in_block_exprs.unwrap();
+
+                match insertion_point {
+                    InsertionPoint::Before(_) => {
+                        block.expressions.insert(insertion_point_in_block_exprs, code_node)
+                    },
+                    InsertionPoint::After(_) => {
+                        block.expressions.insert(insertion_point_in_block_exprs + 1, code_node)
+                    },
+                    _ => panic!("bad insertion point type for a block: {:?}", insertion_point)
+                }
+
+                let mut root = genie.root().clone();
+                root.replace(&CodeNode::Block(block));
+                root
+            },
+            _ => panic!("should be inserting into type parent, got {:?} instead", parent)
+        }
+    }
+
+    pub fn delete_code(&self, node_to_delete: &CodeNode, genie: &CodeGenie) -> CodeNode {
+        let parent = genie.find_parent(node_to_delete.id());
+        if parent.is_none() {
+            panic!("idk when this happens, let's take care of this if / when it does")
+        }
+        let parent = parent.unwrap();
+        match node_to_delete {
+            CodeNode::FunctionCall(function_call) => {
+                match parent {
+                    CodeNode::Block(block) => {
+                        let mut new_block = block.clone();
+                        new_block.expressions.retain(|exp| exp.id() != node_to_delete.id());
+                        let mut new_root = genie.root().clone();
+                        new_root.replace(&CodeNode::Block(new_block));
+                        new_root
+                    }
+                    _ => {
+                        panic!("lol")
+                    }
+                }
+            }
+            _ => {
+                println!("doint nothing");
+                genie.root().clone()
+            }
+        }
+//        match parent {
+//            CodeNode::FunctionCall(function_call) => {
+//                // replace current node with placeholder
+//            }
+//            CodeNode::FunctionReference(function_reference) => {
+//                panic!("function references don't have children")
+//            }
+//            CodeNode::Argument(argument) => {
+//                // replace current node with placeholder
+//            }
+//            CodeNode::StringLiteral(string_literal) => {
+//
+//            }
+//            CodeNode::Assignment(assignment) => {
+//
+//            }
+//            CodeNode::Block(block) => {
+//
+//            }
+//            CodeNode::VariableReference(variable_reference) => {
+//
+//            }
+//            CodeNode::FunctionDefinition(function_definition) {
+//
+//            }
+//            CodeNode::Placeholder(placeholder) {
+//
+//            }
+//        }
     }
 }

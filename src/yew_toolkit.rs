@@ -259,6 +259,7 @@ fn map_key(key: &str) -> Option<AppKey> {
         "x" => Some(AppKey::X),
         "r" => Some(AppKey::R),
         "o" => Some(AppKey::O),
+        "v" => Some(AppKey::V),
         "tab" => Some(AppKey::Tab),
         "arrowleft" => Some(AppKey::LeftArrow),
         "arrowright" => Some(AppKey::RightArrow),
