@@ -286,6 +286,7 @@ pub enum Key {
     X,
     R,
     O,
+    U,
     V,
     Tab,
     Escape,
@@ -564,6 +565,18 @@ impl<'a> Controller {
         self.loaded_code.as_mut().unwrap().replace(&new_code);
     }
 
+    fn undo(&mut self) {
+        if let(Some(previous_root)) = self.mutation_master.undo() {
+            self.loaded_code.as_mut().unwrap().replace(&previous_root)
+        }
+    }
+
+    fn redo(&mut self) {
+        if let(Some(next_root)) = self.mutation_master.redo() {
+            self.loaded_code.as_mut().unwrap().replace(&next_root)
+        }
+    }
+
     fn delete_selected_code(&mut self) {
         let node_to_delete = self.get_selected_node().cloned().unwrap();
 
@@ -619,7 +632,11 @@ impl<'a> Controller {
                 self.delete_selected_code()
             },
             (false, Key::R) => {
-                self.run(&self.loaded_code.as_ref().unwrap().clone())
+                if keypress.ctrl && keypress.shift {
+                    self.run(&self.loaded_code.as_ref().unwrap().clone())
+                } else if keypress.ctrl {
+                    self.redo()
+                }
             },
             (false, Key::O) => {
                 if keypress.shift {
@@ -627,6 +644,9 @@ impl<'a> Controller {
                 } else {
                     self.set_insertion_point_on_next_line_in_block()
                 }
+            },
+            (false, Key::U) => {
+                self.undo()
             },
             (false, Key::V) if keypress.shift => {
                 self.select_current_line()
@@ -746,7 +766,8 @@ impl<'a> Controller {
     }
 
     pub fn load_code(&mut self, code_node: &CodeNode) {
-        self.loaded_code = Some(code_node.clone())
+        self.loaded_code = Some(code_node.clone());
+        self.mutation_master.seed_initial_history(code_node)
     }
 
     // should run the loaded code node
@@ -1248,18 +1269,28 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 controller.borrow_mut().loaded_code.as_mut().unwrap().replace(&new_node)
             },
             move || {
-                controller2.borrow_mut().editing = false
+                controller2.borrow_mut().editing = false;
+                let loaded_code = controller2.borrow_mut().loaded_code.clone().unwrap();
+                controller2.borrow_mut().mutation_master.log_new_mutation(loaded_code);
             }
         )
     }
 }
 
-// need to use interior mutability for the undo / redo list
-struct MutationMaster {}
+struct MutationMaster {
+    history: RefCell<Vec<CodeNode>>,
+    current_index: RefCell<isize>,
+}
 
 impl MutationMaster {
     fn new() -> Self {
-        MutationMaster {}
+        MutationMaster { history: RefCell::new(vec![]), current_index: RefCell::new(-1) }
+    }
+
+    pub fn seed_initial_history(&self, code_node: &CodeNode) {
+        self.history.borrow_mut().clear();
+        *self.current_index.borrow_mut() = -1;
+        self.log_new_mutation(code_node.clone());
     }
 
     fn insert_code(
@@ -1286,7 +1317,7 @@ impl MutationMaster {
         argument.expr = Box::new(code_node);
         let mut root = genie.root().clone();
         root.replace(&CodeNode::Argument(argument));
-        root
+        self.log_new_mutation(root)
     }
 
     fn insert_new_expression_in_block(&self, code_node: CodeNode, insertion_point: InsertionPoint, parent: CodeNode, genie: &CodeGenie) -> CodeNode {
@@ -1311,7 +1342,7 @@ impl MutationMaster {
 
                 let mut root = genie.root().clone();
                 root.replace(&CodeNode::Block(block));
-                root
+                self.log_new_mutation(root)
             },
             _ => panic!("should be inserting into type parent, got {:?} instead", parent)
         }
@@ -1329,61 +1360,44 @@ impl MutationMaster {
                 new_block.expressions.retain(|exp| exp.id() != node_to_delete.id());
                 let mut new_root = genie.root().clone();
                 new_root.replace(&CodeNode::Block(new_block));
-                new_root
+                self.log_new_mutation(new_root)
             }
             _ => {
-                println!("doint nothing");
                 genie.root().clone()
             }
         }
-//        match node_to_delete {
-//            CodeNode::FunctionCall(function_call) => {
-//                match parent {
-//                    CodeNode::Block(block) => {
-//                        let mut new_block = block.clone();
-//                        new_block.expressions.retain(|exp| exp.id() != node_to_delete.id());
-//                        let mut new_root = genie.root().clone();
-//                        new_root.replace(&CodeNode::Block(new_block));
-//                        new_root
-//                    }
-//                    _ => {
-//                        panic!("lol")
-//                    }
-//                }
-//            }
-//            _ => {
-//                println!("doint nothing");
-//                genie.root().clone()
-//            }
-//        }
-//        match parent {
-//            CodeNode::FunctionCall(function_call) => {
-//                // replace current node with placeholder
-//            }
-//            CodeNode::FunctionReference(function_reference) => {
-//                panic!("function references don't have children")
-//            }
-//            CodeNode::Argument(argument) => {
-//                // replace current node with placeholder
-//            }
-//            CodeNode::StringLiteral(string_literal) => {
-//
-//            }
-//            CodeNode::Assignment(assignment) => {
-//
-//            }
-//            CodeNode::Block(block) => {
-//
-//            }
-//            CodeNode::VariableReference(variable_reference) => {
-//
-//            }
-//            CodeNode::FunctionDefinition(function_definition) {
-//
-//            }
-//            CodeNode::Placeholder(placeholder) {
-//
-//            }
-//        }
+    }
+
+    fn log_new_mutation(&self, new_root: CodeNode) -> CodeNode {
+        // delete everything after the current index
+        self.history.borrow_mut().truncate(((*self.current_index.borrow() + 1) as usize));
+        self.history.borrow_mut().push(new_root.clone());
+        let mut i = self.current_index.borrow_mut();
+        *i = (self.history.borrow().len() - 1) as isize;
+        new_root
+    }
+
+    pub fn undo(&self) -> Option<CodeNode> {
+        let mut i = self.current_index.borrow_mut();
+        if *i < 0 {
+            return None
+        }
+        *i -= 1;
+        // after moving the current index back, if we're still at a valid value, then there's still
+        // history we can go back to
+        if *i >= 0 {
+            self.history.borrow().get(*i as usize).cloned()
+        } else {
+            None
+        }
+    }
+
+    pub fn redo(&self) -> Option<CodeNode> {
+        let mut i = self.current_index.borrow_mut();
+        if *i == (self.history.borrow().len() - 1) as isize {
+            return None
+        }
+        *i += 1;
+        self.history.borrow().get(*i as usize).cloned()
     }
 }
