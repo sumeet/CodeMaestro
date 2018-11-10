@@ -77,16 +77,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn focused(&self, draw_fn: &Fn()) {
         draw_fn();
-        unsafe { imgui_sys::igSetKeyboardFocusHere(0) }
+        unsafe {
+            // HACK: the igIsAnyItemHovered allows me to click buttons while focusing a text field.
+            // good enough for now.
+            if !imgui_sys::igIsAnyItemActive() && !imgui_sys::igIsAnyItemHovered() {
+                imgui_sys::igSetKeyboardFocusHere(-1)
+            }
+        }
     }
 
     fn draw_statusbar(&self, draw_fn: &Fn()) {
-//        float status_height = (10.0f + ImGui::GetFontSize());
-//
-//        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4.0f, 3.0f));
-//        ImGui::SetNextWindowPos(ImVec2{0, io.DisplaySize.y - status_height});
-//        ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, status_height));
-
         let x_padding = 4.0;
         let y_padding = 5.0;
         let font_size = unsafe { imgui_sys::igGetFontSize() };
@@ -168,11 +168,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
-            self.ui.with_color_var(ImGuiCol::Button, color, || {
-                if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
-                    on_button_activate()
-                }
-            });
+        self.ui.with_color_var(ImGuiCol::Button, color, || {
+            if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
+                on_button_activate()
+            }
+        });
     }
 
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {

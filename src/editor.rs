@@ -978,25 +978,43 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> <T as UiToolkit>::DrawResult {
-        let mut function_line: Vec<Box<Fn() -> T::DrawResult>> = vec![];
-        for option in menu.list_options() {
-            let button_color = if option.is_selected { RED_COLOR } else { BLACK_COLOR };
-            function_line.push(Box::new(move || {
-                let draw = || {
-                    self.ui_toolkit.draw_small_button(&option.label, button_color, &|| {})
-                };
-                if option.is_selected {
-                    self.ui_toolkit.draw_border_around(&draw)
-                } else {
-                    draw()
-                }
-            }))
+        let options = menu.list_options();
+        let render_insertion_options : Vec<Box<Fn() -> T::DrawResult>> = options.iter()
+            .map(|option| {
+                let c : Box<Fn() -> T::DrawResult> = Box::new(move || {
+                    self.render_insertion_option(option, menu.insertion_point)
+                });
+                c
+            })
+            .collect();
+        self.ui_toolkit.draw_all_on_same_line(
+            render_insertion_options.iter()
+                .map(|c| c.as_ref()).collect()
+        )
+    }
+
+    fn render_insertion_option(
+        &self, option: &'a InsertCodeMenuOption, insertion_point: InsertionPoint) -> T::DrawResult {
+        let is_selected = option.is_selected;
+        let button_color = if is_selected { RED_COLOR } else { BLACK_COLOR };
+        let controller = Rc::clone(&self.controller);
+        let new_code_node = Rc::new(option.new_node.clone());
+        let draw = move|| {
+            let cont = controller.clone();
+            let ncn = new_code_node.clone();
+            self.ui_toolkit.draw_button(&option.label, button_color, move|| {
+                let id = ncn.id();
+                let mut cont2 = cont.borrow_mut();
+                cont2.hide_insert_code_menu();
+                cont2.insert_code((*ncn).clone(), insertion_point);
+                cont2.set_selected_node_id(Some(id))
+            })
+        };
+        if is_selected {
+            self.ui_toolkit.draw_border_around(&draw)
+        } else {
+            draw()
         }
-        let mut function_line_refs = vec![];
-        for func in function_line.iter() {
-            function_line_refs.push(func.as_ref())
-        }
-        self.ui_toolkit.draw_all_on_same_line(function_line_refs)
     }
 
     fn render_assignment(&self, assignment: &Assignment) -> T::DrawResult {
@@ -1080,7 +1098,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
-        let mut type_symbol = "".to_string();
+        let type_symbol;
         {
             let controller = self.controller.borrow();
             let genie = controller.code_genie().unwrap();
@@ -1305,26 +1323,39 @@ impl MutationMaster {
             panic!("idk when this happens, let's take care of this if / when it does")
         }
         let parent = parent.unwrap();
-        match node_to_delete {
-            CodeNode::FunctionCall(function_call) => {
-                match parent {
-                    CodeNode::Block(block) => {
-                        let mut new_block = block.clone();
-                        new_block.expressions.retain(|exp| exp.id() != node_to_delete.id());
-                        let mut new_root = genie.root().clone();
-                        new_root.replace(&CodeNode::Block(new_block));
-                        new_root
-                    }
-                    _ => {
-                        panic!("lol")
-                    }
-                }
+        match parent {
+            CodeNode::Block(block) => {
+                let mut new_block = block.clone();
+                new_block.expressions.retain(|exp| exp.id() != node_to_delete.id());
+                let mut new_root = genie.root().clone();
+                new_root.replace(&CodeNode::Block(new_block));
+                new_root
             }
             _ => {
                 println!("doint nothing");
                 genie.root().clone()
             }
         }
+//        match node_to_delete {
+//            CodeNode::FunctionCall(function_call) => {
+//                match parent {
+//                    CodeNode::Block(block) => {
+//                        let mut new_block = block.clone();
+//                        new_block.expressions.retain(|exp| exp.id() != node_to_delete.id());
+//                        let mut new_root = genie.root().clone();
+//                        new_root.replace(&CodeNode::Block(new_block));
+//                        new_root
+//                    }
+//                    _ => {
+//                        panic!("lol")
+//                    }
+//                }
+//            }
+//            _ => {
+//                println!("doint nothing");
+//                genie.root().clone()
+//            }
+//        }
 //        match parent {
 //            CodeNode::FunctionCall(function_call) => {
 //                // replace current node with placeholder
