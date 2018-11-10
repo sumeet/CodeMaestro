@@ -560,10 +560,16 @@ impl<'a> Controller {
     // thing can error
     fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
         let genie = self.code_genie();
+        let (next_selection_id, editing) = post_insertion_cursor(&code_node);
         let new_code = self.mutation_master.insert_code(
             code_node, insertion_point, genie.as_ref().unwrap(),
             self.selected_node_id);
         self.loaded_code.as_mut().unwrap().replace(&new_code);
+        if editing {
+            self.mark_as_editing(next_selection_id)
+        } else {
+            self.set_selected_node_id(Some(next_selection_id));
+        }
     }
 
     fn undo(&mut self) {
@@ -587,6 +593,8 @@ impl<'a> Controller {
         let new_code = self.mutation_master.delete_code(
             &node_to_delete, genie.as_ref().unwrap(), self.selected_node_id);
         self.loaded_code.as_mut().unwrap().replace(&new_code);
+        // TODO: intelligently select a nearby node to select after deleting
+        self.set_selected_node_id(None);
     }
 
     fn select_current_line(&mut self) {
@@ -991,7 +999,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             let id = new_code_node.id();
                             controller.hide_insert_code_menu();
                             controller.insert_code(new_code_node.clone(), insertion_point);
-                            controller.set_selected_node_id(Some(id))
                         } else {
                             controller.hide_insert_code_menu();
                         }
@@ -1031,7 +1038,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let mut cont2 = cont.borrow_mut();
                 cont2.hide_insert_code_menu();
                 cont2.insert_code((*ncn).clone(), insertion_point);
-                cont2.set_selected_node_id(Some(id))
             })
         };
         if is_selected {
@@ -1421,5 +1427,21 @@ impl MutationMaster {
         }
         *i += 1;
         self.history.borrow().get(*i as usize).cloned()
+    }
+}
+
+// return value: (CodeNode ID, editing: true/false)
+fn post_insertion_cursor(code_node: &CodeNode) -> (ID, bool) {
+    match code_node {
+        CodeNode::FunctionCall(function_call) => {
+            if function_call.args.len() > 0 {
+                (function_call.args.get(0).unwrap().id(), true)
+            } else {
+                (function_call.id, false)
+            }
+        }
+        _ => {
+            (code_node.id(), false)
+        }
     }
 }
