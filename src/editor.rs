@@ -588,7 +588,6 @@ impl<'a> Controller {
 
     fn delete_selected_code(&mut self) {
         let node_to_delete = self.get_selected_node().cloned().unwrap();
-
         let genie = self.code_genie();
         let new_code = self.mutation_master.delete_code(
             &node_to_delete, genie.as_ref().unwrap(), self.selected_node_id);
