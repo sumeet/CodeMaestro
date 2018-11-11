@@ -205,4 +205,18 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
         onchange(input.as_ref() as &str)
     }
+
+    fn draw_main_menu_bar(&self, draw_menus: &Fn()) {
+        self.ui.main_menu_bar(draw_menus)
+    }
+
+    fn draw_menu(&self, label: &str, draw_menu_items: &Fn()) {
+        self.ui.menu(im_str!("{}", label)).build(draw_menu_items)
+    }
+
+    fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) {
+        if self.ui.menu_item(im_str!("{}", label)).build() {
+            onselect()
+        }
+    }
 }

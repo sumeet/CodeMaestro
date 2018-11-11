@@ -5,11 +5,10 @@ authors = ["Sumeet Agarwal <sumeet.a@gmail.com>"]
 edition = "2018"
 
 [features]
-default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer"]
+default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
-#pyo3 = "0.4.1"
 objekt = "0.1.1"
 debug-cell = "0.1.1"
 serde = "1.0.79"
@@ -21,6 +20,7 @@ uuid = { version = "0.7.1", features = ["serde", "v4"] }
 lazy_static = "1.1.0"
 itertools = "0.7.8"
 
+pyo3 = { version = "0.4.1", optional = true }
 glium = { version = "0.22", default-features = true, optional = true }
 glutin = { version = "0.18", optional = true }
 imgui = { version = "0.0.21", optional = true }

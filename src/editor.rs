@@ -828,6 +828,9 @@ pub trait UiToolkit {
     fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult;
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
 }
 
@@ -846,11 +849,25 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     pub fn render_app(&self) -> T::DrawResult {
         self.ui_toolkit.draw_all(vec![
+            self.render_main_menu_bar(),
             self.render_code_window(),
             self.render_console_window(),
             self.render_error_window(),
             self.render_status_bar()
         ])
+    }
+
+    fn render_main_menu_bar(&self) -> T::DrawResult {
+        self.ui_toolkit.draw_main_menu_bar(&|| {
+            self.ui_toolkit.draw_menu(
+                "File",
+                &|| {
+                    self.ui_toolkit.draw_menu_item("Debug", || {
+                        println!("pressed biatch");
+                    })
+                }
+            )
+        })
     }
 
     fn render_status_bar(&self) -> T::DrawResult {

@@ -56,6 +56,9 @@ extern crate erased_serde;
 
 #[macro_use] extern crate itertools;
 
+#[cfg(feature = "default")]
+extern crate pyo3;
+
 use itertools::Itertools;
 
 extern crate debug_cell;
@@ -72,6 +75,8 @@ mod editor;
 mod editor_views;
 mod validation;
 mod code_generation;
+#[cfg(feature = "default")]
+mod pystuff;
 
 
 use self::editor::{Controller,Renderer,UiToolkit};
