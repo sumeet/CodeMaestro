@@ -13,6 +13,7 @@ use super::lang::{
     Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Error as LangError,Assignment,Block,
     VariableReference};
 use super::itertools::Itertools;
+use super::pystuff;
 
 
 pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
@@ -532,6 +533,7 @@ pub struct Controller {
     error_console: String,
     type_by_id: HashMap<ID, lang::Type>,
     mutation_master: MutationMaster,
+    pyfunc: pystuff::PyFunc,
 }
 
 impl<'a> Controller {
@@ -544,7 +546,8 @@ impl<'a> Controller {
             insert_code_menu: None,
             editing: false,
             type_by_id: Self::build_types(),
-            mutation_master: MutationMaster::new()
+            mutation_master: MutationMaster::new(),
+            pyfunc: pystuff::PyFunc::new(),
         }
     }
 
@@ -825,6 +828,8 @@ pub trait UiToolkit {
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
+    fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
+    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -853,6 +858,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_code_window(),
             self.render_console_window(),
             self.render_error_window(),
+            self.render_edit_pyfunc(),
             self.render_status_bar()
         ])
     }
@@ -867,6 +873,24 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     })
                 }
             )
+        })
+    }
+
+    fn render_edit_pyfunc(&self) -> T::DrawResult {
+        self.ui_toolkit.draw_window("Edit PyFunc", &|| {
+            self.ui_toolkit.draw_all(vec![
+                self.ui_toolkit.draw_text_input_with_label(
+                    "Function name",
+                    self.controller.borrow().pyfunc.name(),
+                    |_newvalue| {},
+                    || {},
+                ),
+                self.ui_toolkit.draw_multiline_text_input_with_label(
+                    "Prelude",
+                    &self.controller.borrow().pyfunc.prelude,
+                    |_newvalue| {},
+                )
+            ])
         })
     }
 

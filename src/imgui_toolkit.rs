@@ -28,6 +28,12 @@ struct State {
     prev_window_pos: (f32, f32),
 }
 
+fn buf(text: &str) -> ImString {
+    let mut imstr = ImString::with_capacity(100);
+    imstr.push_str(text);
+    imstr
+}
+
 impl State {
     fn new() -> Self {
         State {
@@ -39,9 +45,7 @@ impl State {
 
     fn text_input_buffer(&mut self, initial_text: &str) -> Rc<RefCell<ImString>> {
         if self.editing_text_input_buffer.is_none() {
-            let mut imstr = ImString::with_capacity(100);
-            imstr.push_str(initial_text);
-            self.editing_text_input_buffer = Some(Rc::new(RefCell::new(imstr)))
+            self.editing_text_input_buffer = Some(Rc::new(RefCell::new(buf(initial_text))))
         }
         Rc::clone(&self.editing_text_input_buffer.as_ref().unwrap())
     }
@@ -190,20 +194,34 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
-        let input = self.get_or_initialize_text_input(existing_value);
-        let mut input = input.borrow_mut();
+        self.draw_text_input_with_label("", existing_value, onchange, ondone)
+    }
+
+    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) {
+        let mut box_input = buf(existing_value);
+        self.ui.input_text_multiline(im_str!("{}", label), &mut box_input, (0., 100.)).build();
+        if box_input.as_ref() as &str != existing_value {
+            onchange(box_input.as_ref() as &str)
+        }
+    }
+
+    fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) {
+        let mut box_input = buf(existing_value);
 
         let mut flags = ImGuiInputTextFlags::empty();
         flags.set(ImGuiInputTextFlags::EnterReturnsTrue, true);
 
-        let enter_pressed = self.ui.input_text(im_str!(""), &mut input)
+        let enter_pressed = self.ui.input_text(im_str!("{}", label), &mut box_input)
             .flags(flags)
             .build();
         if enter_pressed {
             ondone();
             return
         }
-        onchange(input.as_ref() as &str)
+
+        if box_input.as_ref() as &str != existing_value {
+            onchange(box_input.as_ref() as &str)
+        }
     }
 
     fn draw_main_menu_bar(&self, draw_menus: &Fn()) {

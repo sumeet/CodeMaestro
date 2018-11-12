@@ -8,6 +8,56 @@ static PRELUDE : &str = "import random";
 static PYSTR: &str = "str(random.choice([1, 2, 3, 4, 5]))";
 
 #[derive(Clone)]
+pub struct PyFunc {
+    pub prelude: String,
+    pub eval: String,
+    return_type: lang::Type,
+    name: String,
+    id: lang::ID,
+}
+
+impl PyFunc {
+    pub fn new() -> Self {
+        Self {
+            prelude: "".to_string(),
+            eval: "".to_string(),
+            return_type: lang::NULL_TYPE.clone(),
+            name: "New PyFunc".to_string(),
+            id: lang::new_id(),
+        }
+    }
+}
+
+impl lang::Function for PyFunc {
+    fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let result = py.run(&self.prelude, None, None);
+        if let(Err(e)) = result {
+            lang::Value::Result(Err(lang::Error::PythonError))
+        } else {
+            lang::Value::Null
+        }
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn id(&self) -> lang::ID {
+        self.id
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![]
+    }
+
+    fn returns(&self) -> &lang::Type {
+        &self.return_type
+    }
+}
+
+#[derive(Clone)]
 pub struct PyChoice {}
 
 impl lang::Function for PyChoice {

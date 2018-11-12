@@ -63,6 +63,8 @@ pub enum CodeNode {
 pub enum Error {
     ArgumentError,
     UndefinedFunctionError(ID),
+    // TODO: add metadata into here
+    PythonError,
 }
 
 #[derive(Clone, Debug)]
