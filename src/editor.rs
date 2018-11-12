@@ -14,6 +14,7 @@ use super::lang::{
     VariableReference};
 use super::itertools::Itertools;
 use super::pystuff;
+use super::indexmap;
 
 
 pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
@@ -527,11 +528,11 @@ impl<'a> Navigation<'a> {
 pub struct Controller {
     execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
-    editing: bool,
+    pub editing: bool,
     insert_code_menu: Option<InsertCodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
-    type_by_id: HashMap<ID, lang::Type>,
+    type_by_id: indexmap::IndexMap<ID, lang::Type>,
     mutation_master: MutationMaster,
     pyfunc: pystuff::PyFunc,
 }
@@ -551,12 +552,16 @@ impl<'a> Controller {
         }
     }
 
-    fn build_types() -> HashMap<ID, lang::Type> {
-        let mut type_by_id : HashMap<ID, lang::Type> = HashMap::new();
+    fn build_types() -> indexmap::IndexMap<ID, lang::Type> {
+        let mut type_by_id : indexmap::IndexMap<ID, lang::Type> = indexmap::IndexMap::new();
         type_by_id.insert(lang::NULL_TYPE.id, lang::NULL_TYPE.clone());
         type_by_id.insert(lang::STRING_TYPE.id, lang::STRING_TYPE.clone());
         type_by_id.insert(lang::RESULT_TYPE.id, lang::RESULT_TYPE.clone());
         type_by_id
+    }
+
+    fn types(&self) -> Vec<&lang::Type> {
+        self.type_by_id.values().collect()
     }
 
     // TODO: return a result instead of returning nothing? it seems like there might be places this
@@ -611,7 +616,7 @@ impl<'a> Controller {
         }
     }
 
-    fn hide_insert_code_menu(&mut self) {
+    pub fn hide_insert_code_menu(&mut self) {
         self.insert_code_menu = None;
         self.editing = false
     }
@@ -830,6 +835,7 @@ pub trait UiToolkit {
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) -> Self::DrawResult;
+    fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str, current_item: i32, items: &[&str], onchange: F) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -877,18 +883,68 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_pyfunc(&self) -> T::DrawResult {
+        let currently_selected_type_index;
+        let type_names : Vec<String>;
+        {
+            let controller = self.controller.borrow();
+            let return_type = controller.pyfunc.returns();
+            currently_selected_type_index = controller.types().iter()
+                .position(|t| t.id == return_type.id)
+                .unwrap();
+            type_names = controller.types().iter().map(|t| t.readable_name.clone()).collect()
+        }
+
+        let type_names: Vec<&str> = type_names.iter().map(|str: &String| str.as_ref() as &str).collect();
+        let pyfunc = self.controller.borrow().pyfunc.clone();
+
         self.ui_toolkit.draw_window("Edit PyFunc", &|| {
+            let cont1 = Rc::clone(&self.controller);
+            let cont2 = Rc::clone(&self.controller);
+            let cont3 = Rc::clone(&self.controller);
+            let cont4 = Rc::clone(&self.controller);
+
+
             self.ui_toolkit.draw_all(vec![
                 self.ui_toolkit.draw_text_input_with_label(
                     "Function name",
-                    self.controller.borrow().pyfunc.name(),
-                    |_newvalue| {},
+                    pyfunc.name(),
+                    move |newvalue| {
+                        let pyfunc : pystuff::PyFunc;
+                        {
+                            let mut cont = cont1.borrow_mut();
+                            cont.pyfunc.name = newvalue.to_string();
+                            pyfunc = cont.pyfunc.clone();
+                        }
+                        cont1.borrow_mut().execution_environment.add_function(Box::new(pyfunc));
+                    },
                     || {},
                 ),
                 self.ui_toolkit.draw_multiline_text_input_with_label(
+                    // TODO: add help text here
                     "Prelude",
-                    &self.controller.borrow().pyfunc.prelude,
-                    |_newvalue| {},
+                    &pyfunc.prelude,
+                    move |newvalue| {
+                        let mut cont = cont2.borrow_mut();
+                        cont.pyfunc.prelude = newvalue.to_string();
+                    },
+                ),
+                self.ui_toolkit.draw_multiline_text_input_with_label(
+                    "Code",
+                    &pyfunc.eval,
+                    move |newvalue| {
+                        let mut cont = cont3.borrow_mut();
+                        cont.pyfunc.eval = newvalue.to_string();
+                    },
+                ),
+                self.ui_toolkit.draw_combo_box_with_label(
+                    "Return Type",
+                    currently_selected_type_index as i32,
+                    &type_names,
+                    move |i| {
+                        let t = cont4.borrow().types()[i as usize].clone();
+                        let mut cont = cont4.borrow_mut();
+                        cont.pyfunc.return_type = t;
+                    }
                 )
             ])
         })

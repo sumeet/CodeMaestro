@@ -11,9 +11,9 @@ static PYSTR: &str = "str(random.choice([1, 2, 3, 4, 5]))";
 pub struct PyFunc {
     pub prelude: String,
     pub eval: String,
-    return_type: lang::Type,
-    name: String,
-    id: lang::ID,
+    pub return_type: lang::Type,
+    pub name: String,
+    pub id: lang::ID,
 }
 
 impl PyFunc {
@@ -31,12 +31,19 @@ impl PyFunc {
 impl lang::Function for PyFunc {
     fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let gil = Python::acquire_gil();
+        let gil2 = Python::acquire_gil();
         let py = gil.python();
+        let py2 = gil.python();
         let result = py.run(&self.prelude, None, None);
         if let(Err(e)) = result {
             lang::Value::Result(Err(lang::Error::PythonError))
         } else {
-            lang::Value::Null
+            let eval_result = py.eval(PYSTR, None, None);
+            let result = eval_result.unwrap();
+            if let(Ok(string)) = result.extract() {
+                return lang::Value::String(string)
+            }
+            lang::Value::Result(Err(lang::Error::PythonError))
         }
     }
 

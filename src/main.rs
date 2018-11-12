@@ -59,6 +59,8 @@ extern crate erased_serde;
 #[cfg(feature = "default")]
 extern crate pyo3;
 
+extern crate indexmap;
+
 use itertools::Itertools;
 
 extern crate debug_cell;
@@ -106,6 +108,7 @@ struct Print {}
 
 impl Function for Print {
     fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID, Value>) -> Value {
+        println!("trying to print {:#?}", args);
         match args.get(&self.takes_args()[0].id) {
             Some(Value::String(ref string)) =>  {
                 env.println(string);

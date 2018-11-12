@@ -16,6 +16,16 @@ pub fn draw_app(app: Rc<CSApp>) {
        |ui| {
             let mut toolkit = ImguiToolkit::new(ui);
             app.draw(&mut toolkit);
+
+           // argh, need per window key bindings, and check focus before
+           // calling them. makes sense i guess
+           // HACKS:
+           if !toolkit.state.borrow().is_code_window_focused {
+               // XXX: big big hack. we just need to tell the editor that the code window isn't focused.
+               // or rather the editor needs to pass in keybindings for just the code  window. ugh
+               app.controller.borrow_mut().editing = true;
+           }
+
             true
         },
        |keypress| { app.controller.borrow_mut().handle_keypress(keypress) },
@@ -23,9 +33,9 @@ pub fn draw_app(app: Rc<CSApp>) {
 }
 
 struct State {
-    editing_text_input_buffer: Option<Rc<RefCell<ImString>>>,
     prev_window_size: (f32, f32),
     prev_window_pos: (f32, f32),
+    is_code_window_focused: bool,
 }
 
 fn buf(text: &str) -> ImString {
@@ -37,30 +47,16 @@ fn buf(text: &str) -> ImString {
 impl State {
     fn new() -> Self {
         State {
-            editing_text_input_buffer: None,
             prev_window_pos: FIRST_WINDOW_PADDING,
             prev_window_size: (0.0, 0.0),
+            is_code_window_focused: false,
         }
-    }
-
-    fn text_input_buffer(&mut self, initial_text: &str) -> Rc<RefCell<ImString>> {
-        if self.editing_text_input_buffer.is_none() {
-            self.editing_text_input_buffer = Some(Rc::new(RefCell::new(buf(initial_text))))
-        }
-        Rc::clone(&self.editing_text_input_buffer.as_ref().unwrap())
     }
 }
 
 struct ImguiToolkit<'a> {
     ui: &'a Ui<'a>,
     state: RefCell<State>,
-}
-
-impl<'a> ImguiToolkit<'a> {
-    fn get_or_initialize_text_input(&self, existing_value: &str) -> Rc<RefCell<ImString>> {
-        let mut state = self.state.borrow_mut();
-        Rc::clone(&state.text_input_buffer(existing_value))
-    }
 }
 
 impl<'a> ImguiToolkit<'a> {
@@ -153,6 +149,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 f();
                 self.state.borrow_mut().prev_window_size = self.ui.get_window_size();
                 self.state.borrow_mut().prev_window_pos = self.ui.get_window_pos();
+
+                if self.ui.is_window_focused() {
+                    self.state.borrow_mut().is_code_window_focused = window_name.starts_with("Code")
+                }
             });
     }
 
@@ -221,6 +221,21 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
+        }
+    }
+
+    fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str, current_item: i32, items: &[&str], onchange: F) {
+        let mut selected_item_in_combo_box = current_item.clone();
+        let items : Vec<ImString> = items.iter().map(|s| im_str!("{}", s).clone()).collect();
+        let items : Vec<&ImStr> = items.iter().map(|s| s.as_ref()).collect();
+        self.ui.combo(
+            im_str!("{}", label),
+            &mut selected_item_in_combo_box,
+            &items,
+            5
+        );
+        if selected_item_in_combo_box != current_item {
+            onchange(selected_item_in_combo_box)
         }
     }
 
