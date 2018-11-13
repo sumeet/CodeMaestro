@@ -295,7 +295,7 @@ pub fn draw_app(app: Rc<CSApp>) {
     yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
     let app2 = Rc::clone(&app);
     yew_app.send_message(Msg::SetKeypressHandler(Rc::new(move |key| {
-        app2.controller.borrow_mut().handle_keypress(key)
+        app2.controller.borrow_mut().handle_keypress_in_code_window(key)
     })));
     yew::run_loop()
 }

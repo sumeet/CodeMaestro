@@ -16,7 +16,7 @@ struct MouseState {
     wheel: f32,
 }
 
-pub fn run<F: FnMut(&Ui) -> bool, D: Fn(Keypress)>(title: String, clear_color: [f32; 4], mut run_ui: F, on_keypress: D) {
+pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, clear_color: [f32; 4], mut run_ui: F) {
     use glium::glutin;
     use glium::{Display, Surface};
     use imgui_glium_renderer::Renderer;
@@ -114,7 +114,10 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(Keypress)>(title: String, clear_color: [
     let mut mouse_state = MouseState::default();
     let mut quit = false;
 
+
     loop {
+        let mut keypress : Option<Keypress> = None;
+
         events_loop.poll_events(|event| {
             if let Event::WindowEvent { event, .. } = event {
                 match event {
@@ -152,10 +155,9 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(Keypress)>(title: String, clear_color: [
                         if pressed {
                             match input.virtual_keycode {
                                 Some(key) => {
-                                    if let (Some(key)) = map_key(key) {
-                                        let keypress = Keypress::new(
-                                            key, imgui.key_ctrl(), imgui.key_shift());
-                                        on_keypress(keypress)
+                                    if let(Some(key)) = map_key(key) {
+                                        keypress = Some(Keypress::new(
+                                            key, imgui.key_ctrl(), imgui.key_shift()));
                                     }
                                 }
                                 _ => {}
@@ -238,7 +240,7 @@ pub fn run<F: FnMut(&Ui) -> bool, D: Fn(Keypress)>(title: String, clear_color: [
         };
 
         let ui = imgui.frame(frame_size, delta_s);
-        if !run_ui(&ui) {
+        if !run_ui(&ui, keypress) {
             break;
         }
 

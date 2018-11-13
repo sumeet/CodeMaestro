@@ -263,7 +263,7 @@ impl InsertionPoint {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Keypress {
     pub key: Key,
     pub ctrl: bool,
@@ -276,7 +276,7 @@ impl Keypress {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Key {
     A,
     B,
@@ -628,7 +628,7 @@ impl<'a> Controller {
         }
     }
 
-    pub fn handle_keypress(&mut self, keypress: Keypress) {
+    pub fn handle_keypress_in_code_window(&mut self, keypress: Keypress) {
         if keypress.key == Key::Escape {
             self.handle_cancel();
             return
@@ -825,7 +825,7 @@ pub trait UiToolkit {
     type DrawResult;
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
-    fn draw_window(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: F) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
@@ -947,7 +947,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     }
                 )
             ])
-        })
+        },
+        |_|{})
     }
 
     fn render_status_bar(&self) -> T::DrawResult {
@@ -966,17 +967,21 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let controller = self.controller.clone();
         self.ui_toolkit.draw_window("Console", &|| {
             self.ui_toolkit.draw_text_box(controller.borrow().read_console())
-        })
+        },
+        |_|{})
     }
 
     fn render_error_window(&self) -> T::DrawResult {
         let controller = self.controller.clone();
         self.ui_toolkit.draw_window("Errors", &|| {
             self.ui_toolkit.draw_text_box(controller.borrow().read_error_console())
-        })
+        },
+        |_|{})
     }
 
     fn render_code_window(&self) -> T::DrawResult {
+        let cont = Rc::clone(&self.controller);
+
         let loaded_code = self.controller.borrow().loaded_code.clone();
         match loaded_code {
             None => {
@@ -987,7 +992,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.ui_toolkit.draw_layout_with_bottom_bar(
                         &||{ self.render_code(code) },
                         &||{ self.render_run_button(code) }
-                    )})
+                    )},
+                    move |keypress| {
+                        let mut controller = cont.borrow_mut();
+                        controller.handle_keypress_in_code_window(keypress)
+                    })
             }
         }
     }

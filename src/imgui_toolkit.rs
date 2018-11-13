@@ -1,6 +1,6 @@
 use super::{CSApp};
 use super::editor::{UiToolkit};
-use super::editor::{Key};
+use super::editor::{Key,Keypress};
 use super::imgui_support;
 use imgui::*;
 use std::rc::Rc;
@@ -13,29 +13,17 @@ const INITIAL_WINDOW_SIZE: (f32, f32) = (300.0, 200.0);
 
 pub fn draw_app(app: Rc<CSApp>) {
     imgui_support::run("cs".to_owned(), CLEAR_COLOR,
-       |ui| {
-            let mut toolkit = ImguiToolkit::new(ui);
+       |ui, keypress| {
+            let mut toolkit = ImguiToolkit::new(ui, keypress);
             app.draw(&mut toolkit);
-
-           // argh, need per window key bindings, and check focus before
-           // calling them. makes sense i guess
-           // HACKS:
-           if !toolkit.state.borrow().is_code_window_focused {
-               // XXX: big big hack. we just need to tell the editor that the code window isn't focused.
-               // or rather the editor needs to pass in keybindings for just the code  window. ugh
-               app.controller.borrow_mut().editing = true;
-           }
-
             true
         },
-       |keypress| { app.controller.borrow_mut().handle_keypress(keypress) },
     );
 }
 
 struct State {
     prev_window_size: (f32, f32),
     prev_window_pos: (f32, f32),
-    is_code_window_focused: bool,
 }
 
 fn buf(text: &str) -> ImString {
@@ -49,20 +37,21 @@ impl State {
         State {
             prev_window_pos: FIRST_WINDOW_PADDING,
             prev_window_size: (0.0, 0.0),
-            is_code_window_focused: false,
         }
     }
 }
 
 struct ImguiToolkit<'a> {
     ui: &'a Ui<'a>,
+    keypress: Option<Keypress>,
     state: RefCell<State>,
 }
 
 impl<'a> ImguiToolkit<'a> {
-    pub fn new(ui: &'a Ui) -> ImguiToolkit<'a> {
+    pub fn new(ui: &'a Ui, keypress: Option<Keypress>) -> ImguiToolkit<'a> {
         ImguiToolkit {
             ui: ui,
+            keypress,
             state: RefCell::new(State::new()),
         }
     }
@@ -138,7 +127,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         last_draw_fn();
     }
 
-    fn draw_window(&self, window_name: &str, f: &Fn()) {
+    fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, f: &Fn(), handle_keypress: F) {
         let prev_window_size = self.state.borrow().prev_window_size;
         let prev_window_pos = self.state.borrow().prev_window_pos;
         self.ui.window(im_str!("{}", window_name))
@@ -150,8 +139,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 self.state.borrow_mut().prev_window_size = self.ui.get_window_size();
                 self.state.borrow_mut().prev_window_pos = self.ui.get_window_pos();
 
-                if self.ui.is_window_focused() {
-                    self.state.borrow_mut().is_code_window_focused = window_name.starts_with("Code")
+                if let(Some(keypress)) = self.keypress {
+                    if self.ui.is_window_focused() {
+                        handle_keypress(keypress)
+                    }
                 }
             });
     }

@@ -108,7 +108,6 @@ struct Print {}
 
 impl Function for Print {
     fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID, Value>) -> Value {
-        println!("trying to print {:#?}", args);
         match args.get(&self.takes_args()[0].id) {
             Some(Value::String(ref string)) =>  {
                 env.println(string);
