@@ -61,6 +61,8 @@ extern crate pyo3;
 
 extern crate indexmap;
 
+#[macro_use] extern crate downcast_rs;
+
 use itertools::Itertools;
 
 extern crate debug_cell;
@@ -190,6 +192,8 @@ impl CSApp {
         app.controller.borrow_mut().load_code(&loaded_code);
         app.controller.borrow_mut().load_function(Box::new(Print{}));
         app.controller.borrow_mut().load_function(Box::new(Capitalize{}));
+        app.controller.borrow_mut().load_function(Box::new(pystuff::PyFunc::new()));
+        app.controller.borrow_mut().load_function(Box::new(pystuff::PyFunc::new()));
         app
     }
 

@@ -534,11 +534,12 @@ pub struct Controller {
     error_console: String,
     type_by_id: indexmap::IndexMap<ID, lang::Type>,
     mutation_master: MutationMaster,
-    pyfunc: pystuff::PyFunc,
 }
 
 impl<'a> Controller {
     pub fn new() -> Controller {
+        // TODO: probably construct this somewhere else
+
         Controller {
             execution_environment: ExecutionEnvironment::new(),
             selected_node_id: None,
@@ -548,7 +549,6 @@ impl<'a> Controller {
             editing: false,
             type_by_id: Self::build_types(),
             mutation_master: MutationMaster::new(),
-            pyfunc: pystuff::PyFunc::new(),
         }
     }
 
@@ -864,7 +864,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_code_window(),
             self.render_console_window(),
             self.render_error_window(),
-            self.render_edit_pyfunc(),
+            self.render_edit_pyfuncs(),
             self.render_status_bar()
         ])
     }
@@ -882,12 +882,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    fn render_edit_pyfunc(&self) -> T::DrawResult {
+    fn render_edit_pyfuncs(&self) -> T::DrawResult {
+        let funcs = self.controller.borrow().execution_environment.list_functions();
+        let pyfuncs = funcs.iter()
+            .filter_map(|f| f.as_ref().downcast_ref::<pystuff::PyFunc>());
+        self.ui_toolkit.draw_all(pyfuncs.map(|f| self.render_edit_pyfunc(f)).collect())
+    }
+
+    fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc) -> T::DrawResult {
         let currently_selected_type_index;
         let type_names : Vec<String>;
         {
             let controller = self.controller.borrow();
-            let return_type = controller.pyfunc.returns();
+            let return_type = pyfunc.returns();
             currently_selected_type_index = controller.types().iter()
                 .position(|t| t.id == return_type.id)
                 .unwrap();
@@ -895,13 +902,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
 
         let type_names: Vec<&str> = type_names.iter().map(|str: &String| str.as_ref() as &str).collect();
-        let pyfunc = self.controller.borrow().pyfunc.clone();
 
-        self.ui_toolkit.draw_window("Edit PyFunc", &|| {
+        self.ui_toolkit.draw_window(&format!("Edit PyFunc: {}", pyfunc.id), &|| {
             let cont1 = Rc::clone(&self.controller);
+            let pyfunc1 = pyfunc.clone();
             let cont2 = Rc::clone(&self.controller);
+            let pyfunc2 = pyfunc.clone();
             let cont3 = Rc::clone(&self.controller);
+            let pyfunc3 = pyfunc.clone();
             let cont4 = Rc::clone(&self.controller);
+            let pyfunc4 = pyfunc.clone();
 
 
             self.ui_toolkit.draw_all(vec![
@@ -909,13 +919,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     "Function name",
                     pyfunc.name(),
                     move |newvalue| {
-                        let pyfunc : pystuff::PyFunc;
-                        {
-                            let mut cont = cont1.borrow_mut();
-                            cont.pyfunc.name = newvalue.to_string();
-                            pyfunc = cont.pyfunc.clone();
-                        }
-                        cont1.borrow_mut().execution_environment.add_function(Box::new(pyfunc));
+                        let mut pyfunc1 = pyfunc1.clone();
+                        pyfunc1.name = newvalue.to_string();
+                        //pyfunc1 = cont.pyfunc.clone();
+                        cont1.borrow_mut().execution_environment.add_function(Box::new(pyfunc1));
                     },
                     || {},
                 ),
@@ -924,16 +931,18 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     "Prelude",
                     &pyfunc.prelude,
                     move |newvalue| {
-                        let mut cont = cont2.borrow_mut();
-                        cont.pyfunc.prelude = newvalue.to_string();
+                        let mut pyfunc2 = pyfunc2.clone();
+                        pyfunc2.prelude = newvalue.to_string();
+                        cont2.borrow_mut().execution_environment.add_function(Box::new(pyfunc2));
                     },
                 ),
                 self.ui_toolkit.draw_multiline_text_input_with_label(
                     "Code",
                     &pyfunc.eval,
                     move |newvalue| {
-                        let mut cont = cont3.borrow_mut();
-                        cont.pyfunc.eval = newvalue.to_string();
+                        let mut pyfunc3 = pyfunc3.clone();
+                        pyfunc3.eval = newvalue.to_string();
+                        cont3.borrow_mut().execution_environment.add_function(Box::new(pyfunc3));
                     },
                 ),
                 self.ui_toolkit.draw_combo_box_with_label(
@@ -942,8 +951,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     &type_names,
                     move |i| {
                         let t = cont4.borrow().types()[i as usize].clone();
-                        let mut cont = cont4.borrow_mut();
-                        cont.pyfunc.return_type = t;
+                        let mut pyfunc4 = pyfunc4.clone();
+                        pyfunc4.return_type = t;
+                        cont4.borrow_mut().execution_environment.add_function(Box::new(pyfunc4));
                     }
                 )
             ])
@@ -1138,8 +1148,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let draw = move|| {
             let cont = controller.clone();
             let ncn = new_code_node.clone();
-            self.ui_toolkit.draw_button(&option.label, button_color, move|| {
-                let id = ncn.id();
+            self.ui_toolkit.draw_small_button(&option.label, button_color, move|| {
                 let mut cont2 = cont.borrow_mut();
                 cont2.hide_insert_code_menu();
                 cont2.insert_code((*ncn).clone(), insertion_point);
@@ -1246,7 +1255,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {
                 let cont2 = Rc::clone(&self.controller);
                 let node_id_to_select = argument.id;
-                self.ui_toolkit.draw_small_button(&type_symbol, BLACK_COLOR, move ||{
+                self.ui_toolkit.draw_button(&type_symbol, BLACK_COLOR, move ||{
                     let mut controller = cont2.borrow_mut();
                     controller.mark_as_editing(node_id_to_select);
                 })

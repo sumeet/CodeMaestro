@@ -30,7 +30,7 @@ lazy_static! {
     };
 }
 
-pub trait Function: objekt::Clone {
+pub trait Function: objekt::Clone + downcast_rs::Downcast {
     fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID,Value>) -> Value;
     fn name(&self) -> &str;
     fn id(&self) -> ID;
@@ -45,6 +45,7 @@ impl fmt::Debug for Function {
 }
 
 clone_trait_object!(Function);
+impl_downcast!(Function);
 
 #[derive(Deserialize, Serialize, Clone ,Debug)]
 pub enum CodeNode {

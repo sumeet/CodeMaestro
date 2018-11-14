@@ -170,9 +170,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         });
     }
 
+    // XXX: why do i have the small button look like a normal button again????
+    // maybe it's because the code icons looked like this
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
         self.ui.with_color_var(ImGuiCol::Button, color, || {
-            if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
+            if self.ui.small_button(im_str!("{}", label)) {
                 on_button_activate()
             }
         })
