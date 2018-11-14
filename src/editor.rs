@@ -525,6 +525,17 @@ impl<'a> Navigation<'a> {
     }
 }
 
+#[derive(Debug)]
+pub struct TestResult {
+    value: Option<Value>,
+}
+
+impl TestResult {
+    pub fn new(value: Value) -> Self {
+        Self { value: Some(value) }
+    }
+}
+
 pub struct Controller {
     execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
@@ -534,6 +545,7 @@ pub struct Controller {
     error_console: String,
     type_by_id: indexmap::IndexMap<ID, lang::Type>,
     mutation_master: MutationMaster,
+    test_result_by_func_id: HashMap<ID, TestResult>,
 }
 
 impl<'a> Controller {
@@ -549,6 +561,7 @@ impl<'a> Controller {
             editing: false,
             type_by_id: Self::build_types(),
             mutation_master: MutationMaster::new(),
+            test_result_by_func_id: HashMap::new(),
         }
     }
 
@@ -578,6 +591,17 @@ impl<'a> Controller {
         } else {
             self.set_selected_node_id(Some(next_selection_id));
         }
+    }
+
+    fn get_test_result(&self, pyfunc: &pystuff::PyFunc) -> String {
+        format!("{:?}", self.test_result_by_func_id.get(&pyfunc.id()))
+    }
+
+    fn run_test(&mut self, pyfunc: &pystuff::PyFunc) {
+        let fc = code_generation::new_function_call_with_placeholder_args(pyfunc);
+        // XXX lol ghetto
+        let result = TestResult::new(self.run(&fc));
+        self.test_result_by_func_id.insert(pyfunc.id(), result);
     }
 
     fn undo(&mut self) {
@@ -651,7 +675,7 @@ impl<'a> Controller {
             },
             (false, Key::R) => {
                 if keypress.ctrl && keypress.shift {
-                    self.run(&self.loaded_code.as_ref().unwrap().clone())
+                    self.run(&self.loaded_code.as_ref().unwrap().clone());
                 } else if keypress.ctrl {
                     self.redo()
                 }
@@ -789,14 +813,16 @@ impl<'a> Controller {
     }
 
     // should run the loaded code node
-    pub fn run(&mut self, code_node: &CodeNode) {
-        match self.execution_environment.evaluate(code_node) {
-            Value::Result(Err(e)) => {
+    pub fn run(&mut self, code_node: &CodeNode) -> Value {
+        let result = self.execution_environment.evaluate(code_node);
+        match result {
+            Value::Result(Err(ref e)) => {
                 self.error_console.push_str(&format!("{:?}", e));
                 self.error_console.push_str("\n");
             }
             _ => { }
         }
+        result
     }
 
     pub fn read_console(&self) -> &str {
@@ -828,6 +854,7 @@ pub trait UiToolkit {
     fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: F) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
+    fn draw_separator(&self) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
@@ -921,7 +948,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     move |newvalue| {
                         let mut pyfunc1 = pyfunc1.clone();
                         pyfunc1.name = newvalue.to_string();
-                        //pyfunc1 = cont.pyfunc.clone();
                         cont1.borrow_mut().execution_environment.add_function(Box::new(pyfunc1));
                     },
                     || {},
@@ -955,10 +981,23 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         pyfunc4.return_type = t;
                         cont4.borrow_mut().execution_environment.add_function(Box::new(pyfunc4));
                     }
-                )
+                ),
+                self.ui_toolkit.draw_separator(),
+                self.render_pyfunc_test_section(pyfunc.clone()),
             ])
         },
         |_|{})
+    }
+
+    fn render_pyfunc_test_section(&self, pyfunc: pystuff::PyFunc) -> T::DrawResult {
+        let test_result = self.controller.borrow_mut().get_test_result(&pyfunc);
+        let cont = Rc::clone(&self.controller);
+        self.ui_toolkit.draw_all(vec![
+            self.ui_toolkit.draw_text(&format!("Test result: {}", test_result)),
+            self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
+                cont.borrow_mut().run_test(&pyfunc)
+            })
+        ])
     }
 
     fn render_status_bar(&self) -> T::DrawResult {

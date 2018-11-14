@@ -154,6 +154,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         draw_bottom_bar_fn()
     }
 
+    fn draw_separator(&self) {
+        self.ui.separator();
+    }
+
     fn draw_empty_line(&self) {
         self.ui.new_line();
     }
