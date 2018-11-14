@@ -550,8 +550,6 @@ pub struct Controller {
 
 impl<'a> Controller {
     pub fn new() -> Controller {
-        // TODO: probably construct this somewhere else
-
         Controller {
             execution_environment: ExecutionEnvironment::new(),
             selected_node_id: None,
@@ -570,6 +568,7 @@ impl<'a> Controller {
         type_by_id.insert(lang::NULL_TYPE.id, lang::NULL_TYPE.clone());
         type_by_id.insert(lang::STRING_TYPE.id, lang::STRING_TYPE.clone());
         type_by_id.insert(lang::RESULT_TYPE.id, lang::RESULT_TYPE.clone());
+        type_by_id.insert(lang::NUMBER_TYPE.id, lang::NUMBER_TYPE.clone());
         type_by_id
     }
 

@@ -28,6 +28,12 @@ lazy_static! {
         id: uuid::Uuid::parse_str("0613664d-eead-4d83-99a0-9759a5023887").unwrap(),
         symbol: "\u{f493}".to_string(),
     };
+
+    pub static ref NUMBER_TYPE: Type = Type {
+        readable_name: "Number".to_string(),
+        id: uuid::Uuid::parse_str("6dbe9096-4ff5-42f1-b2ff-36eacc3ced59").unwrap(),
+        symbol: "\u{f292}".to_string(),
+    };
 }
 
 pub trait Function: objekt::Clone + downcast_rs::Downcast {
@@ -72,7 +78,9 @@ pub enum Error {
 pub enum Value {
     Null,
     String(String),
-    Result(Result<Box<Value>,Error>)
+    Result(Result<Box<Value>,Error>),
+    // TODO: be smarter amount infinite precision ints
+    Number(i128),
 }
 
 impl Value {
@@ -81,6 +89,7 @@ impl Value {
             Value::Null => &NULL_TYPE,
             Value::String(_) => &STRING_TYPE,
             Value::Result(_) => &RESULT_TYPE,
+            Value::Number(_) => &NUMBER_TYPE,
         }
     }
 }

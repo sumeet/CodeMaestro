@@ -25,6 +25,28 @@ impl PyFunc {
     }
 }
 
+impl PyFunc {
+    fn extract(&self, pyobjectref: &PyObjectRef) -> Option<lang::Value> {
+        use self::lang::Function;
+        let null = lang::NULL_TYPE.id;
+//        let number = lang::NUMBER_TYPE.id;
+        if self.returns().id == lang::STRING_TYPE.id {
+            if let(Ok(string)) = pyobjectref.extract() {
+                return Some(lang::Value::String(string))
+            }
+        } else if self.returns().id == lang::NUMBER_TYPE.id {
+            if let(Ok(int)) = pyobjectref.extract() {
+                return Some(lang::Value::Number(int))
+            }
+        } else if self.returns().id == lang::NULL_TYPE.id {
+            if pyobjectref.is_none() {
+                return Some(lang::Value::Null)
+            }
+        }
+        None
+    }
+}
+
 impl lang::Function for PyFunc {
     fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let gil = Python::acquire_gil();
@@ -37,8 +59,8 @@ impl lang::Function for PyFunc {
         } else {
             let eval_result = py.eval(self.eval.as_ref(), None, None);
             let result = eval_result.unwrap();
-            if let(Ok(string)) = result.extract() {
-                return lang::Value::String(string)
+            if let(Some(value)) = self.extract(result) {
+                return value
             }
             lang::Value::Result(Err(lang::Error::PythonError))
         }
