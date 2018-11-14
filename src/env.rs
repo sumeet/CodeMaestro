@@ -6,7 +6,7 @@ use std::borrow::Borrow;
 pub struct ExecutionEnvironment {
     pub console: String,
     pub locals: HashMap<lang::ID, lang::Value>,
-    pub functions: HashMap<lang::ID, Box<lang::Function>>
+    pub functions: HashMap<lang::ID, Box<lang::Function>>,
 }
 
 impl ExecutionEnvironment {

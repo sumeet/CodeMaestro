@@ -71,7 +71,7 @@ pub enum Error {
     ArgumentError,
     UndefinedFunctionError(ID),
     // TODO: add metadata into here
-    PythonError,
+    PythonError(String),
 }
 
 #[derive(Clone, Debug)]

@@ -3,6 +3,25 @@ use std::collections::HashMap;
 use super::pyo3::prelude::*;
 use super::lang;
 use super::env;
+use std::rc::Rc;
+
+pub struct Py {
+    gil: GILGuard,
+}
+
+impl Py {
+    fn new() -> Self {
+        Self { gil: Python::acquire_gil() }
+    }
+
+    fn py<'a>(&'a self) -> Python<'a> {
+        self.gil.python()
+    }
+}
+
+thread_local! {
+    pub static PY: Py = Py::new();
+}
 
 #[derive(Clone)]
 pub struct PyFunc {
@@ -15,6 +34,7 @@ pub struct PyFunc {
 
 impl PyFunc {
     pub fn new() -> Self {
+        let gil = Python::acquire_gil();
         Self {
             prelude: "".to_string(),
             eval: "".to_string(),
@@ -28,8 +48,6 @@ impl PyFunc {
 impl PyFunc {
     fn extract(&self, pyobjectref: &PyObjectRef) -> Option<lang::Value> {
         use self::lang::Function;
-        let null = lang::NULL_TYPE.id;
-//        let number = lang::NUMBER_TYPE.id;
         if self.returns().id == lang::STRING_TYPE.id {
             if let(Ok(string)) = pyobjectref.extract() {
                 return Some(lang::Value::String(string))
@@ -45,25 +63,38 @@ impl PyFunc {
         }
         None
     }
+
+    fn py_exception_to_error(&self, pyerror: &PyErr) -> lang::Error {
+        let error_str = PY.with(|py| {
+            let error_obj = pyerror.into_object(py.py());
+            error_obj.getattr(py.py(), "__str__").unwrap().call0(py.py()).unwrap()
+                .extract(py.py()).unwrap()
+        });
+        lang::Error::PythonError(error_str)
+    }
 }
 
 impl lang::Function for PyFunc {
     fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        let gil = Python::acquire_gil();
-        let gil2 = Python::acquire_gil();
-        let py = gil.python();
-        let py2 = gil.python();
-        let result = py.run(&self.prelude, None, None);
-        if let(Err(e)) = result {
-            lang::Value::Result(Err(lang::Error::PythonError))
-        } else {
-            let eval_result = py.eval(self.eval.as_ref(), None, None);
-            let result = eval_result.unwrap();
-            if let(Some(value)) = self.extract(result) {
-                return value
+        PY.with(|py| {
+            let result = py.py().run(&self.prelude, None, None);
+
+            if let(Err(e)) = result {
+                lang::Value::Result(Err(lang::Error::PythonError("error rnning the prelude".to_string())))
+            } else {
+                let eval_result = py.py().eval(self.eval.as_ref(), None, None);
+                if let(Err(pyerr)) = eval_result {
+                    return lang::Value::Result(Err(self.py_exception_to_error(&pyerr)))
+                }
+                let eval_result = eval_result.unwrap();
+
+                if let(Some(value)) = self.extract(eval_result) {
+                    return value
+                }
+
+                lang::Value::Result(Err(lang::Error::PythonError("couldn't deserialize type from python".to_string())))
             }
-            lang::Value::Result(Err(lang::Error::PythonError))
-        }
+        })
     }
 
     fn name(&self) -> &str {
