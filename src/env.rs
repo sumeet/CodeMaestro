@@ -83,7 +83,7 @@ impl ExecutionEnvironment {
                 function.clone().call(self, args)
             }
             None => {
-                lang::Value::Result(Err(lang::Error::UndefinedFunctionError(function_id)))
+                lang::Value::Error(lang::Error::UndefinedFunctionError(function_id))
             }
         }
     }

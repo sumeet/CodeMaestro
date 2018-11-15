@@ -83,28 +83,18 @@ pub enum Error {
     ArgumentError,
     UndefinedFunctionError(ID),
     // TODO: add metadata into here
-    PythonError(String),
+    PythonError(String, String),
+    PythonDeserializationError,
 }
 
 #[derive(Clone, Debug)]
 pub enum Value {
     Null,
     String(String),
-    Result(Result<Box<Value>,Error>),
+    Error(Error),
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Vec<Value>),
-}
-
-impl Value {
-//    pub fn get_type(&self) -> Type {
-//        match self {
-//            Value::Null => Type::from_spec(&NULL_TYPESPEC),
-//            Value::String(_) => Type::from_spec(&STRING_TYPESPEC),
-//            Value::Result(_) => Type::from_spec(&RESULT_TYPESPEC),
-//            Value::Number(_) => Type::from_spec(&NUMBER_TYPESPEC),
-//        }
-//    }
 }
 
 #[derive(Deserialize, Serialize, Clone ,Debug)]

@@ -532,12 +532,12 @@ impl<'a> Navigation<'a> {
 
 #[derive(Debug)]
 pub struct TestResult {
-    value: Option<Value>,
+    value: Value,
 }
 
 impl TestResult {
     pub fn new(value: Value) -> Self {
-        Self { value: Some(value) }
+        Self { value }
     }
 }
 
@@ -609,12 +609,17 @@ impl<'a> Controller {
     }
 
     fn get_test_result(&self, pyfunc: &pystuff::PyFunc) -> String {
-        format!("{:?}", self.test_result_by_func_id.get(&pyfunc.id()))
+        let test_result = self.test_result_by_func_id.get(&pyfunc.id());
+        if let(Some(test_result)) = test_result {
+            format!("{:?}", test_result.value)
+        } else {
+            "Test not run yet".to_string()
+        }
     }
 
     fn run_test(&mut self, pyfunc: &pystuff::PyFunc) {
-        let fc = code_generation::new_function_call_with_placeholder_args(pyfunc);
         // XXX lol ghetto
+        let fc = code_generation::new_function_call_with_placeholder_args(pyfunc);
         let result = TestResult::new(self.run(&fc));
         self.test_result_by_func_id.insert(pyfunc.id(), result);
     }
@@ -831,7 +836,7 @@ impl<'a> Controller {
     pub fn run(&mut self, code_node: &CodeNode) -> Value {
         let result = self.execution_environment.evaluate(code_node);
         match result {
-            Value::Result(Err(ref e)) => {
+            Value::Error(ref e) => {
                 self.error_console.push_str(&format!("{:?}", e));
                 self.error_console.push_str("\n");
             }

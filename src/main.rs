@@ -115,7 +115,7 @@ impl Function for Print {
                 env.println(string);
                 Value::Null
             }
-            _ => Value::Result(Err(LangError::ArgumentError))
+            _ => Value::Error(LangError::ArgumentError)
         }
     }
 
@@ -151,7 +151,7 @@ impl Function for Capitalize {
             Some(Value::String(ref string)) =>  {
                 Value::String(string.to_uppercase())
             }
-            _ => Value::Result(Err(LangError::ArgumentError))
+            _ => Value::Error(LangError::ArgumentError)
         }
     }
 

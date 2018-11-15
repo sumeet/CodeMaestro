@@ -13,7 +13,6 @@ impl Py {
     fn new() -> Self {
         Self { gil: Python::acquire_gil() }
     }
-
     fn py<'a>(&'a self) -> Python<'a> {
         self.gil.python()
     }
@@ -46,24 +45,23 @@ impl PyFunc {
 }
 
 impl PyFunc {
-    fn extract(&self, pyobjectref: &PyObjectRef) -> Option<lang::Value> {
+    fn extract(&self, pyobjectref: &PyObjectRef) -> lang::Value {
         use self::lang::Function;
         self.ex(pyobjectref, &self.returns())
     }
 
-    // TODO: this needs to return Result not Option, lol
-    fn ex(&self, pyobjectref: &PyObjectRef, into_type: &lang::Type) -> Option<lang::Value> {
+    fn ex(&self, pyobjectref: &PyObjectRef, into_type: &lang::Type) -> lang::Value {
         if into_type.matches_spec(&lang::STRING_TYPESPEC) {
             if let(Ok(string)) = pyobjectref.extract() {
-                return Some(lang::Value::String(string))
+                return lang::Value::String(string)
             }
         } else if into_type.matches_spec(&lang::NUMBER_TYPESPEC) {
             if let(Ok(int)) = pyobjectref.extract() {
-                return Some(lang::Value::Number(int))
+                return lang::Value::Number(int)
             }
         } else if into_type.matches_spec(&lang::NULL_TYPESPEC) {
             if pyobjectref.is_none() {
-                return Some(lang::Value::Null)
+                return lang::Value::Null
             }
         } else if into_type.matches_spec(&lang::LIST_TYPESPEC) {
             let pyobj : PyObject = pyobjectref.extract().unwrap();
@@ -74,22 +72,31 @@ impl PyFunc {
                 let iter = PyIterator::from_object(py.py(), &pyobj).unwrap();
                 let collected : Vec<lang::Value> = iter
                     .map(|pyresult| {
-                        self.ex(pyresult.unwrap(), collection_type).unwrap()
+                        self.ex(pyresult.unwrap(), collection_type)
                     })
                     .collect();
-                Some(lang::Value::List(collected))
+                lang::Value::List(collected)
             });
         }
-        None
+        lang::Value::Error(lang::Error::PythonDeserializationError)
     }
 
     fn py_exception_to_error(&self, pyerror: &PyErr) -> lang::Error {
-        let error_str = PY.with(|py| {
+        PY.with(|py| {
             let error_obj = pyerror.into_object(py.py());
-            error_obj.getattr(py.py(), "__str__").unwrap().call0(py.py()).unwrap()
+            let error_cls = error_obj.getattr(py.py(), "__class__")
+                .unwrap();
+            let error_cls_name = error_cls.getattr(py.py(), "__name__")
+                .unwrap();
+            lang::Error::PythonError(self.str(error_cls_name), self.str(error_obj))
+        })
+    }
+
+    fn str(&self, pyobj: PyObject) -> String {
+        PY.with(|py| {
+            pyobj.getattr(py.py(), "__str__").unwrap().call0(py.py()).unwrap()
                 .extract(py.py()).unwrap()
-        });
-        lang::Error::PythonError(error_str)
+        })
     }
 }
 
@@ -99,19 +106,14 @@ impl lang::Function for PyFunc {
             let result = py.py().run(&self.prelude, None, None);
 
             if let(Err(e)) = result {
-                lang::Value::Result(Err(lang::Error::PythonError("error rnning the prelude".to_string())))
+                lang::Value::Error(self.py_exception_to_error(&e))
             } else {
                 let eval_result = py.py().eval(self.eval.as_ref(), None, None);
                 if let(Err(pyerr)) = eval_result {
-                    return lang::Value::Result(Err(self.py_exception_to_error(&pyerr)))
+                    return lang::Value::Error(self.py_exception_to_error(&pyerr))
                 }
                 let eval_result = eval_result.unwrap();
-
-                if let(Some(value)) = self.extract(eval_result) {
-                    return value
-                }
-
-                lang::Value::Result(Err(lang::Error::PythonError("couldn't deserialize type from python".to_string())))
+                self.extract(eval_result)
             }
         })
     }
