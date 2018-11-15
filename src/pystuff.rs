@@ -38,7 +38,7 @@ impl PyFunc {
         Self {
             prelude: "".to_string(),
             eval: "".to_string(),
-            return_type: lang::NULL_TYPE.clone(),
+            return_type: lang::Type::from_spec(&lang::NULL_TYPESPEC),
             name: "New PyFunc".to_string(),
             id: lang::new_id(),
         }
@@ -48,15 +48,15 @@ impl PyFunc {
 impl PyFunc {
     fn extract(&self, pyobjectref: &PyObjectRef) -> Option<lang::Value> {
         use self::lang::Function;
-        if self.returns().id == lang::STRING_TYPE.id {
+        if self.returns().matches_spec(&lang::STRING_TYPESPEC) {
             if let(Ok(string)) = pyobjectref.extract() {
                 return Some(lang::Value::String(string))
             }
-        } else if self.returns().id == lang::NUMBER_TYPE.id {
+        } else if self.returns().matches_spec(&lang::NUMBER_TYPESPEC) {
             if let(Ok(int)) = pyobjectref.extract() {
                 return Some(lang::Value::Number(int))
             }
-        } else if self.returns().id == lang::NULL_TYPE.id {
+        } else if self.returns().matches_spec(&lang::NULL_TYPESPEC) {
             if pyobjectref.is_none() {
                 return Some(lang::Value::Null)
             }
@@ -109,7 +109,7 @@ impl lang::Function for PyFunc {
         vec![]
     }
 
-    fn returns(&self) -> &lang::Type {
-        &self.return_type
+    fn returns(&self) -> lang::Type {
+        self.return_type.clone()
     }
 }

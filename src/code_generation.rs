@@ -9,7 +9,8 @@ pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::C
                 expr: Box::new(lang::CodeNode::Placeholder(lang::Placeholder {
                     id: lang::new_id(),
                     description: arg_def.short_name.clone(),
-                    type_id: arg_def.arg_type.id
+                    // XXX: this is wrong... we need to store the whole type in there.
+                    type_id: arg_def.arg_type.typespec.id
                 }))
             })
         })

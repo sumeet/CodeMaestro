@@ -131,14 +131,14 @@ impl Function for Print {
         vec![
             lang::ArgumentDefinition::new(
                 uuid::Uuid::parse_str("feff08f0-7319-4b47-964e-1f470eca81df").unwrap(),
-                lang::STRING_TYPE.clone(),
+                lang::Type::from_spec(&lang::STRING_TYPESPEC),
                 "String to print".to_string()
             )
         ]
     }
 
-    fn returns(&self) -> &lang::Type {
-        &lang::NULL_TYPE
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&lang::NULL_TYPESPEC)
     }
 }
 
@@ -167,14 +167,14 @@ impl Function for Capitalize {
         vec![
             lang::ArgumentDefinition::new(
                 uuid::Uuid::parse_str("94e81ddc-843b-426d-847e-a215125c9593").unwrap(),
-                lang::STRING_TYPE.clone(),
-                "String to capitalize".to_string()
+                lang::Type::from_spec(&lang::STRING_TYPESPEC),
+                "String to capitalize".to_string(),
             )
         ]
     }
 
-    fn returns(&self) -> &lang::Type {
-        &lang::STRING_TYPE
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&lang::STRING_TYPESPEC)
     }
 }
 

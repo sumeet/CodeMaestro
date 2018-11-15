@@ -11,28 +11,32 @@ use super::uuid::Uuid;
 
 
 lazy_static! {
-    pub static ref NULL_TYPE: Type = Type {
+    pub static ref NULL_TYPESPEC: TypeSpec = TypeSpec {
         readable_name: "Null".to_string(),
         id: uuid::Uuid::parse_str(&"daa07233-b887-4512-b06e-d6a53d415213").unwrap(),
         symbol: "\u{f192}".to_string(),
+        num_params: 0,
     };
 
-    pub static ref STRING_TYPE: Type = Type {
+    pub static ref STRING_TYPESPEC: TypeSpec = TypeSpec {
         readable_name: "String".to_string(),
         id: uuid::Uuid::parse_str("e0e8271e-5f94-4d00-bad9-46a2ce4d6568").unwrap(),
         symbol: "\u{f10d}".to_string(),
+        num_params: 0,
     };
 
-    pub static ref RESULT_TYPE: Type = Type {
+    pub static ref RESULT_TYPESPEC: TypeSpec = TypeSpec {
         readable_name: "Result".to_string(),
         id: uuid::Uuid::parse_str("0613664d-eead-4d83-99a0-9759a5023887").unwrap(),
         symbol: "\u{f493}".to_string(),
+        num_params: 0,
     };
 
-    pub static ref NUMBER_TYPE: Type = Type {
+    pub static ref NUMBER_TYPESPEC: TypeSpec = TypeSpec {
         readable_name: "Number".to_string(),
         id: uuid::Uuid::parse_str("6dbe9096-4ff5-42f1-b2ff-36eacc3ced59").unwrap(),
         symbol: "\u{f292}".to_string(),
+        num_params: 0,
     };
 }
 
@@ -41,7 +45,7 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast {
     fn name(&self) -> &str;
     fn id(&self) -> ID;
     fn takes_args(&self) -> Vec<ArgumentDefinition>;
-    fn returns(&self) -> &Type;
+    fn returns(&self) -> Type;
 }
 
 impl fmt::Debug for Function {
@@ -84,21 +88,68 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn get_type(&self) -> &'static Type {
+    pub fn get_type(&self) -> Type {
         match self {
-            Value::Null => &NULL_TYPE,
-            Value::String(_) => &STRING_TYPE,
-            Value::Result(_) => &RESULT_TYPE,
-            Value::Number(_) => &NUMBER_TYPE,
+            Value::Null => Type::from_spec(&NULL_TYPESPEC),
+            Value::String(_) => Type::from_spec(&STRING_TYPESPEC),
+            Value::Result(_) => Type::from_spec(&RESULT_TYPESPEC),
+            Value::Number(_) => Type::from_spec(&NUMBER_TYPESPEC),
         }
     }
 }
 
 #[derive(Deserialize, Serialize, Clone ,Debug)]
-pub struct Type {
+pub struct TypeSpec {
     pub readable_name: String,
     pub id: ID,
     pub symbol: String,
+    pub num_params: usize,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug)]
+pub struct Type {
+    // TODO: should this just be a TypeSpec ID?
+    pub typespec: TypeSpec,
+    pub params: Vec<Type>,
+}
+
+impl Type {
+    // for types with no params
+    pub fn from_spec(spec: &TypeSpec) -> Self {
+        Self::with_params(spec, vec![])
+    }
+
+    pub fn with_params(spec: &TypeSpec, params: Vec<Self>) -> Self {
+        Self {
+            typespec: spec.clone(),
+            params,
+        }
+    }
+
+    pub fn matches(&self, other: &Self) -> bool {
+        self.typespec.id == other.typespec.id &&
+            self.params.iter().zip(other.params.iter())
+                .all(|(selfparam, otherparam)| selfparam.matches(otherparam))
+    }
+
+    // XXX: idk if this is right but it'll at least get me farther i think
+    pub fn matches_spec(&self, spec: &TypeSpec) -> bool {
+        self.typespec.id == spec.id
+    }
+
+    pub fn readable_name(&self) -> String {
+        let param_names : Vec<String> = self.params.iter()
+            .map(|param| param.readable_name())
+            .collect();
+        format!("{}<{}>", self.typespec.readable_name, param_names.join(","))
+    }
+
+    pub fn symbol(&self) -> String {
+        let param_symbols : Vec<String> = self.params.iter()
+            .map(|param| param.symbol())
+            .collect();
+        format!("{}<{}>", self.typespec.symbol, param_symbols.join(","))
+    }
 }
 
 impl CodeNode {

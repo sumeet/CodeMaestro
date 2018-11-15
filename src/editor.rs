@@ -62,11 +62,13 @@ impl InsertCodeMenu {
         }
         let arg_type = arg_type.unwrap();
 
+        // XXX: type ID will no longer be sufficient. i think we may need to hash together the child
+        // type hashes together as well, or smth (for parameterized types)
         let assignments_by_type_id = genie.find_assignments_that_come_before_code(argument.id)
             .into_iter()
             .group_by(|assignment| {
                 let assignment : Assignment = (**assignment).clone();
-                genie.guess_type(&CodeNode::Assignment(assignment)).id
+                genie.guess_type(&CodeNode::Assignment(assignment)).typespec.id
             })
             .into_iter()
             .map(|(id, assignments)| (id, assignments.cloned().collect::<Vec<Assignment>>()))
@@ -163,7 +165,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
         }
         if let(Some(ref return_type)) = search_params.return_type {
             functions = functions.into_iter()
-                .filter(|f| f.returns().id == return_type.id).collect()
+                .filter(|f| f.returns().matches(&return_type)).collect()
         }
         functions.into_iter().map(|func| {
             InsertCodeMenuOption {
@@ -183,7 +185,8 @@ struct InsertVariableReferenceOptionGenerator {
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
         let mut assignments = if let(Some(search_type)) = &search_params.return_type {
-            self.assignments_by_type_id.get(&search_type.id).map_or_else(
+            // XXX: searching by typespec ID is fuxkkkkeeddddddd
+            self.assignments_by_type_id.get(&search_type.typespec.id).map_or_else(
                 || vec![],
                 |assignments| assignments.iter()
                     .map(|assignment| assignment.clone()).collect()
@@ -221,7 +224,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
         let mut options = vec![];
         let input_str = &search_params.input_str;
         if let(Some(ref return_type)) = search_params.return_type {
-            if return_type.id == lang::STRING_TYPE.id {
+            if return_type.matches_spec(&lang::STRING_TYPESPEC) {
                 options.push(
                     InsertCodeMenuOption {
                         label: format!("\u{f10d}{}\u{f10e}", input_str),
@@ -237,7 +240,8 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     InsertCodeMenuOption {
                         label: format!("{} {}", PLACEHOLDER_ICON, input_str),
                         is_selected: false,
-                        new_node: code_generation::new_placeholder(input_str, return_type.id),
+                        // XXX: omg, placholders will now need to hold a type instead of type id
+                        new_node: code_generation::new_placeholder(input_str, return_type.typespec.id),
                     }
                 );
             }
@@ -356,7 +360,7 @@ impl<'a> CodeGenie<'a> {
 
     fn get_functions_returning_type(&self, t: &lang::Type) -> Vec<Box<Function>> {
         self.all_functions().into_iter()
-            .filter(|func| func.returns().id == t.id)
+            .filter(|func| func.returns().matches(t))
             .collect()
     }
 
@@ -386,11 +390,12 @@ impl<'a> CodeGenie<'a> {
                 let func_id = function_call.function_reference().function_id;
                 match self.find_function(func_id) {
                     Some(ref func) => func.returns().clone(),
-                    None => lang::NULL_TYPE.clone()
+                    // TODO: do we really want to just return Null if we couldn't find the function?
+                    None => lang::Type::from_spec(&lang::NULL_TYPESPEC),
                 }
             }
             CodeNode::StringLiteral(string_literal) => {
-                lang::STRING_TYPE.clone()
+                lang::Type::from_spec(&lang::STRING_TYPESPEC)
             }
             CodeNode::Assignment(assignment) => {
                 self.guess_type(&assignment.expression)
@@ -400,23 +405,23 @@ impl<'a> CodeGenie<'a> {
                     let last_expression_in_block= &block.expressions[block.expressions.len() - 1];
                     self.guess_type(last_expression_in_block)
                 } else {
-                    lang::NULL_TYPE.clone()
+                    lang::Type::from_spec(&lang::NULL_TYPESPEC)
                 }
             }
             CodeNode::VariableReference(variable_reference) => {
-                lang::NULL_TYPE.clone()
+                lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
             CodeNode::FunctionReference(function_reference) => {
-                lang::NULL_TYPE.clone()
+                lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
             CodeNode::FunctionDefinition(function_definition) => {
-                lang::NULL_TYPE.clone()
+                lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
             CodeNode::Argument(argument) => {
-                lang::NULL_TYPE.clone()
+                lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
             CodeNode::Placeholder(placeholder) => {
-                lang::NULL_TYPE.clone()
+                lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
         }
     }
@@ -565,10 +570,15 @@ impl<'a> Controller {
 
     fn build_types() -> indexmap::IndexMap<ID, lang::Type> {
         let mut type_by_id : indexmap::IndexMap<ID, lang::Type> = indexmap::IndexMap::new();
-        type_by_id.insert(lang::NULL_TYPE.id, lang::NULL_TYPE.clone());
-        type_by_id.insert(lang::STRING_TYPE.id, lang::STRING_TYPE.clone());
-        type_by_id.insert(lang::RESULT_TYPE.id, lang::RESULT_TYPE.clone());
-        type_by_id.insert(lang::NUMBER_TYPE.id, lang::NUMBER_TYPE.clone());
+
+        // XXX: HACKS: TEMP
+        let null_type = lang::Type::from_spec(&lang::NULL_TYPESPEC);
+        let string_type = lang::Type::from_spec(&lang::STRING_TYPESPEC);
+        let number_type = lang::Type::from_spec(&lang::NUMBER_TYPESPEC);
+
+        for t in [null_type, string_type, number_type].into_iter() {
+            type_by_id.insert(t.typespec.id, t.clone());
+        }
         type_by_id
     }
 
@@ -922,9 +932,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let controller = self.controller.borrow();
             let return_type = pyfunc.returns();
             currently_selected_type_index = controller.types().iter()
-                .position(|t| t.id == return_type.id)
+                .position(|t| t.matches(&return_type))
                 .unwrap();
-            type_names = controller.types().iter().map(|t| t.readable_name.clone()).collect()
+            type_names = controller.types().iter().map(|t| t.readable_name()).collect()
         }
 
         let type_names: Vec<&str> = type_names.iter().map(|str: &String| str.as_ref() as &str).collect();
@@ -1285,7 +1295,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let controller = self.controller.borrow();
             let genie = controller.code_genie().unwrap();
             type_symbol = match genie.get_type_for_arg(argument.argument_definition_id) {
-                Some(arg_type) => arg_type.symbol.clone(),
+                Some(arg_type) => arg_type.symbol(),
                 None => "\u{f059}".to_string(),
             };
         }
