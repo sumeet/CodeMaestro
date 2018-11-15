@@ -48,18 +48,37 @@ impl PyFunc {
 impl PyFunc {
     fn extract(&self, pyobjectref: &PyObjectRef) -> Option<lang::Value> {
         use self::lang::Function;
-        if self.returns().matches_spec(&lang::STRING_TYPESPEC) {
+        self.ex(pyobjectref, &self.returns())
+    }
+
+    // TODO: this needs to return Result not Option, lol
+    fn ex(&self, pyobjectref: &PyObjectRef, into_type: &lang::Type) -> Option<lang::Value> {
+        if into_type.matches_spec(&lang::STRING_TYPESPEC) {
             if let(Ok(string)) = pyobjectref.extract() {
                 return Some(lang::Value::String(string))
             }
-        } else if self.returns().matches_spec(&lang::NUMBER_TYPESPEC) {
+        } else if into_type.matches_spec(&lang::NUMBER_TYPESPEC) {
             if let(Ok(int)) = pyobjectref.extract() {
                 return Some(lang::Value::Number(int))
             }
-        } else if self.returns().matches_spec(&lang::NULL_TYPESPEC) {
+        } else if into_type.matches_spec(&lang::NULL_TYPESPEC) {
             if pyobjectref.is_none() {
                 return Some(lang::Value::Null)
             }
+        } else if into_type.matches_spec(&lang::LIST_TYPESPEC) {
+            let pyobj : PyObject = pyobjectref.extract().unwrap();
+            let collection_type = into_type.params.first().unwrap();
+            return PY.with(|py| {
+                // TODO: error handlign! just figure out what's neccessary by testing it out in the
+                // GUI
+                let iter = PyIterator::from_object(py.py(), &pyobj).unwrap();
+                let collected : Vec<lang::Value> = iter
+                    .map(|pyresult| {
+                        self.ex(pyresult.unwrap(), collection_type).unwrap()
+                    })
+                    .collect();
+                Some(lang::Value::List(collected))
+            });
         }
         None
     }

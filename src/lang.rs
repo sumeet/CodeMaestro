@@ -38,6 +38,14 @@ lazy_static! {
         symbol: "\u{f292}".to_string(),
         num_params: 0,
     };
+
+
+    pub static ref LIST_TYPESPEC: TypeSpec = TypeSpec {
+        readable_name: "List".to_string(),
+        id: uuid::Uuid::parse_str("4c726a5e-d9c2-481b-bbe8-ca5319176aad").unwrap(),
+        symbol: "\u{f03a}".to_string(),
+        num_params: 1,
+    };
 }
 
 pub trait Function: objekt::Clone + downcast_rs::Downcast {
@@ -85,17 +93,18 @@ pub enum Value {
     Result(Result<Box<Value>,Error>),
     // TODO: be smarter amount infinite precision ints
     Number(i128),
+    List(Vec<Value>),
 }
 
 impl Value {
-    pub fn get_type(&self) -> Type {
-        match self {
-            Value::Null => Type::from_spec(&NULL_TYPESPEC),
-            Value::String(_) => Type::from_spec(&STRING_TYPESPEC),
-            Value::Result(_) => Type::from_spec(&RESULT_TYPESPEC),
-            Value::Number(_) => Type::from_spec(&NUMBER_TYPESPEC),
-        }
-    }
+//    pub fn get_type(&self) -> Type {
+//        match self {
+//            Value::Null => Type::from_spec(&NULL_TYPESPEC),
+//            Value::String(_) => Type::from_spec(&STRING_TYPESPEC),
+//            Value::Result(_) => Type::from_spec(&RESULT_TYPESPEC),
+//            Value::Number(_) => Type::from_spec(&NUMBER_TYPESPEC),
+//        }
+//    }
 }
 
 #[derive(Deserialize, Serialize, Clone ,Debug)]
@@ -120,24 +129,27 @@ impl Type {
     }
 
     pub fn with_params(spec: &TypeSpec, params: Vec<Self>) -> Self {
+        if params.len() != spec.num_params {
+            panic!("wrong number of params")
+        }
         Self {
             typespec: spec.clone(),
             params,
         }
     }
 
-    pub fn matches(&self, other: &Self) -> bool {
-        self.typespec.id == other.typespec.id &&
-            self.params.iter().zip(other.params.iter())
-                .all(|(selfparam, otherparam)| selfparam.matches(otherparam))
-    }
-
-    // XXX: idk if this is right but it'll at least get me farther i think
-    pub fn matches_spec(&self, spec: &TypeSpec) -> bool {
-        self.typespec.id == spec.id
+    pub fn id(&self) -> ID {
+        let mut mashed_hashes = vec![self.typespec.id.to_string()];
+        mashed_hashes.extend(self.params.iter().map(|t| t.id().to_string()));
+        uuid::Uuid::new_v5(
+            &uuid::Uuid::NAMESPACE_OID,
+            mashed_hashes.join(":").as_bytes())
     }
 
     pub fn readable_name(&self) -> String {
+        if self.params.is_empty() {
+            return self.typespec.readable_name.clone()
+        }
         let param_names : Vec<String> = self.params.iter()
             .map(|param| param.readable_name())
             .collect();
@@ -145,10 +157,22 @@ impl Type {
     }
 
     pub fn symbol(&self) -> String {
+        if self.params.is_empty() {
+            return self.typespec.symbol.clone()
+        }
         let param_symbols : Vec<String> = self.params.iter()
             .map(|param| param.symbol())
             .collect();
         format!("{}<{}>", self.typespec.symbol, param_symbols.join(","))
+    }
+
+    pub fn matches(&self, other: &Self) -> bool {
+        self.id() == other.id()
+    }
+
+    // XXX: idk if this is right but it'll at least get me farther i think
+    pub fn matches_spec(&self, spec: &TypeSpec) -> bool {
+        self.typespec.id == spec.id
     }
 }
 
@@ -287,7 +311,7 @@ impl CodeNode {
             CodeNode::Argument(argument) => {
                 vec![argument.expr.borrow()]
             }
-            CodeNode::Placeholder(placeholder) => {
+            CodeNode::Placeholder(_) => {
                 vec![]
             }
         }

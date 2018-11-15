@@ -394,7 +394,7 @@ impl<'a> CodeGenie<'a> {
                     None => lang::Type::from_spec(&lang::NULL_TYPESPEC),
                 }
             }
-            CodeNode::StringLiteral(string_literal) => {
+            CodeNode::StringLiteral(_) => {
                 lang::Type::from_spec(&lang::STRING_TYPESPEC)
             }
             CodeNode::Assignment(assignment) => {
@@ -408,19 +408,19 @@ impl<'a> CodeGenie<'a> {
                     lang::Type::from_spec(&lang::NULL_TYPESPEC)
                 }
             }
-            CodeNode::VariableReference(variable_reference) => {
+            CodeNode::VariableReference(_) => {
                 lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
-            CodeNode::FunctionReference(function_reference) => {
+            CodeNode::FunctionReference(_) => {
                 lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
-            CodeNode::FunctionDefinition(function_definition) => {
+            CodeNode::FunctionDefinition(_) => {
                 lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
-            CodeNode::Argument(argument) => {
+            CodeNode::Argument(_) => {
                 lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
-            CodeNode::Placeholder(placeholder) => {
+            CodeNode::Placeholder(_) => {
                 lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
         }
@@ -575,9 +575,15 @@ impl<'a> Controller {
         let null_type = lang::Type::from_spec(&lang::NULL_TYPESPEC);
         let string_type = lang::Type::from_spec(&lang::STRING_TYPESPEC);
         let number_type = lang::Type::from_spec(&lang::NUMBER_TYPESPEC);
+        let list_of_numbers_type = lang::Type::with_params(
+            &lang::LIST_TYPESPEC, vec![number_type.clone()]
+        );
+        let list_of_strings_type = lang::Type::with_params(
+            &lang::LIST_TYPESPEC, vec![string_type.clone()]
+        );
 
-        for t in [null_type, string_type, number_type].into_iter() {
-            type_by_id.insert(t.typespec.id, t.clone());
+        for t in [null_type, string_type, number_type, list_of_numbers_type, list_of_strings_type].into_iter() {
+            type_by_id.insert(t.id(), t.clone());
         }
         type_by_id
     }
