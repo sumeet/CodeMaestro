@@ -1,6 +1,7 @@
 use debug_cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
+use std::iter;
 
 use failure::{err_msg};
 use failure::Error as Error;
@@ -549,6 +550,7 @@ pub struct Controller {
     loaded_code: Option<CodeNode>,
     error_console: String,
     type_by_id: indexmap::IndexMap<ID, lang::Type>,
+    typespec_by_id: indexmap::IndexMap<ID, lang::TypeSpec>,
     mutation_master: MutationMaster,
     test_result_by_func_id: HashMap<ID, TestResult>,
 }
@@ -565,7 +567,17 @@ impl<'a> Controller {
             type_by_id: Self::build_types(),
             mutation_master: MutationMaster::new(),
             test_result_by_func_id: HashMap::new(),
+            typespec_by_id: Self::init_typespecs(),
         }
+    }
+
+    fn init_typespecs() -> indexmap::IndexMap<ID, lang::TypeSpec> {
+        let mut typespec_by_id : indexmap::IndexMap<ID, lang::TypeSpec> = indexmap::IndexMap::new();
+        typespec_by_id.insert(lang::NULL_TYPESPEC.id, lang::NULL_TYPESPEC.clone());
+        typespec_by_id.insert(lang::STRING_TYPESPEC.id, lang::STRING_TYPESPEC.clone());
+        typespec_by_id.insert(lang::NUMBER_TYPESPEC.id, lang::NUMBER_TYPESPEC.clone());
+        typespec_by_id.insert(lang::LIST_TYPESPEC.id, lang::LIST_TYPESPEC.clone());
+        typespec_by_id
     }
 
     fn build_types() -> indexmap::IndexMap<ID, lang::Type> {
@@ -590,6 +602,17 @@ impl<'a> Controller {
 
     fn types(&self) -> Vec<&lang::Type> {
         self.type_by_id.values().collect()
+    }
+
+
+    fn typespecs(&self) -> Vec<&lang::TypeSpec> {
+        self.typespec_by_id.values().collect()
+    }
+
+    fn typespec_names(&self) -> Vec<String> {
+        self.typespecs().iter().map(|typespec| {
+            format!("{} {}", typespec.symbol, typespec.readable_name)
+        }).collect()
     }
 
     // TODO: return a result instead of returning nothing? it seems like there might be places this
@@ -819,6 +842,25 @@ impl<'a> Controller {
         Ok(false)
     }
 
+    pub fn set_typespec(&mut self, pyfunc: &pystuff::PyFunc,
+                        typespec: &lang::TypeSpec, nesting_level: &Vec<usize>) {
+        let mut newpyfunc = pyfunc.clone();
+
+        let mut return_type = &mut newpyfunc.return_type;
+
+        for param_index in nesting_level.into_iter() {
+            return_type = &mut return_type.params[*param_index]
+        }
+
+        return_type.typespec = typespec.clone();
+        return_type.params.truncate(typespec.num_params);
+        let num_missing_params = typespec.num_params - return_type.params.len();
+        for _ in 0..num_missing_params {
+            return_type.params.push(lang::Type::from_spec(&lang::NULL_TYPESPEC))
+        }
+        self.load_function(Box::new(newpyfunc))
+    }
+
     pub fn load_function(&mut self, function: Box<Function>) {
         self.execution_environment.add_function(function.clone())
     }
@@ -937,19 +979,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc) -> T::DrawResult {
-        let currently_selected_type_index;
-        let type_names : Vec<String>;
-        {
-            let controller = self.controller.borrow();
-            let return_type = pyfunc.returns();
-            currently_selected_type_index = controller.types().iter()
-                .position(|t| t.matches(&return_type))
-                .unwrap();
-            type_names = controller.types().iter().map(|t| t.readable_name()).collect()
-        }
-
-        let type_names: Vec<&str> = type_names.iter().map(|str: &String| str.as_ref() as &str).collect();
-
         self.ui_toolkit.draw_window(&format!("Edit PyFunc: {}", pyfunc.id), &|| {
             let cont1 = Rc::clone(&self.controller);
             let pyfunc1 = pyfunc.clone();
@@ -957,9 +986,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let pyfunc2 = pyfunc.clone();
             let cont3 = Rc::clone(&self.controller);
             let pyfunc3 = pyfunc.clone();
-            let cont4 = Rc::clone(&self.controller);
-            let pyfunc4 = pyfunc.clone();
-
 
             self.ui_toolkit.draw_all(vec![
                 self.ui_toolkit.draw_text_input_with_label(
@@ -991,22 +1017,79 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         cont3.borrow_mut().execution_environment.add_function(Box::new(pyfunc3));
                     },
                 ),
-                self.ui_toolkit.draw_combo_box_with_label(
-                    "Return Type",
-                    currently_selected_type_index as i32,
-                    &type_names,
-                    move |i| {
-                        let t = cont4.borrow().types()[i as usize].clone();
-                        let mut pyfunc4 = pyfunc4.clone();
-                        pyfunc4.return_type = t;
-                        cont4.borrow_mut().execution_environment.add_function(Box::new(pyfunc4));
-                    }
-                ),
+                self.render_return_type_selector(&pyfunc),
                 self.ui_toolkit.draw_separator(),
                 self.render_pyfunc_test_section(pyfunc.clone()),
             ])
         },
         |_|{})
+    }
+
+    fn render_return_type_selector(&self, pyfunc: &pystuff::PyFunc) -> T::DrawResult {
+        let return_type = pyfunc.returns();
+        let currently_selected_type_index = self.controller.borrow().typespecs().iter()
+            .position(|t| return_type.matches_spec(t))
+            .unwrap();
+        let typespec_names = self.controller.borrow().typespec_names();
+        let typespec_names : Vec<&str>= typespec_names.iter().map(|s| s as &str)
+            .collect();
+
+        let cont = Rc::clone(&self.controller);
+        let pyfunc2 = pyfunc.clone();
+        self.ui_toolkit.draw_all(vec![
+            self.ui_toolkit.draw_combo_box_with_label(
+                "Return type",
+                currently_selected_type_index as i32,
+                &typespec_names,
+                move |i| {
+                    let new_typespec = cont.borrow().typespecs()[i as usize].clone();
+                    cont.borrow_mut().set_typespec(&pyfunc2, &new_typespec, &vec![])
+                }
+            ),
+            self.render_type_params_selector(pyfunc, &vec![])
+        ])
+    }
+
+    fn render_type_params_selector(&self, pyfunc: &pystuff::PyFunc, nesting_level: &Vec<usize>) -> T::DrawResult {
+        let mut return_type = pyfunc.returns();
+        let mut return_type = &mut return_type;
+
+        for param_index in nesting_level.into_iter() {
+            return_type = &mut return_type.params[*param_index]
+        }
+
+        let indent = iter::repeat("\t").take(nesting_level.len()).join("");
+        let typespec_names : Vec<String> = self.controller.borrow().typespec_names().iter()
+            .map(|typespec_name| format!("\t{}{}", indent, typespec_name)).collect();
+        let typespec_names: Vec<&str> = typespec_names.iter()
+            .map(|s| s as &str)
+            .collect();
+
+        let mut drawn = vec![];
+
+        for (i, param) in return_type.params.iter().enumerate() {
+            let typespec = &param.typespec;
+            let selected_ts_index = self.controller.borrow()
+                .typespec_by_id.get_full(&typespec.id).unwrap().0;
+            let mut new_nesting_level = nesting_level.clone();
+            new_nesting_level.push(i);
+
+            let cont = Rc::clone(&self.controller);
+            let pyfunc1 = pyfunc.clone();
+            let nl = new_nesting_level.clone();
+            drawn.push(self.ui_toolkit.draw_combo_box_with_label(
+                &format!("##{:?}", nl),
+                selected_ts_index as i32,
+                &typespec_names,
+                move|i|{
+                    let new_typespec = cont.borrow().typespecs()[i as usize].clone();
+                    cont.borrow_mut().set_typespec(&pyfunc1, &new_typespec, &nl);
+                }
+            ));
+            drawn.push(self.render_type_params_selector(&pyfunc, &new_nesting_level));
+        }
+
+        self.ui_toolkit.draw_all(drawn)
     }
 
     fn render_pyfunc_test_section(&self, pyfunc: pystuff::PyFunc) -> T::DrawResult {
