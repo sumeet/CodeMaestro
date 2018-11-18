@@ -83,6 +83,15 @@ mod code_generation;
 mod pystuff;
 
 
+#[cfg(feature = "javascript")]
+mod fakepystuff;
+
+#[cfg(feature = "javascript")]
+mod pystuff {
+    pub use super::fakepystuff::*;
+}
+
+
 use self::editor::{Controller,Renderer,UiToolkit};
 use self::env::{ExecutionEnvironment};
 use self::lang::{
@@ -178,6 +187,15 @@ impl Function for Capitalize {
     }
 }
 
+#[cfg(feature = "default")]
+fn load_builtins(controller: &mut Controller) {
+    controller.load_function(Box::new(pystuff::PyFunc::new()));
+    controller.load_function(Box::new(pystuff::PyFunc::new()));
+}
+
+#[cfg(feature = "javascript")]
+fn load_builtins(controller: &mut Controller) {}
+
 pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,
 }
@@ -192,8 +210,7 @@ impl CSApp {
         app.controller.borrow_mut().load_code(&loaded_code);
         app.controller.borrow_mut().load_function(Box::new(Print{}));
         app.controller.borrow_mut().load_function(Box::new(Capitalize{}));
-        app.controller.borrow_mut().load_function(Box::new(pystuff::PyFunc::new()));
-        app.controller.borrow_mut().load_function(Box::new(pystuff::PyFunc::new()));
+        load_builtins(&mut app.controller.borrow_mut());
         app
     }
 

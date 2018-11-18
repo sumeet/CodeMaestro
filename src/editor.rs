@@ -994,7 +994,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     move |newvalue| {
                         let mut pyfunc1 = pyfunc1.clone();
                         pyfunc1.name = newvalue.to_string();
-                        cont1.borrow_mut().execution_environment.add_function(Box::new(pyfunc1));
+                        cont1.borrow_mut().load_function(Box::new(pyfunc1));
                     },
                     || {},
                 ),

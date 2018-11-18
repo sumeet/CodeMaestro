@@ -221,7 +221,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str, current_item: i32, items: &[&str], onchange: F) {
+    fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str,
+                                                             current_item: i32, items: &[&str],
+                                                             onchange: F) {
         let mut selected_item_in_combo_box = current_item.clone();
         let items : Vec<ImString> = items.iter().map(|s| im_str!("{}", s).clone()).collect();
         let items : Vec<&ImStr> = items.iter().map(|s| s.as_ref()).collect();

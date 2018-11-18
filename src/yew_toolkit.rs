@@ -87,7 +87,36 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_window(&self, window_name: &str, f: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_separator(&self) -> Self::DrawResult {
+        html! {
+            <hr>
+        }
+    }
+
+    fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(
+        &self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult {
+        html! {
+            <div>
+                {{ self.draw_text_input(existing_value, onchange, ondone) }}
+                <label>{{ label }}</label>
+            </div>
+        }
+    }
+
+
+    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(
+        &self, label: &str, existing_value: &str, onchange: F) -> Self::DrawResult {
+        html! {
+            <div>
+                <textarea rows=5, value=existing_value,
+                          oninput=|e| { onchange(&e.value) ; Msg::Redraw }, >
+                </textarea>
+                <label>{{ label }}</label>
+            </div>
+        }
+    }
+
+    fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, f: &Fn() -> Self::DrawResult, _handle_keypress: F) -> Self::DrawResult {
         html! {
             <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
                 id={ self.incr_last_drawn_element_id().to_string() }, >
@@ -194,11 +223,55 @@ impl UiToolkit for YewToolkit {
         html
     }
 
+    fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div style="position: fixed; line-height: 1; width: 100%; top: 0; left: 0;",>
+                {{ draw_menus() }}
+            </div>
+        }
+    }
+
+    fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        // TODO: implement this for realsies
+        draw_menu_items()
+    }
+
+    fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult {
+        // TODO: do this for realsies
+        html! { <div>{label}</div> }
+    }
+
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
             <div style="position: fixed; line-height: 1; width: 100%; bottom: 0; left: 0;",>
                 {{ draw_fn() }}
             </div>
+        }
+    }
+
+    fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str,
+                                                             current_item: i32, items: &[&str],
+                                                             onchange: F) -> Self::DrawResult {
+        html! {
+            <select onchange=|event| {
+                        match event {
+                            ChangeData::Select(elem) => {
+                                if let(Some(selected_index)) = elem.selected_index() {
+                                    onchange(selected_index as i32);
+                                }
+                                Msg::Redraw
+                            }
+                            _ => {
+                                unreachable!();
+                            }
+                        }
+                    },>
+                { for items.into_iter().enumerate().map(|(index, item)| html! {
+                    <option selected=(index == current_item as usize), >
+                        { item }
+                    </option>
+                })}
+            </select>
         }
     }
 }
