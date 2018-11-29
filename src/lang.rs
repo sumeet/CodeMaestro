@@ -1,10 +1,7 @@
 use std::fmt;
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
-use std::rc::Rc;
 use std::collections::HashMap;
-
-use serde::ser::{Serialize, Serializer, SerializeSeq, SerializeMap};
 
 use super::ExecutionEnvironment;
 use super::uuid::Uuid;
@@ -346,7 +343,7 @@ impl CodeNode {
             CodeNode::Argument(argument) => {
                 vec![argument.expr.borrow_mut()]
             }
-            CodeNode::Placeholder(placeholder) => {
+            CodeNode::Placeholder(_placeholder) => {
                 vec![]
             }
         }

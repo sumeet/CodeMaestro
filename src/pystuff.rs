@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use super::pyo3::prelude::*;
 use super::lang;
 use super::env;
-use std::rc::Rc;
 
 pub struct Py {
     gil: GILGuard,
@@ -33,7 +32,6 @@ pub struct PyFunc {
 
 impl PyFunc {
     pub fn new() -> Self {
-        let gil = Python::acquire_gil();
         Self {
             prelude: "".to_string(),
             eval: "".to_string(),
@@ -101,7 +99,7 @@ impl PyFunc {
 }
 
 impl lang::Function for PyFunc {
-    fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         PY.with(|py| {
             let result = py.py().run(&self.prelude, None, None);
 

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use super::lang;
 use super::env;
-use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct PyFunc {

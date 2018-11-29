@@ -1,10 +1,8 @@
-use super::lang;
 use super::{CSApp, UiToolkit};
 use super::editor::{Key as AppKey,Keypress};
 use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::slice::SliceConcatExt;
 use stdweb::Value;
 
 pub struct Model {
@@ -42,7 +40,6 @@ impl Component for Model {
                 if app.is_none() {
                     return false;
                 }
-                let app2 = Rc::clone(app.unwrap());
                 let link2 = Rc::clone(&self.link);
                 let callback = move |keydata: (String, bool, bool)| {
                     let keystring = keydata.0;
@@ -70,9 +67,6 @@ const WINDOW_BG_COLOR: [f32; 4] = [0.090, 0.090, 0.090, 0.75];
 const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 
 struct YewToolkit {
-    current_window: RefCell<Vec<Html<Model>>>,
-    windows: RefCell<Vec<Html<Model>>>,
-    draw_next_on_same_line_was_set: RefCell<bool>,
     last_drawn_element_id: RefCell<u32>,
 }
 
@@ -196,7 +190,7 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
-        let mut html = draw_fn();
+        let html = draw_fn();
         match html {
             yew::virtual_dom::VNode::VTag(mut vtag) => {
                 let default = &"".to_string();
@@ -231,12 +225,12 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_menu(&self, _label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         // TODO: implement this for realsies
         draw_menu_items()
     }
 
-    fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult {
+    fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, _onselect: F) -> Self::DrawResult {
         // TODO: do this for realsies
         html! { <div>{label}</div> }
     }
@@ -272,6 +266,7 @@ impl UiToolkit for YewToolkit {
                     </option>
                 })}
             </select>
+            <label>{ label }</label>
         }
     }
 }
@@ -279,9 +274,6 @@ impl UiToolkit for YewToolkit {
 impl YewToolkit {
     fn new() -> Self {
         YewToolkit {
-            current_window: RefCell::new(Vec::new()),
-            windows: RefCell::new(Vec::new()),
-            draw_next_on_same_line_was_set: RefCell::new(false),
             last_drawn_element_id: RefCell::new(0),
         }
     }
@@ -311,7 +303,6 @@ impl YewToolkit {
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         if let(Some(ref app)) = self.app {
-            let app2 = Rc::clone(&app);
             let mut tk = YewToolkit::new();
             app.draw(&mut tk)
         } else {

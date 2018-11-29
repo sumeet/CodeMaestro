@@ -10,7 +10,6 @@
 #[cfg(feature = "default")]
 extern crate glium;
 #[cfg(feature = "default")]
-#[macro_use]
 extern crate imgui;
 #[cfg(feature = "default")]
 extern crate imgui_sys;
@@ -40,10 +39,7 @@ extern crate uuid;
 #[macro_use]
 extern crate lazy_static;
 
-#[macro_use]
 extern crate failure;
-use failure::{err_msg};
-use failure::Error as Error;
 
 #[macro_use]
 extern crate serde_derive;
@@ -51,10 +47,9 @@ extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 
-#[macro_use]
 extern crate erased_serde;
 
-#[macro_use] extern crate itertools;
+extern crate itertools;
 
 #[cfg(feature = "default")]
 extern crate pyo3;
@@ -62,8 +57,6 @@ extern crate pyo3;
 extern crate indexmap;
 
 #[macro_use] extern crate downcast_rs;
-
-use itertools::Itertools;
 
 extern crate debug_cell;
 use debug_cell::RefCell;
@@ -76,8 +69,6 @@ mod lang;
 mod env;
 mod code_loading;
 mod editor;
-mod editor_views;
-mod validation;
 mod code_generation;
 #[cfg(feature = "default")]
 mod pystuff;
@@ -94,9 +85,7 @@ mod pystuff {
 
 use self::editor::{Controller,Renderer,UiToolkit};
 use self::env::{ExecutionEnvironment};
-use self::lang::{
-    Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Error as LangError,Assignment,Block,
-    VariableReference};
+use self::lang::{Value,Function,ID,Error as LangError};
 
 #[cfg(feature = "default")]
 pub fn draw_app(app: Rc<CSApp>) {
@@ -155,7 +144,7 @@ impl Function for Print {
 struct Capitalize {}
 
 impl Function for Capitalize {
-    fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID, Value>) -> Value {
+    fn call(&self, _env: &mut ExecutionEnvironment, args: HashMap<ID, Value>) -> Value {
         match args.get(&self.takes_args()[0].id) {
             Some(Value::String(ref string)) =>  {
                 Value::String(string.to_uppercase())
@@ -194,7 +183,7 @@ fn load_builtins(controller: &mut Controller) {
 }
 
 #[cfg(feature = "javascript")]
-fn load_builtins(controller: &mut Controller) {}
+fn load_builtins(_controller: &mut Controller) {}
 
 pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,

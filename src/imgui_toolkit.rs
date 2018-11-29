@@ -1,11 +1,10 @@
 use super::{CSApp};
 use super::editor::{UiToolkit};
-use super::editor::{Key,Keypress};
+use super::editor::{Keypress};
 use super::imgui_support;
 use imgui::*;
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::collections::hash_map::Entry;
 use std::collections::hash_map::HashMap;
 
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
@@ -67,7 +66,7 @@ impl<'a> ImguiToolkit<'a> {
     // on every draw, we'll just keep track of how many times we use each label and increment so no
     // two labels are the same!
     fn imlabel(&self, str: &str) -> ImString {
-        let mut map = &mut self.state.borrow_mut().used_labels;
+        let map = &mut self.state.borrow_mut().used_labels;
         let label_count = map.entry(str.to_string()).or_insert(0);
         let label = im_str!("{}##{}", str, label_count);
         *label_count += 1;

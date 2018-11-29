@@ -5,13 +5,11 @@ use std::iter;
 
 use failure::{err_msg};
 use failure::Error as Error;
-use super::code_loading::{serialize};
 use super::env::{ExecutionEnvironment};
-use super::editor_views::{FunctionCallView};
 use super::lang;
 use super::code_generation;
 use super::lang::{
-    Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Error as LangError,Assignment,Block,
+    Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Assignment,Block,
     VariableReference};
 use super::itertools::Itertools;
 use super::pystuff;
@@ -359,12 +357,6 @@ impl<'a> CodeGenie<'a> {
         None
     }
 
-    fn get_functions_returning_type(&self, t: &lang::Type) -> Vec<Box<Function>> {
-        self.all_functions().into_iter()
-            .filter(|func| func.returns().matches(t))
-            .collect()
-    }
-
     fn root(&self) -> &CodeNode {
         self.code
     }
@@ -549,7 +541,6 @@ pub struct Controller {
     insert_code_menu: Option<InsertCodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
-    type_by_id: indexmap::IndexMap<ID, lang::Type>,
     typespec_by_id: indexmap::IndexMap<ID, lang::TypeSpec>,
     mutation_master: MutationMaster,
     test_result_by_func_id: HashMap<ID, TestResult>,
@@ -564,7 +555,6 @@ impl<'a> Controller {
             error_console: String::new(),
             insert_code_menu: None,
             editing: false,
-            type_by_id: Self::build_types(),
             mutation_master: MutationMaster::new(),
             test_result_by_func_id: HashMap::new(),
             typespec_by_id: Self::init_typespecs(),
@@ -579,31 +569,6 @@ impl<'a> Controller {
         typespec_by_id.insert(lang::LIST_TYPESPEC.id, lang::LIST_TYPESPEC.clone());
         typespec_by_id
     }
-
-    fn build_types() -> indexmap::IndexMap<ID, lang::Type> {
-        let mut type_by_id : indexmap::IndexMap<ID, lang::Type> = indexmap::IndexMap::new();
-
-        // XXX: HACKS: TEMP
-        let null_type = lang::Type::from_spec(&lang::NULL_TYPESPEC);
-        let string_type = lang::Type::from_spec(&lang::STRING_TYPESPEC);
-        let number_type = lang::Type::from_spec(&lang::NUMBER_TYPESPEC);
-        let list_of_numbers_type = lang::Type::with_params(
-            &lang::LIST_TYPESPEC, vec![number_type.clone()]
-        );
-        let list_of_strings_type = lang::Type::with_params(
-            &lang::LIST_TYPESPEC, vec![string_type.clone()]
-        );
-
-        for t in [null_type, string_type, number_type, list_of_numbers_type, list_of_strings_type].into_iter() {
-            type_by_id.insert(t.id(), t.clone());
-        }
-        type_by_id
-    }
-
-    fn types(&self) -> Vec<&lang::Type> {
-        self.type_by_id.values().collect()
-    }
-
 
     fn typespecs(&self) -> Vec<&lang::TypeSpec> {
         self.typespec_by_id.values().collect()
@@ -1174,7 +1139,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 CodeNode::VariableReference(variable_reference) => {
                     self.render_variable_reference(&variable_reference)
                 }
-                CodeNode::FunctionDefinition(function_definition) => {
+                CodeNode::FunctionDefinition(_function_definition) => {
                     self.ui_toolkit.draw_button(
                         &"Function defs are unimplemented",
                         RED_COLOR,
@@ -1253,7 +1218,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     move ||{
                         let mut controller = controller_2.borrow_mut();
                         if let(Some(ref new_code_node)) = new_code_node {
-                            let id = new_code_node.id();
                             controller.hide_insert_code_menu();
                             controller.insert_code(new_code_node.clone(), insertion_point);
                         } else {
@@ -1318,7 +1282,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_variable_reference(&self, variable_reference: &VariableReference) -> T::DrawResult {
-        let mut controller = self.controller.borrow_mut();
+        let controller = self.controller.borrow();
         let loaded_code = controller.loaded_code.as_ref().unwrap();
         let assignment = loaded_code.find_node(variable_reference.assignment_id);
         if let(Some(CodeNode::Assignment(assignment))) = assignment {
@@ -1427,7 +1391,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(draw_results)
     }
 
-    fn render_missing_function_argument(&self, arg: &lang::ArgumentDefinition) -> T::DrawResult {
+    fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {
         self.ui_toolkit.draw_button(
             "this shouldn't have happened, you've got a missing function arg somehow",
             RED_COLOR,
@@ -1446,7 +1410,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {})
     }
 
-    fn render_args_for_missing_function(&self, args: Vec<&lang::Argument>) -> T::DrawResult {
+    fn render_args_for_missing_function(&self, _args: Vec<&lang::Argument>) -> T::DrawResult {
         // TODO: implement this
         self.ui_toolkit.draw_all(vec![])
     }
@@ -1514,7 +1478,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         })
                 })
             },
-            CodeNode::Argument(argument) => {
+            CodeNode::Argument(_argument) => {
                 self.render_insert_code_node()
             }
             _ => {
@@ -1650,7 +1614,7 @@ impl MutationMaster {
 
     fn log_new_mutation(&self, new_root: CodeNode, cursor_position: Option<ID>) -> CodeNode {
         // delete everything after the current index
-        self.history.borrow_mut().truncate(((*self.current_index.borrow() + 1) as usize));
+        self.history.borrow_mut().truncate((*self.current_index.borrow() + 1) as usize);
         self.history.borrow_mut().push(
             UndoHistoryCell {
                 code_node: new_root.clone(),
