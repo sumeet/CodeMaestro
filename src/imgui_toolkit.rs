@@ -5,6 +5,8 @@ use super::imgui_support;
 use imgui::*;
 use std::rc::Rc;
 use std::cell::RefCell;
+use std::collections::hash_map::Entry;
+use std::collections::hash_map::HashMap;
 
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
@@ -24,6 +26,8 @@ pub fn draw_app(app: Rc<CSApp>) {
 struct State {
     prev_window_size: (f32, f32),
     prev_window_pos: (f32, f32),
+    used_labels: HashMap<String,i32>,
+
 }
 
 fn buf(text: &str) -> ImString {
@@ -37,6 +41,7 @@ impl State {
         State {
             prev_window_pos: FIRST_WINDOW_PADDING,
             prev_window_size: (0.0, 0.0),
+            used_labels: HashMap::new(),
         }
     }
 }
@@ -54,6 +59,20 @@ impl<'a> ImguiToolkit<'a> {
             keypress,
             state: RefCell::new(State::new()),
         }
+    }
+
+    // stupid, but it works. imgui does this stupid shit where if you use the same label for two
+    // separate buttons, it won't detect clicks on the second button. labels have to be unique. but
+    // it supports suffixing labels with ##<UNIQUE_STUFF> so we're taking advantage of that here. so
+    // on every draw, we'll just keep track of how many times we use each label and increment so no
+    // two labels are the same!
+    fn imlabel(&self, str: &str) -> ImString {
+        let mut map = &mut self.state.borrow_mut().used_labels;
+        let label_count = map.entry(str.to_string()).or_insert(0);
+        let label = im_str!("{}##{}", str, label_count);
+        *label_count += 1;
+        // XXX: not sure why we have to clone this label, but rust will NOT let me dereference it
+        label.clone()
     }
 }
 
@@ -93,7 +112,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 StyleVar::WindowPadding(ImVec2::new(x_padding, y_padding))
             ],
             &|| {
-                self.ui.window(im_str!("statusbar"))
+                self.ui.window(&self.imlabel("statusbar"))
                     .collapsible(false)
                     .horizontal_scrollbar(false)
                     .scroll_bar(false)
@@ -130,7 +149,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, f: &Fn(), handle_keypress: F) {
         let prev_window_size = self.state.borrow().prev_window_size;
         let prev_window_pos = self.state.borrow().prev_window_pos;
-        self.ui.window(im_str!("{}", window_name))
+        self.ui.window(&self.imlabel(window_name))
             .size(INITIAL_WINDOW_SIZE, ImGuiCond::FirstUseEver)
             .scrollable(true)
             .position((prev_window_pos.0, prev_window_size.1 + prev_window_pos.1), ImGuiCond::FirstUseEver)
@@ -149,7 +168,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
-        self.ui.child_frame(im_str!(""), (0.0, -frame_height))
+        self.ui.child_frame(&self.imlabel(""), (0.0, -frame_height))
             .build(draw_content_fn);
         draw_bottom_bar_fn()
     }
@@ -168,7 +187,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
         self.ui.with_color_var(ImGuiCol::Button, color, || {
-            if self.ui.button(im_str!("{}", label), BUTTON_SIZE) {
+            if self.ui.button(&self.imlabel(label), BUTTON_SIZE) {
                 on_button_activate()
             }
         });
@@ -178,7 +197,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     // maybe it's because the code icons looked like this
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
         self.ui.with_color_var(ImGuiCol::Button, color, || {
-            if self.ui.small_button(im_str!("{}", label)) {
+            if self.ui.small_button(&self.imlabel(label)) {
                 on_button_activate()
             }
         })
@@ -196,7 +215,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) {
         let mut box_input = buf(existing_value);
-        self.ui.input_text_multiline(im_str!("{}", label), &mut box_input, (0., 100.)).build();
+        self.ui.input_text_multiline(&self.imlabel(label), &mut box_input, (0., 100.)).build();
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
         }
@@ -208,7 +227,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let mut flags = ImGuiInputTextFlags::empty();
         flags.set(ImGuiInputTextFlags::EnterReturnsTrue, true);
 
-        let enter_pressed = self.ui.input_text(im_str!("{}", label), &mut box_input)
+        let enter_pressed = self.ui.input_text(&self.imlabel(label), &mut box_input)
             .flags(flags)
             .build();
         if enter_pressed {
@@ -228,7 +247,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let items : Vec<ImString> = items.iter().map(|s| im_str!("{}", s).clone()).collect();
         let items : Vec<&ImStr> = items.iter().map(|s| s.as_ref()).collect();
         self.ui.combo(
-            im_str!("{}", label),
+            &self.imlabel(label),
             &mut selected_item_in_combo_box,
             &items,
             5
@@ -243,11 +262,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_menu(&self, label: &str, draw_menu_items: &Fn()) {
-        self.ui.menu(im_str!("{}", label)).build(draw_menu_items)
+        self.ui.menu(&self.imlabel(label)).build(draw_menu_items)
     }
 
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) {
-        if self.ui.menu_item(im_str!("{}", label)).build() {
+        if self.ui.menu_item(&self.imlabel(label)).build() {
             onselect()
         }
     }
