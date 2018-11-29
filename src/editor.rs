@@ -13,7 +13,9 @@ use super::lang::{
     VariableReference};
 use super::itertools::Itertools;
 use super::pystuff;
+use super::jsstuff;
 use super::indexmap;
+use super::external_func;
 
 
 pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
@@ -807,12 +809,11 @@ impl<'a> Controller {
         Ok(false)
     }
 
-    pub fn set_typespec(&mut self, pyfunc: &pystuff::PyFunc,
+    pub fn set_typespec<F: external_func::ModifyableFunc>(&mut self, mut func: F,
                         typespec: &lang::TypeSpec, nesting_level: &Vec<usize>) {
-        let mut newpyfunc = pyfunc.clone();
+        let mut root_return_type = func.returns();
 
-        let mut return_type = &mut newpyfunc.return_type;
-
+        let mut return_type = &mut root_return_type;
         for param_index in nesting_level.into_iter() {
             return_type = &mut return_type.params[*param_index]
         }
@@ -823,11 +824,13 @@ impl<'a> Controller {
         for _ in 0..num_missing_params {
             return_type.params.push(lang::Type::from_spec(&lang::NULL_TYPESPEC))
         }
-        self.load_function(Box::new(newpyfunc))
+
+        func.set_return_type(root_return_type);
+        self.load_function(func)
     }
 
-    pub fn load_function(&mut self, function: Box<Function>) {
-        self.execution_environment.add_function(function.clone())
+    pub fn load_function<F: Function>(&mut self, function: F) {
+        self.execution_environment.add_function(Box::new(function))
     }
 
     pub fn find_function(&self, id: ID) -> Option<&Box<Function>> {
@@ -919,6 +922,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_console_window(),
             self.render_error_window(),
             self.render_edit_pyfuncs(),
+            self.render_edit_jsfuncs(),
             self.render_status_bar()
         ])
     }
@@ -959,7 +963,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     move |newvalue| {
                         let mut pyfunc1 = pyfunc1.clone();
                         pyfunc1.name = newvalue.to_string();
-                        cont1.borrow_mut().load_function(Box::new(pyfunc1));
+                        cont1.borrow_mut().load_function(pyfunc1);
                     },
                     || {},
                 ),
@@ -982,7 +986,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         cont3.borrow_mut().execution_environment.add_function(Box::new(pyfunc3));
                     },
                 ),
-                self.render_return_type_selector(&pyfunc),
+                self.render_return_type_selector(pyfunc.clone()),
                 self.ui_toolkit.draw_separator(),
                 self.render_pyfunc_test_section(pyfunc.clone()),
             ])
@@ -990,8 +994,50 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         |_|{})
     }
 
-    fn render_return_type_selector(&self, pyfunc: &pystuff::PyFunc) -> T::DrawResult {
-        let return_type = pyfunc.returns();
+    fn render_edit_jsfuncs(&self) -> T::DrawResult {
+        let funcs = self.controller.borrow().execution_environment.list_functions();
+        let jsfuncs = funcs.iter()
+            .filter_map(|f| f.as_ref().downcast_ref::<jsstuff::JSFunc>());
+        self.ui_toolkit.draw_all(jsfuncs.map(|f| self.render_edit_jsfunc(f)).collect())
+    }
+
+    fn render_edit_jsfunc(&self, jsfunc: &jsstuff::JSFunc) -> T::DrawResult {
+        self.ui_toolkit.draw_window(&format!("Edit JSFunc: {}", jsfunc.id), &|| {
+            let cont1 = Rc::clone(&self.controller);
+            let jsfunc1 = jsfunc.clone();
+            let cont3 = Rc::clone(&self.controller);
+            let jsfunc3 = jsfunc.clone();
+
+            self.ui_toolkit.draw_all(vec![
+                self.ui_toolkit.draw_text_input_with_label(
+                    "Function name",
+                    jsfunc.name(),
+                    move |newvalue| {
+                        let mut jsfunc1 = jsfunc1.clone();
+                        jsfunc1.name = newvalue.to_string();
+                        cont1.borrow_mut().load_function(jsfunc1);
+                    },
+                    || {},
+                ),
+                self.ui_toolkit.draw_multiline_text_input_with_label(
+                    "Code",
+                    &jsfunc.eval,
+                    move |newvalue| {
+                        let mut jsfunc3 = jsfunc3.clone();
+                        jsfunc3.eval = newvalue.to_string();
+                        cont3.borrow_mut().execution_environment.add_function(Box::new(jsfunc3));
+                    },
+                ),
+                self.render_return_type_selector(jsfunc.clone()),
+                self.ui_toolkit.draw_separator(),
+//                self.render_jsfunc_test_section(jsfunc.clone()),
+            ])
+        },
+        |_|{})
+    }
+
+    fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
+        let return_type = func.returns();
         let currently_selected_type_index = self.controller.borrow().typespecs().iter()
             .position(|t| return_type.matches_spec(t))
             .unwrap();
@@ -1000,7 +1046,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             .collect();
 
         let cont = Rc::clone(&self.controller);
-        let pyfunc2 = pyfunc.clone();
+        let pyfunc2 = func.clone();
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_combo_box_with_label(
                 "Return type",
@@ -1008,15 +1054,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &typespec_names,
                 move |i| {
                     let new_typespec = cont.borrow().typespecs()[i as usize].clone();
-                    cont.borrow_mut().set_typespec(&pyfunc2, &new_typespec, &vec![])
+                    cont.borrow_mut().set_typespec(pyfunc2.clone(), &new_typespec, &vec![])
                 }
             ),
-            self.render_type_params_selector(pyfunc, &vec![])
+            self.render_type_params_selector(func, &vec![])
         ])
     }
 
-    fn render_type_params_selector(&self, pyfunc: &pystuff::PyFunc, nesting_level: &Vec<usize>) -> T::DrawResult {
-        let mut return_type = pyfunc.returns();
+    fn render_type_params_selector<F: external_func::ModifyableFunc>(
+        &self, func: F, nesting_level: &Vec<usize>) -> T::DrawResult {
+        let mut return_type = func.returns();
         let mut return_type = &mut return_type;
 
         for param_index in nesting_level.into_iter() {
@@ -1040,7 +1087,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             new_nesting_level.push(i);
 
             let cont = Rc::clone(&self.controller);
-            let pyfunc1 = pyfunc.clone();
+            let pyfunc1 = func.clone();
             let nl = new_nesting_level.clone();
             drawn.push(self.ui_toolkit.draw_combo_box_with_label(
                 &format!("##{:?}", nl),
@@ -1048,10 +1095,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &typespec_names,
                 move|i|{
                     let new_typespec = cont.borrow().typespecs()[i as usize].clone();
-                    cont.borrow_mut().set_typespec(&pyfunc1, &new_typespec, &nl);
+                    cont.borrow_mut().set_typespec(pyfunc1.clone(), &new_typespec, &nl);
                 }
             ));
-            drawn.push(self.render_type_params_selector(&pyfunc, &new_nesting_level));
+            drawn.push(self.render_type_params_selector(func.clone(), &new_nesting_level));
         }
 
         self.ui_toolkit.draw_all(drawn)

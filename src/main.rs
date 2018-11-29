@@ -70,9 +70,9 @@ mod env;
 mod code_loading;
 mod editor;
 mod code_generation;
+mod external_func;
 #[cfg(feature = "default")]
 mod pystuff;
-
 
 #[cfg(feature = "javascript")]
 mod fakepystuff;
@@ -80,6 +80,17 @@ mod fakepystuff;
 #[cfg(feature = "javascript")]
 mod pystuff {
     pub use super::fakepystuff::*;
+}
+
+#[cfg(feature = "javascript")]
+mod jsstuff;
+
+#[cfg(feature = "default")]
+mod fakejsstuff;
+
+#[cfg(feature = "default")]
+mod jsstuff {
+    pub use super::fakejsstuff::*;
 }
 
 
@@ -178,12 +189,15 @@ impl Function for Capitalize {
 
 #[cfg(feature = "default")]
 fn load_builtins(controller: &mut Controller) {
-    controller.load_function(Box::new(pystuff::PyFunc::new()));
-    controller.load_function(Box::new(pystuff::PyFunc::new()));
+    controller.load_function(pystuff::PyFunc::new());
+    controller.load_function(pystuff::PyFunc::new());
 }
 
 #[cfg(feature = "javascript")]
-fn load_builtins(_controller: &mut Controller) {}
+fn load_builtins(controller: &mut Controller) {
+    controller.load_function(jsstuff::JSFunc::new());
+    controller.load_function(jsstuff::JSFunc::new());
+}
 
 pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,
@@ -197,8 +211,8 @@ impl CSApp {
             controller: Rc::new(RefCell::new(Controller::new())),
         };
         app.controller.borrow_mut().load_code(&loaded_code);
-        app.controller.borrow_mut().load_function(Box::new(Print{}));
-        app.controller.borrow_mut().load_function(Box::new(Capitalize{}));
+        app.controller.borrow_mut().load_function(Print{});
+        app.controller.borrow_mut().load_function(Capitalize{});
         load_builtins(&mut app.controller.borrow_mut());
         app
     }

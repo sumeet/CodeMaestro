@@ -1,29 +1,39 @@
-use std::collections::HashMap;
-
-use super::lang;
 use super::env;
+use super::lang;
 use super::external_func;
 
+use std::collections::HashMap;
+
 #[derive(Clone)]
-pub struct PyFunc {
-    pub prelude: String,
+pub struct JSFunc {
     pub eval: String,
     pub return_type: lang::Type,
     pub name: String,
     pub id: lang::ID,
 }
 
-impl lang::Function for PyFunc {
+impl JSFunc {
+    pub fn new() -> Self {
+        Self {
+            eval: "".to_string(),
+            return_type: lang::Type::from_spec(&lang::NULL_TYPESPEC),
+            name: "New JSFunc".to_string(),
+            id: lang::new_id(),
+        }
+    }
+}
+
+impl lang::Function for JSFunc {
     fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         lang::Value::Null
     }
 
     fn name(&self) -> &str {
-        "Not implemented"
+        &self.name
     }
 
     fn id(&self) -> lang::ID {
-        uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000000").unwrap()
+        self.id
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
@@ -31,19 +41,17 @@ impl lang::Function for PyFunc {
     }
 
     fn returns(&self) -> lang::Type {
-        lang::Type::from_spec(&lang::NULL_TYPESPEC)
+        self.return_type.clone()
     }
 }
 
-
-impl external_func::ModifyableFunc for PyFunc {
+impl external_func::ModifyableFunc for JSFunc {
     fn set_return_type(&mut self, return_type: lang::Type) {
         self.return_type = return_type
     }
 
     fn clone(&self) -> Self {
-        PyFunc {
-            prelude: self.prelude.clone(),
+        JSFunc {
             eval: self.eval.clone(),
             return_type: self.return_type.clone(),
             name: self.name.clone(),

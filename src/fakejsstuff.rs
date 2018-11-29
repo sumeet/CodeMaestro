@@ -5,15 +5,14 @@ use super::env;
 use super::external_func;
 
 #[derive(Clone)]
-pub struct PyFunc {
-    pub prelude: String,
+pub struct JSFunc {
     pub eval: String,
     pub return_type: lang::Type,
     pub name: String,
     pub id: lang::ID,
 }
 
-impl lang::Function for PyFunc {
+impl lang::Function for JSFunc {
     fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         lang::Value::Null
     }
@@ -36,14 +35,12 @@ impl lang::Function for PyFunc {
 }
 
 
-impl external_func::ModifyableFunc for PyFunc {
-    fn set_return_type(&mut self, return_type: lang::Type) {
-        self.return_type = return_type
+impl external_func::ModifyableFunc for JSFunc {
+    fn set_return_type(&mut self, _return_type: lang::Type) {
     }
 
     fn clone(&self) -> Self {
-        PyFunc {
-            prelude: self.prelude.clone(),
+        JSFunc {
             eval: self.eval.clone(),
             return_type: self.return_type.clone(),
             name: self.name.clone(),
