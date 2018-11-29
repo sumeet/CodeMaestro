@@ -1,8 +1,10 @@
 use super::env;
 use super::lang;
 use super::external_func;
+use super::stdweb;
 
 use std::collections::HashMap;
+use stdweb::unstable::TryInto;
 
 #[derive(Clone)]
 pub struct JSFunc {
@@ -21,11 +23,46 @@ impl JSFunc {
             id: lang::new_id(),
         }
     }
+
+    fn extract(&self, value: stdweb::Value) -> lang::Value {
+        use self::lang::Function;
+        self.ex(value, &self.returns())
+    }
+
+    fn ex(&self, value: stdweb::Value, into_type: &lang::Type) -> lang::Value {
+        if into_type.matches_spec(&lang::STRING_TYPESPEC) {
+            if let (Some(string)) = value.into_string() {
+                return lang::Value::String(string)
+            }
+        } else if into_type.matches_spec(&lang::NUMBER_TYPESPEC) {
+            if let(Ok(int)) = value.try_into() {
+                let val : i64 = int;
+                return lang::Value::Number(val as i128)
+            }
+        } else if into_type.matches_spec(&lang::NULL_TYPESPEC) {
+            if value.is_null() {
+                return lang::Value::Null
+            }
+        } else if into_type.matches_spec(&lang::LIST_TYPESPEC) {
+            if value.is_array() {
+                let vec : Vec<stdweb::Value> = value.try_into().unwrap();
+                let collection_type = into_type.params.first().unwrap();
+                let collected: Vec<lang::Value> = vec.into_iter()
+                    .map(|value| {
+                        self.ex(value, collection_type)
+                    })
+                    .collect();
+                return lang::Value::List(collected)
+            }
+        }
+        lang::Value::Error(lang::Error::JavaScriptDeserializationError)
+    }
 }
 
 impl lang::Function for JSFunc {
     fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        lang::Value::Null
+        let value = js! { return eval(@{&self.eval}); };
+        self.extract(value)
     }
 
     fn name(&self) -> &str {

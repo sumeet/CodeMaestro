@@ -598,8 +598,8 @@ impl<'a> Controller {
         }
     }
 
-    fn get_test_result(&self, pyfunc: &pystuff::PyFunc) -> String {
-        let test_result = self.test_result_by_func_id.get(&pyfunc.id());
+    fn get_test_result(&self, func: &lang::Function) -> String {
+        let test_result = self.test_result_by_func_id.get(&func.id());
         if let(Some(test_result)) = test_result {
             format!("{:?}", test_result.value)
         } else {
@@ -607,11 +607,11 @@ impl<'a> Controller {
         }
     }
 
-    fn run_test(&mut self, pyfunc: &pystuff::PyFunc) {
+    fn run_test(&mut self, func: &lang::Function) {
         // XXX lol ghetto
-        let fc = code_generation::new_function_call_with_placeholder_args(pyfunc);
+        let fc = code_generation::new_function_call_with_placeholder_args(func);
         let result = TestResult::new(self.run(&fc));
-        self.test_result_by_func_id.insert(pyfunc.id(), result);
+        self.test_result_by_func_id.insert(func.id(), result);
     }
 
     fn undo(&mut self) {
@@ -988,7 +988,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ),
                 self.render_return_type_selector(pyfunc.clone()),
                 self.ui_toolkit.draw_separator(),
-                self.render_pyfunc_test_section(pyfunc.clone()),
+                self.render_test_section(pyfunc.clone()),
             ])
         },
         |_|{})
@@ -1030,7 +1030,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ),
                 self.render_return_type_selector(jsfunc.clone()),
                 self.ui_toolkit.draw_separator(),
-//                self.render_jsfunc_test_section(jsfunc.clone()),
+                self.render_test_section(jsfunc.clone()),
             ])
         },
         |_|{})
@@ -1104,13 +1104,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(drawn)
     }
 
-    fn render_pyfunc_test_section(&self, pyfunc: pystuff::PyFunc) -> T::DrawResult {
-        let test_result = self.controller.borrow_mut().get_test_result(&pyfunc);
+    fn render_test_section<F: lang::Function>(&self, func: F) -> T::DrawResult {
+        let test_result = self.controller.borrow_mut().get_test_result(&func);
         let cont = Rc::clone(&self.controller);
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_text(&format!("Test result: {}", test_result)),
             self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
-                cont.borrow_mut().run_test(&pyfunc)
+                cont.borrow_mut().run_test(&func)
             })
         ])
     }

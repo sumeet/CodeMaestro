@@ -82,6 +82,7 @@ pub enum Error {
     // TODO: add metadata into here
     PythonError(String, String),
     PythonDeserializationError,
+    JavaScriptDeserializationError,
 }
 
 #[derive(Clone, Debug)]
