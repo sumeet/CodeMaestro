@@ -260,10 +260,21 @@ impl UiToolkit for YewToolkit {
                             }
                         }
                     },>
-                { for items.into_iter().enumerate().map(|(index, item)| html! {
-                    <option selected=(index == current_item as usize), >
-                        { item }
-                    </option>
+                { for items.into_iter().enumerate().map(|(index, item)| {
+                    let selected = index == current_item as usize;
+                    if selected {
+                        html! {
+                            <option selected={"true"}, >
+                                { item }
+                            </option>
+                        }
+                    } else {
+                        html! {
+                            <option>
+                                { item }
+                            </option>
+                        }
+                    }
                 })}
             </select>
             <label>{ label }</label>
