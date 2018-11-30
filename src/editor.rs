@@ -893,7 +893,7 @@ pub trait UiToolkit {
     fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) -> Self::DrawResult;
     fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str, current_item: i32, items: &[&str], onchange: F) -> Self::DrawResult;
-    fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult;
+    fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -1287,8 +1287,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             })
             .collect();
         self.ui_toolkit.draw_all_on_same_line(
-            render_insertion_options.iter()
-                .map(|c| c.as_ref()).collect()
+            &render_insertion_options.iter()
+                .map(|c| c.as_ref()).collect_vec()
         )
     }
 
@@ -1315,7 +1315,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_assignment(&self, assignment: &Assignment) -> T::DrawResult {
-        self.ui_toolkit.draw_all_on_same_line(vec![
+        self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
                 self.render_inline_editable_button(
                     &assignment.name,
@@ -1345,19 +1345,22 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call(&self, function_call: &FunctionCall) -> T::DrawResult {
-        let render_function_reference_fn = || {
+        // XXX: we've gotta have this conditional because of a quirk with the way the imgui
+        // toolkit works. if render_function_call_arguments doesn't actually draw anything, it
+        // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
+        // one day fix this jumbledness
+        if function_call.args.is_empty() {
             self.render_code(&function_call.function_reference)
-        };
-
-        let mut renderers : Vec<Box<Fn() -> T::DrawResult>> = vec![Box::new(render_function_reference_fn)];
-        renderers.push(Box::new(|| {
-            self.render_function_call_arguments(
-                function_call.function_reference().function_id,
-                function_call.args())}));
-        self.ui_toolkit.draw_all_on_same_line(
-            renderers.iter()
-                .map(|b| b.as_ref())
-                .collect())
+        } else {
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| { self.render_code(&function_call.function_reference) },
+                &|| {
+                    self.render_function_call_arguments(
+                        function_call.function_reference().function_id,
+                        function_call.args())
+                },
+            ])
+        }
     }
 
     fn render_function_reference(&self, function_reference: &FunctionReference) -> T::DrawResult {
@@ -1404,7 +1407,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 None => "\u{f059}".to_string(),
             };
         }
-        self.ui_toolkit.draw_all_on_same_line(vec![
+        self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
                 let cont2 = Rc::clone(&self.controller);
                 let node_id_to_select = argument.id;
@@ -1433,8 +1436,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             }
         }).collect();
 
-        // TODO: implement this
-        // UHHH: what was this^ TODO for?
         self.ui_toolkit.draw_all(draw_results)
     }
 

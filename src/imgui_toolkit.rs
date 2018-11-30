@@ -133,16 +133,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.text(text)
     }
 
-    fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn()>) {
-        let draw_fns = draw_fns.as_slice();
-        if draw_fns.is_empty() { return; }
-        let last_index = draw_fns.len() - 1;
-        let last_draw_fn = draw_fns[last_index];
-        for draw_fn in &draw_fns[0..last_index] {
-            draw_fn();
-            self.ui.same_line_spacing(0.0, 1.0);
+    fn draw_all_on_same_line(&self, draw_fns: &[&Fn()]) {
+        if let Some((last_draw_fn, first_draw_fns)) = draw_fns.split_last() {
+            for draw_fn in first_draw_fns {
+                draw_fn();
+                self.ui.same_line_spacing(0.0, 1.0);
+            }
+            last_draw_fn();
         }
-        last_draw_fn();
     }
 
     fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, f: &Fn(), handle_keypress: F) {

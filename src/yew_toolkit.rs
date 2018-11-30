@@ -164,7 +164,7 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_all_on_same_line(&self, draw_fns: Vec<&Fn() -> Self::DrawResult>) -> Self::DrawResult {
+    fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult {
         html! {
             <div id={ self.incr_last_drawn_element_id().to_string() },
                  style={"display: flex;"}, >
