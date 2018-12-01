@@ -4,17 +4,18 @@ use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 use stdweb::Value;
+use stdweb::traits::IKeyboardEvent;
+use stdweb::traits::IEvent;
 
 pub struct Model {
     app: Option<Rc<CSApp>>,
     link: Rc<RefCell<ComponentLink<Model>>>,
-    keyboard_input_service: KeyboardInputService,
 }
 
 pub enum Msg {
     SetApp(Rc<CSApp>),
-    SetKeypressHandler(Rc<Fn(Keypress)>),
     Redraw,
+    DontRedraw,
 }
 
 impl Component for Model {
@@ -25,7 +26,6 @@ impl Component for Model {
         Model {
             app: None,
             link: Rc::new(RefCell::new(link)),
-            keyboard_input_service: KeyboardInputService::new(),
         }
     }
 
@@ -35,30 +35,8 @@ impl Component for Model {
                 self.app = Some(app);
                 true
             }
-            Msg::SetKeypressHandler(keypress_handler) => {
-                let app = self.app.as_ref();
-                if app.is_none() {
-                    return false;
-                }
-                let link2 = Rc::clone(&self.link);
-                let callback = move |keydata: (String, bool, bool)| {
-                    let keystring = keydata.0;
-                    let ctrl = keydata.1;
-                    let shift = keydata.2 || was_shift_key_pressed(&keystring);
-                    let key = map_key(&keystring);
-                    if let(Some(key)) = key {
-                        let keypress = Keypress::new(key, ctrl, shift);
-                        keypress_handler(keypress)
-                    }
-                    let cb = link2.borrow_mut().send_back(|_: ()| {Msg::Redraw});
-                    cb.emit(());
-                };
-                self.keyboard_input_service.register(Callback::from(callback));
-                false
-            }
-            Msg::Redraw =>   {
-                true
-            }
+            Msg::Redraw => true,
+            Msg::DontRedraw => false,
         }
     }
 }
@@ -68,6 +46,7 @@ const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 
 struct YewToolkit {
     last_drawn_element_id: RefCell<u32>,
+    focused_element_id: RefCell<u32>,
 }
 
 impl UiToolkit for YewToolkit {
@@ -110,15 +89,52 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, f: &Fn() -> Self::DrawResult, _handle_keypress: F) -> Self::DrawResult {
-        html! {
-            <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
-                id={ self.incr_last_drawn_element_id().to_string() }, >
-                <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
-                { f() }
-            </div>
+    fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, f: &Fn() -> Self::DrawResult,
+                                              handle_keypress: Option<F>) -> Self::DrawResult {
+        // if there's a keypress handler provided, then send those keypresses into the app, and like,
+        // prevent the tab key from doing anything
+        if let ((Some(handle_keypress))) = handle_keypress {
+            let handle_keypress_1 = Rc::new(handle_keypress);
+            let handle_keypress_2 = Rc::clone(&handle_keypress_1);
+            html! {
+                <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+                    id={ self.incr_last_drawn_element_id().to_string() },
+                    tabindex=0,
+                    onkeypress=|e| {
+                        if let(Some(keypress)) = map_keypress_event(&e) {
+                            handle_keypress_1(keypress);
+                        }
+                        e.prevent_default();
+                        Msg::Redraw
+                    },
+                    onkeydown=|e| {
+                        if e.key() == "Tab" {
+                            if let(Some(keypress)) = map_keypress_event(&e) {
+                                handle_keypress_2(keypress);
+                            }
+                            e.prevent_default();
+                            Msg::Redraw
+                        } else {
+                            Msg::DontRedraw
+                        }
+                    }, >
+
+                    <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
+                    { f() }
+                </div>
+            }
+        } else {
+            html! {
+                <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+                    id={ self.incr_last_drawn_element_id().to_string() },
+                    tabindex=0, >
+                    <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
+                    { f() }
+                </div>
+            }
         }
     }
+
 
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         // JANK, make it better
@@ -286,13 +302,12 @@ impl YewToolkit {
     fn new() -> Self {
         YewToolkit {
             last_drawn_element_id: RefCell::new(0),
+            focused_element_id: RefCell::new(0),
         }
     }
 
     fn focus_last_drawn_element(&self) {
-        js! {
-            document.body.setAttribute("data-focused-id", @{self.get_last_drawn_element_id()});
-        }
+        self.focused_element_id.replace(self.get_last_drawn_element_id());
     }
 
     fn rgba(&self, color: [f32; 4]) -> String {
@@ -308,6 +323,10 @@ impl YewToolkit {
     fn get_last_drawn_element_id(&self) -> u32 {
         *self.last_drawn_element_id.borrow()
     }
+
+    fn get_focused_element_id(&self) -> u32 {
+        *self.focused_element_id.borrow()
+    }
 }
 
 
@@ -315,11 +334,24 @@ impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         if let(Some(ref app)) = self.app {
             let mut tk = YewToolkit::new();
-            app.draw(&mut tk)
+            let drawn = app.draw(&mut tk);
+            js! {
+                document.body.setAttribute("data-focused-id", @{tk.get_focused_element_id()});
+            }
+            drawn
         } else {
             html! { <p> {"No app"} </p> }
         }
     }
+}
+
+fn map_keypress_event<F: IKeyboardEvent>(keypress_event: &F) -> Option<Keypress> {
+    let keystring_from_event = keypress_event.key();
+    let appkey = map_key(&keystring_from_event)?;
+    let was_shift_pressed =
+        keypress_event.shift_key() ||
+        was_shift_key_pressed(&keystring_from_event);
+    Some(Keypress::new(appkey, keypress_event.ctrl_key(), was_shift_pressed))
 }
 
 fn map_key(key: &str) -> Option<AppKey> {
@@ -351,72 +383,41 @@ pub fn draw_app(app: Rc<CSApp>) {
     yew::initialize();
 
     js! {
+        var CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = null;
+
+        var findClosestFocusable = function(el) {
+            return el.closest("[tabindex='0']");
+        };
+
         var callback = function() {
             var focusedId = document.body.getAttribute("data-focused-id");
-            console.log("focusedID: " + JSON.stringify(focusedId));
-            if (focusedId) {
+            if (focusedId && focusedId > 0) {
                 var el = document.getElementById(focusedId);
                 if (el) {
+                   console.log("focusing: " + el.id);
+                   let closestFocusable = findClosestFocusable(el);
+                   if (closestFocusable) {
+                       CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = closestFocusable;
+                   }
                    el.focus();
                 }
+            } else if (CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS) {
+                CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS.focus();
             }
         };
         var observer = new MutationObserver(callback);
         var config = {childList: true, subtree: true};
         observer.observe(window.document.documentElement, config);
+
+        // if the user focuses an element, then let's mark that as the currently focused
+        // element
+        document.addEventListener("focusin", function(e) {
+            document.body.setAttribute("data-focused-id", e.target.id);
+        });
     }
 
     let mut yew_app = App::<Model>::new().mount_to_body();
     yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
-    let app2 = Rc::clone(&app);
-    yew_app.send_message(Msg::SetKeypressHandler(Rc::new(move |key| {
-        app2.controller.borrow_mut().handle_keypress_in_code_window(key)
-    })));
     yew::run_loop()
-}
-
-
-// copied from https://github.com/DenisKolodin/yew/issues/333#issuecomment-407585000
-//
-// the example there uses a Drop to undo the binding, but i don't think we'll need that.
-// pretty sure we'll be fine here if we just register once
-pub struct KeyboardInputService {}
-
-pub struct KeyboardInputTask(Option<Value>);
-
-impl KeyboardInputService {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn register(&mut self, callback: Callback<(String, bool, bool)>) -> KeyboardInputTask {
-        let cb = move |key, ctrl, shift| {
-            callback.emit((key, ctrl, shift));
-        };
-        let listener = js! {
-            var callback = @{cb};
-
-            // browsers usually implement tab key navigation on keydown instead of keyup. so we stop
-            // that from doing anything in here
-            window.addEventListener("keydown", function(e) {
-                if (e.key == "Tab") {
-                    console.log("preventing tab from doing anything");
-                    e.preventDefault();
-                }
-            });
-
-            // for the rest of the keys
-            // BUG: right now you have to keep shift pressed while releasing a key, or else it won't
-            // register as shift being pressed.
-            var listener = function(e) {
-                var keystring = e.key;
-                console.log("keystring pressed: " + keystring);
-                callback(keystring, e.ctrlKey, e.shiftKey);
-            };
-            window.addEventListener("keyup", listener);
-            return listener;
-        };
-        return KeyboardInputTask(Some(listener))
-    }
 }
 

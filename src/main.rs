@@ -4,7 +4,7 @@
 #![feature(nll)]
 #![feature(arbitrary_self_types)]
 #![feature(slice_concat_ext)]
-#![recursion_limit="128"]
+#![recursion_limit="256"]
 
 
 #[cfg(feature = "default")]

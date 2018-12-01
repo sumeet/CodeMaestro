@@ -881,7 +881,7 @@ pub trait UiToolkit {
     type DrawResult;
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
-    fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: F) -> Self::DrawResult;
+    fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_separator(&self) -> Self::DrawResult;
@@ -991,7 +991,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 self.render_test_section(pyfunc.clone()),
             ])
         },
-        |_|{})
+        None::<fn(Keypress)>)
     }
 
     fn render_edit_jsfuncs(&self) -> T::DrawResult {
@@ -1033,7 +1033,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 self.render_test_section(jsfunc.clone()),
             ])
         },
-        |_|{})
+        None::<fn(Keypress)>)
     }
 
     fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
@@ -1132,7 +1132,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_window("Console", &|| {
             self.ui_toolkit.draw_text_box(controller.borrow().read_console())
         },
-        |_|{})
+        None::<fn(Keypress)>)
     }
 
     fn render_error_window(&self) -> T::DrawResult {
@@ -1140,7 +1140,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_window("Errors", &|| {
             self.ui_toolkit.draw_text_box(controller.borrow().read_error_console())
         },
-        |_|{})
+        None::<fn(Keypress)>)
     }
 
     fn render_code_window(&self) -> T::DrawResult {
@@ -1157,10 +1157,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         &||{ self.render_code(code) },
                         &||{ self.render_run_button(code) }
                     )},
-                    move |keypress| {
+                    Some(move |keypress| {
                         let mut controller = cont.borrow_mut();
                         controller.handle_keypress_in_code_window(keypress)
-                    })
+                    }))
             }
         }
     }
