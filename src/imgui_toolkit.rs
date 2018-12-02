@@ -143,9 +143,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_window<F: Fn(Keypress)>(&self, window_name: &str, f: &Fn(), handle_keypress: F) {
+    fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, f: &Fn(),
+                                              handle_keypress: Option<F>) {
         let prev_window_size = self.state.borrow().prev_window_size;
         let prev_window_pos = self.state.borrow().prev_window_pos;
+
         self.ui.window(&self.imlabel(window_name))
             .size(INITIAL_WINDOW_SIZE, ImGuiCond::FirstUseEver)
             .scrollable(true)
@@ -157,7 +159,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
                 if let(Some(keypress)) = self.keypress {
                     if self.ui.is_window_focused() {
-                        handle_keypress(keypress)
+                        if let(Some(ref handle_keypress)) = handle_keypress {
+                            handle_keypress(keypress)
+                        }
                     }
                 }
             });
