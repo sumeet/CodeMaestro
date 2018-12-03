@@ -83,6 +83,7 @@ pub enum Error {
     PythonError(String, String),
     PythonDeserializationError,
     JavaScriptDeserializationError,
+    JavaScriptError(String, String),
 }
 
 #[derive(Clone, Debug)]

@@ -5,6 +5,9 @@ use super::stdweb;
 
 use std::collections::HashMap;
 use stdweb::unstable::TryInto;
+use stdweb::web::error;
+use stdweb::traits::IError;
+use stdweb::private::ConversionError;
 
 #[derive(Clone)]
 pub struct JSFunc {
@@ -59,10 +62,35 @@ impl JSFunc {
     }
 }
 
+// caveats regarding this eval:
+// 1) we don't support asynchronous code at all ATM
+// 2) down the line, any JavaScript Error thrown will get converted into a
+//    lang::Error::JavascriptError with a tuple containing (JS exception name, JS exception message)
+// 3) any instance of Error returned (not thrown) will also be treated as an error
+// 4) anything thrown that's not an Error, will result in a lang::JavascriptDeserializationError
+fn eval(js_code: &str) -> Result<stdweb::Value, (String, String)> {
+    let value = js! {
+        try {
+            return eval(@{js_code});
+        } catch(err) {
+            return err;
+        }
+    };
+    if let(Some(value)) = value.as_reference() {
+        let error : Result<error::Error, ConversionError> = value.try_into();
+        if let(Ok(error)) = error {
+            return Err((error.name(), error.message()));
+        }
+    }
+    Ok(value)
+}
+
 impl lang::Function for JSFunc {
     fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        let value = js! { return eval(@{&self.eval}); };
-        self.extract(value)
+        match eval(&self.eval) {
+            Err((err_name, err_string)) => lang::Value::Error(lang::Error::JavaScriptError(err_name, err_string)),
+            Ok(value) => self.extract(value)
+        }
     }
 
     fn name(&self) -> &str {

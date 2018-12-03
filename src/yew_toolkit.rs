@@ -3,13 +3,11 @@ use super::editor::{Key as AppKey,Keypress};
 use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use stdweb::Value;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::traits::IEvent;
 
 pub struct Model {
     app: Option<Rc<CSApp>>,
-    link: Rc<RefCell<ComponentLink<Model>>>,
 }
 
 pub enum Msg {
@@ -22,10 +20,9 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
         Model {
             app: None,
-            link: Rc::new(RefCell::new(link)),
         }
     }
 
