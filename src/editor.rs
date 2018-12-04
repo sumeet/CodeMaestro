@@ -588,9 +588,9 @@ impl<'a> Controller {
     fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
         let genie = self.code_genie();
         let (next_selection_id, editing) = post_insertion_cursor(&code_node);
-        let new_code = self.mutation_master.insert_code(
-            code_node, insertion_point, genie.as_ref().unwrap(),
-            self.selected_node_id);
+        let new_code = self.mutation_master.insert_code(code_node,
+                                                                   insertion_point,
+                                                                   genie.as_ref().unwrap());
         self.loaded_code.as_mut().unwrap().replace(&new_code);
         if editing {
             self.mark_as_editing(next_selection_id)
@@ -1273,6 +1273,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             controller.hide_insert_code_menu();
                             controller.insert_code(new_code_node.clone(), insertion_point);
                         } else {
+                            controller.undo();
                             controller.hide_insert_code_menu();
                         }
                     })
@@ -1586,10 +1587,8 @@ impl MutationMaster {
         MutationMaster { history: RefCell::new(vec![]), current_index: RefCell::new(-1) }
     }
 
-    fn insert_code(
-        &self, node_to_insert: CodeNode, insertion_point: InsertionPoint, genie: &CodeGenie,
-        cursor_position: Option<ID>,
-    ) -> CodeNode {
+    fn insert_code(&self, node_to_insert: CodeNode, insertion_point: InsertionPoint,
+                   genie: &CodeGenie) -> CodeNode {
         let parent = genie.find_parent(insertion_point.node_id());
         if parent.is_none() {
             panic!("unable to insert new code, couldn't find parent to insert into")
@@ -1599,18 +1598,17 @@ impl MutationMaster {
         match insertion_point {
             InsertionPoint::Before(_) | InsertionPoint::After(_) => {
                 self.insert_new_expression_in_block(
-                    node_to_insert, insertion_point, parent.clone(), genie,
-                    cursor_position)
+                    node_to_insert, insertion_point, parent.clone(), genie)
+
             }
             InsertionPoint::Argument(argument_id) => {
-                self.insert_expression_into_argument(
-                    node_to_insert, argument_id, genie, cursor_position)
+                self.insert_expression_into_argument(node_to_insert, argument_id, genie)
             }
         }
     }
 
     fn insert_expression_into_argument(&self, code_node: CodeNode, argument_id: ID,
-                                       genie: &CodeGenie, cursor_position: Option<ID>) -> CodeNode {
+                                       genie: &CodeGenie) -> CodeNode {
         let mut argument = genie.find_node(argument_id).unwrap().into_argument().clone();
         argument.expr = Box::new(code_node);
         let mut root = genie.root().clone();
@@ -1619,8 +1617,7 @@ impl MutationMaster {
     }
 
     fn insert_new_expression_in_block(&self, code_node: CodeNode, insertion_point: InsertionPoint,
-                                      parent: CodeNode, genie: &CodeGenie,
-                                      cursor_position: Option<ID>) -> CodeNode {
+                                      parent: CodeNode, genie: &CodeGenie) -> CodeNode {
         match parent {
             CodeNode::Block(mut block) => {
                 let insertion_point_in_block_exprs = block.expressions.iter()
@@ -1642,7 +1639,6 @@ impl MutationMaster {
 
                 let mut root = genie.root().clone();
                 root.replace(&CodeNode::Block(block));
-//                self.log_new_mutation(&root, cursor_position);
                 root
             },
             _ => panic!("should be inserting into type parent, got {:?} instead", parent)
