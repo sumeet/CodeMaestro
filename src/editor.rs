@@ -618,14 +618,14 @@ impl<'a> Controller {
     fn undo(&mut self) {
         if let Some(previous_root) = self.mutation_master.undo() {
             self.loaded_code.as_mut().unwrap().replace(&previous_root.code_node);
-            self.selected_node_id = previous_root.cursor_position;
+            self.set_selected_node_id(previous_root.cursor_position);
         }
     }
 
     fn redo(&mut self) {
         if let Some(next_root) = self.mutation_master.redo() {
             self.loaded_code.as_mut().unwrap().replace(&next_root.code_node);
-            self.selected_node_id = next_root.cursor_position;
+            self.set_selected_node_id(next_root.cursor_position);
         }
     }
 
@@ -634,6 +634,8 @@ impl<'a> Controller {
         let genie = self.code_genie();
         let deletion_result = self.mutation_master.delete_code(
             &node_to_delete, genie.as_ref().unwrap(), self.selected_node_id);
+        // TODO: these save current state calls can go inside of the mutation master
+        self.save_current_state_to_undo_history();
         self.loaded_code.as_mut().unwrap().replace(&deletion_result.new_root);
         // TODO: intelligently select a nearby node to select after deleting
         self.set_selected_node_id(deletion_result.new_cursor_position);
@@ -715,17 +717,14 @@ impl<'a> Controller {
     fn handle_cancel(&mut self) {
         self.editing = false;
         if self.insert_code_menu.is_none() { return }
-
-        match self.insert_code_menu.as_ref().unwrap().insertion_point {
-            InsertionPoint::After(id) => self.selected_node_id = Some(id),
-            InsertionPoint::Before(id) => self.selected_node_id = Some(id),
-            InsertionPoint::Argument(id) => self.selected_node_id = Some(id),
-        }
+        self.undo();
         self.hide_insert_code_menu()
     }
 
+    // TODO: factor duplicate code between this method and the next
     fn set_insertion_point_on_previous_line_in_block(&mut self) {
         if let Some(expression_id) = self.currently_focused_block_expression() {
+            self.save_current_state_to_undo_history();
             self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
                 InsertionPoint::Before(expression_id),
                 &self.execution_environment,
@@ -739,6 +738,7 @@ impl<'a> Controller {
 
     fn set_insertion_point_on_next_line_in_block(&mut self) {
         if let Some(expression_id) = self.currently_focused_block_expression() {
+            self.save_current_state_to_undo_history();
             self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
                 InsertionPoint::After(expression_id),
                 &self.execution_environment,
@@ -840,7 +840,6 @@ impl<'a> Controller {
 
     pub fn load_code(&mut self, code_node: &CodeNode) {
         self.loaded_code = Some(code_node.clone());
-        self.mutation_master.seed_initial_history(code_node)
     }
 
     // should run the loaded code node
@@ -876,6 +875,11 @@ impl<'a> Controller {
         self.loaded_code.as_ref()?.find_node(self.selected_node_id?)
     }
 
+    pub fn save_current_state_to_undo_history(&mut self) {
+        if let Some(ref loaded_code) = self.loaded_code {
+            self.mutation_master.log_new_mutation(loaded_code, self.selected_node_id)
+        }
+    }
 }
 
 pub trait UiToolkit {
@@ -1547,12 +1551,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 controller.borrow_mut().loaded_code.as_mut().unwrap().replace(&new_node)
             },
             move || {
-                let selected_node_id = controller2.borrow().selected_node_id;
                 let mut controller = controller2.borrow_mut();
                 controller.editing = false;
-                let loaded_code = controller.loaded_code.as_ref().unwrap();
-                controller.mutation_master.log_new_mutation(loaded_code, selected_node_id);
-            }
+            },
+            // TODO: i think we need another callback for what happens when you CANCEL
         )
     }
 }
@@ -1584,12 +1586,6 @@ impl MutationMaster {
         MutationMaster { history: RefCell::new(vec![]), current_index: RefCell::new(-1) }
     }
 
-    pub fn seed_initial_history(&self, code_node: &CodeNode) {
-        self.history.borrow_mut().clear();
-        *self.current_index.borrow_mut() = -1;
-        self.log_new_mutation(code_node, None);
-    }
-
     fn insert_code(
         &self, node_to_insert: CodeNode, insertion_point: InsertionPoint, genie: &CodeGenie,
         cursor_position: Option<ID>,
@@ -1619,7 +1615,6 @@ impl MutationMaster {
         argument.expr = Box::new(code_node);
         let mut root = genie.root().clone();
         root.replace(&CodeNode::Argument(argument));
-        self.log_new_mutation(&root, cursor_position);
         root
     }
 
@@ -1647,7 +1642,7 @@ impl MutationMaster {
 
                 let mut root = genie.root().clone();
                 root.replace(&CodeNode::Block(block));
-                self.log_new_mutation(&root, cursor_position);
+//                self.log_new_mutation(&root, cursor_position);
                 root
             },
             _ => panic!("should be inserting into type parent, got {:?} instead", parent)
@@ -1680,7 +1675,7 @@ impl MutationMaster {
                 let mut new_root = genie.root().clone();
                 new_root.replace(&CodeNode::Block(new_block));
 
-                self.log_new_mutation(&new_root, new_cursor_position);
+//                self.log_new_mutation(&new_root, new_cursor_position);
                 DeletionResult::new(new_root, new_cursor_position)
             }
             _ => {
@@ -1703,14 +1698,15 @@ impl MutationMaster {
 
     pub fn undo(&self) -> Option<UndoHistoryCell> {
         let mut i = self.current_index.borrow_mut();
-        if *i <= 0 {
+        if *i < 0 {
             return None
         }
-        *i -= 1;
         // after moving the current index back, if we're still at a valid value, then there's still
         // history we can go back to
         if *i >= 0 {
-            self.history.borrow().get(*i as usize).cloned()
+            let previous_state = self.history.borrow().get(*i as usize).cloned();
+            *i -= 1;
+            previous_state
         } else {
             None
         }
