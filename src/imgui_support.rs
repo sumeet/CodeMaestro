@@ -155,7 +155,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, clear_color: 
                         if pressed {
                             match input.virtual_keycode {
                                 Some(key) => {
-                                    if let(Some(key)) = map_key(key) {
+                                    if let Some(key) = map_key(key) {
                                         keypress = Some(Keypress::new(
                                             key, imgui.key_ctrl(), imgui.key_shift()));
                                     }

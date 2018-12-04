@@ -157,9 +157,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 self.state.borrow_mut().prev_window_size = self.ui.get_window_size();
                 self.state.borrow_mut().prev_window_pos = self.ui.get_window_pos();
 
-                if let(Some(keypress)) = self.keypress {
+                if let Some(keypress) = self.keypress {
                     if self.ui.is_window_focused() {
-                        if let(Some(ref handle_keypress)) = handle_keypress {
+                        if let Some(ref handle_keypress) = handle_keypress {
                             handle_keypress(keypress)
                         }
                     }

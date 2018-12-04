@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use super::pyo3::prelude::*;
+use super::pyo3::types::{PyIterator,PyObjectRef};
 use super::lang;
 use super::env;
 use super::external_func;
@@ -51,11 +52,11 @@ impl PyFunc {
 
     fn ex(&self, pyobjectref: &PyObjectRef, into_type: &lang::Type) -> lang::Value {
         if into_type.matches_spec(&lang::STRING_TYPESPEC) {
-            if let(Ok(string)) = pyobjectref.extract() {
+            if let Ok(string) = pyobjectref.extract() {
                 return lang::Value::String(string)
             }
         } else if into_type.matches_spec(&lang::NUMBER_TYPESPEC) {
-            if let(Ok(int)) = pyobjectref.extract() {
+            if let Ok(int) = pyobjectref.extract() {
                 return lang::Value::Number(int)
             }
         } else if into_type.matches_spec(&lang::NULL_TYPESPEC) {
@@ -104,11 +105,11 @@ impl lang::Function for PyFunc {
         PY.with(|py| {
             let result = py.py().run(&self.prelude, None, None);
 
-            if let(Err(e)) = result {
+            if let Err(e) = result {
                 lang::Value::Error(self.py_exception_to_error(&e))
             } else {
                 let eval_result = py.py().eval(self.eval.as_ref(), None, None);
-                if let(Err(pyerr)) = eval_result {
+                if let Err(pyerr) = eval_result {
                     return lang::Value::Error(self.py_exception_to_error(&pyerr))
                 }
                 let eval_result = eval_result.unwrap();
