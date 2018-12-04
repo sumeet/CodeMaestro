@@ -90,7 +90,7 @@ impl UiToolkit for YewToolkit {
                                               handle_keypress: Option<F>) -> Self::DrawResult {
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
-        if let ((Some(handle_keypress))) = handle_keypress {
+        if let Some(handle_keypress) = handle_keypress {
             let handle_keypress_1 = Rc::new(handle_keypress);
             let handle_keypress_2 = Rc::clone(&handle_keypress_1);
             html! {
@@ -98,7 +98,7 @@ impl UiToolkit for YewToolkit {
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     onkeypress=|e| {
-                        if let(Some(keypress)) = map_keypress_event(&e) {
+                        if let Some(keypress) = map_keypress_event(&e) {
                             handle_keypress_1(keypress);
                         }
                         e.prevent_default();
@@ -106,7 +106,7 @@ impl UiToolkit for YewToolkit {
                     },
                     onkeydown=|e| {
                         if e.key() == "Tab" {
-                            if let(Some(keypress)) = map_keypress_event(&e) {
+                            if let Some(keypress) = map_keypress_event(&e) {
                                 handle_keypress_2(keypress);
                             }
                             e.prevent_default();
@@ -263,7 +263,7 @@ impl UiToolkit for YewToolkit {
             <select onchange=|event| {
                         match event {
                             ChangeData::Select(elem) => {
-                                if let(Some(selected_index)) = elem.selected_index() {
+                                if let Some(selected_index) = elem.selected_index() {
                                     onchange(selected_index as i32);
                                 }
                                 Msg::Redraw
@@ -329,7 +329,7 @@ impl YewToolkit {
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-        if let(Some(ref app)) = self.app {
+        if let Some(ref app) = self.app {
             let mut tk = YewToolkit::new();
             let drawn = app.draw(&mut tk);
             js! {

@@ -34,11 +34,11 @@ impl JSFunc {
 
     fn ex(&self, value: stdweb::Value, into_type: &lang::Type) -> lang::Value {
         if into_type.matches_spec(&lang::STRING_TYPESPEC) {
-            if let (Some(string)) = value.into_string() {
+            if let Some(string) = value.into_string() {
                 return lang::Value::String(string)
             }
         } else if into_type.matches_spec(&lang::NUMBER_TYPESPEC) {
-            if let(Ok(int)) = value.try_into() {
+            if let Ok(int) = value.try_into() {
                 let val : i64 = int;
                 return lang::Value::Number(val as i128)
             }
@@ -76,9 +76,9 @@ fn eval(js_code: &str) -> Result<stdweb::Value, (String, String)> {
             return err;
         }
     };
-    if let(Some(value)) = value.as_reference() {
+    if let Some(value) = value.as_reference() {
         let error : Result<error::Error, ConversionError> = value.try_into();
-        if let(Ok(error)) = error {
+        if let Ok(error) = error {
             return Err((error.name(), error.message()));
         }
     }

@@ -164,7 +164,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
                     f.name().to_lowercase().contains(&input_str)
                 }).collect()
         }
-        if let(Some(ref return_type)) = search_params.return_type {
+        if let Some(ref return_type) = search_params.return_type {
             functions = functions.into_iter()
                 .filter(|f| f.returns().matches(&return_type)).collect()
         }
@@ -185,7 +185,7 @@ struct InsertVariableReferenceOptionGenerator {
 
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
-        let mut assignments = if let(Some(search_type)) = &search_params.return_type {
+        let mut assignments = if let Some(search_type) = &search_params.return_type {
             // XXX: searching by typespec ID is fuxkkkkeeddddddd
             self.assignments_by_type_id.get(&search_type.typespec.id).map_or_else(
                 || vec![],
@@ -224,7 +224,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
         let input_str = &search_params.input_str;
-        if let(Some(ref return_type)) = search_params.return_type {
+        if let Some(ref return_type) = search_params.return_type {
             if return_type.matches_spec(&lang::STRING_TYPESPEC) {
                 options.push(
                     InsertCodeMenuOption {
@@ -436,7 +436,7 @@ impl<'a> Navigation<'a> {
             return None
         }
         let mut go_back_from_id = code_node_id.unwrap();
-        while let(Some(prev_node)) = self.prev_node_from(go_back_from_id) {
+        while let Some(prev_node) = self.prev_node_from(go_back_from_id) {
            if self.is_navigatable(prev_node) {
                return Some(prev_node.id())
            } else {
@@ -453,7 +453,7 @@ impl<'a> Navigation<'a> {
         }
         let parent = parent.unwrap();
         // first try the previous sibling
-        if let(Some(previous_sibling)) = parent.previous_child(code_node_id) {
+        if let Some(previous_sibling) = parent.previous_child(code_node_id) {
             // but since we're going back, if the previous sibling has children, then let's
             // select the last one. that feels more ergonomic while moving backwards
             let children = previous_sibling.all_children_dfs();
@@ -470,7 +470,7 @@ impl<'a> Navigation<'a> {
 
     pub fn navigate_forward_from(&self, code_node_id: Option<ID>) -> Option<ID> {
         let mut go_back_from_id = code_node_id;
-        while let(Some(prev_node)) = self.next_node_from(go_back_from_id) {
+        while let Some(prev_node) = self.next_node_from(go_back_from_id) {
             if self.is_navigatable(prev_node) {
                 return Some(prev_node.id())
             } else {
@@ -491,13 +491,13 @@ impl<'a> Navigation<'a> {
         let first_child = children.get(0);
 
         // if the selected node has children, then return the first child. depth first
-        if let(Some(first_child)) = first_child {
+        if let Some(first_child) = first_child {
             return Some(first_child)
         }
 
         let mut node_id_to_find_next_sibling_of = selected_node_id;
-        while let(Some(parent))= self.code_genie.find_parent(node_id_to_find_next_sibling_of) {
-            if let(Some(next_sibling)) = parent.next_child(node_id_to_find_next_sibling_of) {
+        while let Some(parent) = self.code_genie.find_parent(node_id_to_find_next_sibling_of) {
+            if let Some(next_sibling) = parent.next_child(node_id_to_find_next_sibling_of) {
                 return Some(next_sibling)
             }
             // if there is no sibling, then try going to the next sibling of the parent, recursively
@@ -600,7 +600,7 @@ impl<'a> Controller {
 
     fn get_test_result(&self, func: &lang::Function) -> String {
         let test_result = self.test_result_by_func_id.get(&func.id());
-        if let(Some(test_result)) = test_result {
+        if let Some(test_result) = test_result {
             format!("{:?}", test_result.value)
         } else {
             "Test not run yet".to_string()
@@ -615,14 +615,14 @@ impl<'a> Controller {
     }
 
     fn undo(&mut self) {
-        if let(Some(previous_root)) = self.mutation_master.undo() {
+        if let Some(previous_root) = self.mutation_master.undo() {
             self.loaded_code.as_mut().unwrap().replace(&previous_root.code_node);
             self.selected_node_id = previous_root.cursor_position;
         }
     }
 
     fn redo(&mut self) {
-        if let(Some(next_root)) = self.mutation_master.redo() {
+        if let Some(next_root) = self.mutation_master.redo() {
             self.loaded_code.as_mut().unwrap().replace(&next_root.code_node);
             self.selected_node_id = next_root.cursor_position;
         }
@@ -645,7 +645,7 @@ impl<'a> Controller {
         }
         let genie = genie.unwrap();
         let selected_id = self.selected_node_id.unwrap();
-        if let(Some(code_id)) = genie.find_expression_inside_block_that_contains(selected_id) {
+        if let Some(code_id) = genie.find_expression_inside_block_that_contains(selected_id) {
             self.set_selected_node_id(Some(code_id))
         }
     }
@@ -676,7 +676,7 @@ impl<'a> Controller {
                 self.try_select_forward_one_node()
             },
             (false, Key::C) => {
-                if let(Some(id)) = self.selected_node_id {
+                if let Some(id) = self.selected_node_id {
                     self.mark_as_editing(id)
                 }
             },
@@ -724,7 +724,7 @@ impl<'a> Controller {
     }
 
     fn set_insertion_point_on_previous_line_in_block(&mut self) {
-        if let(Some(expression_id)) = self.currently_focused_block_expression() {
+        if let Some(expression_id) = self.currently_focused_block_expression() {
             self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
                 InsertionPoint::Before(expression_id),
                 &self.execution_environment,
@@ -737,7 +737,7 @@ impl<'a> Controller {
     }
 
     fn set_insertion_point_on_next_line_in_block(&mut self) {
-        if let(Some(expression_id)) = self.currently_focused_block_expression() {
+        if let Some(expression_id) = self.currently_focused_block_expression() {
             self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
                 InsertionPoint::After(expression_id),
                 &self.execution_environment,
@@ -784,7 +784,7 @@ impl<'a> Controller {
     pub fn try_select_back_one_node(&mut self) {
         let genie = self.code_genie();
         let navigation = Navigation::new(genie.as_ref().unwrap());
-        if let(Some(node_id)) = navigation.navigate_back_from(self.selected_node_id) {
+        if let Some(node_id) = navigation.navigate_back_from(self.selected_node_id) {
             self.set_selected_node_id(Some(node_id))
         }
     }
@@ -792,7 +792,7 @@ impl<'a> Controller {
     pub fn try_select_forward_one_node(&mut self) {
         let genie = self.code_genie();
         let navigation = Navigation::new(genie.as_ref().unwrap());
-        if let(Some(node_id)) = navigation.navigate_forward_from(self.selected_node_id) {
+        if let Some(node_id) = navigation.navigate_forward_from(self.selected_node_id) {
             self.set_selected_node_id(Some(node_id))
         }
 
@@ -1117,7 +1117,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_status_bar(&self) -> T::DrawResult {
         self.ui_toolkit.draw_statusbar(&|| {
-            if let(Some(node)) = self.controller.borrow().get_selected_node() {
+            if let Some(node) = self.controller.borrow().get_selected_node() {
                 self.ui_toolkit.draw_text(
                     &format!("SELECTED: {}", node.description())
                 )
@@ -1264,7 +1264,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     },
                     move ||{
                         let mut controller = controller_2.borrow_mut();
-                        if let(Some(ref new_code_node)) = new_code_node {
+                        if let Some(ref new_code_node) = new_code_node {
                             controller.hide_insert_code_menu();
                             controller.insert_code(new_code_node.clone(), insertion_point);
                         } else {
@@ -1332,7 +1332,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let controller = self.controller.borrow();
         let loaded_code = controller.loaded_code.as_ref().unwrap();
         let assignment = loaded_code.find_node(variable_reference.assignment_id);
-        if let(Some(CodeNode::Assignment(assignment))) = assignment {
+        if let Some(CodeNode::Assignment(assignment)) = assignment {
             self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {})
         } else {
             self.ui_toolkit.draw_button("Variable reference not found", RED_COLOR, &|| {})
@@ -1377,7 +1377,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let mut color = RED_COLOR;
         let mut function_name = format!("Error: function ID {} not found", function_id);
 
-        if let(Some(function)) = self.controller.borrow_mut().find_function(function_id) {
+        if let Some(function) = self.controller.borrow_mut().find_function(function_id) {
             color = BLUE_COLOR;
             function_name = function.name().to_string();
         }
@@ -1429,7 +1429,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
         let draw_results = expected_args.iter().map(|expected_arg| {
             // TODO: display the argument name somewhere in here?
-            if let(Some(provided_arg)) = provided_arg_by_definition_id.get(&expected_arg.id) {
+            if let Some(provided_arg) = provided_arg_by_definition_id.get(&expected_arg.id) {
                 self.render_code(&CodeNode::Argument(provided_arg.clone()))
             } else {
                 self.render_missing_function_argument(expected_arg)

@@ -250,9 +250,9 @@ impl CodeNode {
         let children = self.children();
         let position = children.iter()
             .position(|n| n.id() == node_id);
-        if let(Some(position)) = position {
+        if let Some(position) = position {
             if position > 0 {
-                if let (Some(next)) = children.get(position - 1) {
+                if let Some(next) = children.get(position - 1) {
                     return Some(next)
                 }
             }
@@ -264,8 +264,8 @@ impl CodeNode {
         let children = self.children();
         let position = children.iter()
             .position(|n| n.id() == node_id);
-        if let(Some(position)) = position {
-            if let (Some(next)) = children.get(position + 1) {
+        if let Some(position) = position {
+            if let Some(next) = children.get(position + 1) {
                 return Some(next)
             }
         }
@@ -366,7 +366,7 @@ impl CodeNode {
             Some(self)
         } else {
             for child in self.children() {
-                if let(Some(found_node)) = child.find_node(id) {
+                if let Some(found_node) = child.find_node(id) {
                     return Some(found_node)
                 }
             }
@@ -384,7 +384,7 @@ impl CodeNode {
                     return Some(self)
                 } else {
                     let found_parent = child.find_parent(id);
-                    if let(Some(code_node)) = found_parent {
+                    if let Some(code_node) = found_parent {
                         return Some(code_node)
                     }
                 }

@@ -1,4 +1,3 @@
-#![feature(pattern_parentheses)]
 #![feature(unboxed_closures)]
 #![feature(specialization)]
 #![feature(nll)]
