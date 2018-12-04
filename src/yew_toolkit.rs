@@ -105,7 +105,9 @@ impl UiToolkit for YewToolkit {
                         Msg::Redraw
                     },
                     onkeydown=|e| {
-                        if e.key() == "Tab" {
+                        // lol for these special keys we have to listen on keydown, but the
+                        // rest we can do keypress :/
+                        if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" {
                             if let Some(keypress) = map_keypress_event(&e) {
                                 handle_keypress_2(keypress);
                             }
@@ -368,6 +370,7 @@ fn map_key(key: &str) -> Option<AppKey> {
         "tab" => Some(AppKey::Tab),
         "arrowleft" => Some(AppKey::LeftArrow),
         "arrowright" => Some(AppKey::RightArrow),
+        "esc" | "escape" => Some(AppKey::Escape),
         _ => None
     }
 }
