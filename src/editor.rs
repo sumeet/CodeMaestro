@@ -322,10 +322,7 @@ impl<'a> CodeGenie<'a> {
                 // if this dies, it means we found a block that's a parent of a block expression,
                 // but then when we looked inside the block it didn't contain that expression. this
                 // really shouldn't happen
-                let position_in_block = block.expressions.iter()
-                    .position(|code| code.id() == block_expression_id)
-                    .unwrap();
-
+                let position_in_block = self.find_position_in_block(&block, block_expression_id).unwrap();
                 block.expressions.iter()
                     // position in the block is 0 indexed, so this will take every node up TO it
                     .take(position_in_block)
@@ -336,6 +333,10 @@ impl<'a> CodeGenie<'a> {
             },
             _ => vec![]
         }
+    }
+
+    fn find_position_in_block(&self, block: &lang::Block, block_expression_id: ID) -> Option<usize> {
+        block.expressions.iter().position(|code| code.id() == block_expression_id)
     }
 
     fn find_expression_inside_block_that_contains(&self, node_id: ID) -> Option<ID> {
@@ -631,11 +632,11 @@ impl<'a> Controller {
     fn delete_selected_code(&mut self) {
         let node_to_delete = self.get_selected_node().cloned().unwrap();
         let genie = self.code_genie();
-        let new_code = self.mutation_master.delete_code(
+        let deletion_result = self.mutation_master.delete_code(
             &node_to_delete, genie.as_ref().unwrap(), self.selected_node_id);
-        self.loaded_code.as_mut().unwrap().replace(&new_code);
+        self.loaded_code.as_mut().unwrap().replace(&deletion_result.new_root);
         // TODO: intelligently select a nearby node to select after deleting
-        self.set_selected_node_id(None);
+        self.set_selected_node_id(deletion_result.new_cursor_position);
     }
 
     fn select_current_line(&mut self) {
@@ -1546,11 +1547,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 controller.borrow_mut().loaded_code.as_mut().unwrap().replace(&new_node)
             },
             move || {
-                controller2.borrow_mut().editing = false;
-                let loaded_code = controller2.borrow_mut().loaded_code.clone().unwrap();
                 let selected_node_id = controller2.borrow().selected_node_id;
-                controller2.borrow_mut().mutation_master.log_new_mutation(
-                    loaded_code, selected_node_id);
+                let mut controller = controller2.borrow_mut();
+                controller.editing = false;
+                let loaded_code = controller.loaded_code.as_ref().unwrap();
+                controller.mutation_master.log_new_mutation(loaded_code, selected_node_id);
             }
         )
     }
@@ -1560,6 +1561,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 struct UndoHistoryCell {
     code_node: CodeNode,
     cursor_position: Option<ID>,
+}
+
+struct DeletionResult {
+    new_root: CodeNode,
+    new_cursor_position: Option<ID>,
+}
+
+impl DeletionResult {
+    fn new(new_root: CodeNode, new_cursor_position: Option<ID>) -> Self {
+        Self { new_root, new_cursor_position }
+    }
 }
 
 struct MutationMaster {
@@ -1575,7 +1587,7 @@ impl MutationMaster {
     pub fn seed_initial_history(&self, code_node: &CodeNode) {
         self.history.borrow_mut().clear();
         *self.current_index.borrow_mut() = -1;
-        self.log_new_mutation(code_node.clone(), None);
+        self.log_new_mutation(code_node, None);
     }
 
     fn insert_code(
@@ -1607,11 +1619,13 @@ impl MutationMaster {
         argument.expr = Box::new(code_node);
         let mut root = genie.root().clone();
         root.replace(&CodeNode::Argument(argument));
-        self.log_new_mutation(root, cursor_position)
+        self.log_new_mutation(&root, cursor_position);
+        root
     }
 
     fn insert_new_expression_in_block(&self, code_node: CodeNode, insertion_point: InsertionPoint,
-                                      parent: CodeNode, genie: &CodeGenie, cursor_position: Option<ID>) -> CodeNode {
+                                      parent: CodeNode, genie: &CodeGenie,
+                                      cursor_position: Option<ID>) -> CodeNode {
         match parent {
             CodeNode::Block(mut block) => {
                 let insertion_point_in_block_exprs = block.expressions.iter()
@@ -1633,14 +1647,15 @@ impl MutationMaster {
 
                 let mut root = genie.root().clone();
                 root.replace(&CodeNode::Block(block));
-                self.log_new_mutation(root, cursor_position)
+                self.log_new_mutation(&root, cursor_position);
+                root
             },
             _ => panic!("should be inserting into type parent, got {:?} instead", parent)
         }
     }
 
     pub fn delete_code(&self, node_to_delete: &CodeNode, genie: &CodeGenie,
-                       cursor_position: Option<ID>) -> CodeNode {
+                       cursor_position: Option<ID>) -> DeletionResult {
         let parent = genie.find_parent(node_to_delete.id());
         if parent.is_none() {
             panic!("idk when this happens, let's take care of this if / when it does")
@@ -1650,17 +1665,31 @@ impl MutationMaster {
             CodeNode::Block(block) => {
                 let mut new_block = block.clone();
                 new_block.expressions.retain(|exp| exp.id() != node_to_delete.id());
+
+                let deleted_expression_position_in_block = genie.find_position_in_block(
+                    &block, node_to_delete.id()).unwrap();
+                let mut new_cursor_position = new_block.expressions
+                    .get(deleted_expression_position_in_block)
+                    .map(|code_node| code_node.id());
+                if new_cursor_position.is_none() {
+                    new_cursor_position = new_block.expressions
+                    .get(deleted_expression_position_in_block - 1)
+                    .map(|code_node| code_node.id());
+                }
+
                 let mut new_root = genie.root().clone();
                 new_root.replace(&CodeNode::Block(new_block));
-                self.log_new_mutation(new_root, cursor_position)
+
+                self.log_new_mutation(&new_root, new_cursor_position);
+                DeletionResult::new(new_root, new_cursor_position)
             }
             _ => {
-                genie.root().clone()
+                DeletionResult::new(genie.root().clone(), cursor_position)
             }
         }
     }
 
-    fn log_new_mutation(&self, new_root: CodeNode, cursor_position: Option<ID>) -> CodeNode {
+    fn log_new_mutation(&self, new_root: &CodeNode, cursor_position: Option<ID>) {
         // delete everything after the current index
         self.history.borrow_mut().truncate((*self.current_index.borrow() + 1) as usize);
         self.history.borrow_mut().push(
@@ -1670,7 +1699,6 @@ impl MutationMaster {
             });
         let mut i = self.current_index.borrow_mut();
         *i = (self.history.borrow().len() - 1) as isize;
-        new_root
     }
 
     pub fn undo(&self) -> Option<UndoHistoryCell> {
