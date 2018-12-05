@@ -107,8 +107,12 @@ impl UiToolkit for YewToolkit {
                     onkeydown=|e| {
                         // lol for these special keys we have to listen on keydown, but the
                         // rest we can do keypress :/
-                        if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" {
+                        if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
+                            // LOL this is for ctrl+r
+                            (e.key() == "r" || e.key() == "R" && e.ctrl_key()) {
+                            console!(log, e.key());
                             if let Some(keypress) = map_keypress_event(&e) {
+                                console!(log, format!("{:?}", keypress));
                                 handle_keypress_2(keypress);
                             }
                             e.prevent_default();
