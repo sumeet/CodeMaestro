@@ -621,16 +621,15 @@ impl<'a> Controller {
             return
         }
         let loaded_code = self.loaded_code.as_ref().unwrap();
-        if let Some(previous_root) = self.mutation_master.undo(
-            loaded_code,
-            self.selected_node_id) {
+        if let Some(previous_root) = self.mutation_master.undo(loaded_code, self.selected_node_id) {
             self.loaded_code.as_mut().unwrap().replace(&previous_root.root);
             self.set_selected_node_id(previous_root.cursor_position);
         }
     }
 
     fn redo(&mut self) {
-        if let Some(next_root) = self.mutation_master.redo() {
+        let loaded_code = self.loaded_code.as_ref().unwrap();
+        if let Some(next_root) = self.mutation_master.redo(loaded_code, self.selected_node_id) {
             self.loaded_code.as_mut().unwrap().replace(&next_root.root);
             self.set_selected_node_id(next_root.cursor_position);
         }
@@ -1692,8 +1691,9 @@ impl MutationMaster {
         self.history.borrow_mut().undo(current_root, cursor_position)
     }
 
-    pub fn redo(&self) -> Option<undo::UndoHistoryCell> {
-        self.history.borrow_mut().redo()
+    pub fn redo(&self, current_root: &CodeNode,
+                cursor_position: Option<ID>) -> Option<undo::UndoHistoryCell> {
+        self.history.borrow_mut().redo(current_root, cursor_position)
     }
 }
 
