@@ -62,7 +62,7 @@ impl fmt::Debug for Function {
 clone_trait_object!(Function);
 impl_downcast!(Function);
 
-#[derive(Deserialize, Serialize, Clone ,Debug)]
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub enum CodeNode {
     FunctionCall(FunctionCall),
     FunctionReference(FunctionReference),
@@ -96,7 +96,7 @@ pub enum Value {
     List(Vec<Value>),
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug)]
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct TypeSpec {
     pub readable_name: String,
     pub id: ID,
@@ -104,7 +104,7 @@ pub struct TypeSpec {
     pub num_params: usize,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug)]
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct Type {
     // TODO: should this just be a TypeSpec ID?
     pub typespec: TypeSpec,
@@ -413,13 +413,13 @@ pub fn new_id() -> ID {
     Uuid::parse_str(&uuid.into_string().unwrap()).unwrap()
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
 pub struct StringLiteral {
     pub value: String,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
 pub struct FunctionCall {
     pub function_reference: Box<CodeNode>,
     pub args: Vec<CodeNode>,
@@ -439,7 +439,7 @@ impl FunctionCall {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
 pub struct Assignment {
     pub name: String,
     // TODO: consider differentiating between CodeNodes and Expressions.
@@ -447,32 +447,32 @@ pub struct Assignment {
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
 pub struct Block {
     pub expressions: Vec<CodeNode>,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct VariableReference {
     pub assignment_id: ID,
     pub id: ID,
 }
 
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct FunctionReference {
     pub function_id: ID,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug)]
+#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
 pub struct FunctionDefinition {
     pub name: String,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug)]
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct ArgumentDefinition {
     pub id: ID,
     pub arg_type: Type,
@@ -485,14 +485,14 @@ impl ArgumentDefinition {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug)]
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct Argument {
     pub id: ID,
     pub argument_definition_id: ID,
     pub expr: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug)]
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct Placeholder {
     pub id: ID,
     pub description: String,

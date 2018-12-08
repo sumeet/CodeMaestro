@@ -16,6 +16,7 @@ use super::pystuff;
 use super::jsstuff;
 use super::indexmap;
 use super::external_func;
+use super::undo;
 
 
 pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
@@ -616,15 +617,21 @@ impl<'a> Controller {
     }
 
     fn undo(&mut self) {
-        if let Some(previous_root) = self.mutation_master.undo() {
-            self.loaded_code.as_mut().unwrap().replace(&previous_root.code_node);
+        if self.loaded_code.is_none() {
+            return
+        }
+        let loaded_code = self.loaded_code.as_ref().unwrap();
+        if let Some(previous_root) = self.mutation_master.undo(
+            loaded_code,
+            self.selected_node_id) {
+            self.loaded_code.as_mut().unwrap().replace(&previous_root.root);
             self.set_selected_node_id(previous_root.cursor_position);
         }
     }
 
     fn redo(&mut self) {
         if let Some(next_root) = self.mutation_master.redo() {
-            self.loaded_code.as_mut().unwrap().replace(&next_root.code_node);
+            self.loaded_code.as_mut().unwrap().replace(&next_root.root);
             self.set_selected_node_id(next_root.cursor_position);
         }
     }
@@ -751,11 +758,14 @@ impl<'a> Controller {
     }
 
     fn mark_as_editing(&mut self, node_id: ID) {
-        let genie = self.code_genie();
-        if genie.is_none() {
-            return
+        {
+            let genie = self.code_genie();
+            if genie.is_none() {
+                return
+            }
         }
-        let genie = genie.unwrap();
+        self.save_current_state_to_undo_history();
+        let genie = self.code_genie().unwrap();
         match genie.find_node(node_id) {
             Some(CodeNode::Argument(argument)) => {
                 self.insert_code_menu = Some(
@@ -1560,12 +1570,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 }
 
-#[derive(Clone)]
-struct UndoHistoryCell {
-    code_node: CodeNode,
-    cursor_position: Option<ID>,
-}
-
 struct DeletionResult {
     new_root: CodeNode,
     new_cursor_position: Option<ID>,
@@ -1578,13 +1582,12 @@ impl DeletionResult {
 }
 
 struct MutationMaster {
-    history: RefCell<Vec<UndoHistoryCell>>,
-    current_index: RefCell<isize>,
+    history: RefCell<undo::UndoHistory>,
 }
 
 impl MutationMaster {
     fn new() -> Self {
-        MutationMaster { history: RefCell::new(vec![]), current_index: RefCell::new(-1) }
+        MutationMaster { history: RefCell::new(undo::UndoHistory::new()) }
     }
 
     fn insert_code(&self, node_to_insert: CodeNode, insertion_point: InsertionPoint,
@@ -1681,40 +1684,16 @@ impl MutationMaster {
     }
 
     fn log_new_mutation(&self, new_root: &CodeNode, cursor_position: Option<ID>) {
-        // delete everything after the current index
-        self.history.borrow_mut().truncate((*self.current_index.borrow() + 1) as usize);
-        self.history.borrow_mut().push(
-            UndoHistoryCell {
-                code_node: new_root.clone(),
-                cursor_position,
-            });
-        let mut i = self.current_index.borrow_mut();
-        *i = (self.history.borrow().len() - 1) as isize;
+        self.history.borrow_mut().record_previous_state(new_root, cursor_position);
     }
 
-    pub fn undo(&self) -> Option<UndoHistoryCell> {
-        let mut i = self.current_index.borrow_mut();
-        if *i < 0 {
-            return None
-        }
-        // after moving the current index back, if we're still at a valid value, then there's still
-        // history we can go back to
-        if *i >= 0 {
-            let previous_state = self.history.borrow().get(*i as usize).cloned();
-            *i -= 1;
-            previous_state
-        } else {
-            None
-        }
+    pub fn undo(&self, current_root: &CodeNode,
+                cursor_position: Option<ID>) -> Option<undo::UndoHistoryCell> {
+        self.history.borrow_mut().undo(current_root, cursor_position)
     }
 
-    pub fn redo(&self) -> Option<UndoHistoryCell> {
-        let mut i = self.current_index.borrow_mut();
-        if *i == (self.history.borrow().len() - 1) as isize {
-            return None
-        }
-        *i += 1;
-        self.history.borrow().get(*i as usize).cloned()
+    pub fn redo(&self) -> Option<undo::UndoHistoryCell> {
+        self.history.borrow_mut().redo()
     }
 }
 
