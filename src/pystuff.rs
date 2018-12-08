@@ -30,6 +30,7 @@ pub struct PyFunc {
     pub return_type: lang::Type,
     pub name: String,
     pub id: lang::ID,
+    pub args: Vec<lang::ArgumentDefinition>,
 }
 
 impl PyFunc {
@@ -40,6 +41,7 @@ impl PyFunc {
             return_type: lang::Type::from_spec(&lang::NULL_TYPESPEC),
             name: "New PyFunc".to_string(),
             id: lang::new_id(),
+            args: vec![],
         }
     }
 }
@@ -126,8 +128,9 @@ impl lang::Function for PyFunc {
         self.id
     }
 
+    // XXX: this should really not copy, it should return a reference
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![]
+        self.args.clone()
     }
 
     fn returns(&self) -> lang::Type {
@@ -140,6 +143,10 @@ impl external_func::ModifyableFunc for PyFunc {
         self.return_type = return_type
     }
 
+    fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>) {
+        self.args = args
+    }
+
     fn clone(&self) -> Self {
         PyFunc {
             prelude: self.prelude.clone(),
@@ -147,6 +154,7 @@ impl external_func::ModifyableFunc for PyFunc {
             return_type: self.return_type.clone(),
             name: self.name.clone(),
             id: self.id.clone(),
+            args: self.args.clone(),
         }
     }
 }

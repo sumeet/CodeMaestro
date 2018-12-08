@@ -480,7 +480,11 @@ pub struct ArgumentDefinition {
 }
 
 impl ArgumentDefinition {
-    pub fn new(id: ID, arg_type: Type, short_name: String) -> ArgumentDefinition {
+    pub fn new(arg_type: Type, short_name: String) -> ArgumentDefinition {
+        Self::new_with_id(new_id(), arg_type, short_name)
+    }
+
+    pub fn new_with_id(id: ID, arg_type: Type, short_name: String) -> ArgumentDefinition {
         ArgumentDefinition { id, short_name, arg_type }
     }
 }

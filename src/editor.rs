@@ -900,6 +900,7 @@ pub trait UiToolkit {
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_separator(&self) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
+    fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;
@@ -981,6 +982,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     },
                     || {},
                 ),
+                self.render_arguments_selector(pyfunc.clone()),
                 self.ui_toolkit.draw_multiline_text_input_with_label(
                     // TODO: add help text here
                     "Prelude",
@@ -988,7 +990,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     move |newvalue| {
                         let mut pyfunc2 = pyfunc2.clone();
                         pyfunc2.prelude = newvalue.to_string();
-                        cont2.borrow_mut().execution_environment.add_function(Box::new(pyfunc2));
+                        cont2.borrow_mut().load_function(pyfunc2);
                     },
                 ),
                 self.ui_toolkit.draw_multiline_text_input_with_label(
@@ -997,7 +999,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     move |newvalue| {
                         let mut pyfunc3 = pyfunc3.clone();
                         pyfunc3.eval = newvalue.to_string();
-                        cont3.borrow_mut().execution_environment.add_function(Box::new(pyfunc3));
+                        cont3.borrow_mut().load_function(pyfunc3);
                     },
                 ),
                 self.render_return_type_selector(pyfunc.clone()),
@@ -1050,6 +1052,40 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         None::<fn(Keypress)>)
     }
 
+    fn render_arguments_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
+        let args = func.takes_args();
+
+        let func1 = func.clone();
+        let args1 = args.clone();
+        let cont1 = Rc::clone(&self.controller);
+        let to_draw = vec![
+            self.ui_toolkit.draw_text_with_label(&format!("Takes {} argument(s)", args.len()),
+                                                 "Arguments"),
+            self.ui_toolkit.draw_button("Add", GREY_COLOR, move || {
+                let mut args = args1.clone();
+                let mut func = func1.clone();
+                args.push(lang::ArgumentDefinition::new(
+                    lang::Type::from_spec(&lang::NULL_TYPESPEC),
+                    format!("Argument {}", args.len()),
+                ));
+                func.set_args(args);
+                cont1.borrow_mut().load_function(func);
+            }),
+        ];
+
+        for arg in args {
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| {
+                    self.ui_toolkit.draw_text_input(
+                        &arg.short_name,
+                        |newvalue|{},
+                        &||{})
+                },
+            ]);
+        }
+        self.ui_toolkit.draw_all(to_draw)
+    }
+
     fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
         let return_type = func.returns();
         let currently_selected_type_index = self.controller.borrow().typespecs().iter()
@@ -1075,8 +1111,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn render_type_params_selector<F: external_func::ModifyableFunc>(
-        &self, func: F, nesting_level: &Vec<usize>) -> T::DrawResult {
+    fn render_type_params_selector<F: external_func::ModifyableFunc>(&self, func: F,
+                                                                     nesting_level: &Vec<usize>) -> T::DrawResult {
         let mut return_type = func.returns();
         let mut return_type = &mut return_type;
 

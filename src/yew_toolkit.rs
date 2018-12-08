@@ -179,7 +179,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_text_box(&self, text: &str) -> Self::DrawResult {
         html! {
-            <textarea id={ self.incr_last_drawn_element_id().to_string() },>{ text }</textarea>
+            <textarea readonly={true}, id={ self.incr_last_drawn_element_id().to_string() },>{ text }</textarea>
         }
     }
 

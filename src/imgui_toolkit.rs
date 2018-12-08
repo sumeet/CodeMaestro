@@ -133,6 +133,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.text(text)
     }
 
+    fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {
+        self.ui.label_text(im_str!("{}", label), im_str!("{}", text))
+    }
+
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn()]) {
         if let Some((last_draw_fn, first_draw_fns)) = draw_fns.split_last() {
             for draw_fn in first_draw_fns {
@@ -210,7 +214,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igSetScrollHere(1.0) };
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str,
+                                                                       onchange: F, ondone: D) {
         self.draw_text_input_with_label("", existing_value, onchange, ondone)
     }
 

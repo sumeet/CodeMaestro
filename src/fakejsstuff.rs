@@ -39,6 +39,9 @@ impl external_func::ModifyableFunc for JSFunc {
     fn set_return_type(&mut self, _return_type: lang::Type) {
     }
 
+
+    fn set_args(&mut self, _args: Vec<lang::ArgumentDefinition>) {}
+
     fn clone(&self) -> Self {
         JSFunc {
             eval: self.eval.clone(),
