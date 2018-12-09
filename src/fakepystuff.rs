@@ -41,7 +41,7 @@ impl external_func::ModifyableFunc for PyFunc {
         self.return_type = return_type
     }
 
-    fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>) {}
+    fn set_args(&mut self, _args: Vec<lang::ArgumentDefinition>) {}
 
     fn clone(&self) -> Self {
         PyFunc {

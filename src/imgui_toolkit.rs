@@ -248,7 +248,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_combo_box_with_label2<F, G, H, T>(&self, label: &str, is_item_selected: G,
+    fn draw_combo_box_with_label<F, G, H, T>(&self, label: &str, is_item_selected: G,
                                               format_item: H, items: &[&T],
                                               onchange: F) -> Self::DrawResult
         where T: Clone,
@@ -271,23 +271,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         );
         if selected_item_in_combo_box != previous_selection {
             onchange(items[selected_item_in_combo_box as usize])
-        }
-    }
-
-    fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str,
-                                                             current_item: i32, items: &[&str],
-                                                             onchange: F) {
-        let mut selected_item_in_combo_box = current_item.clone();
-        let items : Vec<ImString> = items.iter().map(|s| im_str!("{}", s).clone()).collect();
-        let items : Vec<&ImStr> = items.iter().map(|s| s.as_ref()).collect();
-        self.ui.combo(
-            &self.imlabel(label),
-            &mut selected_item_in_combo_box,
-            &items,
-            5
-        );
-        if selected_item_in_combo_box != current_item {
-            onchange(selected_item_in_combo_box)
         }
     }
 

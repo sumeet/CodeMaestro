@@ -272,45 +272,7 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str,
-                                                             current_item: i32, items: &[&str],
-                                                             onchange: F) -> Self::DrawResult {
-        html! {
-            <select onchange=|event| {
-                        match event {
-                            ChangeData::Select(elem) => {
-                                if let Some(selected_index) = elem.selected_index() {
-                                    onchange(selected_index as i32);
-                                }
-                                Msg::Redraw
-                            }
-                            _ => {
-                                unreachable!();
-                            }
-                        }
-                    },>
-                { for items.into_iter().enumerate().map(|(index, item)| {
-                    let selected = index == current_item as usize;
-                    if selected {
-                        html! {
-                            <option selected={"true"}, >
-                                { item }
-                            </option>
-                        }
-                    } else {
-                        html! {
-                            <option>
-                                { item }
-                            </option>
-                        }
-                    }
-                })}
-            </select>
-            <label>{ label }</label>
-        }
-    }
-
-    fn draw_combo_box_with_label2<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
+    fn draw_combo_box_with_label<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
         where T: Clone + 'static,
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,

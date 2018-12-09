@@ -579,12 +579,6 @@ impl<'a> Controller {
         self.typespec_by_id.values().collect()
     }
 
-    fn typespec_names(&self) -> Vec<String> {
-        self.typespecs().iter().map(|typespec| {
-            format!("{} {}", typespec.symbol, typespec.readable_name)
-        }).collect()
-    }
-
     // TODO: return a result instead of returning nothing? it seems like there might be places this
     // thing can error
     fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
@@ -896,8 +890,7 @@ pub trait UiToolkit {
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) -> Self::DrawResult;
-    fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str, current_item: i32, items: &[&str], onchange: F) -> Self::DrawResult;
-    fn draw_combo_box_with_label2<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
+    fn draw_combo_box_with_label<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
         where T: Clone + 'static,
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
@@ -1088,13 +1081,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let pyfunc2 = func.clone();
 
         self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit.draw_combo_box_with_label2(
+            self.ui_toolkit.draw_combo_box_with_label(
                 "Return type",
                 |ts| ts.matches(&return_type.typespec),
-                format_typespec_select,
+                |ts| format_typespec_select(ts, None),
                 &typespecs.iter().collect_vec(),
                 move |new_ts| {
-                    cont.borrow_mut().set_typespec(pyfunc2.clone(), new_ts, &vec![])
+                    cont.borrow_mut().set_typespec(pyfunc2.clone(), new_ts, &[])
                 }
             ),
             self.render_type_params_selector(func, &vec![])
@@ -1110,34 +1103,24 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             return_type = &mut return_type.params[*param_index]
         }
 
-        let indent = iter::repeat("\t").take(nesting_level.len() + 1).join("");
-        let typespec_names : Vec<String> = self.controller.borrow().typespec_names().iter()
-            .map(|typespec_name| {
-                [indent.as_str(), typespec_name.as_str()].join("")
-            }).collect();
-        let typespec_names: Vec<&str> = typespec_names.iter()
-            .map(|s| s as &str)
-            .collect();
+        let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
 
         let mut drawn = vec![];
 
         for (i, param) in return_type.params.iter().enumerate() {
-            let typespec = &param.typespec;
-            let selected_ts_index = self.controller.borrow()
-                .typespec_by_id.get_full(&typespec.id).unwrap().0;
             let mut new_nesting_level = nesting_level.into_iter().cloned().collect_vec();
             new_nesting_level.push(i);
 
             let cont = Rc::clone(&self.controller);
             let pyfunc1 = func.clone();
-            let nl = new_nesting_level.clone();
+            let nnl = new_nesting_level.clone();
             drawn.push(self.ui_toolkit.draw_combo_box_with_label(
                 &format!(""),
-                selected_ts_index as i32,
-                &typespec_names,
-                move|i|{
-                    let new_typespec = cont.borrow().typespecs()[i as usize].clone();
-                    cont.borrow_mut().set_typespec(pyfunc1.clone(), &new_typespec, &nl);
+                |ts| ts.matches(&param.typespec),
+                |ts| format_typespec_select(ts, Some(nesting_level)),
+                &typespecs.iter().collect_vec(),
+                move|new_ts|{
+                    cont.borrow_mut().set_typespec(pyfunc1.clone(), new_ts, &nnl);
                 }
             ));
             drawn.push(self.render_type_params_selector(func.clone(), &new_nesting_level));
@@ -1741,6 +1724,12 @@ fn post_insertion_cursor(code_node: &CodeNode) -> (ID, bool) {
     }
 }
 
-fn format_typespec_select(ts: &lang::TypeSpec) -> String {
-    format!("{} {}", ts.symbol, ts.readable_name)
+fn format_typespec_select(ts: &lang::TypeSpec, nesting_level: Option<&[usize]>) -> String {
+    let indent = match nesting_level {
+        Some(nesting_level) => {
+            iter::repeat("\t").take(nesting_level.len() + 1).join("")
+        },
+        None => "".to_owned(),
+    };
+    format!("{}{} {}", indent, ts.symbol, ts.readable_name)
 }
