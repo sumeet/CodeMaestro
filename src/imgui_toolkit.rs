@@ -2,6 +2,8 @@ use super::{CSApp};
 use super::editor::{UiToolkit};
 use super::editor::{Keypress};
 use super::imgui_support;
+use super::itertools::Itertools;
+
 use imgui::*;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -243,6 +245,32 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
+        }
+    }
+
+    fn draw_combo_box_with_label2<F, G, H, T>(&self, label: &str, is_item_selected: G,
+                                              format_item: H, items: &[&T],
+                                              onchange: F) -> Self::DrawResult
+        where T: Clone,
+              F: Fn(&T) -> () + 'static,
+              G: Fn(&T) -> bool,
+              H: Fn(&T) -> String {
+        let mut selected_item_in_combo_box = items.into_iter()
+            .position(|i| is_item_selected(i)).unwrap() as i32;
+        let previous_selection = selected_item_in_combo_box.clone();
+
+        let formatted_items = items.into_iter()
+                .map(|s| im_str!("{}", format_item(s)).clone())
+                .collect_vec();
+
+        self.ui.combo(
+            &self.imlabel(label),
+            &mut selected_item_in_combo_box,
+            &formatted_items.iter().map(|s| s.as_ref()).collect_vec(),
+            5
+        );
+        if selected_item_in_combo_box != previous_selection {
+            onchange(items[selected_item_in_combo_box as usize])
         }
     }
 

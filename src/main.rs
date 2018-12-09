@@ -68,6 +68,7 @@ mod lang;
 mod env;
 mod code_loading;
 mod editor;
+mod edit_types;
 mod undo;
 mod code_generation;
 mod external_func;

@@ -104,6 +104,12 @@ pub struct TypeSpec {
     pub num_params: usize,
 }
 
+impl TypeSpec {
+    pub fn matches(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct Type {
     // TODO: should this just be a TypeSpec ID?

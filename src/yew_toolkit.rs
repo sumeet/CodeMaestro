@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::traits::IEvent;
+use itertools::Itertools;
 
 pub struct Model {
     app: Option<Rc<CSApp>>,
@@ -69,6 +70,15 @@ impl UiToolkit for YewToolkit {
             <div>
                 {{ self.draw_text_input(existing_value, onchange, ondone) }}
                 <label>{{ label }}</label>
+            </div>
+        }
+    }
+
+    fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {
+        html! {
+            <div>
+                <p>{{ text }}<p>
+                <label> {{ label }}
             </div>
         }
     }
@@ -281,6 +291,51 @@ impl UiToolkit for YewToolkit {
                     },>
                 { for items.into_iter().enumerate().map(|(index, item)| {
                     let selected = index == current_item as usize;
+                    if selected {
+                        html! {
+                            <option selected={"true"}, >
+                                { item }
+                            </option>
+                        }
+                    } else {
+                        html! {
+                            <option>
+                                { item }
+                            </option>
+                        }
+                    }
+                })}
+            </select>
+            <label>{ label }</label>
+        }
+    }
+
+    fn draw_combo_box_with_label2<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
+        where T: Clone + 'static,
+              F: Fn(&T) -> () + 'static,
+              G: Fn(&T) -> bool,
+              H: Fn(&T) -> String {
+        let formatted_items = items.into_iter()
+            .map(|i| format_item(i)).collect_vec();
+        let selected_item_in_combo_box = items.into_iter()
+            .position(|i| is_item_selected(i)).unwrap();
+        let items = items.into_iter().map(|i| (*i).clone()).collect_vec();
+        html! {
+            <select onchange=|event| {
+                        match event {
+                            ChangeData::Select(elem) => {
+                                if let Some(selected_index) = elem.selected_index() {
+                                    onchange(&items[selected_index as usize]);
+                                }
+                                Msg::Redraw
+                            }
+                            _ => {
+                                unreachable!();
+                            }
+                        }
+                    },>
+                { for formatted_items.into_iter().enumerate().map(|(index, item)| {
+                    let selected = index == selected_item_in_combo_box;
                     if selected {
                         html! {
                             <option selected={"true"}, >

@@ -17,6 +17,7 @@ use super::jsstuff;
 use super::indexmap;
 use super::external_func;
 use super::undo;
+use super::edit_types;
 
 
 pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
@@ -820,21 +821,9 @@ impl<'a> Controller {
     }
 
     pub fn set_typespec<F: external_func::ModifyableFunc>(&mut self, mut func: F,
-                        typespec: &lang::TypeSpec, nesting_level: &Vec<usize>) {
+                        typespec: &lang::TypeSpec, nesting_level: &[usize]) {
         let mut root_return_type = func.returns();
-
-        let mut return_type = &mut root_return_type;
-        for param_index in nesting_level.into_iter() {
-            return_type = &mut return_type.params[*param_index]
-        }
-
-        return_type.typespec = typespec.clone();
-        return_type.params.truncate(typespec.num_params);
-        let num_missing_params = typespec.num_params - return_type.params.len();
-        for _ in 0..num_missing_params {
-            return_type.params.push(lang::Type::from_spec(&lang::NULL_TYPESPEC))
-        }
-
+        edit_types::set_typespec(&mut root_return_type, typespec, nesting_level);
         func.set_return_type(root_return_type);
         self.load_function(func)
     }
@@ -908,6 +897,11 @@ pub trait UiToolkit {
     fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) -> Self::DrawResult;
     fn draw_combo_box_with_label<F: Fn(i32) -> () + 'static>(&self, label: &str, current_item: i32, items: &[&str], onchange: F) -> Self::DrawResult;
+    fn draw_combo_box_with_label2<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
+        where T: Clone + 'static,
+              F: Fn(&T) -> () + 'static,
+              G: Fn(&T) -> bool,
+              H: Fn(&T) -> String;
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -1088,23 +1082,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
         let return_type = func.returns();
-        let currently_selected_type_index = self.controller.borrow().typespecs().iter()
-            .position(|t| return_type.matches_spec(t))
-            .unwrap();
-        let typespec_names = self.controller.borrow().typespec_names();
-        let typespec_names : Vec<&str>= typespec_names.iter().map(|s| s as &str)
-            .collect();
+        let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
 
         let cont = Rc::clone(&self.controller);
         let pyfunc2 = func.clone();
+
         self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit.draw_combo_box_with_label(
+            self.ui_toolkit.draw_combo_box_with_label2(
                 "Return type",
-                currently_selected_type_index as i32,
-                &typespec_names,
-                move |i| {
-                    let new_typespec = cont.borrow().typespecs()[i as usize].clone();
-                    cont.borrow_mut().set_typespec(pyfunc2.clone(), &new_typespec, &vec![])
+                |ts| ts.matches(&return_type.typespec),
+                format_typespec_select,
+                &typespecs.iter().collect_vec(),
+                move |new_ts| {
+                    cont.borrow_mut().set_typespec(pyfunc2.clone(), new_ts, &vec![])
                 }
             ),
             self.render_type_params_selector(func, &vec![])
@@ -1112,7 +1102,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_type_params_selector<F: external_func::ModifyableFunc>(&self, func: F,
-                                                                     nesting_level: &Vec<usize>) -> T::DrawResult {
+                                                                     nesting_level: &[usize]) -> T::DrawResult {
         let mut return_type = func.returns();
         let mut return_type = &mut return_type;
 
@@ -1120,9 +1110,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             return_type = &mut return_type.params[*param_index]
         }
 
-        let indent = iter::repeat("\t").take(nesting_level.len()).join("");
+        let indent = iter::repeat("\t").take(nesting_level.len() + 1).join("");
         let typespec_names : Vec<String> = self.controller.borrow().typespec_names().iter()
-            .map(|typespec_name| format!("\t{}{}", indent, typespec_name)).collect();
+            .map(|typespec_name| {
+                [indent.as_str(), typespec_name.as_str()].join("")
+            }).collect();
         let typespec_names: Vec<&str> = typespec_names.iter()
             .map(|s| s as &str)
             .collect();
@@ -1133,14 +1125,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let typespec = &param.typespec;
             let selected_ts_index = self.controller.borrow()
                 .typespec_by_id.get_full(&typespec.id).unwrap().0;
-            let mut new_nesting_level = nesting_level.clone();
+            let mut new_nesting_level = nesting_level.into_iter().cloned().collect_vec();
             new_nesting_level.push(i);
 
             let cont = Rc::clone(&self.controller);
             let pyfunc1 = func.clone();
             let nl = new_nesting_level.clone();
             drawn.push(self.ui_toolkit.draw_combo_box_with_label(
-                &format!("##{:?}", nl),
+                &format!(""),
                 selected_ts_index as i32,
                 &typespec_names,
                 move|i|{
@@ -1747,4 +1739,8 @@ fn post_insertion_cursor(code_node: &CodeNode) -> (ID, bool) {
             (code_node.id(), false)
         }
     }
+}
+
+fn format_typespec_select(ts: &lang::TypeSpec) -> String {
+    format!("{} {}", ts.symbol, ts.readable_name)
 }
