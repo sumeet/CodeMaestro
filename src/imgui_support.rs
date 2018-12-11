@@ -32,9 +32,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, clear_color: 
     let mut imgui = ImGui::init();
     imgui.set_ini_filename(None);
 
-    // In the examples we only use integer DPI factors, because the UI can get very blurry
-    // otherwise. This might or might not be what you want in a real application.
-    let hidpi_factor = window.get_hidpi_factor().round();
+    let hidpi_factor = window.get_hidpi_factor();
 
     let font_size = (13.0 * hidpi_factor) as f32;
     let icon_font_size = font_size / 1.75;

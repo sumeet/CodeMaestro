@@ -243,9 +243,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             return
         }
 
-        if box_input.as_ref() as &str != existing_value {
-            onchange(box_input.as_ref() as &str)
-        }
+        // TODO: onchange gets run basically all the time because of this. should
+        // we instead store off the previous value somewhere, and compare it, so we're
+        // not calling it all the damn time, but only when the value's actually changed?
+        onchange(box_input.as_ref() as &str)
     }
 
     fn draw_combo_box_with_label<F, G, H, T>(&self, label: &str, is_item_selected: G,

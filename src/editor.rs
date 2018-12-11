@@ -884,11 +884,11 @@ pub trait UiToolkit {
     fn draw_separator(&self) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
-    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
-    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, f: F) -> Self::DrawResult;
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, onclick: F) -> Self::DrawResult;
+    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, onclick: F) -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
-    fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
+    fn draw_text_input<F: Fn(&str) + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
+    fn draw_text_input_with_label<F: Fn(&str) + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult;
     fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) -> Self::DrawResult;
     fn draw_combo_box_with_label<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
         where T: Clone + 'static,
@@ -1042,91 +1042,150 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_arguments_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
         let args = func.takes_args();
 
-        let func1 = func.clone();
-        let args1 = args.clone();
-        let cont1 = Rc::clone(&self.controller);
         let to_draw = vec![
             self.ui_toolkit.draw_text_with_label(&format!("Takes {} argument(s)", args.len()),
                                                  "Arguments"),
-            self.ui_toolkit.draw_button("Add", GREY_COLOR, move || {
-                let mut args = args1.clone();
-                let mut func = func1.clone();
-                args.push(lang::ArgumentDefinition::new(
-                    lang::Type::from_spec(&lang::NULL_TYPESPEC),
-                    format!("Argument {}", args.len()),
-                ));
-                func.set_args(args);
-                cont1.borrow_mut().load_function(func);
-            }),
         ];
 
-        for arg in args {
-            self.ui_toolkit.draw_all_on_same_line(&[
-                &|| {
-                    self.ui_toolkit.draw_text_input(
-                        &arg.short_name,
-                        |newvalue|{},
-                        &||{})
+        for (i, arg) in args.iter().enumerate() {
+            let func1 = func.clone();
+            let args1 = args.clone();
+            let cont1 = Rc::clone(&self.controller);
+            self.ui_toolkit.draw_text_input_with_label(
+                "Name",
+                &arg.short_name,
+                move |newvalue| {
+                    let mut newfunc = func1.clone();
+                    let mut newargs = args1.clone();
+                    let mut newarg = &mut newargs[i];
+                    newarg.short_name = newvalue.to_string();
+                    newfunc.set_args(newargs);
+                    cont1.borrow_mut().load_function(newfunc)
                 },
-            ]);
+                &||{});
+
+            let func1 = func.clone();
+            let args1 = args.clone();
+            let cont1 = Rc::clone(&self.controller);
+            self.render_type_change_combo(
+                "Type",
+                &arg.arg_type,
+                move |newtype| {
+                    let mut newfunc = func1.clone();
+                    let mut newargs = args1.clone();
+                    let mut newarg = &mut newargs[i];
+                    newarg.arg_type = newtype;
+                    newfunc.set_args(newargs);
+                    cont1.borrow_mut().load_function(newfunc)
+                }
+            );
         }
+
+        let func1 = func.clone();
+        let args1 = args.clone();
+        let cont1 = Rc::clone(&self.controller);
+        self.ui_toolkit.draw_button("Add", GREY_COLOR, move || {
+            let mut args = args1.clone();
+            let mut func = func1.clone();
+            args.push(lang::ArgumentDefinition::new(
+                lang::Type::from_spec(&lang::NULL_TYPESPEC),
+                format!("arg{}", args.len()),
+            ));
+            func.set_args(args);
+            cont1.borrow_mut().load_function(func);
+        });
+
         self.ui_toolkit.draw_all(to_draw)
     }
 
-    fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
-        let return_type = func.returns();
+    fn render_typespec_selector_with_label<F>(&self, label: &str, selected_ts: &lang::TypeSpec,
+                                              nesting_level: Option<&[usize]>, onchange: F) -> T::DrawResult
+        where F: Fn(&lang::TypeSpec) + 'static
+    {
         let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
+        self.ui_toolkit.draw_combo_box_with_label(
+            label,
+            |ts| ts.matches(selected_ts),
+            |ts| format_typespec_select(ts, nesting_level),
+            &typespecs.iter().collect_vec(),
+            move |newts| { onchange(newts) }
+        )
+    }
+
+    fn render_type_change_combo<F>(&self, label: &str, typ: &lang::Type, onchange: F) -> T::DrawResult
+        where F: Fn(lang::Type) + 'static {
+        let type1 = typ.clone();
+        let onchange = Rc::new(onchange);
+        let onchange2 = Rc::clone(&onchange);
+        self.ui_toolkit.draw_all(vec![
+            self.render_typespec_selector_with_label(
+                label,
+                &typ.typespec,
+                None,
+                move |new_ts| {
+                    let mut newtype = type1.clone();
+                    edit_types::set_typespec(&mut newtype, new_ts, &[]);
+                    onchange(newtype)
+                }
+            ),
+            self.render_type_params_change_combo(typ, onchange2, &[])
+        ])
+    }
+
+    fn render_type_params_change_combo<F>(&self, root_type: &lang::Type, onchange: Rc<F>,
+                                          nesting_level: &[usize]) -> T::DrawResult
+        where F: Fn(lang::Type) + 'static
+    {
+        let mut type_to_change = root_type.clone();
+        let mut type_to_change = &mut type_to_change;
+        for param_index in nesting_level.into_iter() {
+            type_to_change = &mut type_to_change.params[*param_index]
+        }
+
+        let mut drawn = vec![];
+        for (i, param) in type_to_change.params.iter().enumerate() {
+            let mut new_nesting_level = nesting_level.to_owned();
+            new_nesting_level.push(i);
+
+            let onchange = Rc::clone(&onchange);
+            let onchange2 = Rc::clone(&onchange);
+            let nnl = new_nesting_level.clone();
+            let root_type1 = root_type.clone();
+            drawn.push(
+                self.render_typespec_selector_with_label(
+                    "",
+                    &param.typespec,
+                    Some(nesting_level),
+                    move |new_ts| {
+                        let mut newtype = root_type1.clone();
+                        edit_types::set_typespec(&mut newtype, new_ts, &nnl);
+                        onchange(newtype)
+                    }
+                ),
+            );
+            drawn.push(self.render_type_params_change_combo(root_type, onchange2, &new_nesting_level));
+        }
+        self.ui_toolkit.draw_all(drawn)
+    }
+
+    fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
+        // TODO: why doesn't this return a reference???
+        let return_type = func.returns();
 
         let cont = Rc::clone(&self.controller);
         let pyfunc2 = func.clone();
 
         self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit.draw_combo_box_with_label(
+            self.render_type_change_combo(
                 "Return type",
-                |ts| ts.matches(&return_type.typespec),
-                |ts| format_typespec_select(ts, None),
-                &typespecs.iter().collect_vec(),
-                move |new_ts| {
-                    cont.borrow_mut().set_typespec(pyfunc2.clone(), new_ts, &[])
+                &return_type,
+                move |newtype| {
+                    let mut newfunc = pyfunc2.clone();
+                    newfunc.set_return_type(newtype);
+                    cont.borrow_mut().load_function(newfunc)
                 }
             ),
-            self.render_type_params_selector(func, &vec![])
         ])
-    }
-
-    fn render_type_params_selector<F: external_func::ModifyableFunc>(&self, func: F,
-                                                                     nesting_level: &[usize]) -> T::DrawResult {
-        let mut return_type = func.returns();
-        let mut return_type = &mut return_type;
-
-        for param_index in nesting_level.into_iter() {
-            return_type = &mut return_type.params[*param_index]
-        }
-
-        let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
-
-        let mut drawn = vec![];
-
-        for (i, param) in return_type.params.iter().enumerate() {
-            let mut new_nesting_level = nesting_level.into_iter().cloned().collect_vec();
-            new_nesting_level.push(i);
-
-            let cont = Rc::clone(&self.controller);
-            let pyfunc1 = func.clone();
-            let nnl = new_nesting_level.clone();
-            drawn.push(self.ui_toolkit.draw_combo_box_with_label(
-                &format!(""),
-                |ts| ts.matches(&param.typespec),
-                |ts| format_typespec_select(ts, Some(nesting_level)),
-                &typespecs.iter().collect_vec(),
-                move|new_ts|{
-                    cont.borrow_mut().set_typespec(pyfunc1.clone(), new_ts, &nnl);
-                }
-            ));
-            drawn.push(self.render_type_params_selector(func.clone(), &new_nesting_level));
-        }
-
-        self.ui_toolkit.draw_all(drawn)
     }
 
     fn render_test_section<F: lang::Function>(&self, func: F) -> T::DrawResult {
@@ -1283,9 +1342,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     "",
                     move |input|{
                         controller_1.borrow_mut().insert_code_menu.as_mut()
-                            .map(|m| {
-                                m.set_search_str(input)
-                            });
+                            .map(|m| {m.set_search_str(input)});
                     },
                     move ||{
                         let mut controller = controller_2.borrow_mut();
