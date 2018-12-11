@@ -1,26 +1,54 @@
 use std::collections::HashMap;
+use std::rc::Rc;
+use std::cell::RefCell;
 
-use super::pyo3::prelude::*;
-use super::pyo3::types::{PyIterator,PyObjectRef};
+use pyo3::prelude::*;
+use pyo3::types::{PyIterator,PyObjectRef,PyDict};
+
 use super::lang;
 use super::env;
 use super::external_func;
 
-pub struct Py {
-    gil: GILGuard,
-}
-
-impl Py {
-    fn new() -> Self {
-        Self { gil: Python::acquire_gil() }
-    }
-    fn py<'a>(&'a self) -> Python<'a> {
-        self.gil.python()
-    }
-}
-
 thread_local! {
-    pub static PY: Py = Py::new();
+    pub static GILGUARD: Rc<GILGuard> = Rc::new(Python::acquire_gil());
+    pub static NAMESPACE_BY_FUNC_ID : RefCell<HashMap<lang::ID, Rc<PyNamespace>>> =
+        RefCell::new(HashMap::new());
+}
+
+fn getgil() -> Rc<GILGuard> {
+    GILGUARD.with(|gg| Rc::clone(&gg))
+}
+
+fn get_namespace(id: lang::ID) -> Rc<PyNamespace> {
+    NAMESPACE_BY_FUNC_ID.with(|namespace_by_func_id| {
+        let mut namespace_by_func_id = namespace_by_func_id.borrow_mut();
+        if !namespace_by_func_id.contains_key(&id) {
+            let newnamespace = PyNamespace::new(&getgil());
+            namespace_by_func_id.insert(id, Rc::new(newnamespace));
+        }
+        Rc::clone(namespace_by_func_id.get(&id).unwrap())
+    })
+}
+
+fn newd(py: Python) -> Py<PyDict> {
+    PyDict::new(py).into()
+}
+
+pub struct PyNamespace {
+    locals: Py<PyDict>,
+}
+
+impl PyNamespace {
+    // TODO: this could also own a ref to the GILGuard, i think if we want to ever do multiple interpreters
+    fn new(gilguard: &GILGuard) -> Self {
+        Self {
+            locals: newd(gilguard.python()),
+        }
+    }
+
+    fn locals(&self, py: Python) -> &PyDict {
+        self.locals.as_ref(py)
+    }
 }
 
 #[derive(Clone)]
@@ -33,6 +61,15 @@ pub struct PyFunc {
     pub args: Vec<lang::ArgumentDefinition>,
 }
 
+impl ToPyObject for lang::CodeNode {
+    fn to_object(&self, py: Python) -> PyObject {
+        match self {
+            _ => ().to_object(py)
+        }
+    }
+}
+
+// TODO: i think the python interpreter could live inside of here
 impl PyFunc {
     pub fn new() -> Self {
         Self {
@@ -53,6 +90,9 @@ impl PyFunc {
     }
 
     fn ex(&self, pyobjectref: &PyObjectRef, into_type: &lang::Type) -> lang::Value {
+        let gil = getgil();
+        let py = gil.python();
+
         if into_type.matches_spec(&lang::STRING_TYPESPEC) {
             if let Ok(string) = pyobjectref.extract() {
                 return lang::Value::String(string)
@@ -68,56 +108,64 @@ impl PyFunc {
         } else if into_type.matches_spec(&lang::LIST_TYPESPEC) {
             let pyobj : PyObject = pyobjectref.extract().unwrap();
             let collection_type = into_type.params.first().unwrap();
-            return PY.with(|py| {
-                // TODO: error handlign! just figure out what's neccessary by testing it out in the
-                // GUI
-                let iter = PyIterator::from_object(py.py(), &pyobj).unwrap();
-                let collected : Vec<lang::Value> = iter
-                    .map(|pyresult| {
-                        self.ex(pyresult.unwrap(), collection_type)
-                    })
-                    .collect();
-                lang::Value::List(collected)
-            });
+            // TODO: error handlign! just figure out what's neccessary by testing it out in the
+            // GUI
+            let iter = PyIterator::from_object(py, &pyobj).unwrap();
+            let collected : Vec<lang::Value> = iter
+                .map(|pyresult| {
+                    self.ex(pyresult.unwrap(), collection_type)
+                })
+                .collect();
+            return lang::Value::List(collected)
         }
         lang::Value::Error(lang::Error::PythonDeserializationError)
     }
 
     fn py_exception_to_error(&self, pyerror: &PyErr) -> lang::Error {
-        PY.with(|py| {
-            let error_obj = pyerror.into_object(py.py());
-            let error_cls = error_obj.getattr(py.py(), "__class__")
-                .unwrap();
-            let error_cls_name = error_cls.getattr(py.py(), "__name__")
-                .unwrap();
-            lang::Error::PythonError(self.str(error_cls_name), self.str(error_obj))
-        })
+        let gil = getgil();
+        let py = gil.python();
+        let error_obj = pyerror.into_object(py);
+        let error_cls = error_obj.getattr(py, "__class__")
+            .unwrap();
+        let error_cls_name = error_cls.getattr(py, "__name__")
+            .unwrap();
+        lang::Error::PythonError(self.str(error_cls_name), self.str(error_obj))
     }
 
     fn str(&self, pyobj: PyObject) -> String {
-        PY.with(|py| {
-            pyobj.getattr(py.py(), "__str__").unwrap().call0(py.py()).unwrap()
-                .extract(py.py()).unwrap()
-        })
+        let gil = getgil();
+        let py = gil.python();
+        pyobj.getattr(py, "__str__").unwrap().call0(py).unwrap()
+            .extract(py).unwrap()
     }
 }
 
 impl lang::Function for PyFunc {
     fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        PY.with(|py| {
-            let result = py.py().run(&self.prelude, None, None);
+        let gil = getgil();
+        let py = gil.python();
 
-            if let Err(e) = result {
-                lang::Value::Error(self.py_exception_to_error(&e))
-            } else {
-                let eval_result = py.py().eval(self.eval.as_ref(), None, None);
-                if let Err(pyerr) = eval_result {
-                    return lang::Value::Error(self.py_exception_to_error(&pyerr))
-                }
-                let eval_result = eval_result.unwrap();
-                self.extract(eval_result)
+        let our_namespace = get_namespace(self.id);
+        let locals = our_namespace.locals(py);
+
+        // TODO: only run the prelude once yo
+        let result = py.run(&self.prelude, None, Some(locals));
+
+        // let mut mh : HashMap<String, ()> = HashMap::new();
+        // mh.insert("hoohaw".to_string(), ());
+        // let pd = mh.to_object(py);
+        // let dict = <PyDict>::try_from(pd.as_ref(py)).unwrap();
+
+        if let Err(e) = result {
+            lang::Value::Error(self.py_exception_to_error(&e))
+        } else {
+            let eval_result = py.eval(self.eval.as_ref(), None, Some(locals));
+            if let Err(pyerr) = eval_result {
+                return lang::Value::Error(self.py_exception_to_error(&pyerr))
             }
-        })
+            let eval_result = eval_result.unwrap();
+            self.extract(eval_result)
+        }
     }
 
     fn name(&self) -> &str {
