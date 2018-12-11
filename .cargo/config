@@ -1,0 +1,6 @@
+[alias]
+br = "build"
+bj = "build --target=wasm32-unknown-unknown --no-default-features --features=javascript"
+rr = "run --release"
+rdb = "run"
+rj = "web start --target=wasm32-unknown-unknown --no-default-features --features=javascript"
