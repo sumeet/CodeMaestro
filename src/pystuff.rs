@@ -30,7 +30,7 @@ fn get_namespace(id: lang::ID) -> Rc<PyNamespace> {
     })
 }
 
-fn newd(py: Python) -> Py<PyDict> {
+fn newdict(py: Python) -> Py<PyDict> {
     PyDict::new(py).into()
 }
 
@@ -42,7 +42,7 @@ impl PyNamespace {
     // TODO: this could also own a ref to the GILGuard, i think if we want to ever do multiple interpreters
     fn new(gilguard: &GILGuard) -> Self {
         Self {
-            locals: newd(gilguard.python()),
+            locals: newdict(gilguard.python()),
         }
     }
 
@@ -54,6 +54,8 @@ impl PyNamespace {
 #[derive(Clone)]
 pub struct PyFunc {
     pub prelude: String,
+    // TODO: eval can only be a single expression. so there should probably be a `run` step that can execute
+    // statements and stuff, and then a final line to be evaluated
     pub eval: String,
     pub return_type: lang::Type,
     pub name: String,
@@ -63,13 +65,19 @@ pub struct PyFunc {
 
 impl ToPyObject for lang::Value {
     fn to_object(&self, py: Python) -> PyObject {
+        use super::lang::Value::*;
         match self {
-            _ => "xxx".to_object(py)
+            Null => ().to_object(py),
+            String(s) => s.to_object(py),
+            // not quite sure what to do with these...
+            Error(e) => format!("{:?}", e).to_object(py),
+            Number(i) => i.to_object(py),
+            List(v) => v.to_object(py),
         }
     }
 }
 
-// TODO: i think the python interpreter could live inside of here
+// TODO: i think a ref to the python interpreter could live inside of here
 impl PyFunc {
     pub fn new() -> Self {
         Self {
@@ -93,6 +101,8 @@ impl PyFunc {
         let gil = getgil();
         let py = gil.python();
 
+        // TODO: this is terrible. i should've used the FromPyObject trait instead of this
+        // verbose bullshit
         if into_type.matches_spec(&lang::STRING_TYPESPEC) {
             if let Ok(string) = pyobjectref.extract() {
                 return lang::Value::String(string)
@@ -138,9 +148,11 @@ impl PyFunc {
     }
 }
 
-fn update_pydict(py: Python, into: &PyDict, from: PyObject) {
-    let into_obj = into.to_object(py);
-    into_obj.getattr(py, "update").unwrap().call1(py, (from,)).unwrap();
+fn mix_args_with_locals<'a>(py: Python, args: &'a PyDict, from: PyObject) -> &'a PyDict {
+    let mixed = args.copy().unwrap();
+    let mixed_as_obj = mixed.to_object(py);
+    mixed_as_obj.getattr(py, "update").unwrap().call1(py, (from,)).unwrap();
+    mixed
 }
 
 impl lang::Function for PyFunc {
@@ -151,17 +163,17 @@ impl lang::Function for PyFunc {
         let our_namespace = get_namespace(self.id);
         let locals = our_namespace.locals(py);
 
-        // TODO: only run the prelude once yo
+        // TODO: only run the prelude once, instead of every time the func is called
         let result = py.run(&self.prelude, None, Some(locals));
 
         let named_args = external_func::to_named_args(self, args);
         let pd = named_args.to_object(py);
-        update_pydict(py, locals, pd);
+        let locals_with_params = mix_args_with_locals(py, locals, pd);
 
         if let Err(e) = result {
             lang::Value::Error(self.py_exception_to_error(&e))
         } else {
-            let eval_result = py.eval(self.eval.as_ref(), None, Some(locals));
+            let eval_result = py.eval(self.eval.as_ref(), None, Some(locals_with_params));
             if let Err(pyerr) = eval_result {
                 return lang::Value::Error(self.py_exception_to_error(&pyerr))
             }
