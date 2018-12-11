@@ -61,10 +61,10 @@ pub struct PyFunc {
     pub args: Vec<lang::ArgumentDefinition>,
 }
 
-impl ToPyObject for lang::CodeNode {
+impl ToPyObject for lang::Value {
     fn to_object(&self, py: Python) -> PyObject {
         match self {
-            _ => ().to_object(py)
+            _ => "xxx".to_object(py)
         }
     }
 }
@@ -112,9 +112,7 @@ impl PyFunc {
             // GUI
             let iter = PyIterator::from_object(py, &pyobj).unwrap();
             let collected : Vec<lang::Value> = iter
-                .map(|pyresult| {
-                    self.ex(pyresult.unwrap(), collection_type)
-                })
+                .map(|pyresult| {self.ex(pyresult.unwrap(), collection_type)})
                 .collect();
             return lang::Value::List(collected)
         }
@@ -140,8 +138,13 @@ impl PyFunc {
     }
 }
 
+fn update_pydict(py: Python, into: &PyDict, from: PyObject) {
+    let into_obj = into.to_object(py);
+    into_obj.getattr(py, "update").unwrap().call1(py, (from,)).unwrap();
+}
+
 impl lang::Function for PyFunc {
-    fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let gil = getgil();
         let py = gil.python();
 
@@ -151,10 +154,9 @@ impl lang::Function for PyFunc {
         // TODO: only run the prelude once yo
         let result = py.run(&self.prelude, None, Some(locals));
 
-        // let mut mh : HashMap<String, ()> = HashMap::new();
-        // mh.insert("hoohaw".to_string(), ());
-        // let pd = mh.to_object(py);
-        // let dict = <PyDict>::try_from(pd.as_ref(py)).unwrap();
+        let named_args = external_func::to_named_args(self, args);
+        let pd = named_args.to_object(py);
+        update_pydict(py, locals, pd);
 
         if let Err(e) = result {
             lang::Value::Error(self.py_exception_to_error(&e))
