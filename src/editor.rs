@@ -1042,7 +1042,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_arguments_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
         let args = func.takes_args();
 
-        let to_draw = vec![
+        let mut to_draw = vec![
             self.ui_toolkit.draw_text_with_label(&format!("Takes {} argument(s)", args.len()),
                                                  "Arguments"),
         ];
@@ -1051,7 +1051,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let func1 = func.clone();
             let args1 = args.clone();
             let cont1 = Rc::clone(&self.controller);
-            self.ui_toolkit.draw_text_input_with_label(
+            to_draw.push(self.ui_toolkit.draw_text_input_with_label(
                 "Name",
                 &arg.short_name,
                 move |newvalue| {
@@ -1062,12 +1062,12 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     newfunc.set_args(newargs);
                     cont1.borrow_mut().load_function(newfunc)
                 },
-                &||{});
+                &||{}));
 
             let func1 = func.clone();
             let args1 = args.clone();
             let cont1 = Rc::clone(&self.controller);
-            self.render_type_change_combo(
+            to_draw.push(self.render_type_change_combo(
                 "Type",
                 &arg.arg_type,
                 move |newtype| {
@@ -1078,13 +1078,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     newfunc.set_args(newargs);
                     cont1.borrow_mut().load_function(newfunc)
                 }
-            );
+            ));
         }
 
         let func1 = func.clone();
         let args1 = args.clone();
         let cont1 = Rc::clone(&self.controller);
-        self.ui_toolkit.draw_button("Add", GREY_COLOR, move || {
+        to_draw.push(self.ui_toolkit.draw_button("Add another argument", GREY_COLOR, move || {
             let mut args = args1.clone();
             let mut func = func1.clone();
             args.push(lang::ArgumentDefinition::new(
@@ -1093,7 +1093,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             ));
             func.set_args(args);
             cont1.borrow_mut().load_function(func);
-        });
+        }));
 
         self.ui_toolkit.draw_all(to_draw)
     }
