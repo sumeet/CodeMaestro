@@ -9,7 +9,7 @@ use stdweb::web::error;
 use stdweb::traits::IError;
 use stdweb::private::ConversionError;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct JSFunc {
     pub eval: String,
     pub return_type: lang::Type,

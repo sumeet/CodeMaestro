@@ -189,15 +189,17 @@ impl Function for Capitalize {
 }
 
 #[cfg(feature = "default")]
-fn load_builtins(controller: &mut Controller) {
-    controller.load_function(pystuff::PyFunc::new());
-    controller.load_function(pystuff::PyFunc::new());
+fn load_builtins(controller: &mut Controller, world: &code_loading::TheWorld) {
+    for pyfunc in world.pyfuncs.iter() {
+        controller.load_function(pyfunc.clone());
+    }
 }
 
 #[cfg(feature = "javascript")]
-fn load_builtins(controller: &mut Controller) {
-    controller.load_function(jsstuff::JSFunc::new());
-    controller.load_function(jsstuff::JSFunc::new());
+fn load_builtins(controller: &mut Controller, world: &code_loading::TheWorld) {
+    for jsfunc in world.jsfuncs.iter() {
+        controller.load_function(jsfunc.clone());
+    }
 }
 
 pub struct CSApp {
@@ -206,15 +208,17 @@ pub struct CSApp {
 
 impl CSApp {
     fn new() -> CSApp {
-        let codestring = include_str!("../codesample.json");
-        let loaded_code = code_loading::deserialize(codestring).unwrap();
         let app = CSApp {
             controller: Rc::new(RefCell::new(Controller::new())),
         };
-        app.controller.borrow_mut().load_code(&loaded_code);
         app.controller.borrow_mut().load_function(Print{});
         app.controller.borrow_mut().load_function(Capitalize{});
-        load_builtins(&mut app.controller.borrow_mut());
+
+        let codestring = include_str!("../codesample.json");
+        let the_world : code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
+        app.controller.borrow_mut().load_code(&the_world.main_code);
+        load_builtins(&mut app.controller.borrow_mut(), &the_world);
+
         app
     }
 

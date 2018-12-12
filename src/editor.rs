@@ -7,6 +7,7 @@ use failure::{err_msg};
 use failure::Error as Error;
 use super::env::{ExecutionEnvironment};
 use super::lang;
+use super::code_loading;
 use super::code_generation;
 use super::lang::{
     Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Assignment,Block,
@@ -579,6 +580,27 @@ impl<'a> Controller {
         self.typespec_by_id.values().collect()
     }
 
+    fn save(&self) {
+        let theworld = code_loading::TheWorld {
+            main_code: self.loaded_code.clone().unwrap(),
+            pyfuncs: self.list_pyfuncs(),
+            jsfuncs: self.list_jsfuncs(),
+        };
+        code_loading::save("../codesample.json", &theworld).unwrap();
+    }
+
+    fn list_jsfuncs(&self) -> Vec<jsstuff::JSFunc> {
+        self.execution_environment.list_functions().into_iter()
+            .filter_map(|f| Result::ok(f.downcast::<jsstuff::JSFunc>()))
+            .map(|boxedjsfunc| *boxedjsfunc).collect()
+    }
+
+    fn list_pyfuncs(&self) -> Vec<pystuff::PyFunc> {
+        self.execution_environment.list_functions().into_iter()
+            .filter_map(|f| Result::ok(f.downcast::<pystuff::PyFunc>()))
+            .map(|boxedpyfunc| *boxedpyfunc).collect()
+    }
+
     // TODO: return a result instead of returning nothing? it seems like there might be places this
     // thing can error
     fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
@@ -826,6 +848,10 @@ impl<'a> Controller {
         self.execution_environment.add_function(Box::new(function))
     }
 
+    pub fn remove_function(&mut self, id: lang::ID) {
+        self.execution_environment.delete_function(id)
+    }
+
     pub fn find_function(&self, id: ID) -> Option<&Box<Function>> {
         self.execution_environment.find_function(id)
     }
@@ -934,11 +960,23 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.ui_toolkit.draw_menu(
                 "File",
                 &|| {
-                    self.ui_toolkit.draw_menu_item("Debug", || {
-                        println!("pressed biatch");
-                    })
+                    let cont1 = Rc::clone(&self.controller);
+                    let cont2 = Rc::clone(&self.controller);
+                    self.ui_toolkit.draw_all(vec![
+                        self.ui_toolkit.draw_menu_item("Save", move || {
+                            cont1.borrow_mut().save();
+                        }),
+                        self.ui_toolkit.draw_menu_item("Add Python function", move || {
+                            cont2.borrow_mut().load_function(pystuff::PyFunc::new());
+                        }),
+                        self.ui_toolkit.draw_menu_item("Exit", || {
+                            std::process::exit(0);
+                        }),
+                    ])
                 }
             )
+            // TODO: add a button for creating pyfuncs
+            // TODO: add an exit button
         })
     }
 
@@ -989,19 +1027,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         cont3.borrow_mut().load_function(pyfunc3);
                     },
                 ),
-                self.render_return_type_selector(pyfunc.clone()),
+                self.render_return_type_selector(pyfunc),
                 self.ui_toolkit.draw_separator(),
                 self.render_test_section(pyfunc.clone()),
+                self.ui_toolkit.draw_separator(),
+                self.render_general_function_menu(pyfunc),
             ])
         },
         None::<fn(Keypress)>)
     }
 
     fn render_edit_jsfuncs(&self) -> T::DrawResult {
-        let funcs = self.controller.borrow().execution_environment.list_functions();
-        let jsfuncs = funcs.iter()
-            .filter_map(|f| f.as_ref().downcast_ref::<jsstuff::JSFunc>());
-        self.ui_toolkit.draw_all(jsfuncs.map(|f| self.render_edit_jsfunc(f)).collect())
+        let cont = self.controller.borrow();
+        let jsfuncs = cont.list_jsfuncs();
+        self.ui_toolkit.draw_all(jsfuncs.iter().map(|f| self.render_edit_jsfunc(f)).collect())
     }
 
     fn render_edit_jsfunc(&self, jsfunc: &jsstuff::JSFunc) -> T::DrawResult {
@@ -1031,12 +1070,24 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         cont3.borrow_mut().execution_environment.add_function(Box::new(jsfunc3));
                     },
                 ),
-                self.render_return_type_selector(jsfunc.clone()),
+                self.render_return_type_selector(jsfunc),
                 self.ui_toolkit.draw_separator(),
                 self.render_test_section(jsfunc.clone()),
+                self.ui_toolkit.draw_separator(),
+                self.render_general_function_menu(jsfunc),
             ])
         },
         None::<fn(Keypress)>)
+    }
+
+    fn render_general_function_menu<F: lang::Function>(&self, func: &F) -> T::DrawResult {
+        let cont1 = Rc::clone(&self.controller);
+        let func_id = func.id();
+        self.ui_toolkit.draw_all(vec![
+            self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
+                cont1.borrow_mut().remove_function(func_id);
+            })
+        ])
     }
 
     fn render_arguments_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
@@ -1047,7 +1098,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                  "Arguments"),
         ];
 
-        for (i, arg) in args.iter().enumerate() {
+        for (current_arg_index, arg) in args.iter().enumerate() {
             let func1 = func.clone();
             let args1 = args.clone();
             let cont1 = Rc::clone(&self.controller);
@@ -1057,7 +1108,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 move |newvalue| {
                     let mut newfunc = func1.clone();
                     let mut newargs = args1.clone();
-                    let mut newarg = &mut newargs[i];
+                    let mut newarg = &mut newargs[current_arg_index];
                     newarg.short_name = newvalue.to_string();
                     newfunc.set_args(newargs);
                     cont1.borrow_mut().load_function(newfunc)
@@ -1073,8 +1124,23 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 move |newtype| {
                     let mut newfunc = func1.clone();
                     let mut newargs = args1.clone();
-                    let mut newarg = &mut newargs[i];
+                    let mut newarg = &mut newargs[current_arg_index];
                     newarg.arg_type = newtype;
+                    newfunc.set_args(newargs);
+                    cont1.borrow_mut().load_function(newfunc)
+                }
+            ));
+
+            let func1 = func.clone();
+            let args1 = args.clone();
+            let cont1 = Rc::clone(&self.controller);
+            to_draw.push(self.ui_toolkit.draw_button(
+                "Delete",
+                RED_COLOR,
+                move || {
+                    let mut newfunc = func1.clone();
+                    let mut newargs = args1.clone();
+                    newargs.remove(current_arg_index);
                     newfunc.set_args(newargs);
                     cont1.borrow_mut().load_function(newfunc)
                 }
@@ -1168,7 +1234,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(drawn)
     }
 
-    fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
+    fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: &F) -> T::DrawResult {
         // TODO: why doesn't this return a reference???
         let return_type = func.returns();
 
@@ -1512,14 +1578,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
         let draw_results = expected_args.iter().map(|expected_arg| {
             // TODO: display the argument name somewhere in here?
-            if let Some(provided_arg) = provided_arg_by_definition_id.get(&expected_arg.id) {
-                self.render_code(&CodeNode::Argument(provided_arg.clone()))
-            } else {
-                self.render_missing_function_argument(expected_arg)
-            }
-        }).collect();
+            let c : Box<Fn() -> T::DrawResult> =
+                if let Some(provided_arg) = provided_arg_by_definition_id.get(&expected_arg.id) {
+                    Box::new(move || self.render_code(&CodeNode::Argument(provided_arg.clone())))
+                } else {
+                    Box::new(move || self.render_missing_function_argument(expected_arg))
+                };
+            c
+        }).collect_vec();
 
-        self.ui_toolkit.draw_all(draw_results)
+        self.ui_toolkit.draw_all_on_same_line(&draw_results.iter().map(|c| c.as_ref()).collect_vec())
     }
 
     fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {

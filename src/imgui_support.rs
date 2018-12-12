@@ -7,8 +7,6 @@ use glium::glutin::VirtualKeyCode as Key;
 
 use super::editor::{Key as AppKey,Keypress};
 
-
-
 #[derive(Copy, Clone, PartialEq, Debug, Default)]
 struct MouseState {
     pos: (i32, i32),

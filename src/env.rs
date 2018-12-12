@@ -26,6 +26,10 @@ impl ExecutionEnvironment {
         self.functions.get(&id)
     }
 
+    pub fn delete_function(&mut self, id: lang::ID) {
+        self.functions.remove(&id).unwrap();
+    }
+
     pub fn list_functions(&self) -> Vec<Box<lang::Function>> {
         self.functions.iter().map(|(_, func)| func.clone()).collect()
     }

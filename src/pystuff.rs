@@ -51,7 +51,7 @@ impl PyNamespace {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PyFunc {
     pub prelude: String,
     // TODO: eval can only be a single expression. so there should probably be a `run` step that can execute

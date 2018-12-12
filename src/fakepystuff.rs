@@ -4,7 +4,7 @@ use super::lang;
 use super::env;
 use super::external_func;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct PyFunc {
     pub prelude: String,
     pub eval: String,
