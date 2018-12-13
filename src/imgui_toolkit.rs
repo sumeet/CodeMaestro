@@ -143,7 +143,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         if let Some((last_draw_fn, first_draw_fns)) = draw_fns.split_last() {
             for draw_fn in first_draw_fns {
                 draw_fn();
-                self.ui.same_line_spacing(0.0, 1.0);
+                self.ui.same_line_spacing(0.0, 0.0);
             }
             last_draw_fn();
         }
