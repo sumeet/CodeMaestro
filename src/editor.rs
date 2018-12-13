@@ -1479,7 +1479,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     &CodeNode::Assignment(assignment.clone())
                 )
             },
-            &|| { self.ui_toolkit.draw_button("=", CLEAR_COLOR, &|| {}) },
+            &|| { self.ui_toolkit.draw_text("  =  ") },
             &|| { self.render_code(assignment.expression.as_ref()) }
         ])
     }
