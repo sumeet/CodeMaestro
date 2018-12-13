@@ -70,12 +70,87 @@
             ],
             "id": "06fc6f25-e2e6-4a76-b010-25452a0894a9"
           }
+        },
+        {
+          "FunctionCall": {
+            "function_reference": {
+              "FunctionReference": {
+                "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
+                "id": "97c4753c-ca85-43e5-95b5-0c2ab386ea65"
+              }
+            },
+            "args": [
+              {
+                "Argument": {
+                  "id": "6e7d29a1-bd5c-4ebc-a1dd-e6a3aa56f5a2",
+                  "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df",
+                  "expr": {
+                    "StringLiteral": {
+                      "value": "'",
+                      "id": "17b7315f-630b-4695-a6e6-c48ec1c09d00"
+                    }
+                  }
+                }
+              }
+            ],
+            "id": "46004a0d-0b03-455c-8f06-e29a3f1c5e48"
+          }
+        },
+        {
+          "FunctionCall": {
+            "function_reference": {
+              "FunctionReference": {
+                "function_id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
+                "id": "a346aed6-16c7-4570-9305-ae228143d4e0"
+              }
+            },
+            "args": [
+              {
+                "Argument": {
+                  "id": "2b772f4c-010e-4b22-a88f-508bff92e408",
+                  "argument_definition_id": "1ace4394-96ff-49fe-a69f-94a08438d251",
+                  "expr": "NullLiteral"
+                }
+              }
+            ],
+            "id": "a40d6efc-4145-4613-9482-ebf64b810fa6"
+          }
         }
       ],
       "id": "b702d87f-28bb-4c2c-b22a-318c342dbaa3"
     }
   },
   "pyfuncs": [
+    {
+      "prelude": "",
+      "eval": "None",
+      "return_type": {
+        "typespec": {
+          "readable_name": "Null",
+          "id": "daa07233-b887-4512-b06e-d6a53d415213",
+          "symbol": "",
+          "num_params": 0
+        },
+        "params": []
+      },
+      "name": "New PyFunc",
+      "id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
+      "args": [
+        {
+          "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
+          "arg_type": {
+            "typespec": {
+              "readable_name": "Null",
+              "id": "daa07233-b887-4512-b06e-d6a53d415213",
+              "symbol": "",
+              "num_params": 0
+            },
+            "params": []
+          },
+          "short_name": "arg0"
+        }
+      ]
+    },
     {
       "prelude": "",
       "eval": "arg2 + \" sup bitches i'm python\" + arg1",

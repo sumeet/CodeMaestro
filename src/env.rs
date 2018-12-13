@@ -73,6 +73,7 @@ impl ExecutionEnvironment {
             // TODO: trying to evaluate a placeholder should probably panic... but we don't have a
             // concept of panic yet
             lang::CodeNode::Placeholder(_) => { lang::Value::Null }
+            lang::CodeNode::NullLiteral => { lang::Value::Null }
         }
     }
 

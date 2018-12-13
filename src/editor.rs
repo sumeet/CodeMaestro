@@ -241,19 +241,28 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                         new_node: code_generation::new_string_literal(input_str)
                     }
                 );
-                // design decision made here: all placeholders have types. therefore, it is now
-                // required for a placeholder node to have a type, meaning we need to know what the
-                // type of a placeholder is to create it. under current conditions that's ok, but i
-                // think we can make this less restrictive in the future if we need to
+            }
+            if return_type.matches_spec(&lang::NULL_TYPESPEC) {
                 options.push(
                     InsertCodeMenuOption {
-                        label: format!("{} {}", PLACEHOLDER_ICON, input_str),
+                        label: lang::NULL_TYPESPEC.symbol.clone(),
                         is_selected: false,
-                        // XXX: omg, placholders will now need to hold a type instead of type id
-                        new_node: code_generation::new_placeholder(input_str, return_type.typespec.id),
+                        new_node: code_generation::new_null_literal(),
                     }
                 );
             }
+            // design decision made here: all placeholders have types. therefore, it is now
+            // required for a placeholder node to have a type, meaning we need to know what the
+            // type of a placeholder is to create it. under current conditions that's ok, but i
+            // think we can make this less restrictive in the future if we need to
+            options.push(
+                InsertCodeMenuOption {
+                    label: format!("{} {}", PLACEHOLDER_ICON, input_str),
+                    is_selected: false,
+                    // XXX: omg, placholders will now need to hold a type instead of type id
+                    new_node: code_generation::new_placeholder(input_str, return_type.typespec.id),
+                }
+            );
         }
         options
     }
@@ -425,6 +434,9 @@ impl<'a> CodeGenie<'a> {
                 lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
             CodeNode::Placeholder(_) => {
+                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+            }
+            CodeNode::NullLiteral => {
                 lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
         }
@@ -1362,6 +1374,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 }
                 CodeNode::Placeholder(placeholder) => {
                     self.render_placeholder(&placeholder)
+                }
+                CodeNode::NullLiteral => {
+                    self.ui_toolkit.draw_text(&format!("  {}  ", lang::NULL_TYPESPEC.symbol))
                 }
             }
         };

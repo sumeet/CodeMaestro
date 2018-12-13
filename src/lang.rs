@@ -68,6 +68,7 @@ pub enum CodeNode {
     FunctionReference(FunctionReference),
     Argument(Argument),
     StringLiteral(StringLiteral),
+    NullLiteral,
     Assignment(Assignment),
     Block(Block),
     VariableReference(VariableReference),
@@ -214,7 +215,10 @@ impl CodeNode {
             }
             CodeNode::Placeholder(placeholder) => {
                 format!("Placeholder: {}", placeholder.description)
-            }
+            },
+            CodeNode::NullLiteral => {
+                "NullLiteral".to_string()
+            },
         }
     }
 
@@ -248,6 +252,9 @@ impl CodeNode {
             }
             CodeNode::Placeholder(placeholder) => {
                 placeholder.id
+            },
+            CodeNode::NullLiteral => {
+                uuid::Uuid::parse_str("1a2de9c5-043c-43c8-ad05-622bb278d5ab").unwrap()
             }
         }
     }
@@ -309,6 +316,7 @@ impl CodeNode {
             CodeNode::Placeholder(_) => {
                 vec![]
             }
+            CodeNode::NullLiteral => vec![]
         }
     }
 
@@ -354,6 +362,7 @@ impl CodeNode {
             CodeNode::Placeholder(_placeholder) => {
                 vec![]
             }
+            CodeNode::NullLiteral => vec![]
         }
     }
 

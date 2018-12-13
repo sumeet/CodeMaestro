@@ -46,3 +46,8 @@ pub fn new_placeholder(description: &str, type_id: lang::ID) -> lang::CodeNode {
         type_id,
     })
 }
+
+
+pub fn new_null_literal() -> lang::CodeNode {
+    lang::CodeNode::NullLiteral
+}
