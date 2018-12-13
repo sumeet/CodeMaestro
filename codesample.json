@@ -19,43 +19,56 @@
             "function_reference": {
               "FunctionReference": {
                 "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
-                "id": "a9747f28-6ef8-4ee7-9afd-d3dd66584c31"
+                "id": "b3641ea3-2013-4d6e-ae53-444cf1ff1e70"
               }
             },
             "args": [
               {
                 "Argument": {
-                  "id": "92e32d0a-774a-4978-8b2a-17eca2d9032e",
+                  "id": "42a4aa7f-b2e5-42bf-9e32-9c5f75e95736",
                   "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df",
                   "expr": {
                     "FunctionCall": {
                       "function_reference": {
                         "FunctionReference": {
                           "function_id": "5670a4e4-835c-44cc-8d8d-ab1d9d9cfd30",
-                          "id": "d0ba327a-48ae-4659-9998-cefaae63c52a"
+                          "id": "6b9f97e9-2beb-43fd-b649-fc60522124eb"
                         }
                       },
                       "args": [
                         {
                           "Argument": {
-                            "id": "7b023df6-755a-42d1-9da6-af4a36158ae0",
+                            "id": "eb3923e4-f4d6-4bf1-86b2-cb18e0f52fb5",
                             "argument_definition_id": "3d8050ff-ffc4-4b6c-b0ce-1c23bf02b19e",
                             "expr": {
                               "VariableReference": {
                                 "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
-                                "id": "d50569c9-462c-48f3-96e7-63308a0f845c"
+                                "id": "2f0a8b96-1293-4bb7-92fe-e0d864dbc087"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "Argument": {
+                            "id": "ba6b0347-8475-4f1d-93b1-a7006ae7679c",
+                            "argument_definition_id": "b0cfb9cb-a823-4c70-b0b5-ef46e0ff07d4",
+                            "expr": {
+                              "Placeholder": {
+                                "id": "946b4995-d611-4379-b74d-2a6bde8be7b7",
+                                "description": "arg2",
+                                "type_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568"
                               }
                             }
                           }
                         }
                       ],
-                      "id": "bec4ea4e-fd9f-4ee3-ac1b-95c8e8315504"
+                      "id": "70b58951-5f81-466c-b79f-0d70e2ddcac7"
                     }
                   }
                 }
               }
             ],
-            "id": "bbb9fc2a-5489-4f10-ae83-2caaa4c57bcc"
+            "id": "06fc6f25-e2e6-4a76-b010-25452a0894a9"
           }
         }
       ],
@@ -65,7 +78,7 @@
   "pyfuncs": [
     {
       "prelude": "",
-      "eval": "arg2 + \" sup bitches i'm python\"",
+      "eval": "arg2 + \" sup bitches i'm python\" + arg1",
       "return_type": {
         "typespec": {
           "readable_name": "String",
@@ -80,6 +93,19 @@
       "args": [
         {
           "id": "3d8050ff-ffc4-4b6c-b0ce-1c23bf02b19e",
+          "arg_type": {
+            "typespec": {
+              "readable_name": "String",
+              "id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+              "symbol": "",
+              "num_params": 0
+            },
+            "params": []
+          },
+          "short_name": "arg1"
+        },
+        {
+          "id": "b0cfb9cb-a823-4c70-b0b5-ef46e0ff07d4",
           "arg_type": {
             "typespec": {
               "readable_name": "String",

@@ -4,6 +4,7 @@
 #![feature(arbitrary_self_types)]
 #![feature(slice_concat_ext)]
 #![feature(refcell_replace_swap)]
+#![feature(box_patterns)]
 #![recursion_limit="256"]
 
 

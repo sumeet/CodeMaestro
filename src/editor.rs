@@ -610,11 +610,11 @@ impl<'a> Controller {
     // thing can error
     fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
         let genie = self.code_genie();
-        let (next_selection_id, editing) = post_insertion_cursor(&code_node);
-        let new_code = self.mutation_master.insert_code(code_node,
-                                                                   insertion_point,
-                                                                   genie.as_ref().unwrap());
+        let new_code = self.mutation_master.insert_code(&code_node, insertion_point,
+                                                        genie.as_ref().unwrap());
         self.loaded_code.as_mut().unwrap().replace(&new_code);
+        let genie = self.code_genie();
+        let (next_selection_id, editing) = post_insertion_cursor(&code_node, genie.as_ref().unwrap());
         if editing {
             self.mark_as_editing(next_selection_id)
         } else {
@@ -1750,7 +1750,7 @@ impl MutationMaster {
         MutationMaster { history: RefCell::new(undo::UndoHistory::new()) }
     }
 
-    fn insert_code(&self, node_to_insert: CodeNode, insertion_point: InsertionPoint,
+    fn insert_code(&self, node_to_insert: &CodeNode, insertion_point: InsertionPoint,
                    genie: &CodeGenie) -> CodeNode {
         let parent = genie.find_parent(insertion_point.node_id());
         if parent.is_none() {
@@ -1758,6 +1758,7 @@ impl MutationMaster {
 
         }
         let parent = parent.unwrap();
+        let node_to_insert = node_to_insert.clone();
         match insertion_point {
             InsertionPoint::Before(_) | InsertionPoint::After(_) => {
                 self.insert_new_expression_in_block(
@@ -1859,19 +1860,32 @@ impl MutationMaster {
 }
 
 // return value: (CodeNode ID, editing: true/false)
-fn post_insertion_cursor(code_node: &CodeNode) -> (ID, bool) {
-    match code_node {
-        CodeNode::FunctionCall(function_call) => {
-            if function_call.args.len() > 0 {
-                (function_call.args.get(0).unwrap().id(), true)
-            } else {
-                (function_call.id, false)
-            }
-        }
-        _ => {
-            (code_node.id(), false)
+fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> (ID, bool) {
+    if let CodeNode::FunctionCall(function_call) = code_node {
+        // if we just inserted a function call, then go to the first arg if there is one
+        if function_call.args.len() > 0 {
+            return (function_call.args.get(0).unwrap().id(), true)
+        } else {
+            return (function_call.id, false)
         }
     }
+
+    let parent = code_genie.find_parent(code_node.id());
+    if let Some(CodeNode::Argument(argument)) = parent {
+        // if we just finished inserting into a function call argument, and the next argument is
+        // a placeholder, then let's insert into that arg!!!!
+        if let Some(CodeNode::FunctionCall(function_call)) = code_genie.find_parent(argument.id) {
+            let just_inserted_argument_position = function_call.args.iter()
+                .position(|arg| arg.id() == argument.id).unwrap();
+            let maybe_next_arg = function_call.args.get(just_inserted_argument_position + 1);
+            if let Some(CodeNode::Argument(lang::Argument{ expr: box CodeNode::Placeholder(_), .. })) = maybe_next_arg {
+                return (maybe_next_arg.unwrap().id(), true)
+            }
+        }
+    }
+
+    // nothing to do next, just chill at the insertion point
+    (code_node.id(), false)
 }
 
 fn format_typespec_select(ts: &lang::TypeSpec, nesting_level: Option<&[usize]>) -> String {
