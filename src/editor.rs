@@ -1,4 +1,5 @@
-use debug_cell::RefCell;
+use std::cell::RefCell;
+//use debug_cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
 use std::iter;
@@ -923,6 +924,10 @@ pub trait UiToolkit {
               H: Fn(&T) -> String;
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8,
+                              draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8,
+                                 draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -931,6 +936,7 @@ pub trait UiToolkit {
 }
 
 pub struct Renderer<'a, T> {
+    arg_nesting_level: RefCell<u32>,
     ui_toolkit: &'a mut T,
     controller: Rc<RefCell<Controller>>,
 }
@@ -938,6 +944,7 @@ pub struct Renderer<'a, T> {
 impl<'a, T: UiToolkit> Renderer<'a, T> {
     pub fn new(ui_toolkit: &'a mut T, controller: Rc<RefCell<Controller>>) -> Renderer<'a, T> {
         Self {
+            arg_nesting_level: RefCell::new(0),
             ui_toolkit: ui_toolkit,
             controller: Rc::clone(&controller)
         }
@@ -1534,16 +1541,30 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> T::DrawResult {
-        let function = self.controller.borrow().find_function(function_id)
-            .map(|func| func.clone());
-        match function {
-            Some(function) => {
-                self.render_args_for_found_function(&*function, args)
-            },
-            None => {
-                self.render_args_for_missing_function(args)
+        let top_border_thickness = 1;
+        let right_border_thickness = 1;
+
+        let draw = || {
+            let function = self.controller.borrow().find_function(function_id)
+                .map(|func| func.clone());
+            let args = args.clone();
+            match function {
+                Some(function) => {
+                    self.render_args_for_found_function(&*function, args)
+                },
+                None => {
+                    self.render_args_for_missing_function(args)
+                }
             }
-        }
+        };
+
+        let nesting_level = self.arg_nesting_level.replace_with(|i| *i + 1);
+        let top_border_thickness = top_border_thickness + nesting_level + 1;
+        let drawn = self.ui_toolkit.draw_top_border_inside(BLACK_COLOR, top_border_thickness as u8, &|| {
+            self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &draw)
+        });
+        self.arg_nesting_level.replace_with(|i| *i - 1);
+        drawn
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {

@@ -3,6 +3,7 @@
 #![feature(nll)]
 #![feature(arbitrary_self_types)]
 #![feature(slice_concat_ext)]
+#![feature(refcell_replace_swap)]
 #![recursion_limit="256"]
 
 
@@ -58,9 +59,9 @@ extern crate indexmap;
 #[macro_use] extern crate downcast_rs;
 
 extern crate debug_cell;
-use debug_cell::RefCell;
+//use debug_cell::RefCell;
 
-//use std::cell::RefCell;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
 

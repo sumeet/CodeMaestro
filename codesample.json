@@ -32,37 +32,24 @@
                       "function_reference": {
                         "FunctionReference": {
                           "function_id": "5670a4e4-835c-44cc-8d8d-ab1d9d9cfd30",
-                          "id": "e3480e10-0af8-4b8b-8c1b-6e2f19fb14fb"
+                          "id": "d0ba327a-48ae-4659-9998-cefaae63c52a"
                         }
                       },
                       "args": [
                         {
                           "Argument": {
-                            "id": "6ac6ac25-e579-475d-b803-22fbd3c92072",
+                            "id": "7b023df6-755a-42d1-9da6-af4a36158ae0",
                             "argument_definition_id": "3d8050ff-ffc4-4b6c-b0ce-1c23bf02b19e",
                             "expr": {
                               "VariableReference": {
                                 "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
-                                "id": "08a3850e-e129-4908-8f65-d80e5d9f40fc"
-                              }
-                            }
-                          }
-                        },
-                        {
-                          "Argument": {
-                            "id": "799b0a38-1b7c-480b-ab6c-06afa3922390",
-                            "argument_definition_id": "c957b815-d2bc-4824-a1a8-77571e64bef7",
-                            "expr": {
-                              "Placeholder": {
-                                "id": "e047e6a5-fdd3-4296-98d9-f70333c5e0a1",
-                                "description": "arg1",
-                                "type_id": "daa07233-b887-4512-b06e-d6a53d415213"
+                                "id": "d50569c9-462c-48f3-96e7-63308a0f845c"
                               }
                             }
                           }
                         }
                       ],
-                      "id": "bda223c2-f7f6-4b16-bb3a-ff2067e7471b"
+                      "id": "bec4ea4e-fd9f-4ee3-ac1b-95c8e8315504"
                     }
                   }
                 }
@@ -78,7 +65,7 @@
   "pyfuncs": [
     {
       "prelude": "",
-      "eval": "arg0 + \" sup bitches i'm python\"",
+      "eval": "arg2 + \" sup bitches i'm python\"",
       "return_type": {
         "typespec": {
           "readable_name": "String",
@@ -102,20 +89,7 @@
             },
             "params": []
           },
-          "short_name": "arg0"
-        },
-        {
-          "id": "c957b815-d2bc-4824-a1a8-77571e64bef7",
-          "arg_type": {
-            "typespec": {
-              "readable_name": "Null",
-              "id": "daa07233-b887-4512-b06e-d6a53d415213",
-              "symbol": "",
-              "num_params": 0
-            },
-            "params": []
-          },
-          "short_name": "arg1"
+          "short_name": "arg2"
         }
       ]
     }
