@@ -103,6 +103,10 @@ impl InsertCodeMenu {
         }
     }
 
+    fn search_str(&self) -> &str {
+        &self.search_params.input_str
+    }
+
     fn set_search_str(&mut self, input_str: &str) {
         if input_str != self.search_params.input_str {
             self.search_params.input_str = input_str.to_string();
@@ -1412,7 +1416,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let new_code_node = menu.selected_option_code();
 
                 self.ui_toolkit.draw_text_input(
-                    "",
+                    menu.search_str(),
                     move |input|{
                         controller_1.borrow_mut().insert_code_menu.as_mut()
                             .map(|m| {m.set_search_str(input)});
