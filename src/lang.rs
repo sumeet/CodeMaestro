@@ -137,6 +137,7 @@ impl Type {
     pub fn id(&self) -> ID {
         let mut mashed_hashes = vec![self.typespec.id.to_string()];
         mashed_hashes.extend(self.params.iter().map(|t| t.id().to_string()));
+        // v5 uuids aren't random, they are hashes
         uuid::Uuid::new_v5(
             &uuid::Uuid::NAMESPACE_OID,
             mashed_hashes.join(":").as_bytes())
