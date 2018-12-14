@@ -22,7 +22,7 @@ use super::undo;
 use super::edit_types;
 
 
-pub const BLUE_COLOR: Color = [0.196, 0.584, 0.721, 1.0];
+pub const BLUE_COLOR: Color = [100.0 / 255.0, 149.0 / 255.0, 237.0 / 255.0, 1.0];
 pub const YELLOW_COLOR: Color = [253.0 / 255.0, 159.0 / 255.0, 19.0 / 255.0, 1.0];
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
