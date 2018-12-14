@@ -213,7 +213,20 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igGetItemRectMin(&mut min) };
         unsafe { imgui_sys::igGetItemRectMax(&mut max) };
         self.ui.get_window_draw_list()
-            .add_rect((max.x - thickness as f32, min.y), (max.x, max.y), color)
+            .add_rect((max.x - thickness as f32, min.y), max, color)
+            .thickness(1.)
+            .filled(true)
+            .build()
+    }
+
+    fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+        self.ui.group(draw_fn);
+        let mut min = ImVec2::zero();
+        let mut max = ImVec2::zero();
+        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
+        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        self.ui.get_window_draw_list()
+            .add_rect((min.x, max.y - thickness as f32), max, color)
             .thickness(1.)
             .filled(true)
             .build()

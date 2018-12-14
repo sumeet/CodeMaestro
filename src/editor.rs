@@ -944,6 +944,8 @@ pub trait UiToolkit {
                               draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8,
                                  draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8,
+                                 draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -1562,6 +1564,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> T::DrawResult {
         let top_border_thickness = 1;
         let right_border_thickness = 1;
+        let bottom_border_thickness = 1;
 
         let draw = || {
             let function = self.controller.borrow().find_function(function_id)
@@ -1580,7 +1583,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let nesting_level = self.arg_nesting_level.replace_with(|i| *i + 1);
         let top_border_thickness = top_border_thickness + nesting_level + 1;
         let drawn = self.ui_toolkit.draw_top_border_inside(BLACK_COLOR, top_border_thickness as u8, &|| {
-            self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &draw)
+            self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &|| {
+                self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, &draw)
+            })
         });
         self.arg_nesting_level.replace_with(|i| *i - 1);
         drawn
