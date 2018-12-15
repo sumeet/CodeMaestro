@@ -176,15 +176,23 @@ impl Type {
 impl CodeNode {
     pub fn into_argument(&self) -> &Argument {
         match self {
-            CodeNode::Argument(argument) => argument,
+            CodeNode::Argument(ref argument) => argument,
             _ => panic!("tried converting into argument but this ain't an argument")
         }
     }
 
     pub fn into_assignment(&self) -> Option<&Assignment> {
         match self {
-            CodeNode::Assignment(assignment) => Some(assignment),
+            CodeNode::Assignment(ref assignment) => Some(assignment),
             _ => None,
+        }
+    }
+
+    pub fn into_block(&self) -> Option<&Block> {
+        if let CodeNode::Block(ref block) = self {
+            Some(block)
+        } else {
+            None
         }
     }
 

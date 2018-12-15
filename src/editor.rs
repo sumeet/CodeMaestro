@@ -305,6 +305,8 @@ pub enum Key {
     C,
     D,
     H,
+    J,
+    K,
     L,
     W,
     X,
@@ -314,6 +316,8 @@ pub enum Key {
     V,
     Tab,
     Escape,
+    UpArrow,
+    DownArrow,
     LeftArrow,
     RightArrow,
 }
@@ -328,6 +332,8 @@ impl<'a> CodeGenie<'a> {
         Self { code: code_node, env }
     }
 
+    // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made
+    // inside of conditionals... ugh scoping is tough
     fn find_assignments_that_come_before_code(&self, node_id: ID) -> Vec<&Assignment> {
         let block_expression_id = self.find_expression_inside_block_that_contains(node_id);
         if block_expression_id.is_none() {
@@ -452,6 +458,46 @@ impl<'a> Navigation<'a> {
         Self { code_genie }
     }
 
+    pub fn navigate_up_from(&self, code_node_id: Option<ID>) -> Option<ID> {
+        let code_node_id = code_node_id?;
+        let containing_block_expression_id = self.code_genie
+            .find_expression_inside_block_that_contains(code_node_id)?;
+        let position_inside_block_expression = self.code_genie
+            .find_node(containing_block_expression_id)?
+            .all_children_dfs()
+            .iter()
+            .position(|child_node| child_node.id() == code_node_id)?;
+
+        let block = self.code_genie.find_parent(containing_block_expression_id)?.into_block()?;
+        let position_of_block_expression_inside_block = self.code_genie
+            .find_position_in_block(block, containing_block_expression_id)?;
+        let previous_block_expression = block.expressions.get(position_of_block_expression_inside_block - 1)?;
+
+        let expression_in_previous_block_expression_with_same_index_id = previous_block_expression
+            .all_children_dfs().get(position_inside_block_expression)?.id();
+        Some(expression_in_previous_block_expression_with_same_index_id)
+    }
+
+    pub fn navigate_down_from(&self, code_node_id: Option<ID>) -> Option<ID> {
+        let code_node_id = code_node_id?;
+        let containing_block_expression_id = self.code_genie
+            .find_expression_inside_block_that_contains(code_node_id)?;
+        let position_inside_block_expression = self.code_genie
+            .find_node(containing_block_expression_id)?
+            .all_children_dfs()
+            .iter()
+            .position(|child_node| child_node.id() == code_node_id)?;
+
+        let block = self.code_genie.find_parent(containing_block_expression_id)?.into_block()?;
+        let position_of_block_expression_inside_block = self.code_genie
+            .find_position_in_block(block, containing_block_expression_id)?;
+        let previous_block_expression = block.expressions.get(position_of_block_expression_inside_block + 1)?;
+
+        let expression_in_previous_block_expression_with_same_index_id = previous_block_expression
+            .all_children_dfs().get(position_inside_block_expression)?.id();
+        Some(expression_in_previous_block_expression_with_same_index_id)
+    }
+
     pub fn navigate_back_from(&self, code_node_id: Option<ID>) -> Option<ID> {
         if code_node_id.is_none() {
             return None
@@ -467,7 +513,20 @@ impl<'a> Navigation<'a> {
         None
     }
 
-    pub fn prev_node_from(&self, code_node_id: ID) -> Option<&CodeNode> {
+    pub fn navigate_forward_from(&self, code_node_id: Option<ID>) -> Option<ID> {
+        let mut go_back_from_id = code_node_id;
+        while let Some(prev_node) = self.next_node_from(go_back_from_id) {
+            if self.is_navigatable(prev_node) {
+                return Some(prev_node.id())
+            } else {
+                go_back_from_id = Some(prev_node.id())
+            }
+        }
+        None
+    }
+
+
+    fn prev_node_from(&self, code_node_id: ID) -> Option<&CodeNode> {
         let parent = self.code_genie.find_parent(code_node_id);
         if parent.is_none() {
             return None
@@ -489,19 +548,7 @@ impl<'a> Navigation<'a> {
         Some(parent)
     }
 
-    pub fn navigate_forward_from(&self, code_node_id: Option<ID>) -> Option<ID> {
-        let mut go_back_from_id = code_node_id;
-        while let Some(prev_node) = self.next_node_from(go_back_from_id) {
-            if self.is_navigatable(prev_node) {
-                return Some(prev_node.id())
-            } else {
-                go_back_from_id = Some(prev_node.id())
-            }
-        }
-        None
-    }
-
-    pub fn next_node_from(&self, code_node_id: Option<ID>) -> Option<&CodeNode> {
+    fn next_node_from(&self, code_node_id: Option<ID>) -> Option<&CodeNode> {
         if code_node_id.is_none() {
             return Some(self.code_genie.root())
         }
@@ -526,6 +573,7 @@ impl<'a> Navigation<'a> {
         }
         None
     }
+
     // don't navigate to either blocks, or direct children of blocks
     fn is_navigatable(&self, code_node: &CodeNode) -> bool {
         match code_node {
@@ -712,6 +760,12 @@ impl<'a> Controller {
         }
         // don't perform any commands when in edit mode
         match (self.editing, keypress.key) {
+            (false, Key::K) | (false, Key::UpArrow) => {
+                self.try_select_up_one_node()
+            },
+            (false, Key::J) | (false, Key::DownArrow) => {
+                self.try_select_down_one_node()
+            },
             (false, Key::B) | (false, Key::LeftArrow) | (false, Key::H) => {
                 self.try_select_back_one_node()
             },
@@ -823,6 +877,22 @@ impl<'a> Controller {
             self.loaded_code.as_ref()?,
             &self.execution_environment,
         ))
+    }
+
+    pub fn try_select_up_one_node(&mut self) {
+        let genie = self.code_genie();
+        let navigation = Navigation::new(genie.as_ref().unwrap());
+        if let Some(node_id) = navigation.navigate_up_from(self.selected_node_id) {
+            self.set_selected_node_id(Some(node_id))
+        }
+    }
+
+    pub fn try_select_down_one_node(&mut self) {
+        let genie = self.code_genie();
+        let navigation = Navigation::new(genie.as_ref().unwrap());
+        if let Some(node_id) = navigation.navigate_down_from(self.selected_node_id) {
+            self.set_selected_node_id(Some(node_id))
+        }
     }
 
     pub fn try_select_back_one_node(&mut self) {

@@ -300,6 +300,8 @@ fn map_key(key: Key) -> Option<AppKey> {
         Key::C => Some(AppKey::C),
         Key::D => Some(AppKey::D),
         Key::H => Some(AppKey::H),
+        Key::J => Some(AppKey::J),
+        Key::K => Some(AppKey::K),
         Key::L => Some(AppKey::L),
         Key::W => Some(AppKey::W),
         Key::X => Some(AppKey::X),
@@ -309,6 +311,8 @@ fn map_key(key: Key) -> Option<AppKey> {
         Key::V => Some(AppKey::V),
         Key::Escape => Some(AppKey::Escape),
         Key::Tab => Some(AppKey::Tab),
+        Key::Up => Some(AppKey::UpArrow),
+        Key::Down => Some(AppKey::DownArrow),
         Key::Left => Some(AppKey::LeftArrow),
         Key::Right => Some(AppKey::RightArrow),
         _ => None
