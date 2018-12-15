@@ -486,7 +486,11 @@ impl<'a> Navigation<'a> {
     }
 
     pub fn navigate_down_from(&self, code_node_id: Option<ID>) -> Option<ID> {
-        let code_node_id = code_node_id?;
+        // if nothing's selected and you try going down, let's just go to the first selectable node
+        if code_node_id.is_none() {
+            return self.navigate_forward_from(code_node_id)
+        }
+        let code_node_id = code_node_id.unwrap();
         let containing_block_expression_id = self.code_genie
             .find_expression_inside_block_that_contains(code_node_id)?;
         let position_inside_block_expression = self.code_genie
