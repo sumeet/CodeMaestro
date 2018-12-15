@@ -2,10 +2,10 @@ use std::fmt;
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
+use std::iter;
 
 use super::ExecutionEnvironment;
 use super::uuid::Uuid;
-
 
 lazy_static! {
     pub static ref NULL_TYPESPEC: TypeSpec = TypeSpec {
@@ -295,47 +295,57 @@ impl CodeNode {
     }
 
     pub fn children(&self) -> Vec<&CodeNode> {
+        self.children_iter().collect()
+    }
+
+    pub fn children_iter<'a>(&'a self) -> Box<Iterator<Item = &'a CodeNode> +'a> {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                let mut children : Vec<&CodeNode> = function_call.args.iter().collect();
-                children.insert(0, function_call.function_reference.as_ref());
-                children
+               Box::new(iter::once(function_call.function_reference.as_ref())
+                    .chain(function_call.args.iter()))
             }
             CodeNode::StringLiteral(_) => {
-                Vec::new()
+                Box::new(iter::empty())
             }
             CodeNode::Assignment(assignment) => {
-                vec![assignment.expression.borrow()]
+                Box::new(iter::once(assignment.expression.borrow()))
             }
             CodeNode::Block(block) => {
-                block.expressions.iter().collect()
+                Box::new(block.expressions.iter())
             }
             CodeNode::VariableReference(_) => {
-                vec![]
+                Box::new(iter::empty())
             }
             CodeNode::FunctionDefinition(_) => {
-                vec![]
+                Box::new(iter::empty())
             }
             CodeNode::FunctionReference(_) => {
-                vec![]
+                Box::new(iter::empty())
             }
             CodeNode::Argument(argument) => {
-                vec![argument.expr.borrow()]
+                Box::new(iter::once(argument.expr.borrow()))
             }
             CodeNode::Placeholder(_) => {
-                vec![]
+                Box::new(iter::empty())
             }
-            CodeNode::NullLiteral => vec![]
+            CodeNode::NullLiteral => Box::new(iter::empty())
         }
     }
 
+    pub fn self_with_all_children_dfs(&self) -> impl Iterator<Item = &CodeNode> {
+        iter::once(self).chain(self.all_children_dfs_iter())
+    }
+
+    pub fn all_children_dfs_iter<'a>(&'a self) -> Box<Iterator<Item = &'a CodeNode> + 'a> {
+        Box::new(self.children_iter()
+            .flat_map(|child| {
+                iter::once(child).chain(child.all_children_dfs_iter())
+            })
+        )
+    }
+
     pub fn all_children_dfs(&self) -> Vec<&CodeNode> {
-        let mut all_children = vec![];
-        for child in self.children() {
-            all_children.push(child);
-            all_children.extend(child.all_children_dfs().iter())
-        }
-        all_children
+        self.all_children_dfs_iter().collect()
     }
 
     pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
@@ -389,7 +399,7 @@ impl CodeNode {
         if self.id() == id {
             Some(self)
         } else {
-            for child in self.children() {
+            for child in self.children_iter() {
                 if let Some(found_node) = child.find_node(id) {
                     return Some(found_node)
                 }
@@ -402,8 +412,7 @@ impl CodeNode {
         if self.id() == id {
             return None
         } else {
-            let children = self.children();
-            for child in children {
+            for child in self.children_iter() {
                 if child.id() == id {
                     return Some(self)
                 } else {

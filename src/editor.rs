@@ -464,8 +464,8 @@ impl<'a> Navigation<'a> {
             .find_expression_inside_block_that_contains(code_node_id)?;
         let position_inside_block_expression = self.code_genie
             .find_node(containing_block_expression_id)?
-            .all_children_dfs()
-            .iter()
+            .self_with_all_children_dfs()
+            .filter(|cn| self.is_navigatable(cn))
             .position(|child_node| child_node.id() == code_node_id)?;
 
         let block = self.code_genie.find_parent(containing_block_expression_id)?.into_block()?;
@@ -473,9 +473,16 @@ impl<'a> Navigation<'a> {
             .find_position_in_block(block, containing_block_expression_id)?;
         let previous_block_expression = block.expressions.get(position_of_block_expression_inside_block - 1)?;
 
-        let expression_in_previous_block_expression_with_same_index_id = previous_block_expression
-            .all_children_dfs().get(position_inside_block_expression)?.id();
-        Some(expression_in_previous_block_expression_with_same_index_id)
+        let expressions_in_previous_block_expression_up_to_our_index = previous_block_expression
+            .self_with_all_children_dfs()
+            .filter(|cn| self.is_navigatable(cn))
+            .take(position_inside_block_expression + 1)
+            .collect_vec();
+
+        let expression_in_previous_block_expression_with_same_or_latest_index_id =
+            expressions_in_previous_block_expression_up_to_our_index.get(position_inside_block_expression)
+                .or_else(|| expressions_in_previous_block_expression_up_to_our_index.last())?;
+        Some(expression_in_previous_block_expression_with_same_or_latest_index_id.id())
     }
 
     pub fn navigate_down_from(&self, code_node_id: Option<ID>) -> Option<ID> {
@@ -484,8 +491,8 @@ impl<'a> Navigation<'a> {
             .find_expression_inside_block_that_contains(code_node_id)?;
         let position_inside_block_expression = self.code_genie
             .find_node(containing_block_expression_id)?
-            .all_children_dfs()
-            .iter()
+            .self_with_all_children_dfs()
+            .filter(|cn| self.is_navigatable(cn))
             .position(|child_node| child_node.id() == code_node_id)?;
 
         let block = self.code_genie.find_parent(containing_block_expression_id)?.into_block()?;
@@ -493,9 +500,16 @@ impl<'a> Navigation<'a> {
             .find_position_in_block(block, containing_block_expression_id)?;
         let previous_block_expression = block.expressions.get(position_of_block_expression_inside_block + 1)?;
 
-        let expression_in_previous_block_expression_with_same_index_id = previous_block_expression
-            .all_children_dfs().get(position_inside_block_expression)?.id();
-        Some(expression_in_previous_block_expression_with_same_index_id)
+        let expressions_in_previous_block_expression_up_to_our_index = previous_block_expression
+            .self_with_all_children_dfs()
+            .filter(|cn| self.is_navigatable(cn))
+            .take(position_inside_block_expression + 1)
+            .collect_vec();
+
+        let expression_in_previous_block_expression_with_same_or_latest_index_id =
+            expressions_in_previous_block_expression_up_to_our_index.get(position_inside_block_expression)
+                .or_else(|| expressions_in_previous_block_expression_up_to_our_index.last())?;
+        Some(expression_in_previous_block_expression_with_same_or_latest_index_id.id())
     }
 
     pub fn navigate_back_from(&self, code_node_id: Option<ID>) -> Option<ID> {
