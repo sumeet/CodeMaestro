@@ -35,3 +35,27 @@
 * {
   font-family: 'Maestro';
 }
+
+.overlay-wrapper {
+  position: relative;
+}
+
+
+.overlay {
+  z-index: 10;
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+
+
+.overlay-bottom-right {
+  z-index: 10;
+  display: block;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}

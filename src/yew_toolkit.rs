@@ -218,22 +218,6 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
-        let html = draw_fn();
-        match html {
-            yew::virtual_dom::VNode::VTag(mut vtag) => {
-                let default = &"".to_string();
-                let style = vtag.attributes.get(&"style".to_string()).unwrap_or(default);
-                vtag.add_attribute(
-                    &"style".to_string(),
-                    &format!("{}; border: 1px solid black;", style)
-                );
-                yew::virtual_dom::VNode::VTag(vtag)
-            }
-            _ => html
-        }
-    }
-
     fn draw_text(&self, text: &str) -> Self::DrawResult {
         html! {
             <span>{ text }</span>
@@ -246,12 +230,14 @@ impl UiToolkit for YewToolkit {
         html
     }
 
-    fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult {
-        html! {
-            <div style="position: fixed; line-height: 1; width: 100%; top: 0; left: 0;",>
-                {{ draw_menus() }}
-            </div>
-        }
+    fn draw_main_menu_bar(&self, _draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        // not implemented yet
+        return html! { <div></div> };
+//        html! {
+//            <div style="position: fixed; line-height: 1; width: 100%; top: 0; left: 0;",>
+//                {{ draw_menus() }}
+//            </div>
+//        }
     }
 
     fn draw_menu(&self, _label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult {
@@ -271,6 +257,7 @@ impl UiToolkit for YewToolkit {
             </div>
         }
     }
+
 
     fn draw_combo_box_with_label<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
         where T: Clone + 'static,
@@ -314,6 +301,66 @@ impl UiToolkit for YewToolkit {
                 })}
             </select>
             <label>{ label }</label>
+        }
+    }
+
+    fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div class={"overlay-wrapper"}, >
+                <div>
+                     { draw_fn() }
+                 </div>
+                 <div class={"overlay"},
+                      style={ format!("top: 0, left: 0; height: 100%; background-color: {}", self.rgba(color)) }, >
+                      {" "}
+                 </div>
+             </div>
+        }
+    }
+
+
+    fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8,
+                              draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div class={"overlay-wrapper"}, >
+                <div>
+                     { draw_fn() }
+                 </div>
+                 <div class={"overlay"},
+                      style={ format!("height: {}px; background-color: {}", thickness, self.rgba(color)) }, >
+                      {" "}
+                 </div>
+             </div>
+        }
+    }
+
+    fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8,
+                                draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div class={"overlay-wrapper"}, >
+                <div>
+                     { draw_fn() }
+                 </div>
+                 <div class={"overlay-bottom-right"},
+                      style={ format!("height: 100%; width: {}px; background-color: {}", thickness, self.rgba(color)) }, >
+                      {" "}
+                 </div>
+             </div>
+        }
+    }
+
+    fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8,
+                                 draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div class={"overlay-wrapper"}, >
+                <div>
+                     { draw_fn() }
+                 </div>
+                 <div class={"overlay-bottom-right"},
+                      style={ format!("width: 100%; height: {}px; background-color: {}", thickness, self.rgba(color)) }, >
+                      {" "}
+                 </div>
+             </div>
         }
     }
 }

@@ -1028,8 +1028,7 @@ pub trait UiToolkit {
               G: Fn(&T) -> bool,
               H: Fn(&T) -> String;
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
-    fn draw_box_around(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
-    fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8,
                               draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8,
@@ -1076,11 +1075,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 "File",
                 &|| {
                     let cont1 = Rc::clone(&self.controller);
+                    #[cfg(feature = "default")]
                     let cont2 = Rc::clone(&self.controller);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
                             cont1.borrow_mut().save();
                         }),
+                        #[cfg(feature = "default")]
                         self.ui_toolkit.draw_menu_item("Add Python function", move || {
                             cont2.borrow_mut().load_function(pystuff::PyFunc::new());
                         }),
@@ -1481,7 +1482,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn draw_selected(&self, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
-        self.ui_toolkit.draw_box_around(SELECTION_COLOR, 1, draw)
+        self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
     }
 
     fn draw_code_node_and_insertion_point_if_before_or_after(&self, code_node: &CodeNode, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
@@ -1579,7 +1580,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             })
         };
         if is_selected {
-            self.ui_toolkit.draw_border_around(&draw)
+            self.draw_selected(&draw)
         } else {
             draw()
         }
