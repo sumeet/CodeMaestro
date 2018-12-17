@@ -74,7 +74,7 @@ impl InsertCodeMenu {
             .into_iter()
             .group_by(|assignment| {
                 let assignment : Assignment = (**assignment).clone();
-                genie.guess_type(&CodeNode::Assignment(assignment)).typespec.id
+                genie.guess_type(&CodeNode::Assignment(assignment)).id()
             })
             .into_iter()
             .map(|(id, assignments)| (id, assignments.cloned().collect::<Vec<Assignment>>()))
@@ -195,8 +195,8 @@ struct InsertVariableReferenceOptionGenerator {
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
         let mut assignments = if let Some(search_type) = &search_params.return_type {
-            // XXX: searching by typespec ID is fuxkkkkeeddddddd
-            self.assignments_by_type_id.get(&search_type.typespec.id).map_or_else(
+            // XXX: this won't work for generics i believe
+            self.assignments_by_type_id.get(&search_type.id()).map_or_else(
                 || vec![],
                 |assignments| assignments.iter()
                     .map(|assignment| assignment.clone()).collect()
@@ -260,8 +260,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                 InsertCodeMenuOption {
                     label: format!("{} {}", PLACEHOLDER_ICON, input_str),
                     is_selected: false,
-                    // XXX: omg, placholders will now need to hold a type instead of type id
-                    new_node: code_generation::new_placeholder(input_str, return_type.typespec.id),
+                    new_node: code_generation::new_placeholder(input_str, return_type.id()),
                 }
             );
         }
@@ -631,7 +630,7 @@ pub struct Controller {
     insert_code_menu: Option<InsertCodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
-    typespec_by_id: indexmap::IndexMap<ID, lang::TypeSpec>,
+    typespec_by_id: indexmap::IndexMap<ID, lang::BuiltInTypeSpec>,
     mutation_master: MutationMaster,
     test_result_by_func_id: HashMap<ID, TestResult>,
 }
@@ -651,8 +650,8 @@ impl<'a> Controller {
         }
     }
 
-    fn init_typespecs() -> indexmap::IndexMap<ID, lang::TypeSpec> {
-        let mut typespec_by_id : indexmap::IndexMap<ID, lang::TypeSpec> = indexmap::IndexMap::new();
+    fn init_typespecs() -> indexmap::IndexMap<ID, lang::BuiltInTypeSpec> {
+        let mut typespec_by_id : indexmap::IndexMap<ID, lang::BuiltInTypeSpec> = indexmap::IndexMap::new();
         typespec_by_id.insert(lang::NULL_TYPESPEC.id, lang::NULL_TYPESPEC.clone());
         typespec_by_id.insert(lang::STRING_TYPESPEC.id, lang::STRING_TYPESPEC.clone());
         typespec_by_id.insert(lang::NUMBER_TYPESPEC.id, lang::NUMBER_TYPESPEC.clone());
@@ -660,7 +659,7 @@ impl<'a> Controller {
         typespec_by_id
     }
 
-    fn typespecs(&self) -> Vec<&lang::TypeSpec> {
+    fn typespecs(&self) -> Vec<&lang::BuiltInTypeSpec> {
         self.typespec_by_id.values().collect()
     }
 
@@ -943,7 +942,7 @@ impl<'a> Controller {
     }
 
     pub fn set_typespec<F: external_func::ModifyableFunc>(&mut self, mut func: F,
-                        typespec: &lang::TypeSpec, nesting_level: &[usize]) {
+                                                          typespec: &lang::BuiltInTypeSpec, nesting_level: &[usize]) {
         let mut root_return_type = func.returns();
         edit_types::set_typespec(&mut root_return_type, typespec, nesting_level);
         func.set_return_type(root_return_type);
@@ -1280,14 +1279,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(to_draw)
     }
 
-    fn render_typespec_selector_with_label<F>(&self, label: &str, selected_ts: &lang::TypeSpec,
+    fn render_typespec_selector_with_label<F>(&self, label: &str, selected_ts_id: ID,
                                               nesting_level: Option<&[usize]>, onchange: F) -> T::DrawResult
-        where F: Fn(&lang::TypeSpec) + 'static
+        where F: Fn(&lang::BuiltInTypeSpec) + 'static
     {
+        // TODO: pretty sure we can get rid of the clone and let the borrow live until the end
+        // but i don't want to mess around with it right now
+        let selected_ts = self.controller.borrow().typespec_by_id.get(&selected_ts_id).unwrap().clone();
         let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
         self.ui_toolkit.draw_combo_box_with_label(
             label,
-            |ts| ts.matches(selected_ts),
+            |ts| ts.matches(&selected_ts),
             |ts| format_typespec_select(ts, nesting_level),
             &typespecs.iter().collect_vec(),
             move |newts| { onchange(newts) }
@@ -1302,7 +1304,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(vec![
             self.render_typespec_selector_with_label(
                 label,
-                &typ.typespec,
+                typ.typespec_id,
                 None,
                 move |new_ts| {
                     let mut newtype = type1.clone();
@@ -1336,7 +1338,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             drawn.push(
                 self.render_typespec_selector_with_label(
                     "",
-                    &param.typespec,
+                    param.typespec_id,
                     Some(nesting_level),
                     move |new_ts| {
                         let mut newtype = root_type1.clone();
@@ -1686,13 +1688,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         drawn
     }
 
+    fn get_symbol_for_type(&self, t: &lang::Type) -> String {
+        self.controller.borrow().typespec_by_id.get(&t.typespec_id).unwrap().symbol.clone()
+    }
+
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
         let type_symbol;
         {
             let controller = self.controller.borrow();
             let genie = controller.code_genie().unwrap();
             type_symbol = match genie.get_type_for_arg(argument.argument_definition_id) {
-                Some(arg_type) => arg_type.symbol(),
+                Some(arg_type) => self.get_symbol_for_type(&arg_type),
                 None => "\u{f059}".to_string(),
             };
         }
@@ -2003,7 +2009,7 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> (ID, b
     (code_node.id(), false)
 }
 
-fn format_typespec_select(ts: &lang::TypeSpec, nesting_level: Option<&[usize]>) -> String {
+fn format_typespec_select(ts: &lang::BuiltInTypeSpec, nesting_level: Option<&[usize]>) -> String {
     let indent = match nesting_level {
         Some(nesting_level) => {
             iter::repeat("\t").take(nesting_level.len() + 1).join("")

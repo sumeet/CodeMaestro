@@ -125,12 +125,7 @@
       "prelude": "",
       "eval": "None",
       "return_type": {
-        "typespec": {
-          "readable_name": "Null",
-          "id": "daa07233-b887-4512-b06e-d6a53d415213",
-          "symbol": "",
-          "num_params": 0
-        },
+        "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
         "params": []
       },
       "name": "New PyFunc",
@@ -139,12 +134,7 @@
         {
           "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
           "arg_type": {
-            "typespec": {
-              "readable_name": "Null",
-              "id": "daa07233-b887-4512-b06e-d6a53d415213",
-              "symbol": "",
-              "num_params": 0
-            },
+            "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
             "params": []
           },
           "short_name": "arg0"
@@ -155,12 +145,7 @@
       "prelude": "",
       "eval": "arg2 + \" sup bitches i'm python\" + arg1",
       "return_type": {
-        "typespec": {
-          "readable_name": "String",
-          "id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-          "symbol": "",
-          "num_params": 0
-        },
+        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
         "params": []
       },
       "name": "my first pyfunc",
@@ -169,12 +154,7 @@
         {
           "id": "3d8050ff-ffc4-4b6c-b0ce-1c23bf02b19e",
           "arg_type": {
-            "typespec": {
-              "readable_name": "String",
-              "id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-              "symbol": "",
-              "num_params": 0
-            },
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           },
           "short_name": "arg1"
@@ -182,12 +162,7 @@
         {
           "id": "b0cfb9cb-a823-4c70-b0b5-ef46e0ff07d4",
           "arg_type": {
-            "typespec": {
-              "readable_name": "String",
-              "id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-              "symbol": "",
-              "num_params": 0
-            },
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           },
           "short_name": "arg2"

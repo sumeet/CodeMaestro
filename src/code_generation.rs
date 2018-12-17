@@ -10,7 +10,7 @@ pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::C
                     id: lang::new_id(),
                     description: arg_def.short_name.clone(),
                     // XXX: this is wrong... we need to store the whole type in there.
-                    type_id: arg_def.arg_type.typespec.id
+                    type_id: arg_def.arg_type.typespec_id
                 }))
             })
         })

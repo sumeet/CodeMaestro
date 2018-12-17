@@ -8,28 +8,28 @@ use super::ExecutionEnvironment;
 use super::uuid::Uuid;
 
 lazy_static! {
-    pub static ref NULL_TYPESPEC: TypeSpec = TypeSpec {
+    pub static ref NULL_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Null".to_string(),
         id: uuid::Uuid::parse_str(&"daa07233-b887-4512-b06e-d6a53d415213").unwrap(),
         symbol: "\u{f192}".to_string(),
         num_params: 0,
     };
 
-    pub static ref STRING_TYPESPEC: TypeSpec = TypeSpec {
+    pub static ref STRING_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "String".to_string(),
         id: uuid::Uuid::parse_str("e0e8271e-5f94-4d00-bad9-46a2ce4d6568").unwrap(),
         symbol: "\u{f10d}".to_string(),
         num_params: 0,
     };
 
-    pub static ref RESULT_TYPESPEC: TypeSpec = TypeSpec {
+    pub static ref RESULT_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Result".to_string(),
         id: uuid::Uuid::parse_str("0613664d-eead-4d83-99a0-9759a5023887").unwrap(),
         symbol: "\u{f493}".to_string(),
         num_params: 0,
     };
 
-    pub static ref NUMBER_TYPESPEC: TypeSpec = TypeSpec {
+    pub static ref NUMBER_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Number".to_string(),
         id: uuid::Uuid::parse_str("6dbe9096-4ff5-42f1-b2ff-36eacc3ced59").unwrap(),
         symbol: "\u{f292}".to_string(),
@@ -37,7 +37,7 @@ lazy_static! {
     };
 
 
-    pub static ref LIST_TYPESPEC: TypeSpec = TypeSpec {
+    pub static ref LIST_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "List".to_string(),
         id: uuid::Uuid::parse_str("4c726a5e-d9c2-481b-bbe8-ca5319176aad").unwrap(),
         symbol: "\u{f03a}".to_string(),
@@ -98,14 +98,39 @@ pub enum Value {
 }
 
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
-pub struct TypeSpec {
+pub struct BuiltInTypeSpec {
     pub readable_name: String,
     pub id: ID,
     pub symbol: String,
     pub num_params: usize,
 }
 
-impl TypeSpec {
+pub trait TypeSpec : objekt::Clone {
+    fn readable_name(&self) -> &str;
+    fn id(&self) -> ID;
+    fn symbol(&self) -> &str;
+    fn num_params(&self) -> usize;
+}
+
+impl TypeSpec for BuiltInTypeSpec {
+    fn readable_name(&self) -> &str {
+        &self.readable_name
+    }
+
+    fn id(&self) -> ID {
+        self.id
+    }
+
+    fn symbol(&self) -> &str {
+        &self.symbol
+    }
+
+    fn num_params(&self) -> usize {
+        self.num_params
+    }
+}
+
+impl BuiltInTypeSpec {
     pub fn matches(&self, other: &Self) -> bool {
         self.id == other.id
     }
@@ -114,28 +139,28 @@ impl TypeSpec {
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct Type {
     // TODO: should this just be a TypeSpec ID?
-    pub typespec: TypeSpec,
+    pub typespec_id: ID,
     pub params: Vec<Type>,
 }
 
 impl Type {
     // for types with no params
-    pub fn from_spec(spec: &TypeSpec) -> Self {
+    pub fn from_spec(spec: &BuiltInTypeSpec) -> Self {
         Self::with_params(spec, vec![])
     }
 
-    pub fn with_params(spec: &TypeSpec, params: Vec<Self>) -> Self {
+    pub fn with_params(spec: &BuiltInTypeSpec, params: Vec<Self>) -> Self {
         if params.len() != spec.num_params {
             panic!("wrong number of params")
         }
         Self {
-            typespec: spec.clone(),
+            typespec_id: spec.id,
             params,
         }
     }
 
     pub fn id(&self) -> ID {
-        let mut mashed_hashes = vec![self.typespec.id.to_string()];
+        let mut mashed_hashes = vec![self.typespec_id.to_string()];
         mashed_hashes.extend(self.params.iter().map(|t| t.id().to_string()));
         // v5 uuids aren't random, they are hashes
         uuid::Uuid::new_v5(
@@ -143,33 +168,13 @@ impl Type {
             mashed_hashes.join(":").as_bytes())
     }
 
-    pub fn readable_name(&self) -> String {
-        if self.params.is_empty() {
-            return self.typespec.readable_name.clone()
-        }
-        let param_names : Vec<String> = self.params.iter()
-            .map(|param| param.readable_name())
-            .collect();
-        format!("{}<{}>", self.typespec.readable_name, param_names.join(","))
-    }
-
-    pub fn symbol(&self) -> String {
-        if self.params.is_empty() {
-            return self.typespec.symbol.clone()
-        }
-        let param_symbols : Vec<String> = self.params.iter()
-            .map(|param| param.symbol())
-            .collect();
-        format!("{}<{}>", self.typespec.symbol, param_symbols.join(","))
-    }
-
     pub fn matches(&self, other: &Self) -> bool {
         self.id() == other.id()
     }
 
     // XXX: idk if this is right but it'll at least get me farther i think
-    pub fn matches_spec(&self, spec: &TypeSpec) -> bool {
-        self.typespec.id == spec.id
+    pub fn matches_spec(&self, spec: &BuiltInTypeSpec) -> bool {
+        self.typespec_id == spec.id
     }
 }
 
