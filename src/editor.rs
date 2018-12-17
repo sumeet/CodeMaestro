@@ -22,6 +22,7 @@ use super::undo;
 use super::edit_types;
 
 
+pub const SELECTION_COLOR: Color = [1., 1., 1., 0.3];
 pub const BLUE_COLOR: Color = [100.0 / 255.0, 149.0 / 255.0, 237.0 / 255.0, 1.0];
 pub const YELLOW_COLOR: Color = [253.0 / 255.0, 159.0 / 255.0, 19.0 / 255.0, 1.0];
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
@@ -1027,6 +1028,7 @@ pub trait UiToolkit {
               G: Fn(&T) -> bool,
               H: Fn(&T) -> String;
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
+    fn draw_box_around(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_border_around(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8,
                               draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -1466,16 +1468,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.render_placeholder(&placeholder)
                 }
                 CodeNode::NullLiteral => {
-                    self.ui_toolkit.draw_text(&format!("  {}  ", lang::NULL_TYPESPEC.symbol))
+                    self.ui_toolkit.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol))
                 }
             }
         };
 
         if self.is_selected(code_node) {
-            self.ui_toolkit.draw_border_around(&draw)
+            self.draw_selected(&draw)
         } else {
             self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
         }
+    }
+
+    fn draw_selected(&self, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
+        self.ui_toolkit.draw_box_around(SELECTION_COLOR, 1, draw)
     }
 
     fn draw_code_node_and_insertion_point_if_before_or_after(&self, code_node: &CodeNode, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
@@ -1588,7 +1594,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     &CodeNode::Assignment(assignment.clone())
                 )
             },
-            &|| { self.ui_toolkit.draw_text("  =  ") },
+            &|| { self.ui_toolkit.draw_text(" = ") },
             &|| { self.render_code(assignment.expression.as_ref()) }
         ])
     }

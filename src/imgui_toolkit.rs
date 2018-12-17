@@ -10,6 +10,7 @@ use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
 
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 50.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (300.0, 200.0);
@@ -132,7 +133,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_text(&self, text: &str) {
-        self.ui.text(text)
+        self.ui.with_color_vars(
+            &[(ImGuiCol::ButtonHovered, TRANSPARENT_COLOR),
+              (ImGuiCol::ButtonActive, TRANSPARENT_COLOR),
+            ],
+            &|| { self.draw_button(text, TRANSPARENT_COLOR, &||{}) }
+        )
     }
 
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {
@@ -188,9 +194,22 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.new_line();
     }
 
-    // TODO: draw my own border using the draw list + a group... then it'll work right. jeez
     fn draw_border_around(&self, draw_fn: &Fn()) {
         self.ui.with_style_var(StyleVar::FrameBorderSize(4.0), draw_fn)
+    }
+
+    // TODO: draw my own border using the draw list + a group... then it'll work right. jeez
+    fn draw_box_around(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+        self.ui.group(draw_fn);
+        let mut min = ImVec2::zero();
+        let mut max = ImVec2::zero();
+        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
+        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        self.ui.get_window_draw_list()
+            .add_rect(min, max, color)
+            .thickness(thickness as f32)
+            .filled(true)
+            .build();
     }
 
     fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
