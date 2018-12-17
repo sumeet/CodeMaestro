@@ -110,6 +110,10 @@ pub trait TypeSpec : objekt::Clone {
     fn id(&self) -> ID;
     fn symbol(&self) -> &str;
     fn num_params(&self) -> usize;
+    fn box_clone(&self) -> Box<TypeSpec + 'static>;
+    fn matches(&self, typespec_id: ID) -> bool {
+        self.id() == typespec_id
+    }
 }
 
 impl TypeSpec for BuiltInTypeSpec {
@@ -127,6 +131,21 @@ impl TypeSpec for BuiltInTypeSpec {
 
     fn num_params(&self) -> usize {
         self.num_params
+    }
+
+    fn box_clone(&self) -> Box<TypeSpec + 'static> {
+        Box::new(Self {
+            readable_name: self.readable_name.clone(),
+            id: self.id.clone(),
+            symbol: self.symbol.clone(),
+            num_params: self.num_params.clone(),
+        })
+    }
+}
+
+impl Clone for Box<TypeSpec> {
+    fn clone(&self) -> Box<TypeSpec> {
+        self.box_clone()
     }
 }
 

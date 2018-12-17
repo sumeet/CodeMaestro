@@ -1,6 +1,6 @@
 use super::lang;
 
-pub fn set_typespec<T: lang::TypeSpec>(t: &mut lang::Type, typespec: &T,
+pub fn set_typespec(t: &mut lang::Type, typespec: &Box<lang::TypeSpec>,
                     nesting_level: &[usize]) {
     let mut type_to_modify = t;
     for param_index in nesting_level {

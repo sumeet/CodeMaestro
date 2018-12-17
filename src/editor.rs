@@ -630,7 +630,7 @@ pub struct Controller {
     insert_code_menu: Option<InsertCodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
-    typespec_by_id: indexmap::IndexMap<ID, lang::BuiltInTypeSpec>,
+    typespec_by_id: indexmap::IndexMap<ID, Box<lang::TypeSpec + 'static>>,
     mutation_master: MutationMaster,
     test_result_by_func_id: HashMap<ID, TestResult>,
 }
@@ -650,16 +650,16 @@ impl<'a> Controller {
         }
     }
 
-    fn init_typespecs() -> indexmap::IndexMap<ID, lang::BuiltInTypeSpec> {
-        let mut typespec_by_id : indexmap::IndexMap<ID, lang::BuiltInTypeSpec> = indexmap::IndexMap::new();
-        typespec_by_id.insert(lang::NULL_TYPESPEC.id, lang::NULL_TYPESPEC.clone());
-        typespec_by_id.insert(lang::STRING_TYPESPEC.id, lang::STRING_TYPESPEC.clone());
-        typespec_by_id.insert(lang::NUMBER_TYPESPEC.id, lang::NUMBER_TYPESPEC.clone());
-        typespec_by_id.insert(lang::LIST_TYPESPEC.id, lang::LIST_TYPESPEC.clone());
+    fn init_typespecs() -> indexmap::IndexMap<ID, Box<lang::TypeSpec>> {
+        let mut typespec_by_id: indexmap::IndexMap<ID, Box<lang::TypeSpec>> = indexmap::IndexMap::new();
+        typespec_by_id.insert(lang::NULL_TYPESPEC.id, Box::new(lang::NULL_TYPESPEC.clone()));
+        typespec_by_id.insert(lang::STRING_TYPESPEC.id, Box::new(lang::STRING_TYPESPEC.clone()));
+        typespec_by_id.insert(lang::NUMBER_TYPESPEC.id, Box::new(lang::NUMBER_TYPESPEC.clone()));
+        typespec_by_id.insert(lang::LIST_TYPESPEC.id, Box::new(lang::LIST_TYPESPEC.clone()));
         typespec_by_id
     }
 
-    fn typespecs(&self) -> Vec<&lang::BuiltInTypeSpec> {
+    fn typespecs(&self) -> Vec<&Box<lang::TypeSpec>> {
         self.typespec_by_id.values().collect()
     }
 
@@ -942,7 +942,8 @@ impl<'a> Controller {
     }
 
     pub fn set_typespec<F: external_func::ModifyableFunc>(&mut self, mut func: F,
-                                                          typespec: &lang::BuiltInTypeSpec, nesting_level: &[usize]) {
+                                                          typespec: &Box<lang::TypeSpec>,
+                                                          nesting_level: &[usize]) {
         let mut root_return_type = func.returns();
         edit_types::set_typespec(&mut root_return_type, typespec, nesting_level);
         func.set_return_type(root_return_type);
@@ -1281,15 +1282,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_typespec_selector_with_label<F>(&self, label: &str, selected_ts_id: ID,
                                               nesting_level: Option<&[usize]>, onchange: F) -> T::DrawResult
-        where F: Fn(&lang::BuiltInTypeSpec) + 'static
+        where F: Fn(&Box<lang::TypeSpec>) + 'static
     {
         // TODO: pretty sure we can get rid of the clone and let the borrow live until the end
         // but i don't want to mess around with it right now
-        let selected_ts = self.controller.borrow().typespec_by_id.get(&selected_ts_id).unwrap().clone();
-        let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
+        let selected_ts = self.controller.borrow().typespec_by_id.get(&selected_ts_id).unwrap().box_clone();
+        let typespecs = self.controller.borrow().typespecs().into_iter()
+            .map(|ts| ts.box_clone()).collect_vec();
         self.ui_toolkit.draw_combo_box_with_label(
             label,
-            |ts| ts.matches(&selected_ts),
+            |ts| ts.matches(selected_ts.id()),
             |ts| format_typespec_select(ts, nesting_level),
             &typespecs.iter().collect_vec(),
             move |newts| { onchange(newts) }
@@ -1689,7 +1691,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn get_symbol_for_type(&self, t: &lang::Type) -> String {
-        self.controller.borrow().typespec_by_id.get(&t.typespec_id).unwrap().symbol.clone()
+        self.controller.borrow().typespec_by_id.get(&t.typespec_id).unwrap().symbol().to_string()
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
@@ -2009,12 +2011,12 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> (ID, b
     (code_node.id(), false)
 }
 
-fn format_typespec_select(ts: &lang::BuiltInTypeSpec, nesting_level: Option<&[usize]>) -> String {
+fn format_typespec_select(ts: &Box<lang::TypeSpec>, nesting_level: Option<&[usize]>) -> String {
     let indent = match nesting_level {
         Some(nesting_level) => {
             iter::repeat("\t").take(nesting_level.len() + 1).join("")
         },
         None => "".to_owned(),
     };
-    format!("{}{} {}", indent, ts.symbol, ts.readable_name)
+    format!("{}{} {}", indent, ts.symbol(), ts.readable_name())
 }
