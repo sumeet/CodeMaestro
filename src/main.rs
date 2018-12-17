@@ -67,6 +67,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 
 mod lang;
+mod structs;
 mod env;
 mod code_loading;
 mod editor;
@@ -220,6 +221,9 @@ impl CSApp {
         let the_world : code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
         app.controller.borrow_mut().load_code(&the_world.main_code);
         load_builtins(&mut app.controller.borrow_mut(), &the_world);
+
+        // TODO: save this in the world
+        app.controller.borrow_mut().load_typespec(structs::Struct::new());
 
         app
     }

@@ -20,6 +20,7 @@ use super::indexmap;
 use super::external_func;
 use super::undo;
 use super::edit_types;
+use super::structs;
 
 
 pub const SELECTION_COLOR: Color = [1., 1., 1., 0.3];
@@ -950,6 +951,10 @@ impl<'a> Controller {
         self.load_function(func)
     }
 
+    pub fn load_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
+        self.typespec_by_id.insert(typespec.id(), Box::new(typespec));
+    }
+
     pub fn load_function<F: Function>(&mut self, function: F) {
         self.execution_environment.add_function(Box::new(function))
     }
@@ -1065,6 +1070,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_error_window(),
             self.render_edit_pyfuncs(),
             self.render_edit_jsfuncs(),
+            self.render_edit_structs(),
             self.render_status_bar()
         ])
     }
@@ -1196,6 +1202,49 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         None::<fn(Keypress)>)
     }
 
+    fn render_edit_structs(&self) -> T::DrawResult {
+        let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
+        let structs = typespecs.iter()
+            .filter_map(|s| s.as_ref().downcast_ref::<structs::Struct>());
+        self.ui_toolkit.draw_all(structs.map(|s| self.render_edit_struct(s)).collect())
+    }
+
+    fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
+        self.ui_toolkit.draw_window(
+            &format!("Edit Struct: {}", strukt.id),
+            &|| {
+                let cont1 = Rc::clone(&self.controller);
+                let strukt1 = strukt.clone();
+                let cont2 = Rc::clone(&self.controller);
+                let strukt2 = strukt.clone();
+
+                self.ui_toolkit.draw_all(vec![
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Structure name",
+                        &strukt.name,
+                        move |newvalue| {
+                            let mut strukt = strukt1.clone();
+                            strukt.name = newvalue.to_string();
+                            cont1.borrow_mut().load_typespec(strukt);
+                        },
+                        &|| {}
+                    ),
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Symbol",
+                        &strukt.symbol,
+                        move |newvalue| {
+                            let mut strukt = strukt2.clone();
+                            strukt.symbol = newvalue.to_string();
+                            cont2.borrow_mut().load_typespec(strukt);
+                        },
+                        &|| {},
+                    ),
+                ])
+            },
+            None::<fn(Keypress)>,
+        )
+    }
+
     fn render_general_function_menu<F: lang::Function>(&self, func: &F) -> T::DrawResult {
         let cont1 = Rc::clone(&self.controller);
         let func_id = func.id();
@@ -1286,9 +1335,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     {
         // TODO: pretty sure we can get rid of the clone and let the borrow live until the end
         // but i don't want to mess around with it right now
-        let selected_ts = self.controller.borrow().typespec_by_id.get(&selected_ts_id).unwrap().box_clone();
+        let selected_ts = self.controller.borrow().typespec_by_id.get(&selected_ts_id).unwrap().clone();
         let typespecs = self.controller.borrow().typespecs().into_iter()
-            .map(|ts| ts.box_clone()).collect_vec();
+            .map(|ts| ts.clone()).collect_vec();
         self.ui_toolkit.draw_combo_box_with_label(
             label,
             |ts| ts.matches(selected_ts.id()),

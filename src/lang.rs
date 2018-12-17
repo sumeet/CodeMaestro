@@ -105,16 +105,18 @@ pub struct BuiltInTypeSpec {
     pub num_params: usize,
 }
 
-pub trait TypeSpec : objekt::Clone {
+pub trait TypeSpec : objekt::Clone + downcast_rs::Downcast {
     fn readable_name(&self) -> &str;
     fn id(&self) -> ID;
     fn symbol(&self) -> &str;
     fn num_params(&self) -> usize;
-    fn box_clone(&self) -> Box<TypeSpec + 'static>;
     fn matches(&self, typespec_id: ID) -> bool {
         self.id() == typespec_id
     }
 }
+
+clone_trait_object!(TypeSpec);
+impl_downcast!(TypeSpec);
 
 impl TypeSpec for BuiltInTypeSpec {
     fn readable_name(&self) -> &str {
@@ -132,22 +134,8 @@ impl TypeSpec for BuiltInTypeSpec {
     fn num_params(&self) -> usize {
         self.num_params
     }
-
-    fn box_clone(&self) -> Box<TypeSpec + 'static> {
-        Box::new(Self {
-            readable_name: self.readable_name.clone(),
-            id: self.id.clone(),
-            symbol: self.symbol.clone(),
-            num_params: self.num_params.clone(),
-        })
-    }
 }
 
-impl Clone for Box<TypeSpec> {
-    fn clone(&self) -> Box<TypeSpec> {
-        self.box_clone()
-    }
-}
 
 impl BuiltInTypeSpec {
     pub fn matches(&self, other: &Self) -> bool {
@@ -157,7 +145,6 @@ impl BuiltInTypeSpec {
 
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct Type {
-    // TODO: should this just be a TypeSpec ID?
     pub typespec_id: ID,
     pub params: Vec<Type>,
 }
