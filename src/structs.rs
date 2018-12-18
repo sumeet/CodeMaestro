@@ -27,6 +27,12 @@ pub struct StructField {
     pub field_type: lang::Type,
 }
 
+impl StructField {
+    pub fn new(name: String, field_type: lang::Type) -> Self {
+        Self { id: lang::new_id(), name, field_type }
+    }
+}
+
 impl lang::TypeSpec for Struct {
     fn readable_name(&self) -> &str {
         &self.name

@@ -4,33 +4,31 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "type": "cargo",
-            "label": "cargo build",
-            "command": "cargo",
-            "args": [
-                "build"
-            ],
-            "problemMatcher": [
-                "$rustc"
-            ]
-        },
-        {
-            "type": "cargo",
+            "type": "shell",
             "label": "cargo rr",
             "command": "cargo",
             "args": [
                 "rr"
             ],
-            "problemMatcher": [
-                "$rustc"
-            ]
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         },
         {
-            "type": "cargo",
+            "type": "shell",
             "label": "cargo rjs",
             "command": "cargo",
             "args": [
                 "rjs"
+            ]
+        },
+        {
+            "type": "cargo",
+            "label": "cargo build",
+            "command": "cargo",
+            "args": [
+                "build"
             ],
             "problemMatcher": [
                 "$rustc"

@@ -1239,10 +1239,83 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         },
                         &|| {},
                     ),
+                    self.render_struct_fields_selector(strukt),
+                    self.render_general_struct_menu(strukt),
                 ])
             },
             None::<fn(Keypress)>,
         )
+    }
+
+    // TODO: this is super dupe of render_arguments_selector, whatever for now but we'll
+    // clean this up
+    // TODO: fix this it looks like shit
+    fn render_struct_fields_selector(&self, strukt: &structs::Struct) -> T::DrawResult {
+        let fields = &strukt.fields;
+
+        let mut to_draw = vec![
+            self.ui_toolkit.draw_text_with_label(&format!("Has {} field(s)", fields.len()),
+                                                 "Fields"),
+        ];
+
+        for (current_field_index, field) in fields.iter().enumerate() {
+            let strukt1 = strukt.clone();
+            let cont1 = Rc::clone(&self.controller);
+            to_draw.push(self.ui_toolkit.draw_text_input_with_label(
+                "Name",
+                &field.name,
+                move |newvalue| {
+                    let mut newstrukt = strukt1.clone();
+                    let mut newfield = &mut newstrukt.fields[current_field_index];
+                    newfield.name = newvalue.to_string();
+                    cont1.borrow_mut().load_typespec(newstrukt)
+                },
+                &||{}));
+
+            let strukt1 = strukt.clone();
+            let cont1 = Rc::clone(&self.controller);
+            to_draw.push(self.render_type_change_combo(
+                "Type",
+                &field.field_type,
+                move |newtype| {
+                    let mut newstrukt = strukt1.clone();
+                    let mut newfield = &mut newstrukt.fields[current_field_index];
+                    newfield.field_type = newtype;
+                    cont1.borrow_mut().load_typespec(newstrukt)
+                }
+            ));
+
+           let strukt1 = strukt.clone();
+           let cont1 = Rc::clone(&self.controller);
+           to_draw.push(self.ui_toolkit.draw_button(
+               "Delete",
+               RED_COLOR,
+               move || {
+                   let mut newstrukt = strukt1.clone();
+                   newstrukt.fields.remove(current_field_index);
+                   cont1.borrow_mut().load_typespec(newstrukt)
+               }
+           ));
+        }
+
+        let strukt1 = strukt.clone();
+        let cont1 = Rc::clone(&self.controller);
+        to_draw.push(self.ui_toolkit.draw_button("Add another field", GREY_COLOR, move || {
+            let mut newstrukt = strukt1.clone();
+            newstrukt.fields.push(structs::StructField::new(
+                format!("field{}", newstrukt.fields.len()),
+                lang::Type::from_spec(&lang::NULL_TYPESPEC),
+            ));
+            cont1.borrow_mut().load_typespec(newstrukt);
+        }));
+
+        self.ui_toolkit.draw_all(to_draw)
+    }
+
+    // TODO: a way to delete the struct :)
+    fn render_general_struct_menu(&self, _strukt: &structs::Struct) -> T::DrawResult {
+        self.ui_toolkit.draw_all(vec![
+        ])
     }
 
     fn render_general_function_menu<F: lang::Function>(&self, func: &F) -> T::DrawResult {
