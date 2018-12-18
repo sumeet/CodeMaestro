@@ -445,6 +445,13 @@ impl<'a> CodeGenie<'a> {
             }
             CodeNode::NullLiteral => {
                 lang::Type::from_spec(&lang::NULL_TYPESPEC)
+            },
+            CodeNode::StructLiteral(_struct_literal) => {
+                // TODO: i have to actually load this from the environment, i guess
+                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+            }
+            CodeNode::StructLiteralField(_) => {
+                lang::Type::from_spec(&lang::NULL_TYPESPEC)
             }
         }
     }
@@ -1596,7 +1603,15 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 }
                 CodeNode::NullLiteral => {
                     self.ui_toolkit.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol))
-                }
+                },
+                CodeNode::StructLiteral(_struct_literal) => {
+                    self.ui_toolkit.draw_all(vec![])
+                    //self.render_struct_literal(&struct_literal)
+                },
+                CodeNode::StructLiteralField(_field) => {
+                    self.ui_toolkit.draw_all(vec![])
+                    //self.render_struct_literal_field(&field)
+                },
             }
         };
 

@@ -74,6 +74,8 @@ pub enum CodeNode {
     VariableReference(VariableReference),
     FunctionDefinition(FunctionDefinition),
     Placeholder(Placeholder),
+    StructLiteral(StructLiteral),
+    StructLiteralField(StructLiteralField),
 }
 
 #[derive(Clone, Debug)]
@@ -239,6 +241,12 @@ impl CodeNode {
             CodeNode::NullLiteral => {
                 "NullLiteral".to_string()
             },
+            CodeNode::StructLiteral(struct_literal) => {
+                format!("Struct literal: {}", struct_literal.id)
+            },
+            CodeNode::StructLiteralField(field) => {
+                format!("Struct literal field: {}", field.id)
+            }
         }
     }
 
@@ -275,7 +283,9 @@ impl CodeNode {
             },
             CodeNode::NullLiteral => {
                 uuid::Uuid::parse_str("1a2de9c5-043c-43c8-ad05-622bb278d5ab").unwrap()
-            }
+            },
+            CodeNode::StructLiteral(struct_literal) => struct_literal.id,
+            CodeNode::StructLiteralField(field) => field.id,
         }
     }
 
@@ -339,7 +349,13 @@ impl CodeNode {
             CodeNode::Placeholder(_) => {
                 Box::new(iter::empty())
             }
-            CodeNode::NullLiteral => Box::new(iter::empty())
+            CodeNode::NullLiteral => Box::new(iter::empty()),
+            CodeNode::StructLiteral(struct_literal) => {
+                Box::new(struct_literal.fields.iter())
+            },
+            CodeNode::StructLiteralField(field) => {
+                Box::new(iter::once(field.expr.borrow()))
+            }
         }
     }
 
@@ -392,7 +408,13 @@ impl CodeNode {
             CodeNode::Placeholder(_placeholder) => {
                 vec![]
             }
-            CodeNode::NullLiteral => vec![]
+            CodeNode::NullLiteral => vec![],
+            CodeNode::StructLiteral(struct_literal) => {
+                struct_literal.fields.iter_mut().collect()
+            },
+            CodeNode::StructLiteralField(field) => {
+                vec![field.expr.borrow_mut()]
+            }
         }
     }
 
@@ -544,9 +566,19 @@ pub struct Argument {
 pub struct Placeholder {
     pub id: ID,
     pub description: String,
-    // ok this is weird. it looks like i only need an ID here for the type... but in other places,
-    // like the ArgumentDefinition, i store the entire type. i'm pretty sure i can go back into the
-    // ArgumentDefinition and change that into a type ID instead of the entire type. there's just
-    // this inconsistency.
     pub type_id: ID,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+pub struct StructLiteral {
+    pub id: ID,
+    pub struct_id: ID,
+    pub fields: Vec<CodeNode>,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+pub struct StructLiteralField {
+    pub id: ID,
+    pub struct_field_id: ID,
+    pub expr: Box<CodeNode>,
 }

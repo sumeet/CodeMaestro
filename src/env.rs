@@ -53,27 +53,27 @@ impl ExecutionEnvironment {
                 value
             }
             lang::CodeNode::Block(block) => {
-                let mut expressions = block.expressions.iter().peekable();
-                while let Some(expression) = expressions.next() {
-                    if expressions.peek().is_some() {
-                        // not the last
-                        self.evaluate(expression);
-                    } else {
-                        return self.evaluate(expression)
-                    }
+                // if there are no expressions in this block, then it will evaluate to Null
+                let mut return_value = lang::Value::Null;
+                for expression in block.expressions.iter() {
+                    return_value = self.evaluate(expression)
                 }
-                // if there are no expressions in this block, then it will evaluate to null
-                lang::Value::Null
+                return_value
+
             }
             lang::CodeNode::VariableReference(variable_reference) => {
                 self.get_local_variable(variable_reference.assignment_id).unwrap().clone()
             }
-            lang::CodeNode::FunctionReference(_) => { lang::Value::Null }
-            lang::CodeNode::FunctionDefinition(_) => { lang::Value::Null }
+            lang::CodeNode::FunctionReference(_) => lang::Value::Null,
+            lang::CodeNode::FunctionDefinition(_) => lang::Value::Null,
             // TODO: trying to evaluate a placeholder should probably panic... but we don't have a
             // concept of panic yet
-            lang::CodeNode::Placeholder(_) => { lang::Value::Null }
-            lang::CodeNode::NullLiteral => { lang::Value::Null }
+            lang::CodeNode::Placeholder(_) => lang::Value::Null,
+            lang::CodeNode::NullLiteral => lang::Value::Null,
+            // TODO: lol need a StructLiteral value
+            lang::CodeNode::StructLiteral(_struct_literal) => lang::Value::Null,
+            // i think these code nodes will actually never be evaluated
+            lang::CodeNode::StructLiteralField(_struct_literal_field) => lang::Value::Null,
         }
     }
 
