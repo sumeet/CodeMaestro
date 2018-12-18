@@ -209,6 +209,14 @@ impl CodeNode {
         }
     }
 
+    pub fn into_struct_literal_field(&self) -> Option<&StructLiteralField> {
+        if let CodeNode::StructLiteralField(ref field) = self {
+            Some(field)
+        } else {
+            None
+        }
+    }
+
     pub fn description(&self) -> String {
         match self {
             CodeNode::FunctionCall(function_call) => {
@@ -574,6 +582,12 @@ pub struct StructLiteral {
     pub id: ID,
     pub struct_id: ID,
     pub fields: Vec<CodeNode>,
+}
+
+impl StructLiteral {
+    pub fn fields(&self) -> Vec<&StructLiteralField> {
+        self.fields.iter().map(|f| f.into_struct_literal_field().unwrap()).collect()
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]

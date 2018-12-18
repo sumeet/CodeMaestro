@@ -31,6 +31,7 @@ pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
 pub const PURPLE_COLOR: Color = [0.486, 0.353, 0.952, 1.0];
 pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
+pub const SALMON_COLOR: Color = [0.996, 0.286, 0.322, 1.0];
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 
@@ -671,6 +672,10 @@ impl<'a> Controller {
         self.typespec_by_id.values().collect()
     }
 
+    fn get_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
+        self.typespec_by_id.get(&id)
+    }
+
     fn save(&self) {
         let theworld = code_loading::TheWorld {
             main_code: self.loaded_code.clone().unwrap(),
@@ -1209,6 +1214,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         None::<fn(Keypress)>)
     }
 
+    fn get_struct(&self, struct_id: lang::ID) -> Option<structs::Struct> {
+        let typespec = self.controller.borrow().get_typespec(struct_id).cloned()?;
+        typespec.downcast::<structs::Struct>().map(|bawx| *bawx).ok()
+    }
+
     fn render_edit_structs(&self) -> T::DrawResult {
         let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
         let structs = typespecs.iter()
@@ -1415,7 +1425,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     {
         // TODO: pretty sure we can get rid of the clone and let the borrow live until the end
         // but i don't want to mess around with it right now
-        let selected_ts = self.controller.borrow().typespec_by_id.get(&selected_ts_id).unwrap().clone();
+        let selected_ts = self.controller.borrow().get_typespec(selected_ts_id).unwrap().clone();
         let typespecs = self.controller.borrow().typespecs().into_iter()
             .map(|ts| ts.clone()).collect_vec();
         self.ui_toolkit.draw_combo_box_with_label(
@@ -1604,9 +1614,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 CodeNode::NullLiteral => {
                     self.ui_toolkit.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol))
                 },
-                CodeNode::StructLiteral(_struct_literal) => {
-                    self.ui_toolkit.draw_all(vec![])
-                    //self.render_struct_literal(&struct_literal)
+                CodeNode::StructLiteral(struct_literal) => {
+                    self.render_struct_literal(&struct_literal)
                 },
                 CodeNode::StructLiteralField(_field) => {
                     self.ui_toolkit.draw_all(vec![])
@@ -1828,7 +1837,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn get_symbol_for_type(&self, t: &lang::Type) -> String {
-        self.controller.borrow().typespec_by_id.get(&t.typespec_id).unwrap().symbol().to_string()
+        self.controller.borrow().get_typespec(t.typespec_id).unwrap().symbol().to_string()
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
@@ -1882,6 +1891,39 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {})
     }
 
+    fn render_args_for_missing_function(&self, _args: Vec<&lang::Argument>) -> T::DrawResult {
+        // TODO: implement this
+        self.ui_toolkit.draw_all(vec![])
+    }
+
+    fn render_struct_literal(&self, struct_literal: &lang::StructLiteral) -> T::DrawResult {
+        // XXX: we've gotta have this conditional because of a quirk with the way the imgui
+        // toolkit works. if render_function_call_arguments doesn't actually draw anything, it
+        // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
+        // one day fix this jumbledness
+        if struct_literal.fields.is_empty() {
+            self.render_struct_identifier(struct_literal)
+        } else {
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| { self.render_struct_identifier(struct_literal) },
+                &|| {
+                    self.render_struct_literal_fields(struct_literal.struct_id,
+                                                      &struct_literal.fields())
+                },
+            ])
+        }
+    }
+
+    fn render_struct_identifier(&self, struct_literal: &lang::StructLiteral) -> T::DrawResult {
+        // TODO: handle when the typespec ain't available
+        let strukt = self.get_struct(struct_literal.struct_id).unwrap();
+        self.ui_toolkit.draw_button(&strukt.name, SALMON_COLOR, &|| {}) 
+    }
+
+    fn render_struct_literal_fields(&self, _struct_id: lang::ID, _fields: &[&lang::StructLiteralField]) -> T::DrawResult {
+        self.ui_toolkit.draw_all(vec![])
+    }
+
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
         let mut r = YELLOW_COLOR;
         // LOL: mess around w/ some transparency
@@ -1892,11 +1934,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &format!("{} {}", PLACEHOLDER_ICON, placeholder.description),
             r,
             &|| {})
-    }
-
-    fn render_args_for_missing_function(&self, _args: Vec<&lang::Argument>) -> T::DrawResult {
-        // TODO: implement this
-        self.ui_toolkit.draw_all(vec![])
     }
 
     fn render_string_literal(&self, string_literal: &StringLiteral) -> T::DrawResult {
