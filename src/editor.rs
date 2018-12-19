@@ -648,7 +648,6 @@ pub struct Controller {
     insert_code_menu: Option<InsertCodeMenu>,
     loaded_code: Option<CodeNode>,
     error_console: String,
-    typespec_by_id: indexmap::IndexMap<ID, Box<lang::TypeSpec + 'static>>,
     mutation_master: MutationMaster,
     test_result_by_func_id: HashMap<ID, TestResult>,
 }
@@ -664,25 +663,15 @@ impl<'a> Controller {
             editing: false,
             mutation_master: MutationMaster::new(),
             test_result_by_func_id: HashMap::new(),
-            typespec_by_id: Self::init_typespecs(),
         }
     }
 
-    fn init_typespecs() -> indexmap::IndexMap<ID, Box<lang::TypeSpec>> {
-        let mut typespec_by_id: indexmap::IndexMap<ID, Box<lang::TypeSpec>> = indexmap::IndexMap::new();
-        typespec_by_id.insert(lang::NULL_TYPESPEC.id, Box::new(lang::NULL_TYPESPEC.clone()));
-        typespec_by_id.insert(lang::STRING_TYPESPEC.id, Box::new(lang::STRING_TYPESPEC.clone()));
-        typespec_by_id.insert(lang::NUMBER_TYPESPEC.id, Box::new(lang::NUMBER_TYPESPEC.clone()));
-        typespec_by_id.insert(lang::LIST_TYPESPEC.id, Box::new(lang::LIST_TYPESPEC.clone()));
-        typespec_by_id
-    }
-
     fn typespecs(&self) -> Vec<&Box<lang::TypeSpec>> {
-        self.typespec_by_id.values().collect()
+        self.execution_environment.list_typespecs()
     }
 
     fn get_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
-        self.typespec_by_id.get(&id)
+        self.execution_environment.find_typespec(id)
     }
 
     fn save(&self) {
@@ -973,7 +962,7 @@ impl<'a> Controller {
     }
 
     pub fn load_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
-        self.typespec_by_id.insert(typespec.id(), Box::new(typespec));
+        self.execution_environment.add_typespec(typespec)
     }
 
     pub fn load_function<F: Function>(&mut self, function: F) {

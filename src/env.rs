@@ -5,8 +5,10 @@ use std::borrow::Borrow;
 
 pub struct ExecutionEnvironment {
     pub console: String,
+    // TODO: lol, this is going to end up being stack frames, or smth like that
     pub locals: HashMap<lang::ID, lang::Value>,
     pub functions: HashMap<lang::ID, Box<lang::Function>>,
+    pub typespecs: HashMap<lang::ID, Box<lang::TypeSpec + 'static>>,
 }
 
 impl ExecutionEnvironment {
@@ -15,7 +17,17 @@ impl ExecutionEnvironment {
             console: String::new(),
             locals: HashMap::new(),
             functions: HashMap::new(),
+            typespecs: Self::built_in_typespecs(),
         }
+    }
+
+    fn built_in_typespecs() -> HashMap<lang::ID, Box<lang::TypeSpec>> {
+        let mut typespec_by_id : HashMap<lang::ID, Box<lang::TypeSpec>> = HashMap::new();
+        typespec_by_id.insert(lang::NULL_TYPESPEC.id, Box::new(lang::NULL_TYPESPEC.clone()));
+        typespec_by_id.insert(lang::STRING_TYPESPEC.id, Box::new(lang::STRING_TYPESPEC.clone()));
+        typespec_by_id.insert(lang::NUMBER_TYPESPEC.id, Box::new(lang::NUMBER_TYPESPEC.clone()));
+        typespec_by_id.insert(lang::LIST_TYPESPEC.id, Box::new(lang::LIST_TYPESPEC.clone()));
+        typespec_by_id
     }
 
     pub fn add_function(&mut self, function: Box<lang::Function>) {
@@ -30,8 +42,21 @@ impl ExecutionEnvironment {
         self.functions.remove(&id).unwrap();
     }
 
+    // TODO: why does this clone? we could totally return references here
     pub fn list_functions(&self) -> Vec<Box<lang::Function>> {
         self.functions.iter().map(|(_, func)| func.clone()).collect()
+    }
+
+    pub fn add_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
+        self.typespecs.insert(typespec.id(), Box::new(typespec));
+    }
+
+    pub fn list_typespecs(&self) -> Vec<&Box<lang::TypeSpec>> {
+        self.typespecs.values().collect()
+    }
+
+    pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
+        self.typespecs.get(&id)
     }
 
     pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> lang::Value {
