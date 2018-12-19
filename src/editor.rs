@@ -231,6 +231,15 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
 #[derive(Clone)]
 struct InsertLiteralOptionGenerator {}
 
+// TODO: some literals we'll want to construct anywhere... you can put something down even if it's
+// not evaluated and just wrap it later!
+//impl InsertLiteralOptionGenerator {
+//    fn maybe_insert_string_literal(&self, options: &mut Vec<InsertCodeMenuOption>,
+//                                   search_params: &CodeSearchParams) {
+//        let input_str = &search_params.input_str;
+//    }
+//}
+
 impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
