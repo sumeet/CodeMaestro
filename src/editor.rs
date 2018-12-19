@@ -16,7 +16,6 @@ use super::lang::{
 use super::itertools::Itertools;
 use super::pystuff;
 use super::jsstuff;
-use super::indexmap;
 use super::external_func;
 use super::undo;
 use super::edit_types;
@@ -1914,7 +1913,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_struct_identifier(&self, strukt: &structs::Struct,
-                                struct_literal: &lang::StructLiteral) -> T::DrawResult {
+                                _struct_literal: &lang::StructLiteral) -> T::DrawResult {
         // TODO: handle when the typespec ain't available
         self.ui_toolkit.draw_button(&strukt.name, SALMON_COLOR, &|| {})
     }

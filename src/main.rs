@@ -55,8 +55,6 @@ extern crate itertools;
 #[cfg(feature = "default")]
 extern crate pyo3;
 
-extern crate indexmap;
-
 #[macro_use] extern crate downcast_rs;
 
 extern crate debug_cell;
