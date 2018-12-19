@@ -1841,15 +1841,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
-        let type_symbol;
-        {
+        let type_symbol = {
             let controller = self.controller.borrow();
             let genie = controller.code_genie().unwrap();
-            type_symbol = match genie.get_type_for_arg(argument.argument_definition_id) {
+            match genie.get_type_for_arg(argument.argument_definition_id) {
                 Some(arg_type) => self.get_symbol_for_type(&arg_type),
                 None => "\u{f059}".to_string(),
-            };
-        }
+            }
+        };
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
                 let cont2 = Rc::clone(&self.controller);
@@ -1901,27 +1900,53 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         // toolkit works. if render_function_call_arguments doesn't actually draw anything, it
         // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
         // one day fix this jumbledness
+        let strukt = self.get_struct(struct_literal.struct_id).unwrap();
+
         if struct_literal.fields.is_empty() {
-            self.render_struct_identifier(struct_literal)
+            self.render_struct_identifier(&strukt, struct_literal)
         } else {
             self.ui_toolkit.draw_all_on_same_line(&[
-                &|| { self.render_struct_identifier(struct_literal) },
+                &|| { self.render_struct_identifier(&strukt, struct_literal) },
                 &|| {
-                    self.render_struct_literal_fields(struct_literal.struct_id,
+                    self.render_struct_literal_fields(&strukt,
                                                       &struct_literal.fields())
                 },
             ])
         }
     }
 
-    fn render_struct_identifier(&self, struct_literal: &lang::StructLiteral) -> T::DrawResult {
+    fn render_struct_identifier(&self, strukt: &structs::Struct,
+                                struct_literal: &lang::StructLiteral) -> T::DrawResult {
         // TODO: handle when the typespec ain't available
-        let strukt = self.get_struct(struct_literal.struct_id).unwrap();
-        self.ui_toolkit.draw_button(&strukt.name, SALMON_COLOR, &|| {}) 
+        self.ui_toolkit.draw_button(&strukt.name, SALMON_COLOR, &|| {})
     }
 
-    fn render_struct_literal_fields(&self, _struct_id: lang::ID, _fields: &[&lang::StructLiteralField]) -> T::DrawResult {
-        self.ui_toolkit.draw_all(vec![])
+    fn render_struct_literal_fields(&self, strukt: &structs::Struct,
+                                    fields: &[&lang::StructLiteralField]) -> T::DrawResult {
+        // TODO: should this map just go inside the struct????
+        let struct_field_by_id : HashMap<ID, &structs::StructField> = strukt.fields.iter()
+            .map(|field| (field.id, field)).collect();
+
+        let mut to_draw : Vec<Box<Fn() -> T::DrawResult>> = vec![];
+        for literal_field in fields.iter() {
+            let strukt_field = struct_field_by_id.get(&literal_field.struct_field_id).unwrap();
+            to_draw.push(Box::new(move || {
+                self.render_struct_literal_field(strukt_field, literal_field)
+            }));
+        }
+        self.ui_toolkit.draw_all_on_same_line(&to_draw.iter().map(|td| td.as_ref()).collect_vec())
+    }
+
+    fn render_struct_literal_field(&self, field: &structs::StructField,
+                                   literal: &lang::StructLiteralField) -> T::DrawResult {
+        let field_text = format!("{} {}", field.name,
+                                 self.get_symbol_for_type(&field.field_type));
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &|| {
+                self.ui_toolkit.draw_button(&field_text, BLACK_COLOR, &|| {})
+            },
+            &|| { self.render_code(&literal.expr) }
+        ])
     }
 
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
