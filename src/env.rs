@@ -42,8 +42,8 @@ impl ExecutionEnvironment {
         self.functions.remove(&id).unwrap();
     }
 
-    pub fn list_functions(&self) -> Vec<&Box<lang::Function>> {
-        self.functions.iter().map(|(_, func)| func).collect()
+    pub fn list_functions(&self) -> impl Iterator<Item = &Box<lang::Function>> {
+        self.functions.iter().map(|(_, func)| func)
     }
 
     pub fn add_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
