@@ -138,7 +138,6 @@ impl TypeSpec for BuiltInTypeSpec {
     }
 }
 
-
 impl BuiltInTypeSpec {
     pub fn matches(&self, other: &Self) -> bool {
         self.id == other.id
@@ -153,16 +152,16 @@ pub struct Type {
 
 impl Type {
     // for types with no params
-    pub fn from_spec(spec: &BuiltInTypeSpec) -> Self {
+    pub fn from_spec<T: TypeSpec>(spec: &T) -> Self {
         Self::with_params(spec, vec![])
     }
 
-    pub fn with_params(spec: &BuiltInTypeSpec, params: Vec<Self>) -> Self {
-        if params.len() != spec.num_params {
+    pub fn with_params<T: TypeSpec>(spec: &T, params: Vec<Self>) -> Self {
+        if params.len() != spec.num_params() {
             panic!("wrong number of params")
         }
         Self {
-            typespec_id: spec.id,
+            typespec_id: spec.id(),
             params,
         }
     }

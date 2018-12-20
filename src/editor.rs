@@ -282,6 +282,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     }
                 );
             }
+
             if return_type.matches_spec(&lang::NULL_TYPESPEC) {
                 options.push(
                     InsertCodeMenuOption {
@@ -291,6 +292,8 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     }
                 );
             }
+
+
             // design decision made here: all placeholders have types. therefore, it is now
             // required for a placeholder node to have a type, meaning we need to know what the
             // type of a placeholder is to create it. under current conditions that's ok, but i
@@ -438,7 +441,6 @@ impl<'a> CodeGenie<'a> {
         self.env.find_function(id)
     }
 
-    // why doesn't this just return a reference... i don't want to clone all the funcs
     fn all_functions(&self) -> impl Iterator<Item = &Box<lang::Function>> {
         self.env.list_functions()
     }
@@ -450,47 +452,47 @@ impl<'a> CodeGenie<'a> {
                 match self.find_function(func_id) {
                     Some(ref func) => func.returns().clone(),
                     // TODO: do we really want to just return Null if we couldn't find the function?
-                    None => lang::Type::from_spec(&lang::NULL_TYPESPEC),
+                    None => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
                 }
             }
             CodeNode::StringLiteral(_) => {
-                lang::Type::from_spec(&lang::STRING_TYPESPEC)
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC)
             }
             CodeNode::Assignment(assignment) => {
-                self.guess_type(&assignment.expression)
+                self.guess_type(&*assignment.expression)
             }
             CodeNode::Block(block) => {
                 if block.expressions.len() > 0 {
                     let last_expression_in_block= &block.expressions[block.expressions.len() - 1];
                     self.guess_type(last_expression_in_block)
                 } else {
-                    lang::Type::from_spec(&lang::NULL_TYPESPEC)
+                    lang::Type::from_spec(&*lang::NULL_TYPESPEC)
                 }
             }
             CodeNode::VariableReference(_) => {
-                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             }
             CodeNode::FunctionReference(_) => {
-                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             }
             CodeNode::FunctionDefinition(_) => {
-                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             }
             CodeNode::Argument(_) => {
-                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             }
             CodeNode::Placeholder(_) => {
-                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             }
             CodeNode::NullLiteral => {
-                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             },
-            CodeNode::StructLiteral(_struct_literal) => {
-                // TODO: i have to actually load this from the environment, i guess
-                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+            CodeNode::StructLiteral(struct_literal) => {
+                let typespec = self.env.find_typespec(struct_literal.struct_id).unwrap();
+                lang::Type::from_spec(typespec.downcast_ref::<structs::Struct>().unwrap())
             }
             CodeNode::StructLiteralField(_) => {
-                lang::Type::from_spec(&lang::NULL_TYPESPEC)
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             }
         }
     }
@@ -1346,7 +1348,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let mut newstrukt = strukt1.clone();
             newstrukt.fields.push(structs::StructField::new(
                 format!("field{}", newstrukt.fields.len()),
-                lang::Type::from_spec(&lang::NULL_TYPESPEC),
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC),
             ));
             cont1.borrow_mut().load_typespec(newstrukt);
         }));
@@ -1434,7 +1436,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let mut args = args1.clone();
             let mut func = func1.clone();
             args.push(lang::ArgumentDefinition::new(
-                lang::Type::from_spec(&lang::NULL_TYPESPEC),
+                lang::Type::from_spec(&*lang::NULL_TYPESPEC),
                 format!("arg{}", args.len()),
             ));
             func.set_args(args);

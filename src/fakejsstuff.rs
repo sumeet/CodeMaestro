@@ -30,7 +30,7 @@ impl lang::Function for JSFunc {
     }
 
     fn returns(&self) -> lang::Type {
-        lang::Type::from_spec(&lang::NULL_TYPESPEC)
+        lang::Type::from_spec(&*lang::NULL_TYPESPEC)
     }
 }
 
