@@ -1,4 +1,27 @@
 use super::lang;
+use super::structs;
+
+pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::CodeNode {
+    let fields = strukt.fields.iter()
+        .map(|field| {
+            lang::CodeNode::StructLiteralField(lang::StructLiteralField {
+                id: lang::new_id(),
+                struct_field_id: field.id,
+                expr: Box::new(lang::CodeNode::Placeholder(lang::Placeholder {
+                    id: lang::new_id(),
+                    description: field.name.clone(),
+                    // XXX: this is wrong... we need to store the whole type in there.
+                    type_id: field.field_type.typespec_id,
+                }))
+            })
+        })
+        .collect();
+    lang::CodeNode::StructLiteral(lang::StructLiteral {
+        id: lang::new_id(),
+        struct_id: strukt.id,
+        fields,
+    })
+}
 
 pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::CodeNode {
     let args = func.takes_args().iter()

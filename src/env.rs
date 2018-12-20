@@ -1,4 +1,4 @@
-use super::{lang};
+use super::{lang,structs};
 
 use std::collections::HashMap;
 use std::borrow::Borrow;
@@ -56,6 +56,11 @@ impl ExecutionEnvironment {
 
     pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
         self.typespecs.get(&id)
+    }
+
+    pub fn find_struct(&self, id: lang::ID) -> Option<&structs::Struct> {
+        self.find_typespec(id)
+            .and_then(|ts| ts.downcast_ref::<structs::Struct>())
     }
 
     pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> lang::Value {

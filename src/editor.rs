@@ -96,6 +96,7 @@ impl InsertCodeMenu {
     }
 
     fn select_next(&mut self) {
+        // this could possibly overflow, but i wouldn't count on it... HAXXXXX
         self.selected_option_index += 1;
     }
 
@@ -281,9 +282,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                         new_node: code_generation::new_string_literal(input_str)
                     }
                 );
-            }
-
-            if return_type.matches_spec(&lang::NULL_TYPESPEC) {
+            } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
                 options.push(
                     InsertCodeMenuOption {
                         label: lang::NULL_TYPESPEC.symbol.clone(),
@@ -291,8 +290,15 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                         new_node: code_generation::new_null_literal(),
                     }
                 );
+            } else if let Some(strukt) = genie.find_struct(return_type.typespec_id) {
+                options.push(
+                    InsertCodeMenuOption {
+                        label: format!("{} {}", strukt.symbol, strukt.name),
+                        is_selected: false,
+                        new_node: code_generation::new_struct_literal_with_placeholders(strukt),
+                    }
+                );
             }
-
 
             // design decision made here: all placeholders have types. therefore, it is now
             // required for a placeholder node to have a type, meaning we need to know what the
@@ -445,6 +451,10 @@ impl<'a> CodeGenie<'a> {
         self.env.list_functions()
     }
 
+    fn find_struct(&self, id: lang::ID) -> Option<&structs::Struct> {
+        self.env.find_struct(id)
+    }
+
     pub fn guess_type(&self, code_node: &CodeNode) -> lang::Type {
         match code_node {
             CodeNode::FunctionCall(function_call) => {
@@ -488,8 +498,8 @@ impl<'a> CodeGenie<'a> {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             },
             CodeNode::StructLiteral(struct_literal) => {
-                let typespec = self.env.find_typespec(struct_literal.struct_id).unwrap();
-                lang::Type::from_spec(typespec.downcast_ref::<structs::Struct>().unwrap())
+                let strukt = self.env.find_struct(struct_literal.struct_id).unwrap();
+                lang::Type::from_spec(strukt)
             }
             CodeNode::StructLiteralField(_) => {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)
@@ -1956,6 +1966,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
         let mut to_draw : Vec<Box<Fn() -> T::DrawResult>> = vec![];
         for literal_field in fields.iter() {
+            // this is where the bug is
             let strukt_field = struct_field_by_id.get(&literal_field.struct_field_id).unwrap();
             to_draw.push(Box::new(move || {
                 self.render_struct_literal_field(strukt_field, literal_field)
@@ -1966,8 +1977,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_struct_literal_field(&self, field: &structs::StructField,
                                    literal: &lang::StructLiteralField) -> T::DrawResult {
-        let field_text = format!("{} {}", field.name,
-                                 self.get_symbol_for_type(&field.field_type));
+        let field_text = format!("{} {}", self.get_symbol_for_type(&field.field_type),
+                                        field.name);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
                 self.ui_toolkit.draw_button(&field_text, BLACK_COLOR, &|| {})
