@@ -54,7 +54,7 @@ impl InsertCodeMenu {
     fn new_expression_inside_code_block(insertion_point: InsertionPoint, env: &ExecutionEnvironment) -> Self {
         Self {
             // TODO: should probably be able to insert new assignment expressions as well
-            option_generators: vec![Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions() })],
+            option_generators: vec![Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions().into_iter().cloned().collect() })],
             selected_option_index: 0,
             search_params: CodeSearchParams::empty(),
             insertion_point,
@@ -82,7 +82,7 @@ impl InsertCodeMenu {
         Self {
             option_generators: vec![
                 Box::new(InsertVariableReferenceOptionGenerator { assignments_by_type_id }),
-                Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions() }),
+                Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions().into_iter().cloned().collect() }),
                 Box::new(InsertLiteralOptionGenerator {}),
             ],
             selected_option_index: 0,
@@ -421,7 +421,7 @@ impl<'a> CodeGenie<'a> {
     }
 
     // why doesn't this just return a reference... i don't want to clone all the funcs
-    fn all_functions(&self) -> Vec<Box<Function>> {
+    fn all_functions(&self) -> Vec<&Box<Function>> {
         self.env.list_functions()
     }
 
@@ -696,13 +696,13 @@ impl<'a> Controller {
 
     fn list_jsfuncs(&self) -> Vec<jsstuff::JSFunc> {
         self.execution_environment.list_functions().into_iter()
-            .filter_map(|f| Result::ok(f.downcast::<jsstuff::JSFunc>()))
+            .filter_map(|f| Result::ok(f.clone().downcast::<jsstuff::JSFunc>()))
             .map(|boxedjsfunc| *boxedjsfunc).collect()
     }
 
     fn list_pyfuncs(&self) -> Vec<pystuff::PyFunc> {
         self.execution_environment.list_functions().into_iter()
-            .filter_map(|f| Result::ok(f.downcast::<pystuff::PyFunc>()))
+            .filter_map(|f| Result::ok(f.clone().downcast::<pystuff::PyFunc>()))
             .map(|boxedpyfunc| *boxedpyfunc).collect()
     }
 
@@ -1123,10 +1123,12 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
-        let funcs = self.controller.borrow().execution_environment.list_functions();
-        let pyfuncs = funcs.iter()
-            .filter_map(|f| f.as_ref().downcast_ref::<pystuff::PyFunc>());
-        self.ui_toolkit.draw_all(pyfuncs.map(|f| self.render_edit_pyfunc(f)).collect())
+        let pyfuncs = {
+            let controller = self.controller.borrow();
+            let funcs = controller.execution_environment.list_functions().into_iter().cloned();
+            funcs.filter_map(|f| f.downcast::<pystuff::PyFunc>().ok()).collect_vec()
+        };
+        self.ui_toolkit.draw_all(pyfuncs.iter().map(|f| self.render_edit_pyfunc(f)).collect())
     }
 
     fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc) -> T::DrawResult {

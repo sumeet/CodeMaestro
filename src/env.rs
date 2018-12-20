@@ -42,9 +42,8 @@ impl ExecutionEnvironment {
         self.functions.remove(&id).unwrap();
     }
 
-    // TODO: why does this clone? we could totally return references here
-    pub fn list_functions(&self) -> Vec<Box<lang::Function>> {
-        self.functions.iter().map(|(_, func)| func.clone()).collect()
+    pub fn list_functions(&self) -> Vec<&Box<lang::Function>> {
+        self.functions.iter().map(|(_, func)| func).collect()
     }
 
     pub fn add_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
