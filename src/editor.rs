@@ -50,41 +50,34 @@ struct InsertCodeMenu {
     insertion_point: InsertionPoint,
 }
 
+// TODO: could probably have a single interface for generating this menu, inject the insertion point
+// into the search params (because we can copy it easily) and then we don't need to box the searchers.
+// every searcher can decide for itself if it can fill in that particular insertion point
 impl InsertCodeMenu {
-    fn new_expression_inside_code_block(insertion_point: InsertionPoint, env: &ExecutionEnvironment) -> Self {
+    fn new_expression_inside_code_block(insertion_point: InsertionPoint) -> Self {
         Self {
             // TODO: should probably be able to insert new assignment expressions as well
-            option_generators: vec![Box::new(InsertFunctionOptionGenerator {
-                all_funcs: env.list_functions().cloned().collect()
-            })],
+            option_generators: vec![Box::new(InsertFunctionOptionGenerator {})],
             selected_option_index: 0,
             search_params: CodeSearchParams::empty(),
             insertion_point,
         }
     }
 
-    fn fill_in_argument(argument: &lang::Argument, env: &ExecutionEnvironment, root_node: &CodeNode) -> Self {
-        let genie = CodeGenie::new(root_node, env);
+    fn fill_in_argument(argument: &lang::Argument, genie: &CodeGenie) -> Self {
         let arg_type = genie.get_type_for_arg(argument.argument_definition_id);
         if arg_type.is_none() {
             panic!("h000000what. couldn't find the argument definition for this thing!")
         }
         let arg_type = arg_type.unwrap();
 
-        let assignments_by_type_id = genie.find_assignments_that_come_before_code(argument.id)
-            .into_iter()
-            .group_by(|assignment| {
-                let assignment : Assignment = (**assignment).clone();
-                genie.guess_type(&CodeNode::Assignment(assignment)).id()
-            })
-            .into_iter()
-            .map(|(id, assignments)| (id, assignments.cloned().collect::<Vec<Assignment>>()))
-            .collect();
 
         Self {
             option_generators: vec![
-                Box::new(InsertVariableReferenceOptionGenerator { assignments_by_type_id }),
-                Box::new(InsertFunctionOptionGenerator { all_funcs: env.list_functions().into_iter().cloned().collect() }),
+                Box::new(InsertVariableReferenceOptionGenerator {
+                    insertion_id: argument.id
+                }),
+                Box::new(InsertFunctionOptionGenerator {}),
                 Box::new(InsertLiteralOptionGenerator {}),
             ],
             selected_option_index: 0,
@@ -149,6 +142,8 @@ trait InsertCodeMenuOptionGenerator : objekt::Clone {
 
 clone_trait_object!(InsertCodeMenuOptionGenerator);
 
+// TODO: should the insertion point go inside here as well? that way we wouldn't have to store off
+// the ID in the variable reference searcher
 #[derive(Clone)]
 struct CodeSearchParams {
     return_type: Option<lang::Type>,
@@ -163,6 +158,10 @@ impl CodeSearchParams {
     fn with_type(t: &lang::Type) -> Self {
         Self { return_type: Some(t.clone()), input_str: "".to_string() }
     }
+
+    pub fn lowercased_trimmed_search_str(&self) -> String {
+        self.input_str.trim().to_lowercase()
+    }
 }
 
 #[derive(Clone)]
@@ -173,25 +172,31 @@ struct InsertCodeMenuOption {
 }
 
 #[derive(Clone)]
-struct InsertFunctionOptionGenerator {
-    all_funcs: Vec<Box<Function>>,
-}
+struct InsertFunctionOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
-        let mut functions = self.all_funcs.clone();
-        let input_str = search_params.input_str.trim().to_lowercase();
+        let mut functions : &mut Iterator<Item = &Box<Function>> = &mut genie.all_functions();
+        let mut a;
+        let mut b;
+
+        let input_str = search_params.lowercased_trimmed_search_str();
         if !input_str.is_empty() {
-            functions = functions.into_iter()
+            a = functions
                 .filter(|f| {
                     f.name().to_lowercase().contains(&input_str)
-                }).collect()
+                });
+            functions = &mut a;
         }
-        if let Some(ref return_type) = search_params.return_type {
-            functions = functions.into_iter()
-                .filter(|f| f.returns().matches(&return_type)).collect()
+
+        let return_type = &search_params.return_type;
+        if return_type.is_some() {
+            b = functions
+                .filter(|f| f.returns().matches(return_type.as_ref().unwrap()));
+            functions = &mut b;
         }
-        functions.into_iter().map(|func| {
+
+        functions.map(|func| {
             InsertCodeMenuOption {
                 label: func.name().to_string(),
                 new_node: code_generation::new_function_call_with_placeholder_args(func.as_ref()),
@@ -203,26 +208,37 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
 
 #[derive(Clone)]
 struct InsertVariableReferenceOptionGenerator {
-    assignments_by_type_id: HashMap<ID, Vec<Assignment>>,
+    insertion_id: lang::ID,
 }
 
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self, search_params: &CodeSearchParams,
+               genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
+        let assignments_by_type_id : HashMap<ID, Vec<lang::Assignment>> = genie.find_assignments_that_come_before_code(self.insertion_id)
+            .into_iter()
+            .group_by(|assignment| {
+                let assignment : Assignment = (**assignment).clone();
+                genie.guess_type(&CodeNode::Assignment(assignment)).id()
+            })
+            .into_iter()
+            .map(|(id, assignments)| (id, assignments.cloned().collect::<Vec<Assignment>>()))
+            .collect();
+
         let mut assignments = if let Some(search_type) = &search_params.return_type {
             // XXX: this won't work for generics i believe
-            self.assignments_by_type_id.get(&search_type.id()).map_or_else(
+            assignments_by_type_id.get(&search_type.id()).map_or_else(
                 || vec![],
                 |assignments| assignments.iter()
                     .map(|assignment| assignment.clone()).collect()
             )
         } else {
-            self.assignments_by_type_id.iter()
+            assignments_by_type_id.iter()
                 .flat_map(|(_id, assignments)| assignments)
                 .map(|assignment| assignment.clone())
                 .collect()
         };
 
-        let input_str = search_params.input_str.trim().to_lowercase();
+        let input_str = search_params.lowercased_trimmed_search_str();
         if !input_str.is_empty() {
             assignments = assignments.into_iter()
                 .filter(|assignment| {
@@ -862,7 +878,6 @@ impl<'a> Controller {
             self.save_current_state_to_undo_history();
             self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
                 InsertionPoint::Before(expression_id),
-                &self.execution_environment,
             ));
             self.editing = true;
             self.selected_node_id = None;
@@ -876,7 +891,6 @@ impl<'a> Controller {
             self.save_current_state_to_undo_history();
             self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
                 InsertionPoint::After(expression_id),
-                &self.execution_environment,
             ));
             self.editing = true;
             self.selected_node_id = None;
@@ -899,8 +913,7 @@ impl<'a> Controller {
                 self.insert_code_menu = Some(
                     InsertCodeMenu::fill_in_argument(
                         argument,
-                        &self.execution_environment,
-                        self.loaded_code.as_ref().unwrap()));
+                        self.code_genie().as_ref().unwrap()));
             }
             _ => ()
         }
