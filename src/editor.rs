@@ -45,7 +45,7 @@ pub type Color = [f32; 4];
 #[derive(Clone)]
 struct InsertCodeMenu {
     option_generators: Vec<Box<InsertCodeMenuOptionGenerator>>,
-    selected_option_index: usize,
+    selected_option_index: isize,
     search_params: CodeSearchParams,
     insertion_point: InsertionPoint,
 }
@@ -69,8 +69,6 @@ impl InsertCodeMenu {
         }
         let arg_type = arg_type.unwrap();
 
-        // XXX: type ID will no longer be sufficient. i think we may need to hash together the child
-        // type hashes together as well, or smth (for parameterized types)
         let assignments_by_type_id = genie.find_assignments_that_come_before_code(argument.id)
             .into_iter()
             .group_by(|assignment| {
@@ -93,16 +91,17 @@ impl InsertCodeMenu {
         }
     }
 
-    fn selected_option_code(&self) -> Option<CodeNode> {
-        Some(self.list_options().get(self.selected_option_index)?.new_node.clone())
+    fn selected_option_code(&self, code_genie: &CodeGenie) -> Option<CodeNode> {
+        let all_options = self.list_options(code_genie);
+        if all_options.is_empty() {
+            return None
+        }
+        let selected_index = self.selected_index(all_options.len());
+        Some(all_options.get(selected_index)?.new_node.clone())
     }
 
     fn select_next(&mut self) {
-        if self.selected_option_index < self.list_options().len() - 1 {
-            self.selected_option_index += 1;
-        } else {
-            self.selected_option_index = 0;
-        }
+        self.selected_option_index += 1;
     }
 
     fn search_str(&self) -> &str {
@@ -119,19 +118,31 @@ impl InsertCodeMenu {
     // TODO: i think the selected option index can get out of sync with this generated list, leading
     // to a panic, say if someone types something and changes the number of options without changing
     // the selected index.
-    fn list_options(&self) -> Vec<InsertCodeMenuOption> {
+    fn list_options(&self, code_genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
         let mut all_options : Vec<InsertCodeMenuOption> = self.option_generators
             .iter()
-            .flat_map(|generator| generator.options(&self.search_params))
+            .flat_map(|generator| {
+                generator.options(&self.search_params, code_genie)
+            })
             .collect();
-        all_options.get_mut(self.selected_option_index).as_mut()
+        if all_options.is_empty() {
+            return all_options
+        }
+        let selected_index = self.selected_index(all_options.len());
+        all_options.get_mut(selected_index).as_mut()
             .map(|option| option.is_selected = true);
         all_options
+    }
+
+    // HACK: this modulo stuff is an insane hack but it lets me not have to pass a code genie into
+    // select_next
+    fn selected_index(&self, num_options: usize) -> usize {
+        (self.selected_option_index % num_options as isize) as usize
     }
 }
 
 trait InsertCodeMenuOptionGenerator : objekt::Clone {
-    fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption>;
+    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie) -> Vec<InsertCodeMenuOption>;
 }
 
 clone_trait_object!(InsertCodeMenuOptionGenerator);
@@ -165,7 +176,7 @@ struct InsertFunctionOptionGenerator {
 }
 
 impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
+    fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
         let mut functions = self.all_funcs.clone();
         let input_str = search_params.input_str.trim().to_lowercase();
         if !input_str.is_empty() {
@@ -194,7 +205,7 @@ struct InsertVariableReferenceOptionGenerator {
 }
 
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
+    fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
         let mut assignments = if let Some(search_type) = &search_params.return_type {
             // XXX: this won't work for generics i believe
             self.assignments_by_type_id.get(&search_type.id()).map_or_else(
@@ -240,7 +251,7 @@ struct InsertLiteralOptionGenerator {}
 //}
 
 impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams) -> Vec<InsertCodeMenuOption> {
+    fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
         let input_str = &search_params.input_str;
         if let Some(ref return_type) = search_params.return_type {
@@ -409,6 +420,7 @@ impl<'a> CodeGenie<'a> {
         self.env.find_function(id)
     }
 
+    // why doesn't this just return a reference... i don't want to clone all the funcs
     fn all_functions(&self) -> Vec<Box<Function>> {
         self.env.list_functions()
     }
@@ -829,8 +841,7 @@ impl<'a> Controller {
                 self.select_current_line()
             },
             (_, Key::Tab) => {
-                self.insert_code_menu.as_mut()
-                    .map(|menu| menu.select_next());
+                self.insert_code_menu.as_mut().map(|menu| menu.select_next());
             }
             _ => {},
         }
@@ -1672,7 +1683,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let controller_1 = Rc::clone(&self.controller);
                 let controller_2 = Rc::clone(&self.controller);
                 let insertion_point = menu.insertion_point.clone();
-                let new_code_node = menu.selected_option_code();
+                let new_code_node = menu.selected_option_code(&self.controller.borrow().code_genie().unwrap());
 
                 self.ui_toolkit.draw_text_input(
                     menu.search_str(),
@@ -1696,7 +1707,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> <T as UiToolkit>::DrawResult {
-        let options = menu.list_options();
+        let options = menu.list_options(&self.controller.borrow().code_genie().unwrap());
         let render_insertion_options : Vec<Box<Fn() -> T::DrawResult>> = options.iter()
             .map(|option| {
                 let c : Box<Fn() -> T::DrawResult> = Box::new(move || {
