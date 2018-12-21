@@ -5,6 +5,7 @@ use super::failure::{Error};
 use super::serde_json;
 use super::pystuff;
 use super::jsstuff;
+use super::structs;
 
 
 // TODO: find a better name. til then, we're gonna save the world
@@ -13,6 +14,7 @@ pub struct TheWorld {
     pub main_code: CodeNode,
     pub pyfuncs: Vec<pystuff::PyFunc>,
     pub jsfuncs: Vec<jsstuff::JSFunc>,
+    pub structs: Vec<structs::Struct>,
 }
 
 // pub fn load(filename: &str) -> Result<CodeNode,Error> {

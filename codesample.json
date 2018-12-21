@@ -128,16 +128,16 @@
         "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
         "params": []
       },
-      "name": "New PyFunc",
+      "name": "pymoopah",
       "id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
       "args": [
         {
           "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
           "arg_type": {
-            "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
             "params": []
           },
-          "short_name": "arg0"
+          "short_name": "moop"
         }
       ]
     },
@@ -170,5 +170,22 @@
       ]
     }
   ],
-  "jsfuncs": []
+  "jsfuncs": [],
+  "structs": [
+    {
+      "name": "Moop",
+      "id": "dd4b190b-663c-444a-afea-970a05b4f787",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "5cced5aa-6e76-4fa6-a430-031594115b34",
+          "name": "name",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    }
+  ]
 }

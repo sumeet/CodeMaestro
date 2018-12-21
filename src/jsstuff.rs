@@ -22,7 +22,7 @@ impl JSFunc {
     pub fn new() -> Self {
         Self {
             eval: "".to_string(),
-            return_type: lang::Type::from_spec(&lang::NULL_TYPESPEC),
+            return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
             name: "New JSFunc".to_string(),
             id: lang::new_id(),
             args: vec![],

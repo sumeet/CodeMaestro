@@ -50,8 +50,8 @@ impl ExecutionEnvironment {
         self.typespecs.insert(typespec.id(), Box::new(typespec));
     }
 
-    pub fn list_typespecs(&self) -> Vec<&Box<lang::TypeSpec>> {
-        self.typespecs.values().collect()
+    pub fn list_typespecs(&self) -> impl Iterator<Item = &Box<lang::TypeSpec>> {
+        self.typespecs.values()
     }
 
     pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {

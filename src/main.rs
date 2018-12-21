@@ -190,16 +190,22 @@ impl Function for Capitalize {
 }
 
 #[cfg(feature = "default")]
-fn load_builtins(controller: &mut Controller, world: &code_loading::TheWorld) {
+fn load_externalfuncs(controller: &mut Controller, world: &code_loading::TheWorld) {
     for pyfunc in world.pyfuncs.iter() {
         controller.load_function(pyfunc.clone());
     }
 }
 
 #[cfg(feature = "javascript")]
-fn load_builtins(controller: &mut Controller, world: &code_loading::TheWorld) {
+fn load_externalfuncs(controller: &mut Controller, world: &code_loading::TheWorld) {
     for jsfunc in world.jsfuncs.iter() {
         controller.load_function(jsfunc.clone());
+    }
+}
+
+fn load_structs(controller: &mut Controller, world: &code_loading::TheWorld) {
+    for strukt in world.structs.iter() {
+        controller.load_typespec(strukt.clone());
     }
 }
 
@@ -215,13 +221,13 @@ impl CSApp {
         app.controller.borrow_mut().load_function(Print{});
         app.controller.borrow_mut().load_function(Capitalize{});
 
+        // TODO: controller can load the world as well as saving it, i don't think the code should
+        // be in here
         let codestring = include_str!("../codesample.json");
         let the_world : code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
         app.controller.borrow_mut().load_code(&the_world.main_code);
-        load_builtins(&mut app.controller.borrow_mut(), &the_world);
-
-        // TODO: save this in the world
-        app.controller.borrow_mut().load_typespec(structs::Struct::new());
+        load_externalfuncs(&mut app.controller.borrow_mut(), &the_world);
+        load_structs(&mut app.controller.borrow_mut(), &the_world);
 
         app
     }

@@ -77,8 +77,8 @@ impl UiToolkit for YewToolkit {
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {
         html! {
             <div>
-                <p>{{ text }}<p>
-                <label> {{ label }}
+                <p>{{ text }}</p>
+                <label>{{ label }}</label>
             </div>
         }
     }

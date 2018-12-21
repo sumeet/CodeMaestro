@@ -707,8 +707,13 @@ impl<'a> Controller {
         }
     }
 
-    fn typespecs(&self) -> Vec<&Box<lang::TypeSpec>> {
+    fn typespecs(&self) -> impl Iterator<Item = &Box<lang::TypeSpec>> {
         self.execution_environment.list_typespecs()
+    }
+
+    fn list_structs(&self) -> impl Iterator<Item = &structs::Struct> {
+        self.typespecs()
+            .filter_map(|ts| ts.as_ref().downcast_ref::<structs::Struct>())
     }
 
     fn get_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
@@ -720,8 +725,9 @@ impl<'a> Controller {
             main_code: self.loaded_code.clone().unwrap(),
             pyfuncs: self.list_pyfuncs(),
             jsfuncs: self.list_jsfuncs(),
+            structs: self.list_structs().cloned().collect(),
         };
-        code_loading::save("../codesample.json", &theworld).unwrap();
+        code_loading::save("codesample.json", &theworld).unwrap();
     }
 
     fn list_jsfuncs(&self) -> Vec<jsstuff::JSFunc> {
@@ -1257,10 +1263,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_structs(&self) -> T::DrawResult {
-        let typespecs = self.controller.borrow().typespecs().into_iter().cloned().collect_vec();
-        let structs = typespecs.iter()
-            .filter_map(|s| s.as_ref().downcast_ref::<structs::Struct>());
-        self.ui_toolkit.draw_all(structs.map(|s| self.render_edit_struct(s)).collect())
+        let structs = self.controller.borrow().list_structs().cloned().collect_vec();
+        self.ui_toolkit.draw_all(structs.iter().map(|s| self.render_edit_struct(s)).collect())
     }
 
     fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
@@ -1981,7 +1985,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                         field.name);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                self.ui_toolkit.draw_button(&field_text, BLACK_COLOR, &|| {})
+                let cont = Rc::clone(&self.controller);
+                let literal_id = literal.id;
+                self.ui_toolkit.draw_button(&field_text, BLACK_COLOR, move || {
+                    cont.borrow_mut().mark_as_editing(literal_id);
+                })
             },
             &|| { self.render_code(&literal.expr) }
         ])
