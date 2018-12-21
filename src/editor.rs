@@ -1783,7 +1783,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 self.render_inline_editable_button(
                     &assignment.name,
                     PURPLE_COLOR,
-                    &CodeNode::Assignment(assignment.clone())
+                    assignment.id
                 )
             },
             &|| { self.ui_toolkit.draw_text(" = ") },
@@ -1892,12 +1892,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         };
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                let cont2 = Rc::clone(&self.controller);
-                let node_id_to_select = argument.id;
-                self.ui_toolkit.draw_button(&type_symbol, BLACK_COLOR, move ||{
-                    let mut controller = cont2.borrow_mut();
-                    controller.mark_as_editing(node_id_to_select);
-                })
+                self.render_inline_editable_button(&type_symbol, BLACK_COLOR, argument.id)
             },
             &|| {
                 self.render_code(argument.expr.as_ref())
@@ -1985,11 +1980,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                         field.name);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                let cont = Rc::clone(&self.controller);
-                let literal_id = literal.id;
-                self.ui_toolkit.draw_button(&field_text, BLACK_COLOR, move || {
-                    cont.borrow_mut().mark_as_editing(literal_id);
-                })
+                self.render_inline_editable_button(&field_text, BLACK_COLOR, literal.id)
             },
             &|| { self.render_code(&literal.expr) }
         ])
@@ -2011,8 +2002,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.render_inline_editable_button(
             &format!("\u{F10D} {} \u{F10E}", string_literal.value),
             CLEAR_COLOR,
-            &CodeNode::StringLiteral(string_literal.clone())
-        )
+            string_literal.id)
     }
 
     fn render_run_button(&self, code_node: &CodeNode) -> T::DrawResult {
@@ -2024,12 +2014,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    fn render_inline_editable_button(&self, label: &str, color: Color, code_node: &CodeNode) -> T::DrawResult {
+    fn render_inline_editable_button(&self, label: &str, color: Color, code_node_id: lang::ID) -> T::DrawResult {
         let controller = self.controller.clone();
-        let id = code_node.id();
         self.ui_toolkit.draw_button(label, color, move || {
             let mut controller = controller.borrow_mut();
-            controller.mark_as_editing(id);
+            controller.mark_as_editing(code_node_id);
         })
     }
 
