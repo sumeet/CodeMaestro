@@ -54,6 +54,19 @@ struct InsertCodeMenu {
 // into the search params (because we can copy it easily) and then we don't need to box the searchers.
 // every searcher can decide for itself if it can fill in that particular insertion point
 impl InsertCodeMenu {
+    // TODO: we could just construct all the generators and have them switch on insertion
+    // point, intead of doing it here... maybe
+    pub fn for_insertion_point(insertion_point: InsertionPoint, genie: &CodeGenie) -> Self {
+        match insertion_point {
+            InsertionPoint::Before(_) | InsertionPoint::After(_) => {
+                Self::new_expression_inside_code_block(insertion_point)
+            },
+            InsertionPoint::Argument(field_id) | InsertionPoint::StructLiteralField(field_id) => {
+                Self::fill_in_field_with_exact_type(field_id, genie, insertion_point)
+            }
+        }
+    }
+
     fn new_expression_inside_code_block(insertion_point: InsertionPoint) -> Self {
         Self {
             // TODO: should probably be able to insert new assignment expressions as well
@@ -64,25 +77,22 @@ impl InsertCodeMenu {
         }
     }
 
-    fn fill_in_argument(argument: &lang::Argument, genie: &CodeGenie) -> Self {
-        let arg_type = genie.get_type_for_arg(argument.argument_definition_id);
-        if arg_type.is_none() {
-            panic!("h000000what. couldn't find the argument definition for this thing!")
-        }
-        let arg_type = arg_type.unwrap();
-
+    fn fill_in_field_with_exact_type(id: lang::ID, genie: &CodeGenie,
+                                     insertion_point: InsertionPoint) -> Self {
+        let node = genie.find_node(id).unwrap();
+        let exact_type = genie.guess_type(node);
 
         Self {
             option_generators: vec![
                 Box::new(InsertVariableReferenceOptionGenerator {
-                    insertion_id: argument.id
+                    insertion_id: id
                 }),
                 Box::new(InsertFunctionOptionGenerator {}),
                 Box::new(InsertLiteralOptionGenerator {}),
             ],
             selected_option_index: 0,
-            search_params: CodeSearchParams::with_type(&arg_type),
-            insertion_point: InsertionPoint::Argument(argument.id),
+            search_params: CodeSearchParams::with_type(&exact_type),
+            insertion_point,
         }
     }
 
@@ -321,6 +331,7 @@ pub enum InsertionPoint {
     Before(ID),
     After(ID),
     Argument(ID),
+    StructLiteralField(ID),
 }
 
 impl InsertionPoint {
@@ -329,6 +340,7 @@ impl InsertionPoint {
             InsertionPoint::Before(id) => id,
             InsertionPoint::After(id) => id,
             InsertionPoint::Argument(id) => id,
+            InsertionPoint::StructLiteralField(id) => id,
         }
     }
 }
@@ -488,8 +500,8 @@ impl<'a> CodeGenie<'a> {
             CodeNode::FunctionDefinition(_) => {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             }
-            CodeNode::Argument(_) => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
+            CodeNode::Argument(arg) => {
+                self.get_type_for_arg(arg.argument_definition_id).unwrap()
             }
             CodeNode::Placeholder(_) => {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)
@@ -501,8 +513,12 @@ impl<'a> CodeGenie<'a> {
                 let strukt = self.env.find_struct(struct_literal.struct_id).unwrap();
                 lang::Type::from_spec(strukt)
             }
-            CodeNode::StructLiteralField(_) => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
+            CodeNode::StructLiteralField(struct_literal_field) => {
+                let strukt_literal = self.find_parent(struct_literal_field.id)
+                    .unwrap().into_struct_literal().unwrap();
+                let strukt = self.env.find_struct(strukt_literal.struct_id).unwrap();
+                strukt.field_by_id().get(&struct_literal_field.struct_field_id).unwrap()
+                    .field_type.clone()
             }
         }
     }
@@ -894,8 +910,9 @@ impl<'a> Controller {
     fn set_insertion_point_on_previous_line_in_block(&mut self) {
         if let Some(expression_id) = self.currently_focused_block_expression() {
             self.save_current_state_to_undo_history();
-            self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
+            self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(
                 InsertionPoint::Before(expression_id),
+                self.code_genie().as_ref().unwrap()
             ));
             self.editing = true;
             self.selected_node_id = None;
@@ -907,8 +924,9 @@ impl<'a> Controller {
     fn set_insertion_point_on_next_line_in_block(&mut self) {
         if let Some(expression_id) = self.currently_focused_block_expression() {
             self.save_current_state_to_undo_history();
-            self.insert_code_menu = Some(InsertCodeMenu::new_expression_inside_code_block(
+            self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(
                 InsertionPoint::After(expression_id),
+                self.code_genie().as_ref().unwrap()
             ));
             self.editing = true;
             self.selected_node_id = None;
@@ -927,11 +945,13 @@ impl<'a> Controller {
         self.save_current_state_to_undo_history();
         let genie = self.code_genie().unwrap();
         match genie.find_node(node_id) {
-            Some(CodeNode::Argument(argument)) => {
-                self.insert_code_menu = Some(
-                    InsertCodeMenu::fill_in_argument(
-                        argument,
-                        self.code_genie().as_ref().unwrap()));
+            Some(CodeNode::Argument(_)) => {
+                let insertion_point = InsertionPoint::Argument(node_id);
+                self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(insertion_point, &genie));
+            },
+            Some(CodeNode::StructLiteralField(_)) => {
+                let insertion_point = InsertionPoint::StructLiteralField(node_id);
+                self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(insertion_point, &genie));
             }
             _ => ()
         }
@@ -1616,7 +1636,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
-        if self.is_editing(code_node) {
+        if self.is_editing(code_node.id()) {
             return self.draw_inline_editor(code_node)
         }
         let draw = ||{
@@ -1660,12 +1680,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 },
                 CodeNode::StructLiteralField(_field) => {
                     self.ui_toolkit.draw_all(vec![])
+                    // we would, except render_struct_literal_field isn't called from here...
+                    // ......... lols
                     //self.render_struct_literal_field(&field)
                 },
             }
         };
 
-        if self.is_selected(code_node) {
+        if self.is_selected(code_node.id()) {
             self.draw_selected(&draw)
         } else {
             self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
@@ -1960,8 +1982,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_struct_literal_fields(&self, strukt: &structs::Struct,
                                     fields: &[&lang::StructLiteralField]) -> T::DrawResult {
         // TODO: should this map just go inside the struct????
-        let struct_field_by_id : HashMap<ID, &structs::StructField> = strukt.fields.iter()
-            .map(|field| (field.id, field)).collect();
+        let struct_field_by_id = strukt.field_by_id();
 
         let mut to_draw : Vec<Box<Fn() -> T::DrawResult>> = vec![];
         for literal_field in fields.iter() {
@@ -1980,7 +2001,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                         field.name);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                self.render_inline_editable_button(&field_text, BLACK_COLOR, literal.id)
+                if self.is_editing(literal.id) {
+                    self.render_insert_code_node()
+                } else {
+                    self.render_inline_editable_button(&field_text, BLACK_COLOR, literal.id)
+                }
             },
             &|| { self.render_code(&literal.expr) }
         ])
@@ -2022,12 +2047,12 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    fn is_selected(&self, code_node: &CodeNode) -> bool {
-        Some(code_node.id()) == *self.controller.borrow().get_selected_node_id()
+    fn is_selected(&self, code_node_id: ID) -> bool {
+        Some(code_node_id) == *self.controller.borrow().get_selected_node_id()
     }
 
-    fn is_editing(&self, code_node: &CodeNode) -> bool {
-        self.is_selected(code_node) && self.controller.borrow().editing
+    fn is_editing(&self, code_node_id: ID) -> bool {
+        self.is_selected(code_node_id) && self.controller.borrow().editing
     }
 
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
@@ -2059,7 +2084,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         })
                 })
             },
-            CodeNode::Argument(_argument) => {
+            CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => {
                 self.render_insert_code_node()
             }
             _ => {
@@ -2124,6 +2149,9 @@ impl MutationMaster {
             }
             InsertionPoint::Argument(argument_id) => {
                 self.insert_expression_into_argument(node_to_insert, argument_id, genie)
+            },
+            InsertionPoint::StructLiteralField(struct_literal_field_id) => {
+                self.insert_expression_into_struct_literal_field(node_to_insert, struct_literal_field_id, genie)
             }
         }
     }
@@ -2134,6 +2162,17 @@ impl MutationMaster {
         argument.expr = Box::new(code_node);
         let mut root = genie.root().clone();
         root.replace(&CodeNode::Argument(argument));
+        root
+    }
+
+    fn insert_expression_into_struct_literal_field(&self, code_node: CodeNode,
+                                                   struct_literal_field_id: ID,
+                                                   genie: &CodeGenie) -> CodeNode {
+        let mut struct_literal_field = genie.find_node(struct_literal_field_id).unwrap()
+            .into_struct_literal_field().unwrap().clone();
+        struct_literal_field.expr = Box::new(code_node);
+        let mut root = genie.root().clone();
+        root.replace(&CodeNode::StructLiteralField(struct_literal_field));
         root
     }
 
@@ -2227,6 +2266,15 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> (ID, b
         }
     }
 
+    if let CodeNode::StructLiteral(struct_literal) = code_node {
+        // if we just inserted a function call, then go to the first arg if there is one
+        if struct_literal.fields.len() > 0 {
+            return (struct_literal.fields.get(0).unwrap().id(), true)
+        } else {
+            return (struct_literal.id, false)
+        }
+    }
+
     let parent = code_genie.find_parent(code_node.id());
     if let Some(CodeNode::Argument(argument)) = parent {
         // if we just finished inserting into a function call argument, and the next argument is
@@ -2239,9 +2287,20 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> (ID, b
                 return (maybe_next_arg.unwrap().id(), true)
             }
         }
+    } else if let Some(CodeNode::StructLiteralField(struct_literal_field)) = parent {
+        // if we just finished inserting into a function call argument, and the next argument is
+        // a placeholder, then let's insert into that arg!!!!
+        if let Some(CodeNode::StructLiteral(struct_literal)) = code_genie.find_parent(struct_literal_field.id) {
+            let just_inserted_argument_position = struct_literal.fields.iter()
+                .position(|field| field.id() == struct_literal_field.id).unwrap();
+            let maybe_next_field = struct_literal.fields.get(just_inserted_argument_position + 1);
+            if let Some(CodeNode::StructLiteralField(lang::StructLiteralField{ expr: box CodeNode::Placeholder(_), .. })) = maybe_next_field {
+                return (maybe_next_field.unwrap().id(), true)
+            }
+        }
     }
 
-    // nothing to do next, just chill at the insertion point
+    // nothing that we can think of to do next, just chill at the insertion point
     (code_node.id(), false)
 }
 

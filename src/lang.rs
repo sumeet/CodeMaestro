@@ -208,6 +208,14 @@ impl CodeNode {
         }
     }
 
+    pub fn into_struct_literal(&self) -> Option<&StructLiteral> {
+        if let CodeNode::StructLiteral(ref struct_literal) = self {
+            Some(struct_literal)
+        } else {
+            None
+        }
+    }
+
     pub fn into_struct_literal_field(&self) -> Option<&StructLiteralField> {
         if let CodeNode::StructLiteralField(ref field) = self {
             Some(field)

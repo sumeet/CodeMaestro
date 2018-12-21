@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::lang;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,6 +19,13 @@ impl Struct {
             symbol: "\u{f535}".to_string(),
             fields: vec![],
         }
+    }
+
+    // TODO: don't compute this every time... replace the fields
+    // vector with this
+    pub fn field_by_id(&self) -> HashMap<lang::ID, &StructField> {
+        self.fields.iter()
+            .map(|field| (field.id, field)).collect()
     }
 }
 
