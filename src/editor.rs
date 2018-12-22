@@ -667,21 +667,38 @@ impl<'a> Navigation<'a> {
         None
     }
 
-    // don't navigate to either blocks, or direct children of blocks
+    // navigation entails moving forward and backwards with the cursor, using the keyboard. i'd like
+    // for this keyboard based navigation to feel ergonomic, so when you're navigating through items,
+    // the cursor doesn't get stuck on elements that you didn't really care to navigate to. therefore
+    // i've arrived at the following rules:
     fn is_navigatable(&self, code_node: &CodeNode) -> bool {
         match code_node {
+            // skip entire code blocks: you want to navigate individual elements, and entire codeblocks are
+            // huge chunks of code
             CodeNode::Block(_) => false,
+            // you always want to be able to edit the name of an assignment
             CodeNode::Assignment(_) => true,
-            _ => {
-                let parent = self.code_genie.find_parent(code_node.id());
-                if parent.is_none() {
-                    return false
+            // instead of navigating over the entire function call, you want to navigate through its
+            // innards. that is, the function reference (so you can change the function that's being
+            // referred to), or the holes (arguments)
+            CodeNode::FunctionCall(_) => false,
+            CodeNode::FunctionReference(_) => true,
+            // skip holes. function args and struct literal fields always contain inner elements
+            // that can be changed. to change those, we can always invoke `r` (replace), which will
+            // let you edit the value of the hole
+            CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => false,
+            // you always want to move to literals
+            CodeNode::StringLiteral(_) | CodeNode::NullLiteral | CodeNode::StructLiteral(_) => true,
+            _ => match self.code_genie.find_parent(code_node.id()) {
+                Some(parent) => {
+                    match parent {
+                        // if our parent is an arg or struct literal field, then we're inside a hole.
+                        // let's make ourselves navigatable
+                        CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => true,
+                        _ => false,
+                    }
                 }
-                let parent = parent.unwrap();
-                match parent {
-                    CodeNode::Block(_) => false,
-                    _ => true,
-                }
+                None => false
             }
         }
     }
