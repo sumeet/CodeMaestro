@@ -894,6 +894,8 @@ impl<'a> Controller {
                     self.run(&self.loaded_code.as_ref().unwrap().clone());
                 } else if keypress.ctrl {
                     self.redo()
+                } else {
+                    self.try_enter_replace_edit_for_selected_node();
                 }
             },
             (false, Key::O) => {
@@ -913,6 +915,27 @@ impl<'a> Controller {
                 self.insert_code_menu.as_mut().map(|menu| menu.select_next());
             }
             _ => {},
+        }
+    }
+
+    fn try_enter_replace_edit_for_selected_node(&mut self) {
+        if let Some(id) = self.selected_node_id {
+            if let Some(genie) = self.code_genie() {
+                if let Some(parent) = genie.find_parent(id) {
+                    match parent {
+                        CodeNode::Argument(cn) => {
+                            self.mark_as_editing(cn.id)
+                        },
+                        CodeNode::StructLiteralField(cn) => {
+                            self.mark_as_editing(cn.id)
+                        },
+//                        CodeNode::Block(block) => {
+//                            self.mark_as_editing(cn.id)
+//                        },
+                        _ => (),
+                    }
+                }
+            }
         }
     }
 
