@@ -109,7 +109,26 @@
                 "Argument": {
                   "id": "2b772f4c-010e-4b22-a88f-508bff92e408",
                   "argument_definition_id": "1ace4394-96ff-49fe-a69f-94a08438d251",
-                  "expr": "NullLiteral"
+                  "expr": {
+                    "StructLiteral": {
+                      "id": "4f801bc0-41df-4859-baab-6fc3ed2a9086",
+                      "struct_id": "dd4b190b-663c-444a-afea-970a05b4f787",
+                      "fields": [
+                        {
+                          "StructLiteralField": {
+                            "id": "a6be0803-f6ff-4003-b91d-ce8fa900d49f",
+                            "struct_field_id": "5cced5aa-6e76-4fa6-a430-031594115b34",
+                            "expr": {
+                              "VariableReference": {
+                                "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                                "id": "dd7a95b0-d033-4ada-88d2-d4b4ce79b1c4"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
                 }
               }
             ],
@@ -182,6 +201,14 @@
           "name": "name",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "de0cbfc7-4bba-416c-9829-28bf1591818b",
+          "name": "field1",
+          "field_type": {
+            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
             "params": []
           }
         }
