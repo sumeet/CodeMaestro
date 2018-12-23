@@ -1,8 +1,10 @@
 use super::env;
 use super::lang;
 use super::external_func;
-use super::stdweb;
 
+use serde_derive::{Serialize,Deserialize};
+use stdweb::{js,_js_impl,__js_raw_asm};
+use stdweb;
 use std::collections::HashMap;
 use stdweb::unstable::TryInto;
 use stdweb::web::error;

@@ -4,6 +4,7 @@ use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::iter;
 
+use stdweb::{js,_js_impl,__js_raw_asm};
 use super::ExecutionEnvironment;
 use uuid::Uuid;
 use lazy_static::lazy_static;

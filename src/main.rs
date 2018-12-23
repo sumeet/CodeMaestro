@@ -12,6 +12,8 @@
 mod imgui_support;
 #[cfg(feature = "default")]
 mod imgui_toolkit;
+#[cfg(feature = "javascript")]
+mod yew_toolkit;
 
 
 mod lang;
