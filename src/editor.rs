@@ -4,6 +4,7 @@ use std::rc::Rc;
 use std::collections::HashMap;
 use std::iter;
 
+use objekt::{clone_trait_object,__internal_clone_trait_object};
 use failure::{err_msg};
 use failure::Error as Error;
 use super::env::{ExecutionEnvironment};
@@ -13,7 +14,7 @@ use super::code_generation;
 use super::lang::{
     Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Assignment,Block,
     VariableReference};
-use super::itertools::Itertools;
+use itertools::Itertools;
 use super::pystuff;
 use super::jsstuff;
 use super::external_func;

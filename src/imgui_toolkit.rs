@@ -2,7 +2,7 @@ use super::{CSApp};
 use super::editor::{UiToolkit};
 use super::editor::{Keypress};
 use super::imgui_support;
-use super::itertools::Itertools;
+use itertools::Itertools;
 
 use imgui::*;
 use std::rc::Rc;

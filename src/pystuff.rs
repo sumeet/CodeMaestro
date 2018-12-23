@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::cell::RefCell;
 
+use serde_derive::{Serialize,Deserialize};
 use pyo3::prelude::*;
 use pyo3::types::{PyIterator,PyObjectRef,PyDict};
 

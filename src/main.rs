@@ -9,60 +9,10 @@
 
 
 #[cfg(feature = "default")]
-extern crate glium;
-#[cfg(feature = "default")]
-extern crate imgui;
-#[cfg(feature = "default")]
-extern crate imgui_sys;
-#[cfg(feature = "default")]
-extern crate imgui_glium_renderer;
-#[cfg(feature = "default")]
 mod imgui_support;
 #[cfg(feature = "default")]
 mod imgui_toolkit;
 
-#[cfg(feature = "javascript")]
-#[macro_use]
-extern crate stdweb;
-
-#[cfg(feature = "javascript")]
-#[macro_use]
-extern crate yew;
-
-#[cfg(feature = "javascript")]
-mod yew_toolkit;
-
-#[macro_use]
-extern crate objekt;
-
-extern crate uuid;
-
-#[macro_use]
-extern crate lazy_static;
-
-extern crate failure;
-
-#[macro_use]
-extern crate serde_derive;
-
-extern crate serde;
-extern crate serde_json;
-
-extern crate erased_serde;
-
-extern crate itertools;
-
-#[cfg(feature = "default")]
-extern crate pyo3;
-
-#[macro_use] extern crate downcast_rs;
-
-extern crate debug_cell;
-//use debug_cell::RefCell;
-
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::collections::HashMap;
 
 mod lang;
 mod structs;
@@ -96,9 +46,14 @@ mod jsstuff {
 }
 
 
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::collections::HashMap;
+
 use self::editor::{Controller,Renderer,UiToolkit};
 use self::env::{ExecutionEnvironment};
 use self::lang::{Value,Function,ID,Error as LangError};
+//use debug_cell::RefCell;
 
 #[cfg(feature = "default")]
 pub fn draw_app(app: Rc<CSApp>) {

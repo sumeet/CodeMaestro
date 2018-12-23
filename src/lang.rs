@@ -5,7 +5,11 @@ use std::collections::HashMap;
 use std::iter;
 
 use super::ExecutionEnvironment;
-use super::uuid::Uuid;
+use uuid::Uuid;
+use lazy_static::lazy_static;
+use objekt::{clone_trait_object,__internal_clone_trait_object};
+use downcast_rs::impl_downcast;
+use serde_derive::{Serialize,Deserialize};
 
 lazy_static! {
     pub static ref NULL_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
