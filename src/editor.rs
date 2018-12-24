@@ -1423,7 +1423,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let mut newstrukt = strukt1.clone();
             newstrukt.fields.push(structs::StructField::new(
                 format!("field{}", newstrukt.fields.len()),
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
             ));
             cont1.borrow_mut().load_typespec(newstrukt);
         }));
@@ -1511,7 +1511,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let mut args = args1.clone();
             let mut func = func1.clone();
             args.push(lang::ArgumentDefinition::new(
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
                 format!("arg{}", args.len()),
             ));
             func.set_args(args);
