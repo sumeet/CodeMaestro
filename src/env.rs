@@ -100,7 +100,15 @@ impl ExecutionEnvironment {
             lang::CodeNode::Placeholder(_) => lang::Value::Null,
             lang::CodeNode::NullLiteral => lang::Value::Null,
             // TODO: lol need a StructLiteral value
-            lang::CodeNode::StructLiteral(_struct_literal) => lang::Value::Null,
+            lang::CodeNode::StructLiteral(struct_literal) => {
+                lang::Value::Struct {
+                    struct_id: struct_literal.struct_id,
+                    values: struct_literal.fields().map(|literal_field| {
+                        (literal_field.struct_field_id,
+                         self.evaluate(&literal_field.expr))
+                    }).collect()
+                }
+            }
             // i think these code nodes will actually never be evaluated
             lang::CodeNode::StructLiteralField(_struct_literal_field) => lang::Value::Null,
         }

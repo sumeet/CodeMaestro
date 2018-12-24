@@ -4,13 +4,16 @@ use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::iter;
 
+#[cfg(feature = "javascript")]
 use stdweb::{js,_js_impl,__js_raw_asm};
-use super::ExecutionEnvironment;
+
 use uuid::Uuid;
 use lazy_static::lazy_static;
 use objekt::{clone_trait_object,__internal_clone_trait_object};
 use downcast_rs::impl_downcast;
 use serde_derive::{Serialize,Deserialize};
+
+use super::ExecutionEnvironment;
 
 lazy_static! {
     pub static ref NULL_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
@@ -102,7 +105,10 @@ pub enum Value {
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Vec<Value>),
+    Struct {struct_id: ID, values: StructValues}
 }
+
+type StructValues = HashMap<ID, Value>;
 
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct BuiltInTypeSpec {
@@ -597,8 +603,8 @@ pub struct StructLiteral {
 }
 
 impl StructLiteral {
-    pub fn fields(&self) -> Vec<&StructLiteralField> {
-        self.fields.iter().map(|f| f.into_struct_literal_field().unwrap()).collect()
+    pub fn fields(&self) -> impl Iterator<Item = &StructLiteralField> {
+        self.fields.iter().map(|f| f.into_struct_literal_field().unwrap())
     }
 }
 

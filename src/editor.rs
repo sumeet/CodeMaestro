@@ -2008,7 +2008,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| { self.render_struct_identifier(&strukt, struct_literal) },
                 &|| {
                     self.render_struct_literal_fields(&strukt,
-                                                      &struct_literal.fields())
+                                                      struct_literal.fields())
                 },
             ])
         }
@@ -2020,13 +2020,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_button(&strukt.name, SALMON_COLOR, &|| {})
     }
 
-    fn render_struct_literal_fields(&self, strukt: &structs::Struct,
-                                    fields: &[&lang::StructLiteralField]) -> T::DrawResult {
+    fn render_struct_literal_fields(&self, strukt: &'a structs::Struct,
+        fields: impl Iterator<Item = &'a lang::StructLiteralField>) -> T::DrawResult {
         // TODO: should this map just go inside the struct????
         let struct_field_by_id = strukt.field_by_id();
 
         let mut to_draw : Vec<Box<Fn() -> T::DrawResult>> = vec![];
-        for literal_field in fields.iter() {
+        for literal_field in fields {
             // this is where the bug is
             let strukt_field = struct_field_by_id.get(&literal_field.struct_field_id).unwrap();
             to_draw.push(Box::new(move || {

@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use serde_derive::{Serialize,Deserialize};
 use pyo3::prelude::*;
 use pyo3::types::{PyIterator,PyObjectRef,PyDict};
+use itertools::Itertools;
 
 use super::lang;
 use super::env;
@@ -64,16 +65,38 @@ pub struct PyFunc {
     pub args: Vec<lang::ArgumentDefinition>,
 }
 
-impl ToPyObject for lang::Value {
-    fn to_object(&self, py: Python) -> PyObject {
+struct ValueWithEnv<'a> {
+    value: lang::Value,
+    env: &'a env::ExecutionEnvironment,
+}
+
+impl<'a> IntoPyObject for ValueWithEnv<'a> {
+    fn into_object(self, py: Python) -> PyObject {
         use super::lang::Value::*;
-        match self {
-            Null => ().to_object(py),
-            String(s) => s.to_object(py),
+        match (self.env, self.value) {
+            (_, Null) => ().into_object(py),
+            (_, String(s)) => s.into_object(py),
             // not quite sure what to do with these...
-            Error(e) => format!("{:?}", e).to_object(py),
-            Number(i) => i.to_object(py),
-            List(v) => v.to_object(py),
+            (_, Error(e)) => format!("{:?}", e).into_object(py),
+            (_, Number(i)) => i.into_object(py),
+            (env, List(v)) => {
+                v.into_iter().map(|item| Self { value: item, env: env }.into_object(py))
+                    .collect_vec().into_object(py)
+            },
+            (env, Struct { struct_id, values }) => {
+                let strukt = env.find_struct(struct_id).unwrap();
+                let ms = py.eval("MaestroStruct", None, None).unwrap();
+                let field_by_id = strukt.field_by_id();
+                let value_by_name : HashMap<&str, ValueWithEnv> = values.into_iter()
+                    .map(|(id, value)| {
+                        let val_with_env = Self { value, env };
+                        let name = &field_by_id.get(&id).unwrap().name;
+                        (name.as_str(), val_with_env)
+                    }).collect();
+
+                ms.call1((&strukt.name, into_pyobject(value_by_name, py))).unwrap()
+                    .to_object(py)
+            }
         }
     }
 }
@@ -157,30 +180,37 @@ fn mix_args_with_locals<'a>(py: Python, args: &'a PyDict, from: PyObject) -> &'a
 }
 
 impl lang::Function for PyFunc {
-    fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let gil = getgil();
         let py = gil.python();
 
         let our_namespace = get_namespace(self.id);
         let locals = our_namespace.locals(py);
 
+        // not passing in any locals so that the struct gets loaded into the module namespace
+        let result = py.run(include_str!("maestro_struct.py"), None, None);
+        if let Err(e) = result {
+            return lang::Value::Error(self.py_exception_to_error(&e))
+        }
+
         // TODO: only run the prelude once, instead of every time the func is called
         let result = py.run(&self.prelude, None, Some(locals));
-
-        let named_args = external_func::to_named_args(self, args);
-        let pd = named_args.to_object(py);
-        let locals_with_params = mix_args_with_locals(py, locals, pd);
-
         if let Err(e) = result {
-            lang::Value::Error(self.py_exception_to_error(&e))
-        } else {
-            let eval_result = py.eval(self.eval.as_ref(), None, Some(locals_with_params));
-            if let Err(pyerr) = eval_result {
-                return lang::Value::Error(self.py_exception_to_error(&pyerr))
-            }
-            let eval_result = eval_result.unwrap();
-            self.extract(eval_result)
+            return lang::Value::Error(self.py_exception_to_error(&e))
         }
+
+        let named_args : HashMap<String, ValueWithEnv> = external_func::to_named_args(self, args)
+            .map(|(name, value)| (name, ValueWithEnv { env, value: value })).collect();
+
+        let pd = into_pyobject(named_args, py);
+        let locals_with_params = mix_args_with_locals(py, locals, pd);
+        let eval_result = py.eval(self.eval.as_ref(), None, Some(locals_with_params));
+        if let Err(pyerr) = eval_result {
+            return lang::Value::Error(self.py_exception_to_error(&pyerr))
+        }
+
+        let eval_result = eval_result.unwrap();
+        self.extract(eval_result)
     }
 
     fn name(&self) -> &str {
@@ -220,4 +250,20 @@ impl external_func::ModifyableFunc for PyFunc {
             args: self.args.clone(),
         }
     }
+}
+
+use std::hash;
+use std::cmp;
+fn into_pyobject<K, V, H>(from: HashMap<K, V, H>, py: Python) -> PyObject
+    where
+        K: hash::Hash + cmp::Eq + IntoPyObject,
+        V: IntoPyObject,
+        H: hash::BuildHasher,
+{
+    let dict = PyDict::new(py);
+    for (key, value) in from {
+        dict.set_item(key.into_object(py), value.into_object(py))
+            .expect("Failed to set_item on dict");
+    }
+    dict.into()
 }

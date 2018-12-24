@@ -7,7 +7,7 @@
             "name": "my variable",
             "expression": {
               "StringLiteral": {
-                "value": "HW",
+                "value": "wefjio",
                 "id": "4ef63614-a462-4de5-ae68-7671bb03ac4e"
               }
             },
@@ -19,120 +19,57 @@
             "function_reference": {
               "FunctionReference": {
                 "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
-                "id": "b3641ea3-2013-4d6e-ae53-444cf1ff1e70"
+                "id": "d9a49004-9bcf-4d26-aab7-8ac60fe635f1"
               }
             },
             "args": [
               {
                 "Argument": {
-                  "id": "42a4aa7f-b2e5-42bf-9e32-9c5f75e95736",
+                  "id": "a0ac4181-b945-421f-9a9a-3c3ae17a11df",
                   "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df",
                   "expr": {
                     "FunctionCall": {
                       "function_reference": {
                         "FunctionReference": {
-                          "function_id": "5670a4e4-835c-44cc-8d8d-ab1d9d9cfd30",
-                          "id": "6b9f97e9-2beb-43fd-b649-fc60522124eb"
+                          "function_id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
+                          "id": "25bddae9-69df-4040-a260-58db9029411b"
                         }
                       },
                       "args": [
                         {
                           "Argument": {
-                            "id": "eb3923e4-f4d6-4bf1-86b2-cb18e0f52fb5",
-                            "argument_definition_id": "3d8050ff-ffc4-4b6c-b0ce-1c23bf02b19e",
+                            "id": "85d10430-e305-4655-bbc0-c169543f6a04",
+                            "argument_definition_id": "1ace4394-96ff-49fe-a69f-94a08438d251",
                             "expr": {
-                              "VariableReference": {
-                                "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
-                                "id": "2f0a8b96-1293-4bb7-92fe-e0d864dbc087"
-                              }
-                            }
-                          }
-                        },
-                        {
-                          "Argument": {
-                            "id": "ba6b0347-8475-4f1d-93b1-a7006ae7679c",
-                            "argument_definition_id": "b0cfb9cb-a823-4c70-b0b5-ef46e0ff07d4",
-                            "expr": {
-                              "Placeholder": {
-                                "id": "946b4995-d611-4379-b74d-2a6bde8be7b7",
-                                "description": "arg2",
-                                "type_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568"
+                              "StructLiteral": {
+                                "id": "d8915e65-74e2-4b54-b80d-1db84224df54",
+                                "struct_id": "dd4b190b-663c-444a-afea-970a05b4f787",
+                                "fields": [
+                                  {
+                                    "StructLiteralField": {
+                                      "id": "94292037-ad90-4aab-aad9-ebf69ecb86f3",
+                                      "struct_field_id": "5cced5aa-6e76-4fa6-a430-031594115b34",
+                                      "expr": {
+                                        "VariableReference": {
+                                          "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                                          "id": "f74da767-62f4-4cea-91aa-3052dc6e492e"
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
                               }
                             }
                           }
                         }
                       ],
-                      "id": "70b58951-5f81-466c-b79f-0d70e2ddcac7"
+                      "id": "1840b7e7-f2bf-4cbf-a3da-3f7a4e85269d"
                     }
                   }
                 }
               }
             ],
-            "id": "06fc6f25-e2e6-4a76-b010-25452a0894a9"
-          }
-        },
-        {
-          "FunctionCall": {
-            "function_reference": {
-              "FunctionReference": {
-                "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
-                "id": "97c4753c-ca85-43e5-95b5-0c2ab386ea65"
-              }
-            },
-            "args": [
-              {
-                "Argument": {
-                  "id": "6e7d29a1-bd5c-4ebc-a1dd-e6a3aa56f5a2",
-                  "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df",
-                  "expr": {
-                    "StringLiteral": {
-                      "value": "'",
-                      "id": "17b7315f-630b-4695-a6e6-c48ec1c09d00"
-                    }
-                  }
-                }
-              }
-            ],
-            "id": "46004a0d-0b03-455c-8f06-e29a3f1c5e48"
-          }
-        },
-        {
-          "FunctionCall": {
-            "function_reference": {
-              "FunctionReference": {
-                "function_id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
-                "id": "a346aed6-16c7-4570-9305-ae228143d4e0"
-              }
-            },
-            "args": [
-              {
-                "Argument": {
-                  "id": "2b772f4c-010e-4b22-a88f-508bff92e408",
-                  "argument_definition_id": "1ace4394-96ff-49fe-a69f-94a08438d251",
-                  "expr": {
-                    "StructLiteral": {
-                      "id": "4f801bc0-41df-4859-baab-6fc3ed2a9086",
-                      "struct_id": "dd4b190b-663c-444a-afea-970a05b4f787",
-                      "fields": [
-                        {
-                          "StructLiteralField": {
-                            "id": "a6be0803-f6ff-4003-b91d-ce8fa900d49f",
-                            "struct_field_id": "5cced5aa-6e76-4fa6-a430-031594115b34",
-                            "expr": {
-                              "VariableReference": {
-                                "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
-                                "id": "dd7a95b0-d033-4ada-88d2-d4b4ce79b1c4"
-                              }
-                            }
-                          }
-                        }
-                      ]
-                    }
-                  }
-                }
-              }
-            ],
-            "id": "a40d6efc-4145-4613-9482-ebf64b810fa6"
+            "id": "84b06d41-1fc7-454c-8585-db116a3e09ac"
           }
         }
       ],
@@ -140,26 +77,6 @@
     }
   },
   "pyfuncs": [
-    {
-      "prelude": "",
-      "eval": "None",
-      "return_type": {
-        "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
-        "params": []
-      },
-      "name": "pymoopah",
-      "id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
-      "args": [
-        {
-          "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
-          "arg_type": {
-            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
-            "params": []
-          },
-          "short_name": "moop"
-        }
-      ]
-    },
     {
       "prelude": "",
       "eval": "arg2 + \" sup bitches i'm python\" + arg1",
@@ -187,12 +104,32 @@
           "short_name": "arg2"
         }
       ]
+    },
+    {
+      "prelude": "",
+      "eval": "str(mah) + mah.name",
+      "return_type": {
+        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+        "params": []
+      },
+      "name": "pymahhhh",
+      "id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
+      "args": [
+        {
+          "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
+          "arg_type": {
+            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
+            "params": []
+          },
+          "short_name": "mah"
+        }
+      ]
     }
   ],
   "jsfuncs": [],
   "structs": [
     {
-      "name": "Moop",
+      "name": "Mah",
       "id": "dd4b190b-663c-444a-afea-970a05b4f787",
       "symbol": "",
       "fields": [
@@ -201,14 +138,6 @@
           "name": "name",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "de0cbfc7-4bba-416c-9829-28bf1591818b",
-          "name": "field1",
-          "field_type": {
-            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
             "params": []
           }
         }
