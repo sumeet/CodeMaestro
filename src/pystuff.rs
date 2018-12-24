@@ -1,15 +1,18 @@
-use std::collections::HashMap;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::cmp;
+use std::collections::HashMap;
+use std::hash;
+use std::rc::Rc;
 
-use serde_derive::{Serialize,Deserialize};
+use itertools::Itertools;
 use pyo3::prelude::*;
 use pyo3::types::{PyIterator,PyObjectRef,PyDict};
-use itertools::Itertools;
+use serde_derive::{Serialize,Deserialize};
 
-use super::lang;
 use super::env;
 use super::external_func;
+use super::lang;
+use super::structs;
 
 thread_local! {
     pub static GILGUARD: Rc<GILGuard> = Rc::new(Python::acquire_gil());
@@ -116,12 +119,12 @@ impl PyFunc {
 }
 
 impl PyFunc {
-    fn extract(&self, pyobjectref: &PyObjectRef) -> lang::Value {
+    fn extract(&self, pyobjectref: &PyObjectRef, env: &env::ExecutionEnvironment) -> lang::Value {
         use self::lang::Function;
-        self.ex(pyobjectref, &self.returns())
+        self.ex(pyobjectref, &self.returns(), env)
     }
 
-    fn ex(&self, pyobjectref: &PyObjectRef, into_type: &lang::Type) -> lang::Value {
+    fn ex(&self, pyobjectref: &PyObjectRef, into_type: &lang::Type, env: &env::ExecutionEnvironment) -> lang::Value {
         let gil = getgil();
         let py = gil.python();
 
@@ -146,11 +149,28 @@ impl PyFunc {
             // GUI
             let iter = PyIterator::from_object(py, &pyobj).unwrap();
             let collected : Vec<lang::Value> = iter
-                .map(|pyresult| {self.ex(pyresult.unwrap(), collection_type)})
+                .map(|pyresult| {
+                    self.ex(pyresult.unwrap(), collection_type, env)
+                })
                 .collect();
             return lang::Value::List(collected)
+        } else if let Some(strukt) = env.find_struct(into_type.typespec_id) {
+            if let Ok(value) = self.pyobject_into_struct(pyobjectref, strukt, env) {
+                return value
+            }
         }
         lang::Value::Error(lang::Error::PythonDeserializationError)
+    }
+
+    fn pyobject_into_struct(&self, pyobjectref: &PyObjectRef, strukt: &structs::Struct,
+                            env: &env::ExecutionEnvironment) -> PyResult<lang::Value> {
+        let values : PyResult<HashMap<lang::ID, lang::Value>> = strukt.fields.iter()
+            .map(|strukt_field| {
+                let field_ref = try_get_name(pyobjectref, &strukt_field.name)?;
+                Ok((strukt_field.id,
+                    self.ex(&field_ref, &strukt_field.field_type, env)))
+        }).collect();
+        Ok(lang::Value::Struct { struct_id: strukt.id, values: values? })
     }
 
     fn py_exception_to_error(&self, pyerror: &PyErr) -> lang::Error {
@@ -202,15 +222,15 @@ impl lang::Function for PyFunc {
         let named_args : HashMap<String, ValueWithEnv> = external_func::to_named_args(self, args)
             .map(|(name, value)| (name, ValueWithEnv { env, value: value })).collect();
 
-        let pd = into_pyobject(named_args, py);
-        let locals_with_params = mix_args_with_locals(py, locals, pd);
+        let args_dict = into_pyobject(named_args, py);
+        let locals_with_params = mix_args_with_locals(py, locals, args_dict);
         let eval_result = py.eval(self.eval.as_ref(), None, Some(locals_with_params));
         if let Err(pyerr) = eval_result {
             return lang::Value::Error(self.py_exception_to_error(&pyerr))
         }
 
         let eval_result = eval_result.unwrap();
-        self.extract(eval_result)
+        self.extract(eval_result, env)
     }
 
     fn name(&self) -> &str {
@@ -252,8 +272,6 @@ impl external_func::ModifyableFunc for PyFunc {
     }
 }
 
-use std::hash;
-use std::cmp;
 fn into_pyobject<K, V, H>(from: HashMap<K, V, H>, py: Python) -> PyObject
     where
         K: hash::Hash + cmp::Eq + IntoPyObject,
@@ -266,4 +284,13 @@ fn into_pyobject<K, V, H>(from: HashMap<K, V, H>, py: Python) -> PyObject
             .expect("Failed to set_item on dict");
     }
     dict.into()
+}
+
+fn try_get_name<'a>(pyobjectref: &'a PyObjectRef, name: &str) -> PyResult<&'a PyObjectRef> {
+    if pyobjectref.hasattr("__getitem__")? {
+        let getitem = pyobjectref.getattr("__getitem__")?;
+        getitem.call1(name)
+    } else {
+        pyobjectref.getattr(name)
+    }
 }

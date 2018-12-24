@@ -78,13 +78,13 @@
   },
   "pyfuncs": [
     {
-      "prelude": "",
-      "eval": "arg2 + \" sup bitches i'm python\" + arg1",
+      "prelude": "class MyClass:\n    @property\n    def name(self):\n        return 'mowjefoi'",
+      "eval": "MyClass()",
       "return_type": {
-        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+        "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
         "params": []
       },
-      "name": "my first pyfunc",
+      "name": "makesmah",
       "id": "5670a4e4-835c-44cc-8d8d-ab1d9d9cfd30",
       "args": [
         {
@@ -93,15 +93,7 @@
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           },
-          "short_name": "arg1"
-        },
-        {
-          "id": "b0cfb9cb-a823-4c70-b0b5-ef46e0ff07d4",
-          "arg_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          },
-          "short_name": "arg2"
+          "short_name": "name"
         }
       ]
     },

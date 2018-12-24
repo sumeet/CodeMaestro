@@ -1722,7 +1722,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 CodeNode::StructLiteralField(_field) => {
                     self.ui_toolkit.draw_all(vec![])
                     // we would, except render_struct_literal_field isn't called from here...
-                    // ......... lols
                     //self.render_struct_literal_field(&field)
                 },
             }
