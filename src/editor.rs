@@ -547,7 +547,11 @@ impl<'a> Navigation<'a> {
         let block = self.code_genie.find_parent(containing_block_expression_id)?.into_block()?;
         let position_of_block_expression_inside_block = self.code_genie
             .find_position_in_block(block, containing_block_expression_id)?;
-        let previous_block_expression = block.expressions.get(position_of_block_expression_inside_block - 1)?;
+
+        let previous_position_inside_block = position_of_block_expression_inside_block
+            .checked_sub(1).unwrap_or(0);
+        let previous_block_expression = block.expressions
+            .get(previous_position_inside_block)?;
 
         let expressions_in_previous_block_expression_up_to_our_index = previous_block_expression
             .self_with_all_children_dfs()
@@ -578,7 +582,10 @@ impl<'a> Navigation<'a> {
         let block = self.code_genie.find_parent(containing_block_expression_id)?.into_block()?;
         let position_of_block_expression_inside_block = self.code_genie
             .find_position_in_block(block, containing_block_expression_id)?;
-        let previous_block_expression = block.expressions.get(position_of_block_expression_inside_block + 1)?;
+        let previous_position_inside_block = position_of_block_expression_inside_block
+            .checked_add(1).unwrap_or(block.expressions.len() - 1);
+        let previous_block_expression = block.expressions
+            .get(previous_position_inside_block)?;
 
         let expressions_in_previous_block_expression_up_to_our_index = previous_block_expression
             .self_with_all_children_dfs()
