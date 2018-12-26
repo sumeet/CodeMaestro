@@ -626,7 +626,6 @@ impl<'a> Navigation<'a> {
         None
     }
 
-
     fn prev_node_from(&self, code_node_id: ID) -> Option<&CodeNode> {
         let parent = self.code_genie.find_parent(code_node_id);
         if parent.is_none() {
