@@ -1,6 +1,6 @@
 use super::{CSApp, UiToolkit};
 use super::editor::{Key as AppKey,Keypress};
-use stdweb::{console,__internal_console_unsafe,js,_js_impl,__js_raw_asm};
+use stdweb::{console,__internal_console_unsafe,js,_js_impl};
 use yew::{html,html_impl};
 use yew::prelude::*;
 use std::cell::RefCell;
@@ -289,7 +289,7 @@ impl UiToolkit for YewToolkit {
                     let selected = index == selected_item_in_combo_box;
                     if selected {
                         html! {
-                            <option selected={"true"}, >
+                            <option selected=true, >
                                 { item }
                             </option>
                         }

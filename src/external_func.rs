@@ -14,5 +14,7 @@ pub fn to_named_args(func: &lang::Function,
         .map(|argdef| (argdef.id, argdef.short_name))
         .collect();
     args.into_iter()
-        .map(move |(arg_id, value)| (short_name_by_id.remove(&arg_id).unwrap(), value))
+        .map(move |(arg_id, value)| {
+            (short_name_by_id.remove(&arg_id).unwrap(), value)
+        })
 }

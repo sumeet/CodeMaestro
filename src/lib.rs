@@ -50,8 +50,6 @@ mod jsstuff {
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::collections::HashMap;
-use tokio::prelude::*;
 
 use self::editor::{Controller,Renderer,UiToolkit};
 use self::env::{ExecutionEnvironment};
