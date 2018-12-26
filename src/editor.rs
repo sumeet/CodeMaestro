@@ -723,11 +723,13 @@ impl TestResult {
 }
 
 pub struct Controller {
-    execution_environment: ExecutionEnvironment,
+    // TODO: i only need this to be public for hax, so i can make this unpublic later
+    pub execution_environment: ExecutionEnvironment,
     selected_node_id: Option<ID>,
     pub editing: bool,
     insert_code_menu: Option<InsertCodeMenu>,
-    loaded_code: Option<CodeNode>,
+    // TODO: i only need this to be public for hax, so i can make this unpublic later
+    pub loaded_code: Option<CodeNode>,
     error_console: String,
     mutation_master: MutationMaster,
     test_result_by_func_id: HashMap<ID, TestResult>,

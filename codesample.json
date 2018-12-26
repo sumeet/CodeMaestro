@@ -19,57 +19,87 @@
             "function_reference": {
               "FunctionReference": {
                 "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
-                "id": "d9a49004-9bcf-4d26-aab7-8ac60fe635f1"
+                "id": "5208fb41-841a-441b-b631-e592d7d60a3b"
               }
             },
             "args": [
               {
                 "Argument": {
-                  "id": "a0ac4181-b945-421f-9a9a-3c3ae17a11df",
+                  "id": "335faeff-7822-4977-b0e5-ff8bd4acd61f",
                   "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df",
                   "expr": {
                     "FunctionCall": {
                       "function_reference": {
                         "FunctionReference": {
-                          "function_id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
-                          "id": "25bddae9-69df-4040-a260-58db9029411b"
+                          "function_id": "86ae2a51-5538-436f-b48e-3aa6c873b189",
+                          "id": "2e3e3870-4621-465b-97e3-2d7485a524fb"
                         }
                       },
                       "args": [
                         {
                           "Argument": {
-                            "id": "85d10430-e305-4655-bbc0-c169543f6a04",
-                            "argument_definition_id": "1ace4394-96ff-49fe-a69f-94a08438d251",
+                            "id": "a169d9da-ed9f-412a-bb56-853525fb50b5",
+                            "argument_definition_id": "94e81ddc-843b-426d-847e-a215125c9593",
                             "expr": {
-                              "StructLiteral": {
-                                "id": "d8915e65-74e2-4b54-b80d-1db84224df54",
-                                "struct_id": "dd4b190b-663c-444a-afea-970a05b4f787",
-                                "fields": [
-                                  {
-                                    "StructLiteralField": {
-                                      "id": "94292037-ad90-4aab-aad9-ebf69ecb86f3",
-                                      "struct_field_id": "5cced5aa-6e76-4fa6-a430-031594115b34",
-                                      "expr": {
-                                        "VariableReference": {
-                                          "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
-                                          "id": "f74da767-62f4-4cea-91aa-3052dc6e492e"
-                                        }
-                                      }
-                                    }
-                                  }
-                                ]
+                              "VariableReference": {
+                                "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                                "id": "ffdfaea4-428d-45ee-b27d-3fc11efa6b7c"
                               }
                             }
                           }
                         }
                       ],
-                      "id": "1840b7e7-f2bf-4cbf-a3da-3f7a4e85269d"
+                      "id": "214c4591-4738-479b-9c6b-a015fe3f9bb0"
                     }
                   }
                 }
               }
             ],
-            "id": "84b06d41-1fc7-454c-8585-db116a3e09ac"
+            "id": "2db0744a-8384-4ffe-98cd-f8d7d33275fa"
+          }
+        },
+        {
+          "FunctionCall": {
+            "function_reference": {
+              "FunctionReference": {
+                "function_id": "29436fad-b1cf-4525-85b7-e9133cd7a1fb",
+                "id": "73072f54-568b-4db3-bb8e-e3b31cc8ba4f"
+              }
+            },
+            "args": [
+              {
+                "Argument": {
+                  "id": "f987b2c2-26e2-41eb-a985-d8a308645de4",
+                  "argument_definition_id": "b4e2e666-7467-4496-9d1d-52abdafc0a84",
+                  "expr": {
+                    "FunctionCall": {
+                      "function_reference": {
+                        "FunctionReference": {
+                          "function_id": "86ae2a51-5538-436f-b48e-3aa6c873b189",
+                          "id": "a8fe9663-682e-454f-a794-2b6f77114f18"
+                        }
+                      },
+                      "args": [
+                        {
+                          "Argument": {
+                            "id": "8d3c0aee-306f-4d17-83dd-a8ec0d07a810",
+                            "argument_definition_id": "94e81ddc-843b-426d-847e-a215125c9593",
+                            "expr": {
+                              "VariableReference": {
+                                "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                                "id": "50191254-5443-4669-aab6-9e248c5d8583"
+                              }
+                            }
+                          }
+                        }
+                      ],
+                      "id": "61883705-9c1b-4f7c-90ed-8394981bfe9f"
+                    }
+                  }
+                }
+              }
+            ],
+            "id": "acf491c3-f970-474a-91db-0a8d98874ffb"
           }
         }
       ],
@@ -77,6 +107,26 @@
     }
   },
   "pyfuncs": [
+    {
+      "prelude": "",
+      "eval": "str(mah) + mah.name",
+      "return_type": {
+        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+        "params": []
+      },
+      "name": "pymahhhh",
+      "id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
+      "args": [
+        {
+          "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
+          "arg_type": {
+            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
+            "params": []
+          },
+          "short_name": "mah"
+        }
+      ]
+    },
     {
       "prelude": "class MyClass:\n    @property\n    def name(self):\n        return 'mowjefoi'",
       "eval": "MyClass()",
@@ -98,22 +148,22 @@
       ]
     },
     {
-      "prelude": "",
-      "eval": "str(mah) + mah.name",
+      "prelude": "import random",
+      "eval": "random.choice(['hi', 'bye']) + ' ' + input",
       "return_type": {
         "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
         "params": []
       },
-      "name": "pymahhhh",
-      "id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
+      "name": "somerandomstuff",
+      "id": "29436fad-b1cf-4525-85b7-e9133cd7a1fb",
       "args": [
         {
-          "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
+          "id": "b4e2e666-7467-4496-9d1d-52abdafc0a84",
           "arg_type": {
-            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           },
-          "short_name": "mah"
+          "short_name": "input"
         }
       ]
     }

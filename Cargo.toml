@@ -1,11 +1,15 @@
+cargo-features = ["default-run"]
+
 [package]
 name = "cs"
 version = "0.1.0"
 authors = ["Sumeet Agarwal <sumeet.a@gmail.com>"]
 edition = "2018"
+default-run = "cs"
 
 [features]
-default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3"]
+default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3",
+           "tokio", "tokio-reactor", "irc", "irc-proto", "tokio-async-await"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
@@ -20,6 +24,7 @@ uuid = { version = "0.7.1", features = ["serde", "v4", "v5"] }
 lazy_static = "1.1.0"
 itertools = "0.7.8"
 downcast-rs = "1.0.3"
+futures = "0.1"
 
 pyo3 = { version = "0.5.2", optional = true }
 glium = { version = "0.22", default-features = true, optional = true }
@@ -27,6 +32,12 @@ glutin = { version = "0.18", optional = true }
 imgui = { version = "0.0.21", optional = true }
 imgui-sys = { version = "0.0.21", optional = true }
 imgui-glium-renderer = { version = "0.0.21", optional = true }
+tokio = {version = "0.1.13", features = ["async-await-preview"], optional = true }
+tokio-reactor = {version = "0.1.7", optional = true }
+tokio-async-await = {version = "0.1.4", optional = true }
+irc = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
+irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 
 yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
 stdweb = { version = "0.4.9", optional = true }
+

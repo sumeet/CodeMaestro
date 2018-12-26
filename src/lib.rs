@@ -15,10 +15,10 @@ mod imgui_toolkit;
 #[cfg(feature = "javascript")]
 mod yew_toolkit;
 
-
-mod lang;
+pub mod builtin_funcs;
+pub mod lang;
 mod structs;
-mod env;
+pub mod env;
 mod code_loading;
 mod editor;
 mod edit_types;
@@ -51,10 +51,10 @@ mod jsstuff {
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
+use tokio::prelude::*;
 
 use self::editor::{Controller,Renderer,UiToolkit};
 use self::env::{ExecutionEnvironment};
-use self::lang::{Value,Function,ID,Error as LangError};
 //use debug_cell::RefCell;
 
 #[cfg(feature = "default")]
@@ -65,85 +65,6 @@ pub fn draw_app(app: Rc<CSApp>) {
 #[cfg(feature = "javascript")]
 pub fn draw_app(app: Rc<CSApp>) {
     yew_toolkit::draw_app(Rc::clone(&app));
-}
-
-
-fn main() {
-    let app = Rc::new(CSApp::new());
-    draw_app(app);
-}
-
-#[derive(Clone)]
-struct Print {}
-
-impl Function for Print {
-    fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID, Value>) -> Value {
-        match args.get(&self.takes_args()[0].id) {
-            Some(Value::String(ref string)) =>  {
-                env.println(string);
-                Value::Null
-            }
-            _ => Value::Error(LangError::ArgumentError)
-        }
-    }
-
-    fn name(&self) -> &str {
-        "Print"
-    }
-
-    fn id(&self) -> ID {
-        uuid::Uuid::parse_str("b5c18d63-f9a0-4f08-8ee7-e35b3db9122d").unwrap()
-    }
-
-    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("feff08f0-7319-4b47-964e-1f470eca81df").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "String to print".to_string()
-            )
-        ]
-    }
-
-    fn returns(&self) -> lang::Type {
-        lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-    }
-}
-
-#[derive(Clone)]
-struct Capitalize {}
-
-impl Function for Capitalize {
-    fn call(&self, _env: &mut ExecutionEnvironment, args: HashMap<ID, Value>) -> Value {
-        match args.get(&self.takes_args()[0].id) {
-            Some(Value::String(ref string)) =>  {
-                Value::String(string.to_uppercase())
-            }
-            _ => Value::Error(LangError::ArgumentError)
-        }
-    }
-
-    fn name(&self) -> &str {
-        "Capitalize"
-    }
-
-    fn id(&self) -> ID {
-        uuid::Uuid::parse_str("86ae2a51-5538-436f-b48e-3aa6c873b189").unwrap()
-    }
-
-    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("94e81ddc-843b-426d-847e-a215125c9593").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "String to capitalize".to_string(),
-            )
-        ]
-    }
-
-    fn returns(&self) -> lang::Type {
-        lang::Type::from_spec(&*lang::STRING_TYPESPEC)
-    }
 }
 
 #[cfg(feature = "default")]
@@ -171,12 +92,12 @@ pub struct CSApp {
 }
 
 impl CSApp {
-    fn new() -> CSApp {
+    pub fn new() -> CSApp {
         let app = CSApp {
             controller: Rc::new(RefCell::new(Controller::new())),
         };
-        app.controller.borrow_mut().load_function(Print{});
-        app.controller.borrow_mut().load_function(Capitalize{});
+        app.controller.borrow_mut().load_function(builtin_funcs::Print{});
+        app.controller.borrow_mut().load_function(builtin_funcs::Capitalize{});
 
         // TODO: controller can load the world as well as saving it, i don't think the code should
         // be in here
