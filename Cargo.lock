@@ -254,7 +254,6 @@ dependencies = [
  "downcast-rs 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "erased-serde 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "glium 0.22.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glutin 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui 0.0.21 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -429,6 +428,90 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "futures"
 version = "0.1.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "futures-channel-preview"
+version = "0.3.0-alpha.10"
+source = "git+https://github.com/cramertj/futures-rs?branch=update-nightly#cc0d0a4646bbdb44a1b52f99288631854594274f"
+dependencies = [
+ "futures-core-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+]
+
+[[package]]
+name = "futures-channel-preview"
+version = "0.3.0-alpha.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "futures-core-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+]
+
+[[package]]
+name = "futures-core-preview"
+version = "0.3.0-alpha.10"
+source = "git+https://github.com/cramertj/futures-rs?branch=update-nightly#cc0d0a4646bbdb44a1b52f99288631854594274f"
+dependencies = [
+ "either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "futures-executor-preview"
+version = "0.3.0-alpha.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "futures-channel-preview 0.3.0-alpha.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-core-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "futures-util-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "lazy_static 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "num_cpus 1.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pin-utils 0.1.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "futures-io-preview"
+version = "0.3.0-alpha.10"
+source = "git+https://github.com/cramertj/futures-rs?branch=update-nightly#cc0d0a4646bbdb44a1b52f99288631854594274f"
+dependencies = [
+ "futures-core-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "iovec 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "futures-select-macro-preview"
+version = "0.3.0-alpha.10"
+source = "git+https://github.com/cramertj/futures-rs?branch=update-nightly#cc0d0a4646bbdb44a1b52f99288631854594274f"
+dependencies = [
+ "proc-macro-hack 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proc-macro2 0.4.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 0.15.23 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "futures-sink-preview"
+version = "0.3.0-alpha.10"
+source = "git+https://github.com/cramertj/futures-rs?branch=update-nightly#cc0d0a4646bbdb44a1b52f99288631854594274f"
+dependencies = [
+ "either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-channel-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "futures-core-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+]
+
+[[package]]
+name = "futures-util-preview"
+version = "0.3.0-alpha.10"
+source = "git+https://github.com/cramertj/futures-rs?branch=update-nightly#cc0d0a4646bbdb44a1b52f99288631854594274f"
+dependencies = [
+ "either 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-channel-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "futures-core-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "futures-io-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "futures-select-macro-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "futures-sink-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "pin-utils 0.1.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proc-macro-hack 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "slab 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "gl_generator"
@@ -912,6 +995,11 @@ version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "pin-utils"
+version = "0.1.0-alpha.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "pkg-config"
 version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -922,6 +1010,16 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "proc-macro-hack-impl 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "proc-macro-hack"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "proc-macro2 0.4.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 0.15.23 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1270,6 +1368,10 @@ version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "discard 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-channel-preview 0.3.0-alpha.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-core-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
+ "futures-executor-preview 0.3.0-alpha.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-util-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)",
  "rustc_version 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.82 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1834,6 +1936,14 @@ dependencies = [
 "checksum fuchsia-zircon 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2e9763c69ebaae630ba35f74888db465e49e259ba1bc0eda7d06f4a067615d82"
 "checksum fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 "checksum futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)" = "49e7653e374fe0d0c12de4250f0bdb60680b8c80eed558c5c7538eec9c89e21b"
+"checksum futures-channel-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)" = "<none>"
+"checksum futures-channel-preview 0.3.0-alpha.10 (registry+https://github.com/rust-lang/crates.io-index)" = "05b4b0788ee395c18d2b2d4b7c1ca5420f3086770c84b54ad122e0d69bde01d0"
+"checksum futures-core-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)" = "<none>"
+"checksum futures-executor-preview 0.3.0-alpha.10 (registry+https://github.com/rust-lang/crates.io-index)" = "07ab6c8894c3550d02b3dbcdad033b0bce133490c94e832e80e230ba90af8305"
+"checksum futures-io-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)" = "<none>"
+"checksum futures-select-macro-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)" = "<none>"
+"checksum futures-sink-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)" = "<none>"
+"checksum futures-util-preview 0.3.0-alpha.10 (git+https://github.com/cramertj/futures-rs?branch=update-nightly)" = "<none>"
 "checksum gl_generator 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a0ffaf173cf76c73a73e080366bf556b4776ece104b06961766ff11449f38604"
 "checksum gl_generator 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7a795170cbd85b5a7baa58d6d7525cae6a03e486859860c220f7ebbbdd379d0a"
 "checksum gleam 0.6.8 (registry+https://github.com/rust-lang/crates.io-index)" = "4b47f5b15742aee359c7895ab98cf2cceecc89bb4feb6f4e42f802d7899877da"
@@ -1884,8 +1994,10 @@ dependencies = [
 "checksum parking_lot 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)" = "f0802bff09003b291ba756dc7e79313e51cc31667e94afbe847def490424cde5"
 "checksum parking_lot_core 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ad7f7e6ebdc79edff6fdcb87a55b620174f7a989e3eb31b65231f4af57f00b8c"
 "checksum percent-encoding 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "31010dd2e1ac33d5b46a5b413495239882813e0369f8ed8a5e266f173602f831"
+"checksum pin-utils 0.1.0-alpha.4 (registry+https://github.com/rust-lang/crates.io-index)" = "5894c618ce612a3fa23881b152b608bafb8c56cfc22f434a3ba3120b40f7b587"
 "checksum pkg-config 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)" = "676e8eb2b1b4c9043511a9b7bea0915320d7e502b0a079fb03f9635a5252b18c"
 "checksum proc-macro-hack 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2c725b36c99df7af7bf9324e9c999b9e37d92c8f8caf106d82e1d7953218d2d8"
+"checksum proc-macro-hack 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "539145c26064b6a98030ef04295da99739904b152ad17eed218d5728fcf9b370"
 "checksum proc-macro-hack-impl 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2b753ad9ed99dd8efeaa7d2fb8453c8f6bc3e54b97966d35f1bc77ca6865254a"
 "checksum proc-macro2 0.4.24 (registry+https://github.com/rust-lang/crates.io-index)" = "77619697826f31a02ae974457af0b29b723e5619e113e9397b8b82c6bd253f09"
 "checksum pyo3 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e83982f603caf8ad2e1fb3c4d2cccf31097c7dd0c99cc7acc4704b8f4c1047e7"

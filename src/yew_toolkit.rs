@@ -449,8 +449,24 @@ fn was_shift_key_pressed(key: &str) -> bool {
     key.len() == 1 && key.chars().next().unwrap().is_uppercase()
 }
 
+use stdweb::web::error::Error;
+use stdweb::web::wait;
+// use Delay from the tokio::timer module to sleep the task:
+async fn hoohaw() -> Result<(), Error> {
+    loop {
+        await!(wait(500));
+        console!(log, "hoohaw")
+    }
+}
+
+use stdweb::{spawn_local,unwrap_future};
+
+
 pub fn draw_app(app: Rc<CSApp>) {
     yew::initialize();
+
+//    spawn_local(unwrap_future(hoohaw()));
+//
 
     js! {
         var CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = null;
@@ -486,8 +502,14 @@ pub fn draw_app(app: Rc<CSApp>) {
         });
     }
 
-    let mut yew_app = App::<Model>::new().mount_to_body();
-    yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
-    yew::run_loop()
+
+
+    spawn_local(unwrap_future(run_bitches(app)));
 }
 
+async fn run_bitches(app: Rc<CSApp>) -> Result<(), Error> {
+    let mut yew_app = App::<Model>::new().mount_to_body();
+    yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
+    yew::run_loop();
+    Ok(())
+}
