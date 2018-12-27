@@ -1,5 +1,5 @@
-use std::rc::Rc;
 extern crate cs;
+use std::rc::Rc;
 
 fn main() {
     let app = Rc::new(cs::CSApp::new());

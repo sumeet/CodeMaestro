@@ -51,6 +51,7 @@ mod jsstuff {
 
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::future::Future;
 
 use self::editor::{Controller,Renderer,UiToolkit};
 use self::env::{ExecutionEnvironment};
@@ -93,7 +94,7 @@ pub struct CSApp {
 impl CSApp {
     pub fn new() -> CSApp {
         let app = CSApp {
-            controller: Rc::new(RefCell::new(Controller::new())),
+            controller: Rc::new(RefCell::new(Controller::new(create_executor()))),
         };
         app.controller.borrow_mut().load_function(builtin_funcs::Print{});
         app.controller.borrow_mut().load_function(builtin_funcs::Capitalize{});
@@ -113,4 +114,66 @@ impl CSApp {
         let renderer = Renderer::new(ui_toolkit, Rc::clone(&self.controller));
         renderer.render_app()
     }
+}
+
+#[cfg(feature = "default")]
+use tokio::runtime::Runtime;
+
+#[cfg(feature = "default")]
+pub struct TokioExecutor {
+    runtime: Runtime,
+}
+
+#[cfg(feature = "default")]
+impl TokioExecutor {
+    pub fn new() -> Self {
+        Self { runtime: Runtime::new().unwrap() }
+    }
+}
+
+use std::future::Future as NewFuture;
+use futures::Future as OldFuture;
+
+// converts from a new style Future to an old style one:
+fn backward<I,E>(f: impl NewFuture<Output=Result<I,E>>) -> impl OldFuture<Item=I, Error=E> {
+    use tokio_async_await::compat::backward;
+    backward::Compat::new(f)
+}
+
+#[cfg(feature = "default")]
+impl env::AsyncExecutor for TokioExecutor {
+    fn exec<I, E, F: Future<Output = Result<I, E>> + Send + 'static>(&mut self, future: F) where Self: Sized {
+        self.runtime.spawn(backward(async {
+            await!(future);
+            Ok(())
+        }));
+    }
+}
+
+#[cfg(feature = "default")]
+pub fn create_executor() -> TokioExecutor {
+    TokioExecutor::new()
+}
+
+
+
+#[cfg(feature = "javascript")]
+pub struct StdwebExecutor {}
+
+#[cfg(feature = "javascript")]
+impl StdwebExecutor {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[cfg(feature = "javascript")]
+impl env::AsyncExecutor for StdwebExecutor {
+    fn exec<F: Future>(&self, future: F) where Self: Sized {
+        unimplemented!()
+    }
+}
+
+#[cfg(feature = "javascript")]
+pub fn create_executor() -> StdwebExecutor {
 }

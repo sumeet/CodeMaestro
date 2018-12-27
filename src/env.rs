@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::borrow::Borrow;
 
 pub struct ExecutionEnvironment {
+    pub async_executor: Box<AsyncExecutor>,
     pub console: String,
     // TODO: lol, this is going to end up being stack frames, or smth like that
     pub locals: HashMap<lang::ID, lang::Value>,
@@ -12,12 +13,13 @@ pub struct ExecutionEnvironment {
 }
 
 impl ExecutionEnvironment {
-    pub fn new() -> ExecutionEnvironment {
+    pub fn new<T: AsyncExecutor + 'static>(async_executor: T) -> ExecutionEnvironment {
         return ExecutionEnvironment {
             console: String::new(),
             locals: HashMap::new(),
             functions: HashMap::new(),
             typespecs: Self::built_in_typespecs(),
+            async_executor: Box::new(async_executor),
         }
     }
 
@@ -99,7 +101,6 @@ impl ExecutionEnvironment {
             // concept of panic yet
             lang::CodeNode::Placeholder(_) => lang::Value::Null,
             lang::CodeNode::NullLiteral => lang::Value::Null,
-            // TODO: lol need a StructLiteral value
             lang::CodeNode::StructLiteral(struct_literal) => {
                 lang::Value::Struct {
                     struct_id: struct_literal.struct_id,
@@ -149,3 +150,10 @@ impl ExecutionEnvironment {
     }
 }
 
+
+use std::future::Future;
+
+pub trait AsyncExecutor {
+    // runs but you don't get any results back lol
+    fn exec<I, E, F: Future<Output = Result<I, E>> + Send + 'static>(&mut self, future: F) where Self: Sized;
+}

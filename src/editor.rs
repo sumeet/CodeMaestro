@@ -7,7 +7,7 @@ use std::iter;
 use objekt::{clone_trait_object,__internal_clone_trait_object};
 use failure::{err_msg};
 use failure::Error as Error;
-use super::env::{ExecutionEnvironment};
+use super::env;
 use super::lang;
 use super::code_loading;
 use super::code_generation;
@@ -385,11 +385,11 @@ pub enum Key {
 
 pub struct CodeGenie<'a> {
     code: &'a CodeNode,
-    env: &'a ExecutionEnvironment,
+    env: &'a env::ExecutionEnvironment,
 }
 
 impl<'a> CodeGenie<'a> {
-    fn new(code_node: &'a CodeNode, env: &'a ExecutionEnvironment) -> Self {
+    fn new(code_node: &'a CodeNode, env: &'a env::ExecutionEnvironment) -> Self {
         Self { code: code_node, env }
     }
 
@@ -724,7 +724,7 @@ impl TestResult {
 
 pub struct Controller {
     // TODO: i only need this to be public for hax, so i can make this unpublic later
-    pub execution_environment: ExecutionEnvironment,
+    pub execution_environment: env::ExecutionEnvironment,
     selected_node_id: Option<ID>,
     pub editing: bool,
     insert_code_menu: Option<InsertCodeMenu>,
@@ -736,9 +736,9 @@ pub struct Controller {
 }
 
 impl<'a> Controller {
-    pub fn new() -> Controller {
+    pub fn new<T: env::AsyncExecutor + 'static>(async_executor: T) -> Controller {
         Controller {
-            execution_environment: ExecutionEnvironment::new(),
+            execution_environment: env::ExecutionEnvironment::new(async_executor),
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
@@ -809,8 +809,16 @@ impl<'a> Controller {
         }
     }
 
-    fn run_test(&mut self, func: &lang::Function) {
-        // XXX lol ghetto
+    fn run_test<F: lang::Function>(&'a mut self, func: &'a F) {
+        self.execution_environment.async_executor.exec(self.run_test_async(func));
+//        // TODO: need a way to provide args for test (test cases???)
+//        let fc = code_generation::new_function_call_with_placeholder_args(func);
+//        let result = TestResult::new(self.run(&fc));
+//        self.test_result_by_func_id.insert(func.id(), result);
+    }
+
+    async fn run_test_async<F: lang::Function>(&'a mut self, func: &'a F) {
+        // TODO: need a way to provide args for test (test cases???)
         let fc = code_generation::new_function_call_with_placeholder_args(func);
         let result = TestResult::new(self.run(&fc));
         self.test_result_by_func_id.insert(func.id(), result);
@@ -1629,7 +1637,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_text(&format!("Test result: {}", test_result)),
             self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
-                cont.borrow_mut().run_test(&func)
+                cont.borrow_mut().run_test(&func);
             })
         ])
     }

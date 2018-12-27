@@ -1,5 +1,4 @@
 #![feature(await_macro, async_await, futures_api)]
-#![feature(pin)]
 
 extern crate cs;
 
@@ -27,7 +26,6 @@ fn backward<I,E>(f: impl NewFuture<Output=Result<I,E>>) -> impl OldFuture<Item=I
 //}
 
 fn main() {
-
     let config = Config {
         nickname: Some("cs".to_owned()),
         server: Some("irc.darwin.network".to_owned()),

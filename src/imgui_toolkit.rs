@@ -9,6 +9,8 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
 
+use tokio::spawn_async;
+
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
