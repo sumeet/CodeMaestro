@@ -81,11 +81,7 @@ impl ExecutionEnvironment {
                 lang::Value::String(string_literal.value.clone())
             }
             lang::CodeNode::Assignment(assignment) => {
-                let value = self.evaluate(&assignment.expression);
-                // TODO: pretty sure i'll have to return an Rc<Value> in evaluate
-                self.set_local_variable(assignment.id, value.clone());
-                // the result of an assignment is the value being assigned
-                value
+                self.evaluate_assignment(&assignment)
             }
             lang::CodeNode::Block(block) => {
                 // if there are no expressions in this block, then it will evaluate to Null
@@ -117,6 +113,14 @@ impl ExecutionEnvironment {
             // i think these code nodes will actually never be evaluated
             lang::CodeNode::StructLiteralField(_struct_literal_field) => lang::Value::Null,
         }
+    }
+
+    fn evaluate_assignment(&mut self, assignment: &lang::Assignment) -> lang::Value {
+        let value = self.evaluate(&assignment.expression);
+        // TODO: pretty sure i'll have to return an Rc<Value> in evaluate
+        self.set_local_variable(assignment.id, value.clone());
+        // the result of an assignment is the value being assigned
+        value
     }
 
     fn evaluate_function_call(&mut self, function_call: &lang::FunctionCall) -> lang::Value {
