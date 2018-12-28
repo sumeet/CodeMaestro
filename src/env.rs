@@ -1,25 +1,27 @@
-use super::{lang,structs};
+use super::lang;
+use super::structs;
+use super::async_executor;
 
 use std::collections::HashMap;
 use std::borrow::Borrow;
 
 pub struct ExecutionEnvironment {
-    pub async_executor: Box<AsyncExecutor>,
     pub console: String,
     // TODO: lol, this is going to end up being stack frames, or smth like that
     pub locals: HashMap<lang::ID, lang::Value>,
     pub functions: HashMap<lang::ID, Box<lang::Function>>,
     pub typespecs: HashMap<lang::ID, Box<lang::TypeSpec + 'static>>,
+    pub async_executor: async_executor::AsyncExecutor,
 }
 
 impl ExecutionEnvironment {
-    pub fn new<T: AsyncExecutor + 'static>(async_executor: T) -> ExecutionEnvironment {
+    pub fn new() -> ExecutionEnvironment {
         return ExecutionEnvironment {
             console: String::new(),
             locals: HashMap::new(),
             functions: HashMap::new(),
             typespecs: Self::built_in_typespecs(),
-            async_executor: Box::new(async_executor),
+            async_executor: async_executor::AsyncExecutor::new(),
         }
     }
 
@@ -148,12 +150,4 @@ impl ExecutionEnvironment {
     pub fn read_console(&self) -> &str {
         &self.console
     }
-}
-
-
-use std::future::Future;
-
-pub trait AsyncExecutor {
-    // runs but you don't get any results back lol
-    fn exec<I, E, F: Future<Output = Result<I, E>> + Send + 'static>(&mut self, future: F) where Self: Sized;
 }

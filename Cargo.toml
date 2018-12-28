@@ -9,7 +9,7 @@ default-run = "cs"
 
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3",
-           "tokio", "tokio-reactor", "irc", "irc-proto", "tokio-async-await"]
+           "tokio", "tokio-reactor", "irc", "irc-proto", "tokio-async-await", "tokio-current-thread"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
@@ -35,6 +35,7 @@ imgui-glium-renderer = { version = "0.0.21", optional = true }
 tokio = {version = "0.1.13", features = ["async-await-preview"], optional = true }
 tokio-reactor = {version = "0.1.7", optional = true }
 tokio-async-await = {version = "0.1.4", optional = true }
+tokio-current-thread = {version = "0.1.4", optional = true }
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 

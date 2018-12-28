@@ -736,9 +736,9 @@ pub struct Controller {
 }
 
 impl<'a> Controller {
-    pub fn new<T: env::AsyncExecutor + 'static>(async_executor: T) -> Controller {
+    pub fn new() -> Controller {
         Controller {
-            execution_environment: env::ExecutionEnvironment::new(async_executor),
+            execution_environment: env::ExecutionEnvironment::new(),
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
@@ -809,20 +809,27 @@ impl<'a> Controller {
         }
     }
 
-    fn run_test<F: lang::Function>(&'a mut self, func: &'a F) {
-        self.execution_environment.async_executor.exec(self.run_test_async(func));
+    fn run_test<F: lang::Function>(&mut self, func: &F) {
+        let fc = code_generation::new_function_call_with_placeholder_args(func);
+        let id = func.id();
+        let ee = &mut self.execution_environment;
+
+//        self.execution_environment.async_executor.exec(async move {
+////            println!("{:?}", fc);
+//            let result = TestResult::new(self.run(&fc));
+//            self.test_result_by_func_id.insert(id, result);
+//            let out : Result<(), ()> = Ok(());
+//            out
+//        });
+//        // TODO: need a way to provide args for test (test cases???)
+    }
+
+//    async fn run_test_async<F: lang::Function>(&'a mut self, func: &'a F) {
 //        // TODO: need a way to provide args for test (test cases???)
 //        let fc = code_generation::new_function_call_with_placeholder_args(func);
 //        let result = TestResult::new(self.run(&fc));
 //        self.test_result_by_func_id.insert(func.id(), result);
-    }
-
-    async fn run_test_async<F: lang::Function>(&'a mut self, func: &'a F) {
-        // TODO: need a way to provide args for test (test cases???)
-        let fc = code_generation::new_function_call_with_placeholder_args(func);
-        let result = TestResult::new(self.run(&fc));
-        self.test_result_by_func_id.insert(func.id(), result);
-    }
+//    }
 
     fn undo(&mut self) {
         if self.loaded_code.is_none() {
@@ -1233,11 +1240,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
-        let pyfuncs = {
-            let controller = self.controller.borrow();
-            let funcs = controller.execution_environment.list_functions().cloned();
-            funcs.filter_map(|f| f.downcast::<pystuff::PyFunc>().ok()).collect_vec()
-        };
+        let pyfuncs = self.controller.borrow().list_pyfuncs();
         self.ui_toolkit.draw_all(pyfuncs.iter().map(|f| self.render_edit_pyfunc(f)).collect())
     }
 
@@ -1321,7 +1324,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     move |newvalue| {
                         let mut jsfunc3 = jsfunc3.clone();
                         jsfunc3.eval = newvalue.to_string();
-                        cont3.borrow_mut().execution_environment.add_function(Box::new(jsfunc3));
+                        cont3.borrow_mut().load_function(jsfunc3);
                     },
                 ),
                 self.render_return_type_selector(jsfunc),
