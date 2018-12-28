@@ -810,25 +810,6 @@ impl<'a> Controller {
         }
     }
 
-    fn run_test<F: lang::Function>(&mut self, func: &F) {
-        let fc = code_generation::new_function_call_with_placeholder_args(func);
-        let id = func.id();
-        let ee = &mut self.execution_environment;
-
-        self.execution_environment.async_executor.borrow_mut().exec(async move {
-            println!("high");
-            let out: Result<(), ()> = Ok(());
-            out
-        });
-    }
-
-//    async fn run_test_async<F: lang::Function>(&'a mut self, func: &'a F) {
-//        // TODO: need a way to provide args for test (test cases???)
-//        let fc = code_generation::new_function_call_with_placeholder_args(func);
-//        let result = TestResult::new(self.run(&fc));
-//        self.test_result_by_func_id.insert(func.id(), result);
-//    }
-
     fn undo(&mut self) {
         if self.loaded_code.is_none() {
             return
@@ -1107,16 +1088,16 @@ impl<'a> Controller {
     }
 
     // should run the loaded code node
-    pub fn run(&mut self, code_node: &CodeNode) -> Value {
-        let result = self.execution_environment.evaluate(code_node);
-        match result {
-            Value::Error(ref e) => {
-                self.error_console.push_str(&format!("{:?}", e));
-                self.error_console.push_str("\n");
-            }
-            _ => { }
-        }
-        result
+    pub fn run(&mut self, code_node: &CodeNode) {
+//        let result = self.execution_environment.evaluate(code_node);
+//        match result {
+//            Value::Error(ref e) => {
+//                self.error_console.push_str(&format!("{:?}", e));
+//                self.error_console.push_str("\n");
+//            }
+//            _ => { }
+//        }
+//        result
     }
 
     pub fn read_console(&self) -> &str {
@@ -1638,7 +1619,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_text(&format!("Test result: {}", test_result)),
             self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
-                cont.borrow_mut().run_test(&func);
+                run_test(&cont, &func);
             })
         ])
     }
@@ -2370,3 +2351,16 @@ fn format_typespec_select(ts: &Box<lang::TypeSpec>, nesting_level: Option<&[usiz
     };
     format!("{}{} {}", indent, ts.symbol(), ts.readable_name())
 }
+
+
+fn run_test<F: lang::Function>(sharedcont: &Rc<RefCell<Controller>>, func: &F) {
+    let fc = code_generation::new_function_call_with_placeholder_args(func);
+    let id = func.id();
+    let mut controller = sharedcont.borrow_mut();
+    let cont2 = Rc::clone(&sharedcont);
+    controller.execution_environment.run(&fc, move |result| {
+        let mut cont = cont2.borrow_mut();
+        cont.test_result_by_func_id.insert(id, TestResult::new(result));
+    });
+}
+

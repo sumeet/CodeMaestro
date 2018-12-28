@@ -2,9 +2,11 @@ use super::lang;
 use super::structs;
 use super::async_executor;
 
-use std::collections::HashMap;
 use std::borrow::Borrow;
 use std::cell::RefCell;
+use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::rc::Rc;
 
 pub struct ExecutionEnvironment {
@@ -69,74 +71,93 @@ impl ExecutionEnvironment {
             .and_then(|ts| ts.downcast_ref::<structs::Struct>())
     }
 
-    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> lang::Value {
-        match code_node {
+    pub fn run<F: FnOnce(lang::Value) + 'static>(&mut self, code_node: &lang::CodeNode, callback: F) {
+        let fut = self.evaluate(code_node);
+        self.async_executor.borrow_mut().exec(async move {
+            callback(await!(fut));
+            let ok : Result<(), ()> = Ok(());
+            ok
+        })
+    }
+
+    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
+        let code_node = code_node.clone();
+        let fut : Pin<Box<Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
-                self.evaluate_function_call(function_call)
+                Box::pin(self.evaluate_function_call(function_call))
             }
             lang::CodeNode::Argument(argument) => {
-                self.evaluate(argument.expr.borrow())
+                Box::pin(self.evaluate(argument.expr.borrow()))
             }
             lang::CodeNode::StringLiteral(string_literal) => {
-                lang::Value::String(string_literal.value.clone())
+                let val = string_literal.value.clone();
+                Box::pin( async { lang::Value::String(val) })
             }
             lang::CodeNode::Assignment(assignment) => {
-                self.evaluate_assignment(&assignment)
+                Box::pin(self.evaluate_assignment(&assignment))
             }
             lang::CodeNode::Block(block) => {
+                Box::pin(async {
+                    lang::Value::Null
+                })
                 // if there are no expressions in this block, then it will evaluate to Null
-                let mut return_value = lang::Value::Null;
-                for expression in block.expressions.iter() {
-                    return_value = self.evaluate(expression)
-                }
-                return_value
+//                let mut return_value = lang::Value::Null;
+//                for expression in block.expressions.iter() {
+//                    return_value = self.evaluate(expression)
+//                }
+//                Box::new(return_value)
 
             }
             lang::CodeNode::VariableReference(variable_reference) => {
-                self.get_local_variable(variable_reference.assignment_id).unwrap().clone()
+                let var = self.get_local_variable(variable_reference.assignment_id).unwrap().clone();
+                Box::pin(async { var })
             }
-            lang::CodeNode::FunctionReference(_) => lang::Value::Null,
-            lang::CodeNode::FunctionDefinition(_) => lang::Value::Null,
+            lang::CodeNode::FunctionReference(_) => Box::pin(async { lang::Value::Null }),
+            lang::CodeNode::FunctionDefinition(_) => Box::pin(async { lang::Value::Null }),
             // TODO: trying to evaluate a placeholder should probably panic... but we don't have a
             // concept of panic yet
-            lang::CodeNode::Placeholder(_) => lang::Value::Null,
-            lang::CodeNode::NullLiteral => lang::Value::Null,
+            lang::CodeNode::Placeholder(_) => Box::pin(async { lang::Value::Null }),
+            lang::CodeNode::NullLiteral => Box::pin(async { lang::Value::Null }),
             lang::CodeNode::StructLiteral(struct_literal) => {
-                lang::Value::Struct {
-                    struct_id: struct_literal.struct_id,
-                    values: struct_literal.fields().map(|literal_field| {
-                        (literal_field.struct_field_id,
-                         self.evaluate(&literal_field.expr))
-                    }).collect()
-                }
+                Box::pin(async { lang::Value::Null })
+//                lang::Value::Struct {
+//                    struct_id: struct_literal.struct_id,
+//                    values: struct_literal.fields().map(|literal_field| {
+//                        (literal_field.struct_field_id,
+//                         self.evaluate(&literal_field.expr))
+//                    }).collect()
+//                }
             }
             // i think these code nodes will actually never be evaluated
-            lang::CodeNode::StructLiteralField(_struct_literal_field) => lang::Value::Null,
-        }
+                lang::CodeNode::StructLiteralField(_struct_literal_field) => Box::pin(async { lang::Value::Null }),
+        };
+        fut
     }
 
-    fn evaluate_assignment(&mut self, assignment: &lang::Assignment) -> lang::Value {
-        let value = self.evaluate(&assignment.expression);
-        // TODO: pretty sure i'll have to return an Rc<Value> in evaluate
-        self.set_local_variable(assignment.id, value.clone());
-        // the result of an assignment is the value being assigned
-        value
+    fn evaluate_assignment(&mut self, assignment: &lang::Assignment) -> impl Future<Output = lang::Value> {
+        async { lang::Value::Null }
+//        let value = self.evaluate(&assignment.expression);
+//        // TODO: pretty sure i'll have to return an Rc<Value> in evaluate
+//        self.set_local_variable(assignment.id, value.clone());
+//        // the result of an assignment is the value being assigned
+//        value
     }
 
-    fn evaluate_function_call(&mut self, function_call: &lang::FunctionCall) -> lang::Value {
-        let args: HashMap<lang::ID,lang::Value> = function_call.args.iter()
-            .map(|code_node| code_node.into_argument())
-            .map(|arg| (arg.argument_definition_id, self.evaluate(&arg.expr)))
-            .collect();
-        let function_id = function_call.function_reference().function_id;
-        match self.find_function(function_id) {
-            Some(function) => {
-                function.clone().call(self, args)
-            }
-            None => {
-                lang::Value::Error(lang::Error::UndefinedFunctionError(function_id))
-            }
-        }
+    fn evaluate_function_call(&mut self, function_call: lang::FunctionCall) -> impl Future<Output = lang::Value> {
+        async { lang::Value::Null }
+//        let args: HashMap<lang::ID,lang::Value> = function_call.args.iter()
+//            .map(|code_node| code_node.into_argument())
+//            .map(|arg| (arg.argument_definition_id, self.evaluate(&arg.expr)))
+//            .collect();
+//        let function_id = function_call.function_reference().function_id;
+//        match self.find_function(function_id) {
+//            Some(function) => {
+//                function.clone().call(self, args)
+//            }
+//            None => {
+//                lang::Value::Error(lang::Error::UndefinedFunctionError(function_id))
+//            }
+//        }
     }
 
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
