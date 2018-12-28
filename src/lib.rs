@@ -105,12 +105,17 @@ fn load_structs(controller: &mut Controller, world: &code_loading::TheWorld) {
 
 pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,
+    pub async_executor: Rc<RefCell<async_executor::AsyncExecutor>>,
 }
 
 impl CSApp {
     pub fn new() -> CSApp {
+        let async_executor = Rc::new(RefCell::new(async_executor::AsyncExecutor::new()));
+        let async_executor2 = Rc::clone(&async_executor);
+
         let app = CSApp {
-            controller: Rc::new(RefCell::new(Controller::new())),
+            async_executor: async_executor,
+            controller: Rc::new(RefCell::new(Controller::new(async_executor2))),
         };
         app.controller.borrow_mut().load_function(builtin_funcs::Print{});
         app.controller.borrow_mut().load_function(builtin_funcs::Capitalize{});

@@ -110,7 +110,6 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, clear_color: 
     let mut mouse_state = MouseState::default();
     let mut quit = false;
 
-
     loop {
         let mut keypress : Option<Keypress> = None;
 

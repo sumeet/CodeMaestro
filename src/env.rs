@@ -4,6 +4,8 @@ use super::async_executor;
 
 use std::collections::HashMap;
 use std::borrow::Borrow;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 pub struct ExecutionEnvironment {
     pub console: String,
@@ -11,17 +13,17 @@ pub struct ExecutionEnvironment {
     pub locals: HashMap<lang::ID, lang::Value>,
     pub functions: HashMap<lang::ID, Box<lang::Function>>,
     pub typespecs: HashMap<lang::ID, Box<lang::TypeSpec + 'static>>,
-    pub async_executor: async_executor::AsyncExecutor,
+    pub async_executor: Rc<RefCell<async_executor::AsyncExecutor>>,
 }
 
 impl ExecutionEnvironment {
-    pub fn new() -> ExecutionEnvironment {
+    pub fn new(async_executor: Rc<RefCell<async_executor::AsyncExecutor>>) -> ExecutionEnvironment {
         return ExecutionEnvironment {
             console: String::new(),
             locals: HashMap::new(),
             functions: HashMap::new(),
             typespecs: Self::built_in_typespecs(),
-            async_executor: async_executor::AsyncExecutor::new(),
+            async_executor,
         }
     }
 

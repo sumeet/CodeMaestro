@@ -7,6 +7,7 @@ use std::iter;
 use objekt::{clone_trait_object,__internal_clone_trait_object};
 use failure::{err_msg};
 use failure::Error as Error;
+use super::async_executor;
 use super::env;
 use super::lang;
 use super::code_loading;
@@ -736,9 +737,9 @@ pub struct Controller {
 }
 
 impl<'a> Controller {
-    pub fn new() -> Controller {
+    pub fn new(async_executor: Rc<RefCell<async_executor::AsyncExecutor>>) -> Controller {
         Controller {
-            execution_environment: env::ExecutionEnvironment::new(),
+            execution_environment: env::ExecutionEnvironment::new(async_executor),
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
@@ -814,14 +815,11 @@ impl<'a> Controller {
         let id = func.id();
         let ee = &mut self.execution_environment;
 
-//        self.execution_environment.async_executor.exec(async move {
-////            println!("{:?}", fc);
-//            let result = TestResult::new(self.run(&fc));
-//            self.test_result_by_func_id.insert(id, result);
-//            let out : Result<(), ()> = Ok(());
-//            out
-//        });
-//        // TODO: need a way to provide args for test (test cases???)
+        self.execution_environment.async_executor.borrow_mut().exec(async move {
+            println!("high");
+            let out: Result<(), ()> = Ok(());
+            out
+        });
     }
 
 //    async fn run_test_async<F: lang::Function>(&'a mut self, func: &'a F) {
