@@ -6,14 +6,15 @@ use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::future::Future;
-use std::pin::Pin;
+use std ::pin::Pin;
 use std::rc::Rc;
+
 
 pub struct ExecutionEnvironment {
     pub console: String,
     // TODO: lol, this is going to end up being stack frames, or smth like that
     pub locals: HashMap<lang::ID, lang::Value>,
-    pub functions: HashMap<lang::ID, Box<lang::Function>>,
+    pub functions: HashMap<lang::ID, Box<lang::Function + 'static>>,
     pub typespecs: HashMap<lang::ID, Box<lang::TypeSpec + 'static>>,
     pub async_executor: Rc<RefCell<async_executor::AsyncExecutor>>,
 }
@@ -80,9 +81,9 @@ impl ExecutionEnvironment {
         })
     }
 
-    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
+    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> Pin<Box<Future<Output = lang::Value>>> {
         let code_node = code_node.clone();
-        let fut : Pin<Box<Future<Output = lang::Value>>> = match code_node {
+        match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
                 Box::pin(self.evaluate_function_call(function_call))
             }
@@ -119,19 +120,24 @@ impl ExecutionEnvironment {
             lang::CodeNode::Placeholder(_) => Box::pin(async { lang::Value::Null }),
             lang::CodeNode::NullLiteral => Box::pin(async { lang::Value::Null }),
             lang::CodeNode::StructLiteral(struct_literal) => {
-                Box::pin(async { lang::Value::Null })
-//                lang::Value::Struct {
-//                    struct_id: struct_literal.struct_id,
-//                    values: struct_literal.fields().map(|literal_field| {
-//                        (literal_field.struct_field_id,
-//                         self.evaluate(&literal_field.expr))
-//                    }).collect()
-//                }
+                let value_futures : HashMap<lang::ID, Pin<Box<Future<Output = lang::Value>>>> = struct_literal.fields().map(|literal_field| {
+                    (literal_field.struct_field_id, self.evaluate(&literal_field.expr))
+                }).collect();
+                Box::pin(async move {
+                    // TODO: use join to await them all at the same time
+                    let mut values = HashMap::new();
+                    for (id, value_future) in value_futures.into_iter() {
+                        values.insert(id, await!(value_future));
+                    }
+                    lang::Value::Struct {
+                        struct_id: struct_literal.struct_id,
+                        values,
+                    }
+                })
             }
             // i think these code nodes will actually never be evaluated
                 lang::CodeNode::StructLiteralField(_struct_literal_field) => Box::pin(async { lang::Value::Null }),
-        };
-        fut
+        }
     }
 
     fn evaluate_assignment(&mut self, assignment: &lang::Assignment) -> impl Future<Output = lang::Value> {
