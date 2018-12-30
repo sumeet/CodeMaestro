@@ -9,6 +9,29 @@ use std::future::Future;
 use std ::pin::Pin;
 use std::rc::Rc;
 
+pub struct Interpreter {
+    env: Rc<RefCell<ExecutionEnvironment>>,
+    pub env2: ExecutionEnvironment,
+    // TODO: the way i've shittily coded things, the ExecutionEnvironment needs to share the interp
+    // with the main function, so the way i've drafted things, i SHOULD be able to get rid of this
+    // rc refcell
+    pub async_executor: Rc<RefCell<async_executor::AsyncExecutor>>,
+}
+
+impl Interpreter {
+    pub fn new() -> Self {
+        let async_executor =
+            Rc::new(RefCell::new(async_executor::AsyncExecutor::new()));
+        let async_executor2 = Rc::clone(&async_executor);
+        let async_executor3 = Rc::clone(&async_executor);
+        Self {
+            env: Rc::new(RefCell::new(ExecutionEnvironment::new(async_executor))),
+            env2: ExecutionEnvironment::new(async_executor3),
+            async_executor: async_executor2,
+        }
+    }
+}
+
 
 pub struct ExecutionEnvironment {
     pub console: String,

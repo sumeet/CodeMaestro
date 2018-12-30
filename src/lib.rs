@@ -103,6 +103,14 @@ fn load_structs(controller: &mut Controller, world: &code_loading::TheWorld) {
     }
 }
 
+pub fn newmain() {
+    let interpreter = env::Interpreter::new();
+    // TODO: pass this into the renderer, but for now we'll just not use it
+    let _command_buffer = Rc::new(RefCell::new(editor::CommandBuffer::new()));
+
+    let controller = Controller::new(interpreter);
+}
+
 pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,
     pub async_executor: Rc<RefCell<async_executor::AsyncExecutor>>,
@@ -110,12 +118,12 @@ pub struct CSApp {
 
 impl CSApp {
     pub fn new() -> CSApp {
-        let async_executor = Rc::new(RefCell::new(async_executor::AsyncExecutor::new()));
-        let async_executor2 = Rc::clone(&async_executor);
+        let interpreter = env::Interpreter::new();
+        let async_executor2 = Rc::clone(&interpreter.async_executor);
 
         let app = CSApp {
-            async_executor: async_executor,
-            controller: Rc::new(RefCell::new(Controller::new(async_executor2))),
+            async_executor: async_executor2,
+            controller: Rc::new(RefCell::new(Controller::new(interpreter))),
         };
         app.controller.borrow_mut().load_function(builtin_funcs::Print{});
         app.controller.borrow_mut().load_function(builtin_funcs::Capitalize{});

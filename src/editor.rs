@@ -723,9 +723,10 @@ impl TestResult {
     }
 }
 
-pub struct Controller {
+pub struct Controller<'a> {
     // TODO: i only need this to be public for hax, so i can make this unpublic later
-    pub execution_environment: env::ExecutionEnvironment,
+    pub execution_environment: Option<env::ExecutionEnvironment>,
+    execution_environment_borrow: Option<&'a mut env::ExecutionEnvironment>,
     selected_node_id: Option<ID>,
     pub editing: bool,
     insert_code_menu: Option<InsertCodeMenu>,
@@ -736,10 +737,11 @@ pub struct Controller {
     test_result_by_func_id: HashMap<ID, TestResult>,
 }
 
-impl<'a> Controller {
-    pub fn new(async_executor: Rc<RefCell<async_executor::AsyncExecutor>>) -> Controller {
+impl<'a> Controller<'a> {
+    pub fn new(interpreter: env::Interpreter) -> Controller<'a> {
         Controller {
-            execution_environment: env::ExecutionEnvironment::new(async_executor),
+            execution_environment: Some(interpreter.env2),
+            execution_environment_borrow: None,
             selected_node_id: None,
             loaded_code: None,
             error_console: String::new(),
@@ -750,8 +752,24 @@ impl<'a> Controller {
         }
     }
 
+    pub fn borrow_env<T, F: FnMut(&Self) -> T>(&mut self,
+                                               env: &mut env::ExecutionEnvironment,
+                                               mut borrows_self: F) -> T {
+        let ret = borrows_self(&self);
+        ret
+    }
+
+    // TODO: delete this to see what kinda things need to be moved into the CommandBuffer
+    fn execution_environment_mut(&mut self) -> &mut env::ExecutionEnvironment {
+        self.execution_environment.as_mut().unwrap()
+    }
+
+    fn execution_environment(&self) -> &env::ExecutionEnvironment {
+        self.execution_environment.as_ref().unwrap()
+    }
+
     fn typespecs(&self) -> impl Iterator<Item = &Box<lang::TypeSpec>> {
-        self.execution_environment.list_typespecs()
+        self.execution_environment().list_typespecs()
     }
 
     fn list_structs(&self) -> impl Iterator<Item = &structs::Struct> {
@@ -760,7 +778,7 @@ impl<'a> Controller {
     }
 
     fn get_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
-        self.execution_environment.find_typespec(id)
+        self.execution_environment().find_typespec(id)
     }
 
     fn save(&self) {
@@ -774,13 +792,13 @@ impl<'a> Controller {
     }
 
     fn list_jsfuncs(&self) -> Vec<jsstuff::JSFunc> {
-        self.execution_environment.list_functions()
+        self.execution_environment().list_functions()
             .filter_map(|f| Result::ok(f.clone().downcast::<jsstuff::JSFunc>()))
             .map(|boxedjsfunc| *boxedjsfunc).collect()
     }
 
     fn list_pyfuncs(&self) -> Vec<pystuff::PyFunc> {
-        self.execution_environment.list_functions()
+        self.execution_environment().list_functions()
             .filter_map(|f| Result::ok(f.clone().downcast::<pystuff::PyFunc>()))
             .map(|boxedpyfunc| *boxedpyfunc).collect()
     }
@@ -1010,7 +1028,7 @@ impl<'a> Controller {
     fn code_genie(&'a self) -> Option<CodeGenie> {
         Some(CodeGenie::new(
             self.loaded_code.as_ref()?,
-            &self.execution_environment,
+            self.execution_environment(),
         ))
     }
 
@@ -1068,19 +1086,19 @@ impl<'a> Controller {
     }
 
     pub fn load_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
-        self.execution_environment.add_typespec(typespec)
+        self.execution_environment_mut().add_typespec(typespec)
     }
 
     pub fn load_function<F: Function>(&mut self, function: F) {
-        self.execution_environment.add_function(Box::new(function))
+        self.execution_environment_mut().add_function(Box::new(function))
     }
 
     pub fn remove_function(&mut self, id: lang::ID) {
-        self.execution_environment.delete_function(id)
+        self.execution_environment_mut().delete_function(id)
     }
 
     pub fn find_function(&self, id: ID) -> Option<&Box<Function>> {
-        self.execution_environment.find_function(id)
+        self.execution_environment().find_function(id)
     }
 
     pub fn load_code(&mut self, code_node: &CodeNode) {
@@ -1101,7 +1119,7 @@ impl<'a> Controller {
     }
 
     pub fn read_console(&self) -> &str {
-        &self.execution_environment.console
+        &self.execution_environment().console
     }
 
     pub fn read_error_console(&self) -> &str {
@@ -1163,9 +1181,30 @@ pub trait UiToolkit {
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
 }
 
+enum Command {
+}
+
+pub struct CommandBuffer {
+    commands: Vec<Command>,
+}
+
+impl CommandBuffer {
+    pub fn new() -> Self {
+        Self { commands: vec![] }
+    }
+
+    pub fn flush(&mut self, controller: &mut Controller, interpreter: &mut env::Interpreter) {
+
+    }
+}
+
 pub struct Renderer<'a, T> {
     arg_nesting_level: RefCell<u32>,
     ui_toolkit: &'a mut T,
+    // TODO: this is gonna be used for readonly access to the controller
+    cont: Option<&'a Controller>,
+    // TODO: take this through the constructor, but now we'll let ppl peek in here
+    pub command_buffer: Rc<RefCell<CommandBuffer>>,
     controller: Rc<RefCell<Controller>>,
 }
 
@@ -1174,7 +1213,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         Self {
             arg_nesting_level: RefCell::new(0),
             ui_toolkit: ui_toolkit,
-            controller: Rc::clone(&controller)
+            cont: None,
+            controller: Rc::clone(&controller),
+            command_buffer: Rc::new(RefCell::new(CommandBuffer::new())),
         }
     }
 
@@ -2358,7 +2399,7 @@ fn run_test<F: lang::Function>(sharedcont: &Rc<RefCell<Controller>>, func: &F) {
     let id = func.id();
     let mut controller = sharedcont.borrow_mut();
     let cont2 = Rc::clone(&sharedcont);
-    controller.execution_environment.run(&fc, move |result| {
+    controller.execution_environment_mut().run(&fc, move |result| {
         let mut cont = cont2.borrow_mut();
         cont.test_result_by_func_id.insert(id, TestResult::new(result));
     });
