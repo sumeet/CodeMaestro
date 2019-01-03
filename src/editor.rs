@@ -3,6 +3,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::HashMap;
 use std::iter;
+use std::boxed::FnBox;
 
 use objekt::{clone_trait_object,__internal_clone_trait_object};
 use failure::{err_msg};
@@ -1192,20 +1193,119 @@ pub trait UiToolkit {
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
 }
 
-enum Command {
-}
-
+// TODO: to simplify things for now, this thing just holds onto closures and
+// applies them onto the controller. in the future we could save the actual
+// contents into an enum and match on it.... and change things other than the
+// controller. for now this is just easier to move us forward
 pub struct CommandBuffer {
-    commands: Vec<Command>,
+    controller_commands: Vec<Box<FnBox(&mut Controller)>>,
 }
 
 impl CommandBuffer {
     pub fn new() -> Self {
-        Self { commands: vec![] }
+        Self { controller_commands: vec![] }
     }
 
-    pub fn flush(&mut self, controller: &mut Controller, interpreter: &mut env::Interpreter) {
+    pub fn save(&mut self) {
+        self.add_controller_command(move |mut controller| {
+            controller.save()
+        })
+    }
 
+    pub fn load_function<F: lang::Function>(&mut self, func: F) {
+        self.add_controller_command(move |mut controller| {
+            controller.load_function(func)
+        })
+    }
+
+    pub fn hide_insert_code_menu(&mut self) {
+        self.add_controller_command(move |mut controller| {
+            controller.hide_insert_code_menu()
+        })
+    }
+
+    pub fn insert_code(&mut self, code: lang::CodeNode,
+                       insertion_point: InsertionPoint) {
+        self.add_controller_command(move |mut controller| {
+            controller.insert_code(code, insertion_point)
+        })
+    }
+
+    pub fn set_search_str_on_insert_code_menu(&mut self, input: &str) {
+        let input = input.to_owned();
+        self.add_controller_command(move |mut controller| {
+            controller.insert_code_menu.as_mut()
+                .map(|m| {m.set_search_str(&input)});
+        })
+    }
+
+    pub fn mark_as_editing(&mut self, code_node_id: lang::ID) {
+        self.add_controller_command(move |mut controller| {
+            controller.mark_as_editing(code_node_id)
+        })
+    }
+
+    pub fn replace_code(&mut self, code: lang::CodeNode) {
+        self.add_controller_command(move |mut controller| {
+            controller.loaded_code.as_mut().unwrap()
+                .replace(&code)
+        })
+    }
+
+    pub fn mark_as_not_editing(&mut self) {
+        self.add_controller_command(move |mut controller| {
+            controller.editing = false
+        })
+    }
+
+    pub fn handle_keypress_in_code_window(&mut self, keypress: Keypress) {
+        self.add_controller_command(move |mut controller| {
+            controller.handle_keypress_in_code_window(keypress)
+        })
+    }
+
+    pub fn remove_function(&mut self, func_id: lang::ID) {
+        self.add_controller_command(move |mut controller| {
+            controller.remove_function(func_id)
+        })
+    }
+
+    pub fn load_typespec<T: lang::TypeSpec>(&mut self, ts: T) {
+        self.add_controller_command(move |mut controller| {
+            controller.load_typespec(ts)
+        })
+    }
+
+    pub fn undo(&mut self) {
+        self.add_controller_command(move |mut controller| {
+            controller.undo()
+        })
+    }
+
+    pub fn redo(&mut self) {
+        self.add_controller_command(move |mut controller| {
+            controller.redo()
+        })
+    }
+
+    // environment actions
+
+    // TODO: fix this, pretty sure it does nothing
+    pub fn run(&mut self, code: &lang::CodeNode) {
+        let code = code.clone();
+        self.add_controller_command(move |mut controller| {
+            controller.run(&code)
+        })
+    }
+
+    pub fn flush(&mut self, controller: &mut Controller) {
+        for command in self.controller_commands.drain(..) {
+            command.call_box((controller,))
+        }
+    }
+
+    pub fn add_controller_command<F: FnOnce(&mut Controller) + 'static>(&mut self, f: F) {
+        self.controller_commands.push(Box::new(f));
     }
 }
 
@@ -1215,17 +1315,15 @@ pub struct Renderer<'a, T> {
     // TODO: take this through the constructor, but now we'll let ppl peek in here
     command_buffer: Rc<RefCell<CommandBuffer>>,
     controller: &'a Controller,
-    deadcont: Rc<RefCell<Controller>>,
 }
 
 impl<'a, T: UiToolkit> Renderer<'a, T> {
-    pub fn new(ui_toolkit: &'a mut T, controller: &'a Controller, deadcont: Rc<RefCell<Controller>>,
+    pub fn new(ui_toolkit: &'a mut T, controller: &'a Controller,
                command_buffer: Rc<RefCell<CommandBuffer>>) -> Renderer<'a, T> {
         Self {
             arg_nesting_level: RefCell::new(0),
             ui_toolkit,
             controller,
-            deadcont,
             command_buffer,
         }
     }
@@ -1248,9 +1346,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.ui_toolkit.draw_menu(
                 "File",
                 &|| {
-                    let cont1 = Rc::clone(&self.deadcont);
+                    let cont1 = Rc::clone(&self.command_buffer);
                     #[cfg(feature = "default")]
-                    let cont2 = Rc::clone(&self.deadcont);
+                    let cont2 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
                             cont1.borrow_mut().save();
@@ -1278,11 +1376,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc) -> T::DrawResult {
         self.ui_toolkit.draw_window(&format!("Edit PyFunc: {}", pyfunc.id), &|| {
-            let cont1 = Rc::clone(&self.deadcont);
+            let cont1 = Rc::clone(&self.command_buffer);
             let pyfunc1 = pyfunc.clone();
-            let cont2 = Rc::clone(&self.deadcont);
+            let cont2 = Rc::clone(&self.command_buffer);
             let pyfunc2 = pyfunc.clone();
-            let cont3 = Rc::clone(&self.deadcont);
+            let cont3 = Rc::clone(&self.command_buffer);
             let pyfunc3 = pyfunc.clone();
 
             self.ui_toolkit.draw_all(vec![
@@ -1334,9 +1432,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_edit_jsfunc(&self, jsfunc: &jsstuff::JSFunc) -> T::DrawResult {
         self.ui_toolkit.draw_window(&format!("Edit JSFunc: {}", jsfunc.id), &|| {
-            let cont1 = Rc::clone(&self.deadcont);
+            let cont1 = Rc::clone(&self.command_buffer);
             let jsfunc1 = jsfunc.clone();
-            let cont3 = Rc::clone(&self.deadcont);
+            let cont3 = Rc::clone(&self.command_buffer);
             let jsfunc3 = jsfunc.clone();
 
             self.ui_toolkit.draw_all(vec![
@@ -1383,9 +1481,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_window(
             &format!("Edit Struct: {}", strukt.id),
             &|| {
-                let cont1 = Rc::clone(&self.deadcont);
+                let cont1 = Rc::clone(&self.command_buffer);
                 let strukt1 = strukt.clone();
-                let cont2 = Rc::clone(&self.deadcont);
+                let cont2 = Rc::clone(&self.command_buffer);
                 let strukt2 = strukt.clone();
 
                 self.ui_toolkit.draw_all(vec![
@@ -1430,7 +1528,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
         for (current_field_index, field) in fields.iter().enumerate() {
             let strukt1 = strukt.clone();
-            let cont1 = Rc::clone(&self.deadcont);
+            let cont1 = Rc::clone(&self.command_buffer);
             to_draw.push(self.ui_toolkit.draw_text_input_with_label(
                 "Name",
                 &field.name,
@@ -1443,7 +1541,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &||{}));
 
             let strukt1 = strukt.clone();
-            let cont1 = Rc::clone(&self.deadcont);
+            let cont1 = Rc::clone(&self.command_buffer);
             to_draw.push(self.render_type_change_combo(
                 "Type",
                 &field.field_type,
@@ -1456,7 +1554,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             ));
 
            let strukt1 = strukt.clone();
-           let cont1 = Rc::clone(&self.deadcont);
+           let cont1 = Rc::clone(&self.command_buffer);
            to_draw.push(self.ui_toolkit.draw_button(
                "Delete",
                RED_COLOR,
@@ -1469,7 +1567,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
 
         let strukt1 = strukt.clone();
-        let cont1 = Rc::clone(&self.deadcont);
+        let cont1 = Rc::clone(&self.command_buffer);
         to_draw.push(self.ui_toolkit.draw_button("Add another field", GREY_COLOR, move || {
             let mut newstrukt = strukt1.clone();
             newstrukt.fields.push(structs::StructField::new(
@@ -1489,7 +1587,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_general_function_menu<F: lang::Function>(&self, func: &F) -> T::DrawResult {
-        let cont1 = Rc::clone(&self.deadcont);
+        let cont1 = Rc::clone(&self.command_buffer);
         let func_id = func.id();
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
@@ -1509,7 +1607,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         for (current_arg_index, arg) in args.iter().enumerate() {
             let func1 = func.clone();
             let args1 = args.clone();
-            let cont1 = Rc::clone(&self.deadcont);
+            let cont1 = Rc::clone(&self.command_buffer);
             to_draw.push(self.ui_toolkit.draw_text_input_with_label(
                 "Name",
                 &arg.short_name,
@@ -1525,7 +1623,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
             let func1 = func.clone();
             let args1 = args.clone();
-            let cont1 = Rc::clone(&self.deadcont);
+            let cont1 = Rc::clone(&self.command_buffer);
             to_draw.push(self.render_type_change_combo(
                 "Type",
                 &arg.arg_type,
@@ -1541,7 +1639,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
             let func1 = func.clone();
             let args1 = args.clone();
-            let cont1 = Rc::clone(&self.deadcont);
+            let cont1 = Rc::clone(&self.command_buffer);
             to_draw.push(self.ui_toolkit.draw_button(
                 "Delete",
                 RED_COLOR,
@@ -1557,7 +1655,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
         let func1 = func.clone();
         let args1 = args.clone();
-        let cont1 = Rc::clone(&self.deadcont);
+        let cont1 = Rc::clone(&self.command_buffer);
         to_draw.push(self.ui_toolkit.draw_button("Add another argument", GREY_COLOR, move || {
             let mut args = args1.clone();
             let mut func = func1.clone();
@@ -1650,7 +1748,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         // TODO: why doesn't this return a reference???
         let return_type = func.returns();
 
-        let cont = Rc::clone(&self.deadcont);
+        let cont = Rc::clone(&self.command_buffer);
         let pyfunc2 = func.clone();
 
         self.ui_toolkit.draw_all(vec![
@@ -1668,11 +1766,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_test_section<F: lang::Function>(&self, func: F) -> T::DrawResult {
         let test_result = self.controller.get_test_result(&func);
-        let cont = Rc::clone(&self.deadcont);
+        let cont = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_text(&format!("Test result: {}", test_result)),
             self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
-                run_test(&cont, &func);
+                // TODO: running is totally broken, let's just ignore this one for now
+                // til we fix it ;)
+//                run_test(&cont, &func);
             })
         ])
     }
@@ -1706,7 +1806,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_code_window(&self) -> T::DrawResult {
-        let cont = Rc::clone(&self.deadcont);
+        let cont = Rc::clone(&self.command_buffer);
 
         let loaded_code = self.controller.loaded_code.clone();
         match loaded_code {
@@ -1826,16 +1926,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.focused(&||{
-                let controller_1 = Rc::clone(&self.deadcont);
-                let controller_2 = Rc::clone(&self.deadcont);
+                let controller_1 = Rc::clone(&self.command_buffer);
+                let controller_2 = Rc::clone(&self.command_buffer);
                 let insertion_point = menu.insertion_point.clone();
                 let new_code_node = menu.selected_option_code(&self.controller.code_genie().unwrap());
 
                 self.ui_toolkit.draw_text_input(
                     menu.search_str(),
                     move |input|{
-                        controller_1.borrow_mut().insert_code_menu.as_mut()
-                            .map(|m| {m.set_search_str(input)});
+                        controller_1.borrow_mut()
+                            .set_search_str_on_insert_code_menu(input);
                     },
                     move ||{
                         let mut controller = controller_2.borrow_mut();
@@ -1872,7 +1972,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         &self, option: &'a InsertCodeMenuOption, insertion_point: InsertionPoint) -> T::DrawResult {
         let is_selected = option.is_selected;
         let button_color = if is_selected { RED_COLOR } else { BLACK_COLOR };
-        let controller = Rc::clone(&self.deadcont);
+        let controller = Rc::clone(&self.command_buffer);
         let new_code_node = Rc::new(option.new_node.clone());
         let draw = move|| {
             let cont = controller.clone();
@@ -2120,7 +2220,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_run_button(&self, code_node: &CodeNode) -> T::DrawResult {
-        let controller = self.deadcont.clone();
+        let controller = self.command_buffer.clone();
         let code_node = code_node.clone();
         self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
             let mut controller = controller.borrow_mut();
@@ -2129,7 +2229,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_inline_editable_button(&self, label: &str, color: Color, code_node_id: lang::ID) -> T::DrawResult {
-        let controller = self.deadcont.clone();
+        let controller = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_button(label, color, move || {
             let mut controller = controller.borrow_mut();
             controller.mark_as_editing(code_node_id);
@@ -2177,24 +2277,25 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 self.render_insert_code_node()
             }
             _ => {
-                self.deadcont.borrow_mut().editing = false;
+                // TODO: this is super hacks. the editor just reaches in and makes something not
+                // editing while rendering lol
+                self.command_buffer.borrow_mut().mark_as_not_editing();
                 self.ui_toolkit.draw_button(&format!("Not possible to edit {:?}", code_node), RED_COLOR, &||{})
             }
         }
     }
 
     fn draw_inline_text_editor<F: Fn(&str) -> CodeNode + 'static>(&self, initial_value: &str, new_node_fn: F) -> T::DrawResult {
-        let controller = Rc::clone(&self.deadcont);
-        let controller2 = Rc::clone(&self.deadcont);
+        let controller = Rc::clone(&self.command_buffer);
+        let controller2 = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_text_input(
             initial_value,
             move |new_value| {
-                let new_node = new_node_fn(new_value);
-                controller.borrow_mut().loaded_code.as_mut().unwrap().replace(&new_node)
+                controller.borrow_mut().replace_code(new_node_fn(new_value));
             },
             move || {
                 let mut controller = controller2.borrow_mut();
-                controller.editing = false;
+                controller.mark_as_not_editing();
             },
             // TODO: i think we need another callback for what happens when you CANCEL
         )

@@ -7,6 +7,7 @@
 #![feature(box_patterns)]
 #![feature(await_macro, async_await, futures_api)]
 #![recursion_limit="256"]
+#![feature(fnbox)]
 
 #[cfg(feature = "default")]
 mod imgui_support;
@@ -104,15 +105,9 @@ fn load_structs(controller: &mut Controller, world: &code_loading::TheWorld) {
 }
 
 pub fn newmain() {
-    let interpreter = env::Interpreter::new();
-    // TODO: pass this into the renderer, but for now we'll just not use it
-    let _command_buffer = Rc::new(RefCell::new(editor::CommandBuffer::new()));
-
-    let mut controller = init_controller(&interpreter);
-    // we're just passing this into the renderer so it has something. we're gonna replace this with the command buffer :>
-    let deadcontroller = Rc::new(RefCell::new(init_controller(&interpreter)));
-
+    let mut interpreter = env::Interpreter::new();
     let mut command_buffer = Rc::new(RefCell::new(editor::CommandBuffer::new()));
+    let mut controller = init_controller(&interpreter);
 
     imgui_support::run(
         "cs".to_string(),
@@ -123,9 +118,9 @@ pub fn newmain() {
                 let renderer = editor::Renderer::new(
                     &mut toolkit,
                     controller,
-                    Rc::clone(&deadcontroller),
                     Rc::clone(&command_buffer));
                 renderer.render_app();
+                command_buffer.borrow_mut().flush(&mut controller);
             });
             true
        },
@@ -180,7 +175,6 @@ impl CSApp {
         let renderer = Renderer::new(
             ui_toolkit,
             unimplemented!(),
-            Rc::clone(&self.controller),
             unimplemented!());
         renderer.render_app()
     }
