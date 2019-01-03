@@ -131,6 +131,12 @@ pub trait TypeSpec : objekt::Clone + downcast_rs::Downcast {
 clone_trait_object!(TypeSpec);
 impl_downcast!(TypeSpec);
 
+impl fmt::Debug for TypeSpec {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<TypeSpec: {}>", self.id())
+    }
+}
+
 impl TypeSpec for BuiltInTypeSpec {
     fn readable_name(&self) -> &str {
         &self.readable_name

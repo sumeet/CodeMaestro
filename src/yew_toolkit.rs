@@ -503,5 +503,12 @@ pub fn draw_app(app: Rc<CSApp>) {
 
     let mut yew_app = App::<Model>::new().mount_to_body();
     yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
+    let hoohaw = Rc::new(RefCell::new(yew_app));
+//    take_ownership(yew_app);
     yew::run_loop();
+}
+
+
+fn take_ownership(y: html::Scope<Model>) {
+    println!("took it");
 }

@@ -30,9 +30,13 @@ impl Interpreter {
             async_executor: async_executor2,
         }
     }
+
+    pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {
+        Rc::clone(&self.env)
+    }
 }
 
-
+#[derive(Debug)]
 pub struct ExecutionEnvironment {
     pub console: String,
     // TODO: lol, this is going to end up being stack frames, or smth like that

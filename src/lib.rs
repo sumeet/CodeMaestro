@@ -108,7 +108,42 @@ pub fn newmain() {
     // TODO: pass this into the renderer, but for now we'll just not use it
     let _command_buffer = Rc::new(RefCell::new(editor::CommandBuffer::new()));
 
-    let controller = Controller::new(interpreter);
+    let mut controller = init_controller(&interpreter);
+    // we're just passing this into the renderer so it has something. we're gonna replace this with the command buffer :>
+    let mut deadcontroller = Rc::new(RefCell::new(init_controller(&interpreter)));
+
+    imgui_support::run(
+        "cs".to_string(),
+        imgui_toolkit::CLEAR_COLOR,
+        move |ui, keypress| {
+            let mut toolkit = imgui_toolkit::ImguiToolkit::new(ui, keypress);
+            controller.borrow_env(&mut interpreter.env().borrow_mut(), |mut controller| {
+                let renderer = editor::Renderer::new(
+                    &mut toolkit,
+                    controller,
+                    Rc::clone(&deadcontroller));
+                renderer.render_app();
+            });
+            true
+       },
+    );
+}
+
+fn init_controller(interpreter: &env::Interpreter) -> Controller {
+    let mut controller = Controller::new();
+    // TODO: controller can load the world as well as saving it, i don't think the code should
+    // be in here
+    let codestring = include_str!("../codesample.json");
+    let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
+    controller.load_code(&the_world.main_code);
+    // we could just load these into the env.... lol
+    controller.borrow_env(&mut interpreter.env().borrow_mut(), |mut controller| {
+        load_externalfuncs(&mut controller, &the_world);
+        load_structs(&mut controller, &the_world);
+        controller.load_function(builtin_funcs::Print{});
+        controller.load_function(builtin_funcs::Capitalize{});
+    });
+    controller
 }
 
 pub struct CSApp {
@@ -119,14 +154,13 @@ pub struct CSApp {
 impl CSApp {
     pub fn new() -> CSApp {
         let interpreter = env::Interpreter::new();
-        let async_executor2 = Rc::clone(&interpreter.async_executor);
+        let async_executor2 =
+            Rc::clone(&interpreter.async_executor);
 
         let app = CSApp {
             async_executor: async_executor2,
-            controller: Rc::new(RefCell::new(Controller::new(interpreter))),
+            controller: Rc::new(RefCell::new(Controller::new())),
         };
-        app.controller.borrow_mut().load_function(builtin_funcs::Print{});
-        app.controller.borrow_mut().load_function(builtin_funcs::Capitalize{});
 
         // TODO: controller can load the world as well as saving it, i don't think the code should
         // be in here
@@ -140,28 +174,8 @@ impl CSApp {
     }
 
     fn draw<T: UiToolkit>(self: &Rc<CSApp>, ui_toolkit: &mut T) -> T::DrawResult {
-        let renderer = Renderer::new(ui_toolkit, Rc::clone(&self.controller));
+        let renderer = Renderer::new(ui_toolkit, unimplemented!(), Rc::clone(&self.controller));
         renderer.render_app()
     }
 }
 
-#[cfg(feature = "javascript")]
-pub struct StdwebExecutor {}
-
-#[cfg(feature = "javascript")]
-impl StdwebExecutor {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-#[cfg(feature = "javascript")]
-impl env::AsyncExecutor for StdwebExecutor {
-    fn exec<F: Future>(&self, future: F) where Self: Sized {
-        unimplemented!()
-    }
-}
-
-#[cfg(feature = "javascript")]
-pub fn create_executor() -> StdwebExecutor {
-}

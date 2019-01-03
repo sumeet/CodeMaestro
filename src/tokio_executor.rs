@@ -19,6 +19,7 @@ pub fn forward<I,E>(f: impl OldFuture<Item=I, Error=E> + Unpin) -> impl NewFutur
     f.into_awaitable()
 }
 
+#[derive(Debug)]
 pub struct AsyncExecutor {
     current_thread: CurrentThread,
 }
@@ -40,4 +41,3 @@ impl AsyncExecutor {
         }));
     }
 }
-

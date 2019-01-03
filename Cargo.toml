@@ -25,6 +25,7 @@ lazy_static = "1.1.0"
 itertools = "0.7.8"
 downcast-rs = "1.0.3"
 futures = "0.1"
+take_mut = "0.2.2"
 
 pyo3 = { version = "0.5.2", optional = true }
 glium = { version = "0.22", default-features = true, optional = true }
