@@ -22,7 +22,7 @@ pub fn draw_app(app: Rc<CSApp>) {
        |ui, keypress| {
             let mut toolkit = ImguiToolkit::new(ui, keypress);
             app.draw(&mut toolkit);
-            app.async_executor.borrow_mut().turn();
+//            app.async_executor.borrow_mut().turn();
             true
         },
     );

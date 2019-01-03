@@ -733,10 +733,9 @@ impl TestResult {
     }
 }
 
-#[derive(Debug)]
 pub struct Controller {
     // TODO: i only need this to be public for hax, so i can make this unpublic later
-    pub execution_environment: Option<env::ExecutionEnvironment>,
+    execution_environment: Option<env::ExecutionEnvironment>,
     selected_node_id: Option<ID>,
     pub editing: bool,
     insert_code_menu: Option<InsertCodeMenu>,
@@ -895,6 +894,8 @@ impl<'a> Controller {
         }
     }
 
+    // TODO: hax passing in the command buffer, we only need it to schedule things to run from the
+    // controller :/
     pub fn handle_keypress_in_code_window(&mut self, keypress: Keypress) {
         if keypress.key == Key::Escape {
             self.handle_cancel();
@@ -1119,15 +1120,7 @@ impl<'a> Controller {
 
     // should run the loaded code node
     pub fn run(&mut self, code_node: &CodeNode) {
-//        let result = self.execution_environment.evaluate(code_node);
-//        match result {
-//            Value::Error(ref e) => {
-//                self.error_console.push_str(&format!("{:?}", e));
-//                self.error_console.push_str("\n");
-//            }
-//            _ => { }
-//        }
-//        result
+        // TODO: ugh this doesn't work
     }
 
     pub fn read_console(&self) -> &str {
@@ -1199,11 +1192,15 @@ pub trait UiToolkit {
 // controller. for now this is just easier to move us forward
 pub struct CommandBuffer {
     controller_commands: Vec<Box<FnBox(&mut Controller)>>,
+    interpreter_commands: Vec<Box<FnBox(&mut env::Interpreter)>>,
 }
 
 impl CommandBuffer {
     pub fn new() -> Self {
-        Self { controller_commands: vec![] }
+        Self {
+            controller_commands: vec![],
+            interpreter_commands: vec![],
+        }
     }
 
     pub fn save(&mut self) {
@@ -1289,23 +1286,31 @@ impl CommandBuffer {
     }
 
     // environment actions
-
-    // TODO: fix this, pretty sure it does nothing
     pub fn run(&mut self, code: &lang::CodeNode) {
         let code = code.clone();
-        self.add_controller_command(move |mut controller| {
-            controller.run(&code)
+        self.add_interpreter_command(move |mut interpreter| {
+            interpreter.run(&code, |_|{});
         })
     }
 
-    pub fn flush(&mut self, controller: &mut Controller) {
+    pub fn add_controller_command<F: FnOnce(&mut Controller) + 'static>(&mut self, f: F) {
+        self.controller_commands.push(Box::new(f));
+    }
+
+    pub fn flush_to_controller(&mut self, controller: &mut Controller) {
         for command in self.controller_commands.drain(..) {
             command.call_box((controller,))
         }
     }
 
-    pub fn add_controller_command<F: FnOnce(&mut Controller) + 'static>(&mut self, f: F) {
-        self.controller_commands.push(Box::new(f));
+    pub fn add_interpreter_command<F: FnOnce(&mut env::Interpreter) + 'static>(&mut self, f: F) {
+        self.interpreter_commands.push(Box::new(f));
+    }
+
+    pub fn flush_to_interpreter(&mut self, interpreter: &mut env::Interpreter) {
+        for command in self.interpreter_commands.drain(..) {
+            command.call_box((interpreter,))
+        }
     }
 }
 
@@ -2506,14 +2511,14 @@ fn format_typespec_select(ts: &Box<lang::TypeSpec>, nesting_level: Option<&[usiz
 }
 
 
-fn run_test<F: lang::Function>(sharedcont: &Rc<RefCell<Controller>>, func: &F) {
-    let fc = code_generation::new_function_call_with_placeholder_args(func);
-    let id = func.id();
-    let mut controller = sharedcont.borrow_mut();
-    let cont2 = Rc::clone(&sharedcont);
-    controller.execution_environment_mut().run(&fc, move |result| {
-        let mut cont = cont2.borrow_mut();
-        cont.test_result_by_func_id.insert(id, TestResult::new(result));
-    });
-}
+//fn run_test<F: lang::Function>(sharedcont: &Rc<RefCell<Controller>>, func: &F) {
+//    let fc = code_generation::new_function_call_with_placeholder_args(func);
+//    let id = func.id();
+//    let mut controller = sharedcont.borrow_mut();
+//    let cont2 = Rc::clone(&sharedcont);
+//    controller.execution_environment_mut().run(&fc, move |result| {
+//        let mut cont = cont2.borrow_mut();
+//        cont.test_result_by_func_id.insert(id, TestResult::new(result));
+//    });
+//}
 

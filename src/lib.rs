@@ -120,8 +120,10 @@ pub fn newmain() {
                     controller,
                     Rc::clone(&command_buffer));
                 renderer.render_app();
-                command_buffer.borrow_mut().flush(&mut controller);
+                command_buffer.borrow_mut().flush_to_controller(&mut controller);
             });
+            command_buffer.borrow_mut().flush_to_interpreter(&mut interpreter);
+            interpreter.turn();
             true
        },
     );
@@ -146,17 +148,12 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
 
 pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,
-    pub async_executor: Rc<RefCell<async_executor::AsyncExecutor>>,
 }
 
 impl CSApp {
     pub fn new() -> CSApp {
         let interpreter = env::Interpreter::new();
-        let async_executor2 =
-            Rc::clone(&interpreter.async_executor);
-
         let app = CSApp {
-            async_executor: async_executor2,
             controller: Rc::new(RefCell::new(Controller::new())),
         };
 
