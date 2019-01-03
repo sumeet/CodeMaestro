@@ -110,7 +110,9 @@ pub fn newmain() {
 
     let mut controller = init_controller(&interpreter);
     // we're just passing this into the renderer so it has something. we're gonna replace this with the command buffer :>
-    let mut deadcontroller = Rc::new(RefCell::new(init_controller(&interpreter)));
+    let deadcontroller = Rc::new(RefCell::new(init_controller(&interpreter)));
+
+    let mut command_buffer = Rc::new(RefCell::new(editor::CommandBuffer::new()));
 
     imgui_support::run(
         "cs".to_string(),
@@ -121,7 +123,8 @@ pub fn newmain() {
                 let renderer = editor::Renderer::new(
                     &mut toolkit,
                     controller,
-                    Rc::clone(&deadcontroller));
+                    Rc::clone(&deadcontroller),
+                    Rc::clone(&command_buffer));
                 renderer.render_app();
             });
             true
@@ -174,7 +177,11 @@ impl CSApp {
     }
 
     fn draw<T: UiToolkit>(self: &Rc<CSApp>, ui_toolkit: &mut T) -> T::DrawResult {
-        let renderer = Renderer::new(ui_toolkit, unimplemented!(), Rc::clone(&self.controller));
+        let renderer = Renderer::new(
+            ui_toolkit,
+            unimplemented!(),
+            Rc::clone(&self.controller),
+            unimplemented!());
         renderer.render_app()
     }
 }

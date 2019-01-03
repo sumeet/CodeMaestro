@@ -1213,19 +1213,20 @@ pub struct Renderer<'a, T> {
     arg_nesting_level: RefCell<u32>,
     ui_toolkit: &'a mut T,
     // TODO: take this through the constructor, but now we'll let ppl peek in here
-    pub command_buffer: Rc<RefCell<CommandBuffer>>,
+    command_buffer: Rc<RefCell<CommandBuffer>>,
     controller: &'a Controller,
     deadcont: Rc<RefCell<Controller>>,
 }
 
 impl<'a, T: UiToolkit> Renderer<'a, T> {
-    pub fn new(ui_toolkit: &'a mut T, controller: &'a Controller, deadcont: Rc<RefCell<Controller>>) -> Renderer<'a, T> {
+    pub fn new(ui_toolkit: &'a mut T, controller: &'a Controller, deadcont: Rc<RefCell<Controller>>,
+               command_buffer: Rc<RefCell<CommandBuffer>>) -> Renderer<'a, T> {
         Self {
             arg_nesting_level: RefCell::new(0),
             ui_toolkit,
             controller,
             deadcont,
-            command_buffer: Rc::new(RefCell::new(CommandBuffer::new())),
+            command_buffer,
         }
     }
 
