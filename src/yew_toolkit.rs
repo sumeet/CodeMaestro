@@ -1,4 +1,5 @@
 use super::{App as CSApp, UiToolkit};
+use super::editor;
 use super::editor::{Key as AppKey,Keypress};
 use stdweb::{console,__internal_console_unsafe,js,_js_impl};
 use yew::{html,html_impl};
@@ -235,24 +236,28 @@ impl UiToolkit for YewToolkit {
         html
     }
 
-    fn draw_main_menu_bar(&self, _draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult {
-        // not implemented yet
-        return html! { <div></div> };
-//        html! {
+    fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
 //            <div style="position: fixed; line-height: 1; width: 100%; top: 0; left: 0;",>
-//                {{ draw_menus() }}
-//            </div>
-//        }
+            <div>
+                {{ draw_menus() }}
+            </div>
+        }
     }
 
-    fn draw_menu(&self, _label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         // TODO: implement this for realsies
-        draw_menu_items()
+        html! {
+            <div>
+                <p>{label}</p>
+                {{ draw_menu_items() }}
+            </div>
+        }
     }
 
-    fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, _onselect: F) -> Self::DrawResult {
+    fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult {
         // TODO: do this for realsies
-        html! { <div>{label}</div> }
+        self.draw_button(label, editor::GREY_COLOR, onselect)
     }
 
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
@@ -452,23 +457,8 @@ fn was_shift_key_pressed(key: &str) -> bool {
     key.len() == 1 && key.chars().next().unwrap().is_uppercase()
 }
 
-use stdweb::web::error::Error;
-use stdweb::web::wait;
-// use Delay from the tokio::timer module to sleep the task:
-async fn hoohaw(s: &str) -> Result<(), Error> {
-    loop {
-        await!(wait(500));
-        console!(log, s)
-    }
-}
-
-use stdweb::{spawn_local,unwrap_future};
-
 pub fn draw_app(app: Rc<RefCell<CSApp>>) {
     yew::initialize();
-
-    spawn_local(unwrap_future(hoohaw("1")));
-    spawn_local(unwrap_future(hoohaw("2")));
 
     js! {
         var CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = null;
@@ -505,13 +495,14 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>) {
     }
 
     let mut yew_app = App::<Model>::new().mount_to_body();
-    yew_app.send_message(Msg::SetApp(app));
-    let hoohaw = Rc::new(RefCell::new(yew_app));
-//    take_ownership(yew_app);
+    yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
+    setup_ui_update_on_io_event_completion(app, yew_app);
     yew::run_loop();
 }
 
-
-fn take_ownership(y: html::Scope<Model>) {
-    println!("took it");
+fn setup_ui_update_on_io_event_completion(app: Rc<RefCell<CSApp>>, yew_app: html::Scope<Model>) {
+    let yew_app_rc = Rc::new(RefCell::new(yew_app));
+    app.borrow_mut().interpreter.async_executor.setonupdate(Rc::new(move || {
+        yew_app_rc.borrow_mut().send_message(Msg::Redraw);
+    }));
 }

@@ -11,10 +11,9 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 
-#[derive(Debug)]
 pub struct Interpreter {
     env: Rc<RefCell<ExecutionEnvironment>>,
-    async_executor: async_executor::AsyncExecutor,
+    pub async_executor: async_executor::AsyncExecutor,
 }
 
 impl Interpreter {

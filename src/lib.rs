@@ -127,7 +127,7 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
 }
 
 pub struct App {
-    interpreter: env::Interpreter,
+    pub interpreter: env::Interpreter,
     command_buffer: Rc<RefCell<editor::CommandBuffer>>,
     controller: Controller,
 }
