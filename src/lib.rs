@@ -75,8 +75,8 @@ use self::env::{ExecutionEnvironment};
 //use debug_cell::RefCell;
 
 #[cfg(feature = "default")]
-pub fn draw_app(app: Rc<CSApp>) {
-    imgui_toolkit::draw_app(Rc::clone(&app));
+pub fn draw_app(app: Rc<RefCell<App>>) {
+    imgui_toolkit::draw_app(app);
 }
 
 #[cfg(feature = "javascript")]
@@ -102,6 +102,11 @@ fn load_structs(controller: &mut Controller, world: &code_loading::TheWorld) {
     for strukt in world.structs.iter() {
         controller.load_typespec(strukt.clone());
     }
+}
+
+pub fn main() {
+    let app = App::new_rc();
+    draw_app(app);
 }
 
 pub fn newmain() {
@@ -145,6 +150,50 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     });
     controller
 }
+
+pub struct App {
+    interpreter: env::Interpreter,
+    command_buffer: Rc<RefCell<editor::CommandBuffer>>,
+    controller: Controller,
+}
+
+impl App {
+    pub fn new() -> Self {
+        let interpreter = env::Interpreter::new();
+        let command_buffer =
+            Rc::new(RefCell::new(editor::CommandBuffer::new()));
+        let controller = init_controller(&interpreter);
+        Self { interpreter, command_buffer, controller }
+    }
+
+    pub fn new_rc() -> Rc<RefCell<App>> {
+        Rc::new(RefCell::new(Self::new()))
+    }
+
+    pub fn draw<T: UiToolkit>(&mut self, mut ui_toolkit: T) -> T::DrawResult {
+        let command_buffer = Rc::clone(&self.command_buffer);
+        self.controller.borrow_env(&mut self.interpreter.env().borrow_mut(), |mut controller| {
+            let renderer = editor::Renderer::new(
+                &mut ui_toolkit,
+                controller,
+                Rc::clone(&command_buffer));
+            renderer.render_app()
+        })
+    }
+
+    pub fn flush_commands(&mut self) {
+        let command_buffer = Rc::clone(&self.command_buffer);
+        self.controller.borrow_env(&mut self.interpreter.env().borrow_mut(), |mut controller| {
+            command_buffer.borrow_mut().flush_to_controller(&mut controller);
+        });
+        command_buffer.borrow_mut().flush_to_interpreter(&mut self.interpreter);
+    }
+
+    pub fn turn_event_loop(&mut self) {
+        self.interpreter.turn()
+    }
+}
+
 
 pub struct CSApp {
     pub controller: Rc<RefCell<Controller>>,

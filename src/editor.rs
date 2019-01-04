@@ -760,13 +760,13 @@ impl<'a> Controller {
         }
     }
 
-    pub fn borrow_env<F: FnMut(&mut Self)>(&mut self,
+    pub fn borrow_env<R, F: FnMut(&mut Self) -> R>(&mut self,
                                        env: &mut env::ExecutionEnvironment,
-                                       mut borrows_self: F) {
+                                       mut borrows_self: F) -> R {
         take_mut::take(env, |env| {
             self.execution_environment = Some(env);
-            borrows_self(self);
-            self.execution_environment.take().unwrap()
+            let ret = borrows_self(self);
+            (self.execution_environment.take().unwrap(), ret)
         })
     }
 

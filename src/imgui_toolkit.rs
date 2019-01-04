@@ -1,4 +1,4 @@
-use super::{CSApp};
+use super::{App};
 use super::editor::{UiToolkit};
 use super::editor::{Keypress};
 use super::imgui_support;
@@ -17,12 +17,14 @@ const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 50.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (300.0, 200.0);
 
-pub fn draw_app(app: Rc<CSApp>) {
+pub fn draw_app(app: Rc<RefCell<App>>) {
     imgui_support::run("cs".to_string(), CLEAR_COLOR,
        |ui, keypress| {
+            let mut app = app.borrow_mut();
             let mut toolkit = ImguiToolkit::new(ui, keypress);
-            app.draw(&mut toolkit);
-//            app.async_executor.borrow_mut().turn();
+            app.draw(toolkit);
+            app.flush_commands();
+            app.interpreter.turn();
             true
         },
     );
