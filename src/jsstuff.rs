@@ -2,6 +2,7 @@ use super::env;
 use super::lang;
 use super::external_func;
 use super::external_func::ValueWithEnv;
+use super::structs;
 
 use itertools::Itertools;
 use serde;
@@ -37,12 +38,12 @@ impl JSFunc {
         }
     }
 
-    fn extract(&self, value: stdweb::Value) -> lang::Value {
+    fn extract(&self, value: stdweb::Value, env: &env::ExecutionEnvironment) -> lang::Value {
         use self::lang::Function;
-        self.ex(value, &self.returns())
+        self.ex(value, &self.returns(), env)
     }
 
-    fn ex(&self, value: stdweb::Value, into_type: &lang::Type) -> lang::Value {
+    fn ex(&self, value: stdweb::Value, into_type: &lang::Type, env: &env::ExecutionEnvironment) -> lang::Value {
         if into_type.matches_spec(&lang::STRING_TYPESPEC) {
             if let Some(string) = value.into_string() {
                 return lang::Value::String(string)
@@ -62,16 +63,33 @@ impl JSFunc {
                 let collection_type = into_type.params.first().unwrap();
                 let collected: Vec<lang::Value> = vec.into_iter()
                     .map(|value| {
-                        self.ex(value, collection_type)
+                        self.ex(value, collection_type, env)
                     })
                     .collect();
                 return lang::Value::List(collected)
             }
+        } else if let Some(strukt) = env.find_struct(into_type.typespec_id) {
+            if let Some(value) = self.stdweb_value_into_struct(value, strukt, env) {
+                return value
+            }
         }
         lang::Value::Error(lang::Error::JavaScriptDeserializationError)
     }
-}
 
+    fn stdweb_value_into_struct(&self, value: stdweb::Value, strukt: &structs::Struct,
+                                env: &env::ExecutionEnvironment) -> Option<lang::Value> {
+        if let Some(obj) = value.into_object() {
+            let mut map : HashMap<String, stdweb::Value> = obj.into();
+            let values : Option<_>= strukt.fields.iter()
+                .map(|strukt_field| {
+                    let js_obj = map.remove(&strukt_field.name)?;
+                    Some((strukt_field.id, self.ex(js_obj, &strukt_field.field_type, env)))
+                }).collect();
+            return Some(lang::Value::Struct { struct_id: strukt.id, values: values? })
+        }
+        None
+    }
+}
 
 impl<'a> serde::Serialize for ValueWithEnv<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
@@ -140,7 +158,7 @@ impl lang::Function for JSFunc {
 
         match eval(&self.eval, named_args) {
             Err((err_name, err_string)) => lang::Value::Error(lang::Error::JavaScriptError(err_name, err_string)),
-            Ok(value) => self.extract(value)
+            Ok(value) => self.extract(value, env)
         }
     }
 
