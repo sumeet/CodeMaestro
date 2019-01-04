@@ -1286,10 +1286,10 @@ impl CommandBuffer {
     }
 
     // environment actions
-    pub fn run(&mut self, code: &lang::CodeNode) {
+    pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
         let code = code.clone();
         self.add_interpreter_command(move |mut interpreter| {
-            interpreter.run(&code, |_|{});
+            interpreter.run(&code, callback);
         })
     }
 
@@ -1778,9 +1778,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_text(&format!("Test result: {}", test_result)),
             self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
-                // TODO: running is totally broken, let's just ignore this one for now
-                // til we fix it ;)
-//                run_test(&cont, &func);
+                run_test(&cont, &func);
             })
         ])
     }
@@ -2232,7 +2230,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let code_node = code_node.clone();
         self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
             let mut controller = controller.borrow_mut();
-            controller.run(&code_node);
+            controller.run(&code_node, |_|{});
         })
     }
 
@@ -2513,15 +2511,15 @@ fn format_typespec_select(ts: &Box<lang::TypeSpec>, nesting_level: Option<&[usiz
     format!("{}{} {}", indent, ts.symbol(), ts.readable_name())
 }
 
-
-//fn run_test<F: lang::Function>(sharedcont: &Rc<RefCell<Controller>>, func: &F) {
-//    let fc = code_generation::new_function_call_with_placeholder_args(func);
-//    let id = func.id();
-//    let mut controller = sharedcont.borrow_mut();
-//    let cont2 = Rc::clone(&sharedcont);
-//    controller.execution_environment_mut().run(&fc, move |result| {
-//        let mut cont = cont2.borrow_mut();
-//        cont.test_result_by_func_id.insert(id, TestResult::new(result));
-//    });
-//}
+fn run_test<F: lang::Function>(command_buffer: &Rc<RefCell<CommandBuffer>>, func: &F) {
+    let fc = code_generation::new_function_call_with_placeholder_args(func);
+    let id = func.id();
+    let command_buffer2 = Rc::clone(command_buffer);
+    command_buffer.borrow_mut().run(&fc, move |value| {
+        let mut command_buffer = command_buffer2.borrow_mut();
+        command_buffer.add_controller_command(move |controller| {
+            controller.test_result_by_func_id.insert(id, TestResult::new(value));
+        });
+    });
+}
 
