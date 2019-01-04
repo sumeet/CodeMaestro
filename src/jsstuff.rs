@@ -4,13 +4,11 @@ use super::external_func;
 use super::external_func::ValueWithEnv;
 use super::structs;
 
-use itertools::Itertools;
 use serde;
 use serde::ser::{SerializeSeq,SerializeMap};
 use serde_derive::{Serialize,Deserialize};
 use stdweb::{js,_js_impl, js_serializable, __js_serializable_serde_boilerplate,
              __js_serializable_boilerplate};
-use stdweb::private::SerializedValue;
 use stdweb;
 use std::collections::HashMap;
 use stdweb::unstable::TryInto;

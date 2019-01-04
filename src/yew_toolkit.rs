@@ -1,7 +1,8 @@
 use super::{App as CSApp, UiToolkit};
 use super::editor;
 use super::editor::{Key as AppKey,Keypress};
-use stdweb::{console,__internal_console_unsafe,js,_js_impl};
+use stdweb::{js,_js_impl};
+//use stdweb::{console,__internal_console_unsafe};
 use yew::{html,html_impl};
 use yew::prelude::*;
 use std::cell::RefCell;
@@ -125,10 +126,10 @@ impl UiToolkit for YewToolkit {
                         // rest we can do keypress :/
                         if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
                             // LOL this is for ctrl+r
-                            (e.key() == "r" || e.key() == "R" && e.ctrl_key()) {
-                            console!(log, e.key());
+                            ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
+                            //console!(log, e.key());
                             if let Some(keypress) = map_keypress_event(&e) {
-                                console!(log, format!("{:?}", keypress));
+                                //console!(log, format!("{:?}", keypress));
                                 handle_keypress_2(keypress);
                             }
                             e.prevent_default();
@@ -472,7 +473,7 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>) {
             if (focusedId && focusedId > 0) {
                 var el = document.getElementById(focusedId);
                 if (el) {
-                   console.log("focusing: " + el.id);
+                   //console.log("focusing: " + el.id);
                    let closestFocusable = findClosestFocusable(el);
                    if (closestFocusable) {
                        CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = closestFocusable;

@@ -6,8 +6,6 @@ use std::iter;
 use std::boxed::FnBox;
 
 use objekt::{clone_trait_object,__internal_clone_trait_object};
-use failure::{err_msg};
-use failure::Error as Error;
 use super::env;
 use super::lang;
 use super::code_loading;
@@ -1078,25 +1076,6 @@ impl<'a> Controller {
 
     }
 
-    pub fn select_loaded_code_if_nothing_selected(&mut self) -> Result<bool,Error> {
-        if self.loaded_code.is_none() { return Err(err_msg("No code loaded")) }
-        let loaded_code = self.loaded_code.as_ref().unwrap().clone();
-        if self.get_selected_node_id().is_none() {
-            self.set_selected_node_id(Some(loaded_code.id()));
-            return Ok(true)
-        }
-        Ok(false)
-    }
-
-    pub fn set_typespec<F: external_func::ModifyableFunc>(&mut self, mut func: F,
-                                                          typespec: &Box<lang::TypeSpec>,
-                                                          nesting_level: &[usize]) {
-        let mut root_return_type = func.returns();
-        edit_types::set_typespec(&mut root_return_type, typespec, nesting_level);
-        func.set_return_type(root_return_type);
-        self.load_function(func)
-    }
-
     pub fn load_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
         self.execution_environment_mut().add_typespec(typespec)
     }
@@ -1278,11 +1257,11 @@ impl CommandBuffer {
         })
     }
 
-    pub fn redo(&mut self) {
-        self.add_controller_command(move |controller| {
-            controller.redo()
-        })
-    }
+//    pub fn redo(&mut self) {
+//        self.add_controller_command(move |controller| {
+//            controller.redo()
+//        })
+//    }
 
     // environment actions
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
