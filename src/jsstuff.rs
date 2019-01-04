@@ -107,8 +107,6 @@ impl<'a> serde::Serialize for ValueWithEnv<'a> {
     }
 }
 
-//struct Wrapper<'a, T: serde::Serialize + 'a>(&'a T);
-
 // WTF?
 js_serializable!(impl <'a> for ValueWithEnv<'a>);
 
