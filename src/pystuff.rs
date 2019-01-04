@@ -11,6 +11,7 @@ use serde_derive::{Serialize,Deserialize};
 
 use super::env;
 use super::external_func;
+use super::external_func::{ValueWithEnv};
 use super::lang;
 use super::structs;
 
@@ -66,11 +67,6 @@ pub struct PyFunc {
     pub name: String,
     pub id: lang::ID,
     pub args: Vec<lang::ArgumentDefinition>,
-}
-
-struct ValueWithEnv<'a> {
-    value: lang::Value,
-    env: &'a env::ExecutionEnvironment,
 }
 
 impl<'a> IntoPyObject for ValueWithEnv<'a> {

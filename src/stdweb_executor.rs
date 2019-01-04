@@ -1,6 +1,5 @@
-use stdweb::{spawn_local,unwrap_future};
+use stdweb::{spawn_local};
 
-use std::cell::RefCell;
 use std::future::Future as NewFuture;
 use std::rc::Rc;
 
@@ -20,7 +19,7 @@ impl AsyncExecutor {
     }
 
     pub fn exec<I, E: std::fmt::Debug, F: NewFuture<Output = Result<I, E>> + 'static>(&mut self, future: F) {
-        let mut onupdate = self.onupdate.clone();
+        let onupdate = self.onupdate.clone();
         spawn_local(async move {
             await!(future).unwrap();
             onupdate.map(|f| f());

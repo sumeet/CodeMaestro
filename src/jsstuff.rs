@@ -1,9 +1,15 @@
 use super::env;
 use super::lang;
 use super::external_func;
+use super::external_func::ValueWithEnv;
 
+use itertools::Itertools;
+use serde;
+use serde::ser::{SerializeSeq,SerializeMap};
 use serde_derive::{Serialize,Deserialize};
-use stdweb::{js,_js_impl};
+use stdweb::{js,_js_impl, js_serializable, __js_serializable_serde_boilerplate,
+             __js_serializable_boilerplate};
+use stdweb::private::SerializedValue;
 use stdweb;
 use std::collections::HashMap;
 use stdweb::unstable::TryInto;
@@ -66,16 +72,56 @@ impl JSFunc {
     }
 }
 
+
+impl<'a> serde::Serialize for ValueWithEnv<'a> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        use super::lang::Value::*;
+        match (&self.env, &self.value) {
+            (_, Null) => serializer.serialize_none(),
+            (_, String(s)) => serializer.serialize_str(&s),
+            // not quite sure what to do with these...
+            (_, Error(e)) => serializer.serialize_str(&format!("{:?}", e)),
+            // TODO: fix this i128 to i64 cast...
+            (_, Number(i)) => serializer.serialize_i64(*i as i64),
+            (env, List(v)) => {
+                let mut seq = serializer.serialize_seq(Some(v.len()))?;
+                for item in v {
+                    // TODO: ugh this clone...
+                    seq.serialize_element(&Self { value: item.clone(), env })?;
+                }
+                seq.end()
+            },
+            (env, Struct { struct_id, values }) => {
+                let strukt = env.find_struct(*struct_id).unwrap();
+                let field_by_id = strukt.field_by_id();
+                let mut map = serializer.serialize_map(Some(values.len()))?;
+                for (id, value) in values {
+                    // TODO: ugh this clone
+                    let val_with_env = Self { value: value.clone(), env };
+                    let name = &field_by_id.get(&id).unwrap().name;
+                    map.serialize_entry(name, &val_with_env)?;
+                }
+                map.end()
+            }
+        }
+    }
+}
+
+//struct Wrapper<'a, T: serde::Serialize + 'a>(&'a T);
+
+// WTF?
+js_serializable!(impl <'a> for ValueWithEnv<'a>);
+
 // caveats regarding this eval:
 // 1) we don't support asynchronous code at all ATM
 // 2) down the line, any JavaScript Error thrown will get converted into a
 //    lang::Error::JavascriptError with a tuple containing (JS exception name, JS exception message)
 // 3) any instance of Error returned (not thrown) will also be treated as an error
 // 4) anything thrown that's not an Error, will result in a lang::JavascriptDeserializationError
-fn eval(js_code: &str) -> Result<stdweb::Value, (String, String)> {
+fn eval(js_code: &str, locals: HashMap<String, ValueWithEnv>) -> Result<stdweb::Value, (String, String)> {
     let value = js! {
         try {
-            return eval(@{js_code});
+            return  CS_EVAL__(@{js_code}, @{locals});
         } catch(err) {
             return err;
         }
@@ -90,8 +136,11 @@ fn eval(js_code: &str) -> Result<stdweb::Value, (String, String)> {
 }
 
 impl lang::Function for JSFunc {
-    fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        match eval(&self.eval) {
+    fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        let named_args : HashMap<String, ValueWithEnv> = external_func::to_named_args(self, args)
+            .map(|(name, value)| (name, ValueWithEnv { env, value })).collect();
+
+        match eval(&self.eval, named_args) {
             Err((err_name, err_string)) => lang::Value::Error(lang::Error::JavaScriptError(err_name, err_string)),
             Ok(value) => self.extract(value)
         }

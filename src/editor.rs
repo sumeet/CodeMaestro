@@ -8,7 +8,6 @@ use std::boxed::FnBox;
 use objekt::{clone_trait_object,__internal_clone_trait_object};
 use failure::{err_msg};
 use failure::Error as Error;
-use super::async_executor;
 use super::env;
 use super::lang;
 use super::code_loading;
@@ -1119,7 +1118,7 @@ impl<'a> Controller {
     }
 
     // should run the loaded code node
-    pub fn run(&mut self, code_node: &CodeNode) {
+    pub fn run(&mut self, _code_node: &CodeNode) {
         // TODO: ugh this doesn't work
     }
 
@@ -1204,46 +1203,46 @@ impl CommandBuffer {
     }
 
     pub fn save(&mut self) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.save()
         })
     }
 
     pub fn load_function<F: lang::Function>(&mut self, func: F) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.load_function(func)
         })
     }
 
     pub fn hide_insert_code_menu(&mut self) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.hide_insert_code_menu()
         })
     }
 
     pub fn insert_code(&mut self, code: lang::CodeNode,
                        insertion_point: InsertionPoint) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.insert_code(code, insertion_point)
         })
     }
 
     pub fn set_search_str_on_insert_code_menu(&mut self, input: &str) {
         let input = input.to_owned();
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.insert_code_menu.as_mut()
                 .map(|m| {m.set_search_str(&input)});
         })
     }
 
     pub fn mark_as_editing(&mut self, code_node_id: lang::ID) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.mark_as_editing(code_node_id)
         })
     }
 
     pub fn replace_code(&mut self, code: lang::CodeNode) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.loaded_code.as_mut().unwrap()
                 .replace(&code)
         })
@@ -1256,31 +1255,31 @@ impl CommandBuffer {
     }
 
     pub fn handle_keypress_in_code_window(&mut self, keypress: Keypress) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.handle_keypress_in_code_window(keypress)
         })
     }
 
     pub fn remove_function(&mut self, func_id: lang::ID) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.remove_function(func_id)
         })
     }
 
     pub fn load_typespec<T: lang::TypeSpec>(&mut self, ts: T) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.load_typespec(ts)
         })
     }
 
     pub fn undo(&mut self) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.undo()
         })
     }
 
     pub fn redo(&mut self) {
-        self.add_controller_command(move |mut controller| {
+        self.add_controller_command(move |controller| {
             controller.redo()
         })
     }
@@ -1288,7 +1287,7 @@ impl CommandBuffer {
     // environment actions
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
         let code = code.clone();
-        self.add_interpreter_command(move |mut interpreter| {
+        self.add_interpreter_command(move |interpreter| {
             interpreter.run(&code, callback);
         })
     }
@@ -1456,6 +1455,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     },
                     || {},
                 ),
+                self.render_arguments_selector(jsfunc.clone()),
                 self.ui_toolkit.draw_multiline_text_input_with_label(
                     "Code",
                     &jsfunc.eval,

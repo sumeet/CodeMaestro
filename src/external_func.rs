@@ -1,3 +1,4 @@
+use super::env;
 use super::lang;
 use std::collections::HashMap;
 
@@ -5,6 +6,11 @@ pub trait ModifyableFunc: lang::Function {
     fn set_return_type(&mut self, return_type: lang::Type);
     fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>);
     fn clone(&self) -> Self;
+}
+
+pub struct ValueWithEnv<'a> {
+    pub value: lang::Value,
+    pub env: &'a env::ExecutionEnvironment,
 }
 
 pub fn to_named_args(func: &lang::Function,

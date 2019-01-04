@@ -68,9 +68,8 @@ mod async_executor {
 
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::future::Future;
 
-use self::editor::{Controller,Renderer,UiToolkit};
+use self::editor::{Controller,UiToolkit};
 use self::env::{ExecutionEnvironment};
 //use debug_cell::RefCell;
 
@@ -145,9 +144,9 @@ impl App {
         Rc::new(RefCell::new(Self::new()))
     }
 
-    pub fn draw<T: UiToolkit>(&mut self, mut ui_toolkit: &mut T) -> T::DrawResult {
+    pub fn draw<T: UiToolkit>(&mut self, ui_toolkit: &mut T) -> T::DrawResult {
         let command_buffer = Rc::clone(&self.command_buffer);
-        self.controller.borrow_env(&mut self.interpreter.env().borrow_mut(), |mut controller| {
+        self.controller.borrow_env(&mut self.interpreter.env().borrow_mut(), |controller| {
             let renderer = editor::Renderer::new(
                 ui_toolkit,
                 controller,
