@@ -1,4 +1,4 @@
-use super::{CSApp, UiToolkit};
+use super::{App as CSApp, UiToolkit};
 use super::editor::{Key as AppKey,Keypress};
 use stdweb::{console,__internal_console_unsafe,js,_js_impl};
 use yew::{html,html_impl};
@@ -10,11 +10,11 @@ use stdweb::traits::IEvent;
 use itertools::Itertools;
 
 pub struct Model {
-    app: Option<Rc<CSApp>>,
+    app: Option<Rc<RefCell<CSApp>>>,
 }
 
 pub enum Msg {
-    SetApp(Rc<CSApp>),
+    SetApp(Rc<RefCell<CSApp>>),
     Redraw,
     DontRedraw,
 }
@@ -35,7 +35,10 @@ impl Component for Model {
                 self.app = Some(app);
                 true
             }
-            Msg::Redraw => true,
+            Msg::Redraw => {
+                self.app.clone().map(|app| app.borrow_mut().flush_commands());
+                true
+            },
             Msg::DontRedraw => false,
         }
     }
@@ -403,7 +406,7 @@ impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         if let Some(ref app) = self.app {
             let mut tk = YewToolkit::new();
-            let drawn = app.draw(&mut tk);
+            let drawn = app.borrow_mut().draw(&mut tk);
             js! {
                 document.body.setAttribute("data-focused-id", @{tk.get_focused_element_id()});
             }
@@ -461,7 +464,7 @@ async fn hoohaw(s: &str) -> Result<(), Error> {
 
 use stdweb::{spawn_local,unwrap_future};
 
-pub fn draw_app(app: Rc<CSApp>) {
+pub fn draw_app(app: Rc<RefCell<CSApp>>) {
     yew::initialize();
 
     spawn_local(unwrap_future(hoohaw("1")));
@@ -502,7 +505,7 @@ pub fn draw_app(app: Rc<CSApp>) {
     }
 
     let mut yew_app = App::<Model>::new().mount_to_body();
-    yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
+    yew_app.send_message(Msg::SetApp(app));
     let hoohaw = Rc::new(RefCell::new(yew_app));
 //    take_ownership(yew_app);
     yew::run_loop();

@@ -80,8 +80,8 @@ pub fn draw_app(app: Rc<RefCell<App>>) {
 }
 
 #[cfg(feature = "javascript")]
-pub fn draw_app(app: Rc<CSApp>) {
-    yew_toolkit::draw_app(Rc::clone(&app));
+pub fn draw_app(app: Rc<RefCell<App>>) {
+    yew_toolkit::draw_app(app);
 }
 
 #[cfg(feature = "default")]
@@ -107,31 +107,6 @@ fn load_structs(controller: &mut Controller, world: &code_loading::TheWorld) {
 pub fn main() {
     let app = App::new_rc();
     draw_app(app);
-}
-
-pub fn newmain() {
-    let mut interpreter = env::Interpreter::new();
-    let mut command_buffer = Rc::new(RefCell::new(editor::CommandBuffer::new()));
-    let mut controller = init_controller(&interpreter);
-
-    imgui_support::run(
-        "cs".to_string(),
-        imgui_toolkit::CLEAR_COLOR,
-        move |ui, keypress| {
-            let mut toolkit = imgui_toolkit::ImguiToolkit::new(ui, keypress);
-            controller.borrow_env(&mut interpreter.env().borrow_mut(), |mut controller| {
-                let renderer = editor::Renderer::new(
-                    &mut toolkit,
-                    controller,
-                    Rc::clone(&command_buffer));
-                renderer.render_app();
-                command_buffer.borrow_mut().flush_to_controller(&mut controller);
-            });
-            command_buffer.borrow_mut().flush_to_interpreter(&mut interpreter);
-            interpreter.turn();
-            true
-       },
-    );
 }
 
 fn init_controller(interpreter: &env::Interpreter) -> Controller {
@@ -170,11 +145,11 @@ impl App {
         Rc::new(RefCell::new(Self::new()))
     }
 
-    pub fn draw<T: UiToolkit>(&mut self, mut ui_toolkit: T) -> T::DrawResult {
+    pub fn draw<T: UiToolkit>(&mut self, mut ui_toolkit: &mut T) -> T::DrawResult {
         let command_buffer = Rc::clone(&self.command_buffer);
         self.controller.borrow_env(&mut self.interpreter.env().borrow_mut(), |mut controller| {
             let renderer = editor::Renderer::new(
-                &mut ui_toolkit,
+                ui_toolkit,
                 controller,
                 Rc::clone(&command_buffer));
             renderer.render_app()
@@ -193,36 +168,3 @@ impl App {
         self.interpreter.turn()
     }
 }
-
-
-pub struct CSApp {
-    pub controller: Rc<RefCell<Controller>>,
-}
-
-impl CSApp {
-    pub fn new() -> CSApp {
-        let interpreter = env::Interpreter::new();
-        let app = CSApp {
-            controller: Rc::new(RefCell::new(Controller::new())),
-        };
-
-        // TODO: controller can load the world as well as saving it, i don't think the code should
-        // be in here
-        let codestring = include_str!("../codesample.json");
-        let the_world : code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
-        app.controller.borrow_mut().load_code(&the_world.main_code);
-        load_externalfuncs(&mut app.controller.borrow_mut(), &the_world);
-        load_structs(&mut app.controller.borrow_mut(), &the_world);
-
-        app
-    }
-
-    fn draw<T: UiToolkit>(self: &Rc<CSApp>, ui_toolkit: &mut T) -> T::DrawResult {
-        let renderer = Renderer::new(
-            ui_toolkit,
-            unimplemented!(),
-            unimplemented!());
-        renderer.render_app()
-    }
-}
-
