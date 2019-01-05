@@ -36,7 +36,7 @@ struct State {
 }
 
 fn buf(text: &str) -> ImString {
-    let mut imstr = ImString::with_capacity(100);
+    let mut imstr = ImString::with_capacity(text.len() + 500);
     imstr.push_str(text);
     imstr
 }

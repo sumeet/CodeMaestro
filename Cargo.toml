@@ -8,7 +8,7 @@ edition = "2018"
 default-run = "cs"
 
 [features]
-default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3",
+default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3", "slack",
            "tokio", "tokio-reactor", "irc", "irc-proto", "tokio-async-await", "tokio-current-thread"]
 javascript = ["yew", "stdweb"]
 
@@ -39,9 +39,9 @@ tokio-async-await = {version = "0.1.4", optional = true }
 tokio-current-thread = {version = "0.1.4", optional = true }
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
-
 stdweb = {version = "0.4.12", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"], optional = true }
 yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
+slack = { git = "https://github.com/sumeet/slack-rs", features = ["future"], branch = "master", optional = true }
 
 [patch.crates-io]
 futures-core-preview = { git = "https://github.com/cramertj/futures-rs", branch = "update-nightly" }

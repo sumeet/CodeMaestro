@@ -108,22 +108,22 @@
   },
   "pyfuncs": [
     {
-      "prelude": "",
-      "eval": "str(mah) + mah.name",
+      "prelude": "import random",
+      "eval": "random.choice(['hi', 'bye']) + ' ' + input",
       "return_type": {
         "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
         "params": []
       },
-      "name": "pymahhhh",
-      "id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
+      "name": "somerandomstuff",
+      "id": "29436fad-b1cf-4525-85b7-e9133cd7a1fb",
       "args": [
         {
-          "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
+          "id": "b4e2e666-7467-4496-9d1d-52abdafc0a84",
           "arg_type": {
-            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           },
-          "short_name": "mah"
+          "short_name": "input"
         }
       ]
     },
@@ -148,22 +148,22 @@
       ]
     },
     {
-      "prelude": "import random",
-      "eval": "random.choice(['hi', 'bye']) + ' ' + input",
+      "prelude": "from slack.io.aiohttp import SlackAPI\n\nasync def rtm(client):\n    async for event in client.rtm():\n ",
+      "eval": "str(mah) + mah.name",
       "return_type": {
         "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
         "params": []
       },
-      "name": "somerandomstuff",
-      "id": "29436fad-b1cf-4525-85b7-e9133cd7a1fb",
+      "name": "pymahhhh",
+      "id": "9429d63f-fb92-4ba2-afad-6692caeba7f9",
       "args": [
         {
-          "id": "b4e2e666-7467-4496-9d1d-52abdafc0a84",
+          "id": "1ace4394-96ff-49fe-a69f-94a08438d251",
           "arg_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "typespec_id": "dd4b190b-663c-444a-afea-970a05b4f787",
             "params": []
           },
-          "short_name": "input"
+          "short_name": "mah"
         }
       ]
     }
