@@ -3,6 +3,7 @@ use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::iter;
+use std::future::Future;
 
 #[cfg(feature = "javascript")]
 use stdweb::{js,_js_impl};
@@ -97,6 +98,17 @@ pub enum Error {
     JavaScriptError(String, String),
 }
 
+use futures::future::Shared;
+use futures::Future as OldFuture;
+#[derive(Clone)]
+pub struct ValueFuture(pub Shared<Box<OldFuture<Item = Value, Error = ()>>>);
+
+impl fmt::Debug for ValueFuture {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<ValueFuture>")
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum Value {
     Null,
@@ -105,7 +117,8 @@ pub enum Value {
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Vec<Value>),
-    Struct {struct_id: ID, values: StructValues}
+    Struct {struct_id: ID, values: StructValues},
+    Future(ValueFuture)
 }
 
 type StructValues = HashMap<ID, Value>;

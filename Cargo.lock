@@ -301,6 +301,7 @@ dependencies = [
  "futures 0.1.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "glium 0.22.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "glutin 0.18.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "http 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui 0.0.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui-glium-renderer 0.0.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui-sys 0.0.21 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -14,7 +14,8 @@ struct MouseState {
     wheel: f32,
 }
 
-pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, clear_color: [f32; 4], mut run_ui: F) {
+pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
+                                                    clear_color: [f32; 4], mut run_ui: F) {
     use glium::glutin;
     use glium::{Display, Surface};
     use imgui_glium_renderer::Renderer;

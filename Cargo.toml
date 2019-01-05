@@ -9,7 +9,7 @@ default-run = "cs"
 
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3", "slack",
-           "tokio", "tokio-reactor", "irc", "irc-proto", "tokio-async-await", "tokio-current-thread"]
+           "tokio", "tokio-reactor", "irc", "irc-proto", "tokio-current-thread"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
@@ -26,6 +26,9 @@ itertools = "0.7.8"
 downcast-rs = "1.0.3"
 futures = "0.1"
 take_mut = "0.2.2"
+http = "0.1"
+# need this for the old / new futures compat layer in wasm as well as native
+tokio-async-await = {version = "0.1.4", features = ["async-await-preview"]}
 
 pyo3 = { version = "0.5.2", optional = true }
 glium = { version = "0.22", default-features = true, optional = true }
@@ -35,7 +38,6 @@ imgui-sys = { version = "0.0.21", optional = true }
 imgui-glium-renderer = { version = "0.0.21", optional = true }
 tokio = {version = "0.1.13", features = ["async-await-preview"], optional = true }
 tokio-reactor = {version = "0.1.7", optional = true }
-tokio-async-await = {version = "0.1.4", optional = true }
 tokio-current-thread = {version = "0.1.4", optional = true }
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }

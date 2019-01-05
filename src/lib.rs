@@ -1,3 +1,4 @@
+#![feature(trait_alias)]
 #![feature(unboxed_closures)]
 #![feature(specialization)]
 #![feature(nll)]
@@ -16,6 +17,7 @@ mod imgui_toolkit;
 #[cfg(feature = "javascript")]
 mod yew_toolkit;
 
+mod asynk;
 pub mod builtin_funcs;
 pub mod lang;
 mod structs;
@@ -63,6 +65,14 @@ mod stdweb_executor;
 #[cfg(feature = "javascript")]
 mod async_executor {
     pub use super::stdweb_executor::*;
+}
+
+#[cfg(feature = "javascript")]
+mod wasm_http_client;
+
+#[cfg(feature = "javascript")]
+mod http_client {
+    pub use super::wasm_http_client::*;
 }
 
 
@@ -121,6 +131,7 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
         load_structs(&mut controller, &the_world);
         controller.load_function(builtin_funcs::Print{});
         controller.load_function(builtin_funcs::Capitalize{});
+        controller.load_function(builtin_funcs::HTTPGet{});
     });
     controller
 }
