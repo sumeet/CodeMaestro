@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::future::Future;
 use std ::pin::Pin;
 use std::rc::Rc;
+use stdweb::{console,__internal_console_unsafe,js,_js_impl};
 
 use itertools::Itertools;
 
@@ -25,9 +26,13 @@ impl Interpreter {
     }
 
     pub fn run<F: FnOnce(lang::Value) + 'static>(&mut self, code_node: &lang::CodeNode, callback: F) {
+        use super::asynk::forward;
         let fut = self.evaluate(code_node);
         self.async_executor.exec(async move {
-            callback(await!(fut));
+            let mut val = await!(fut);
+            while let lang::Value::Future(future) = val {
+                val = await!(future);
+            }
             let ok : Result<(), ()> = Ok(());
             ok
         })

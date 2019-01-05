@@ -4,3 +4,9 @@ function CS_EVAL__(js_code, locals) {
     return eval(eval_string);
 }
 
+async function CS_FETCH__(url) {
+    console.log("making the damn request");
+    var resp = await fetch(url);
+    console.log("made the damn request!");
+    return await resp.text();
+}

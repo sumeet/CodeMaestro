@@ -98,16 +98,11 @@ pub enum Error {
     JavaScriptError(String, String),
 }
 
-use futures::future::Shared;
-use futures::Future as OldFuture;
-#[derive(Clone)]
-pub struct ValueFuture(pub Shared<Box<OldFuture<Item = Value, Error = ()>>>);
+use futures_util::future::Shared;
+use std::pin::Pin;
 
-impl fmt::Debug for ValueFuture {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<ValueFuture>")
-    }
-}
+
+pub type ValueFuture = Shared<Pin<Box<Future<Output = Value>>>>;
 
 #[derive(Clone, Debug)]
 pub enum Value {

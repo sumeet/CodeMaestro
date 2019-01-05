@@ -82,6 +82,7 @@ pub struct HTTPGet {}
 use http::Request;
 use super::http_client;
 use super::asynk::{backward,forward};
+use futures_util::future::FutureExt;
 use futures::Future;
 
 impl lang::Function for HTTPGet {
@@ -89,18 +90,12 @@ impl lang::Function for HTTPGet {
         match args.get(&self.takes_args()[0].id) {
             Some(lang::Value::String(ref url)) =>  {
                 let request = Request::get(url).body(()).unwrap();
-                http_client::fetch(request);
-//                lang::Value::Future(lang::ValueFuture(Box::new(Future::shared(backward(async move {
-//                    //await!(http_client);
-//                    lang::Value::Null
-//                })))))
-//                lang::Value::Future(lang::ValueFuture(
-//                    Future::shared(Box::new(backward(async move {
-//                        await!(forward(http_client::fetch(request))).unwrap();
-//                        Ok(lang::Value::Null)
-//                    })))
-//                ))
-                unreachable!()
+                lang::Value::Future(
+                    FutureExt::shared(Box::pin(async move {
+                        let str = await!(http_client::fetch(request)).unwrap();
+                        lang::Value::String(str)
+                    }))
+                )
             }
             _ => lang::Value::Error(lang::Error::ArgumentError)
         }
