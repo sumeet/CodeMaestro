@@ -81,6 +81,17 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool,
+                                                       onchange: F) -> Self::DrawResult {
+
+        html! {
+            <div>
+                <input type="checkbox", checked=value, onclick=|_| { onchange(!value) ; Msg::Redraw }, />
+                <label>{{ label }}</label>
+            </div>
+        }
+    }
+
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {
         html! {
             <div>
