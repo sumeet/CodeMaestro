@@ -1,3 +1,5 @@
+use cfg_if::{cfg_if};
+
 use std::collections::HashMap;
 use super::lang;
 use super::env;
@@ -76,50 +78,84 @@ impl lang::Function for Capitalize {
 }
 
 
-#[derive(Clone)]
-pub struct HTTPGet {}
+cfg_if! {
+    if #[cfg(feature = "javascript")] {
+        #[derive(Clone)]
+        pub struct HTTPGet {}
 
-use http::Request;
-use super::http_client;
-use super::asynk::{backward,forward};
-use futures_util::future::FutureExt;
-use futures::Future;
+        use http::Request;
+        use super::http_client;
+        use super::asynk::{backward,forward};
+        use futures_util::future::FutureExt;
+        use futures::Future;
 
-impl lang::Function for HTTPGet {
-    fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        match args.get(&self.takes_args()[0].id) {
-            Some(lang::Value::String(ref url)) =>  {
-                let request = Request::get(url).body(()).unwrap();
-                lang::Value::Future(
-                    FutureExt::shared(Box::pin(async move {
-                        let str = await!(http_client::fetch(request)).unwrap();
-                        lang::Value::String(str)
-                    }))
-                )
+        impl lang::Function for HTTPGet {
+            fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+                match args.get(&self.takes_args()[0].id) {
+                    Some(lang::Value::String(ref url)) =>  {
+                        let request = Request::get(url).body(()).unwrap();
+                        lang::Value::Future(
+                            FutureExt::shared(Box::pin(async move {
+                                let str = await!(http_client::fetch(request)).unwrap();
+                                lang::Value::String(str)
+                            }))
+                        )
+                    }
+                    _ => lang::Value::Error(lang::Error::ArgumentError)
+                }
             }
-            _ => lang::Value::Error(lang::Error::ArgumentError)
+
+            fn name(&self) -> &str {
+                "HTTP Get"
+            }
+
+            fn id(&self) -> lang::ID {
+                uuid::Uuid::parse_str("7a5952b5-f814-40a7-b555-e01ac6eb2d69").unwrap()
+            }
+
+            fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+                vec![
+                    lang::ArgumentDefinition::new_with_id(
+                        uuid::Uuid::parse_str("7a5952b5-f814-40a7-b555-e01ac6eb2d69").unwrap(),
+                        lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                        "URL".to_string(),
+                    )
+                ]
+            }
+
+            fn returns(&self) -> lang::Type {
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC)
+            }
         }
-    }
+    } else if #[cfg(feature = "default")] {
+        #[derive(Clone)]
+        pub struct HTTPGet {}
 
-    fn name(&self) -> &str {
-        "HTTP Get"
-    }
+        impl lang::Function for HTTPGet {
+            fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+                unimplemented ! ();
+            }
 
-    fn id(&self) -> lang::ID {
-        uuid::Uuid::parse_str("7a5952b5-f814-40a7-b555-e01ac6eb2d69").unwrap()
-    }
+            fn name(&self) -> &str {
+                "HTTP Get"
+            }
 
-    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("7a5952b5-f814-40a7-b555-e01ac6eb2d69").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "URL".to_string(),
-            )
-        ]
-    }
+            fn id(&self) -> lang::ID {
+                uuid::Uuid::parse_str("7a5952b5-f814-40a7-b555-e01ac6eb2d69").unwrap()
+            }
 
-    fn returns(&self) -> lang::Type {
-        lang::Type::from_spec(&*lang::STRING_TYPESPEC)
+            fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+                vec![
+                    lang::ArgumentDefinition::new_with_id(
+                        uuid::Uuid::parse_str("7a5952b5-f814-40a7-b555-e01ac6eb2d69").unwrap(),
+                        lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                        "URL".to_string())
+                ]
+            }
+
+            fn returns(&self) -> lang::Type {
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC)
+            }
+        }
     }
 }

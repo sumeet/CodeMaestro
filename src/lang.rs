@@ -99,11 +99,12 @@ pub enum Error {
 }
 
 use futures_util::future::Shared;
+use futures_util::FutureExt;
 use std::pin::Pin;
 
 
 pub type ValueFuture = Shared<Pin<Box<Future<Output = Value>>>>;
-
+type StructValues = HashMap<ID, Value>;
 #[derive(Clone, Debug)]
 pub enum Value {
     Null,
@@ -116,7 +117,11 @@ pub enum Value {
     Future(ValueFuture)
 }
 
-type StructValues = HashMap<ID, Value>;
+impl Value {
+    pub fn new_future(async_fn: impl Future<Output = Value> + 'static) -> Value {
+        Value::Future(FutureExt::shared(Box::pin(async_fn)))
+    }
+}
 
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub struct BuiltInTypeSpec {

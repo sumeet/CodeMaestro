@@ -95,7 +95,20 @@ impl<'a> IntoPyObject for ValueWithEnv<'a> {
 
                 ms.call1((&strukt.name, into_pyobject(value_by_name, py))).unwrap()
                     .to_object(py)
-            }
+            },
+            // TODO: unless we share the event loop with python, we should pry wait on the fut
+            // before passing it along to python. i suppose that would require threading the
+            // async executor through (which should be pretty doable)
+            // some info on it here https://stackoverflow.com/questions/40329421/)
+            //
+            // but if we did that, then you'd need to know on the python side that it's a future
+            //
+            // i think instead, what we can do, is write a function from lang::Value => lang::Value
+            // that recurses through the datastructure and if anything in there is a future, it'll
+            // get resolved. then we just tell the interpreter resolve any futures before passing
+            // them along to either a python function or a javascript function. i mean we're already
+            // doing said recursion in here, so it should be pretty easy to implement!
+            (_env, Future(_value_fut)) => unimplemented!(),
         }
     }
 }

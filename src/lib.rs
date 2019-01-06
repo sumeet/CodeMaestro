@@ -8,7 +8,7 @@
 #![feature(box_patterns)]
 #![feature(await_macro, async_await, futures_api)]
 #![feature(try_from)]
-#![recursion_limit="256"]
+#![recursion_limit="99999"]
 #![feature(fnbox)]
 
 #[cfg(feature = "default")]
@@ -22,6 +22,7 @@ mod asynk;
 pub mod builtin_funcs;
 pub mod lang;
 mod structs;
+mod enums;
 pub mod env;
 mod code_loading;
 mod editor;

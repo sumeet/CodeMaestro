@@ -24,3 +24,37 @@ pub fn to_named_args(func: &lang::Function,
             (short_name_by_id.remove(&arg_id).unwrap(), value)
         })
 }
+
+pub async fn resolve_futures(value: lang::Value) -> lang::Value {
+    match value {
+        lang::Value::Future(value_future) => {
+            // need to recursive call here because even after resolving the
+            // future, the Value could contain MORE nested futures!
+//            await!(resolve_futures(await!(value_future)))
+        }
+        lang::Value::List(vs) => {
+            let mut o = vec![];
+            for v in vs.into_iter() {
+                o.push(await!(resolve_futures(v)))
+            }
+            lang::Value::List(o)
+        },
+        lang::Value::Struct { values, struct_id } => {
+            let mut resolved_values = HashMap::new();
+            for (value_id, value) in values.into_iter() {
+                resolved_values.insert(value_id, await!(resolve_futures(value)));
+            }
+            lang::Value::Struct {
+                struct_id,
+                values: resolved_values,
+            }
+        },
+        lang::Value::Null | lang::Value::String(_) | lang::Value::Error(_) |
+         lang::Value::Number(_) => value
+    }
+}
+
+pub async fn preresolve_futures_if_external_func(func: Option<Box<lang::Function + 'static>>,
+                                                 value: lang::Value) -> lang::Value {
+    unimplemented!()
+}

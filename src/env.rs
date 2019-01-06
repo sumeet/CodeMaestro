@@ -1,6 +1,7 @@
 use super::lang;
 use super::structs;
 use super::async_executor;
+use super::external_func::preresolve_futures_if_external_func;
 
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -8,7 +9,6 @@ use std::collections::HashMap;
 use std::future::Future;
 use std ::pin::Pin;
 use std::rc::Rc;
-use stdweb::{console,__internal_console_unsafe,js,_js_impl};
 
 use itertools::Itertools;
 
@@ -132,14 +132,17 @@ impl Interpreter {
             .collect_vec();
         let function_id = function_call.function_reference().function_id;
         let env = self.env();
+        let func = (*env).borrow().find_function(function_id).cloned();
         async move {
-            let mut args = HashMap::new();
-            for (arg_id, arg_future) in args_futures {
-                args.insert(arg_id, await!(arg_future));
-            }
             // TODO: ok, can't pass the env in while we're borrowing the function, so we have to clone
             // it... figure out how to not do this :/
-            let func = (*env).borrow().find_function(function_id).cloned();
+
+            let mut args = HashMap::new();
+            for (arg_id, arg_future) in args_futures {
+                let arg_value = await!(arg_future);
+                let arg_value = await!(preresolve_futures_if_external_func(func.clone(), arg_value));
+                args.insert(arg_id, arg_value);
+            }
             match func {
                 Some(function) => {
                     function.call(&mut env.borrow_mut(), args)
