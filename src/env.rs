@@ -140,7 +140,7 @@ impl Interpreter {
             let mut args = HashMap::new();
             for (arg_id, arg_future) in args_futures {
                 let arg_value = await!(arg_future);
-                let arg_value = await!(preresolve_futures_if_external_func(func.clone(), arg_value));
+//                let arg_value = await!(preresolve_futures_if_external_func(func.clone(), arg_value));
                 args.insert(arg_id, arg_value);
             }
             match func {

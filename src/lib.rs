@@ -8,7 +8,7 @@
 #![feature(box_patterns)]
 #![feature(await_macro, async_await, futures_api)]
 #![feature(try_from)]
-#![recursion_limit="99999"]
+#![recursion_limit="256"]
 #![feature(fnbox)]
 
 #[cfg(feature = "default")]

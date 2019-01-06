@@ -119,7 +119,11 @@ pub enum Value {
 
 impl Value {
     pub fn new_future(async_fn: impl Future<Output = Value> + 'static) -> Value {
-        Value::Future(FutureExt::shared(Box::pin(async_fn)))
+        Value::Future(Self::new_value_future(async_fn))
+    }
+
+    pub fn new_value_future(async_fn: impl Future<Output = Value> + 'static) -> ValueFuture {
+        FutureExt::shared(Box::pin(async_fn))
     }
 }
 

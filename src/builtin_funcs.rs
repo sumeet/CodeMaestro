@@ -6,16 +6,22 @@ use super::env;
 
 #[derive(Clone)]
 pub struct Print {}
+use futures_util::future::FutureExt;
 
 impl lang::Function for Print {
     fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        match args.get(&self.takes_args()[0].id) {
-            Some(lang::Value::String(ref string)) =>  {
-                env.println(string);
+//        match args.get(&self.takes_args()[0].id) {
+//            Some(lang::Value::String(ref string)) =>  {
+//                env.println(string);
+//                lang::Value::Null
+//            }
+//            _ => lang::Value::Error(lang::Error::ArgumentError)
+//        }
+        lang::Value::Future(
+            FutureExt::shared(Box::pin(async move {
                 lang::Value::Null
-            }
-            _ => lang::Value::Error(lang::Error::ArgumentError)
-        }
+            }))
+        )
     }
 
     fn name(&self) -> &str {
