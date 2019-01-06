@@ -5,6 +5,8 @@ use futures_util::compat::Compat;
 
 
 // converts from a new style Future to an old style one:
+// javascript needs 0.1 futures while tokio needs 0.3 futures, idk why:
+// but see https://github.com/tokio-rs/tokio/pull/819 for how i figured this out
 // for some reason you've gotta do this :/
 #[cfg(feature = "default")]
 pub fn backward<I,E>(f: impl NewFuture<Output=Result<I,E>>) -> impl OldFuture<Item=I, Error=E> {
@@ -18,7 +20,7 @@ pub fn backward<I,E>(f: impl NewFuture<Output=Result<I,E>>) -> impl OldFuture<It
     backward::Compat::new(f)
 }
 
-pub fn forward<I,E>(f: impl OldFuture<Item=I, Error=E> + Unpin) -> impl NewFuture<Output=Result<I,E>> {
+pub fn _forward<I,E>(f: impl OldFuture<Item=I, Error=E> + Unpin) -> impl NewFuture<Output=Result<I,E>> {
     use tokio_async_await::compat::forward::IntoAwaitable;
     f.into_awaitable()
 }

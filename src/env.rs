@@ -26,13 +26,13 @@ impl Interpreter {
     }
 
     pub fn run<F: FnOnce(lang::Value) + 'static>(&mut self, code_node: &lang::CodeNode, callback: F) {
-        use super::asynk::forward;
         let fut = self.evaluate(code_node);
         self.async_executor.exec(async move {
             let mut val = await!(fut);
             while let lang::Value::Future(future) = val {
                 val = await!(future);
             }
+            callback(val);
             let ok : Result<(), ()> = Ok(());
             ok
         })

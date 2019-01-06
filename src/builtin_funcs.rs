@@ -132,7 +132,7 @@ cfg_if! {
         pub struct HTTPGet {}
 
         impl lang::Function for HTTPGet {
-            fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+            fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
                 unimplemented ! ();
             }
 

@@ -1,9 +1,6 @@
 use super::env;
 use super::lang;
-use super::pystuff::PyFunc;
-use super::jsstuff::JSFunc;
 use std::collections::HashMap;
-use std::future::Future;
 
 pub trait ModifyableFunc: lang::Function {
     fn set_return_type(&mut self, return_type: lang::Type);
@@ -53,6 +50,9 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
     })
 }
 
+// right now to simplify execution, this just always gets called no matter if we're calling
+// an external func or not. we can update the Interpreter to be smarter about awaiting futures
+// at the last minute, however, later. this should simplify things for now
 pub fn preresolve_futures_if_external_func(
     func: Option<Box<lang::Function + 'static>>,
     value: lang::Value) -> lang::ValueFuture {
@@ -63,20 +63,4 @@ pub fn preresolve_futures_if_external_func(
     } else {
         panic!("there's no way this could happen")
     }
-
-//    if func.is_none() {
-//        println!("preresolving taking path 1");
-//        return lang::Value::new_value_future(async move { value })
-//    }
-//    let func = func.as_ref().unwrap();
-//    if func.downcast_ref::<PyFunc>().is_some() || func.downcast_ref::<JSFunc>().is_some() {
-//        if let lang::Value::Future(fut) = resolve_futures(value) {
-//            println!("preresolving taking path 2");
-//            return lang::Value::new_value_future(async move { await!(fut) })
-//        } else {
-//            panic!("there's no way this could happen")
-//        }
-//    }
-//    println!("preresolving taking path 3");
-//    lang::Value::new_value_future(async move { value })
 }
