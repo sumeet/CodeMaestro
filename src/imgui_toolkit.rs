@@ -331,6 +331,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
+
+    fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool, onchange: F) {
+        let mut val = value;
+        self.ui.checkbox(&self.imlabel(label), &mut val);
+        if val != value {
+            onchange(val);
+        }
+    }
+
     fn draw_main_menu_bar(&self, draw_menus: &Fn()) {
         self.ui.main_menu_bar(draw_menus)
     }

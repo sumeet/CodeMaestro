@@ -4,6 +4,7 @@ use super::lang::CodeNode;
 use super::pystuff;
 use super::jsstuff;
 use super::structs;
+use super::enums;
 
 use failure::{Error};
 use serde_json;
@@ -17,6 +18,7 @@ pub struct TheWorld {
     pub pyfuncs: Vec<pystuff::PyFunc>,
     pub jsfuncs: Vec<jsstuff::JSFunc>,
     pub structs: Vec<structs::Struct>,
+    pub enums: Vec<enums::Enum>,
 }
 
 // pub fn load(filename: &str) -> Result<CodeNode,Error> {

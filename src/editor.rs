@@ -19,6 +19,7 @@ use super::jsstuff;
 use super::external_func;
 use super::undo;
 use super::edit_types;
+use super::enums;
 use super::structs;
 
 
@@ -785,6 +786,11 @@ impl<'a> Controller {
             .filter_map(|ts| ts.as_ref().downcast_ref::<structs::Struct>())
     }
 
+    fn list_enums(&self) -> impl Iterator<Item = &enums::Enum> {
+        self.typespecs()
+            .filter_map(|ts| ts.as_ref().downcast_ref::<enums::Enum>())
+    }
+
     fn get_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
         self.execution_environment().find_typespec(id)
     }
@@ -795,6 +801,7 @@ impl<'a> Controller {
             pyfuncs: self.list_pyfuncs(),
             jsfuncs: self.list_jsfuncs(),
             structs: self.list_structs().cloned().collect(),
+            enums: self.list_enums().cloned().collect(),
         };
         code_loading::save("codesample.json", &theworld).unwrap();
     }
@@ -1149,6 +1156,7 @@ pub trait UiToolkit {
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
               H: Fn(&T) -> String;
+    fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool, onchange: F) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8,
@@ -1320,6 +1328,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_edit_pyfuncs(),
             self.render_edit_jsfuncs(),
             self.render_edit_structs(),
+            self.render_edit_enums(),
             self.render_status_bar()
         ])
     }
@@ -1332,6 +1341,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     let cont1 = Rc::clone(&self.command_buffer);
                     let cont2 = Rc::clone(&self.command_buffer);
                     let cont3 = Rc::clone(&self.command_buffer);
+                    let cont4 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
                             cont1.borrow_mut().save();
@@ -1346,6 +1356,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         }),
                         self.ui_toolkit.draw_menu_item("Add Struct", move || {
                             cont3.borrow_mut().load_typespec(structs::Struct::new());
+                        }),
+                        self.ui_toolkit.draw_menu_item("Add Enum", move || {
+                            cont4.borrow_mut().load_typespec(enums::Enum::new());
                         }),
                         self.ui_toolkit.draw_menu_item("Exit", || {
                             std::process::exit(0);
@@ -1464,8 +1477,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_structs(&self) -> T::DrawResult {
-        let structs = self.controller.list_structs().cloned().collect_vec();
-        self.ui_toolkit.draw_all(structs.iter().map(|s| self.render_edit_struct(s)).collect())
+        let structs = self.controller.list_structs();
+        self.ui_toolkit.draw_all(structs.map(|s| self.render_edit_struct(s)).collect())
+    }
+
+    fn render_edit_enums(&self) -> T::DrawResult {
+        let structs = self.controller.list_enums();
+        self.ui_toolkit.draw_all(structs.map(|e| self.render_edit_enum(e)).collect())
     }
 
     fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
@@ -1575,6 +1593,125 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_general_struct_menu(&self, _strukt: &structs::Struct) -> T::DrawResult {
         self.ui_toolkit.draw_all(vec![
         ])
+    }
+
+    fn render_edit_enum(&self, eneom: &enums::Enum) -> T::DrawResult {
+        self.ui_toolkit.draw_window(
+            &format!("Edit Enum: {}", eneom.id),
+            &|| {
+                let cont1 = Rc::clone(&self.command_buffer);
+                let eneom1 = eneom.clone();
+                let cont2 = Rc::clone(&self.command_buffer);
+                let eneom2 = eneom.clone();
+
+                self.ui_toolkit.draw_all(vec![
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Enum name",
+                        &eneom.name,
+                        move |newvalue| {
+                            let mut eneom = eneom1.clone();
+                            eneom.name = newvalue.to_string();
+                            cont1.borrow_mut().load_typespec(eneom);
+                        },
+                        &|| {}
+                    ),
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Symbol",
+                        &eneom.symbol,
+                        move |newvalue| {
+                            let mut eneom = eneom2.clone();
+                            eneom.symbol = newvalue.to_string();
+                            cont2.borrow_mut().load_typespec(eneom);
+                        },
+                        &|| {},
+                    ),
+                    self.render_enum_variants_selector(eneom),
+//                    self.render_general_struct_menu(eneom),
+                ])
+            },
+            None::<fn(Keypress)>,
+        )
+    }
+
+    fn render_enum_variants_selector(&self, eneom: &enums::Enum) -> T::DrawResult {
+        let variants = &eneom.variants;
+
+        let mut to_draw = vec![
+            self.ui_toolkit.draw_text_with_label(&format!("Has {} variant(s)", variants.len()),
+                                                 "Variants"),
+        ];
+
+        for (current_variant_index, variant) in variants.iter().enumerate() {
+            let eneom1 = eneom.clone();
+            let cont1 = Rc::clone(&self.command_buffer);
+            to_draw.push(self.ui_toolkit.draw_text_input_with_label(
+                "Name",
+                &variant.name,
+                move |newvalue| {
+                    let mut neweneom = eneom1.clone();
+                    let mut newvariant = &mut neweneom.variants[current_variant_index];
+                    newvariant.name = newvalue.to_string();
+                    cont1.borrow_mut().load_typespec(neweneom)
+                },
+                &||{}));
+
+            // TODO: add this checkbox logic to other types?
+            let eneom1 = eneom.clone();
+            let cont1 = Rc::clone(&self.command_buffer);
+            to_draw.push(self.ui_toolkit.draw_checkbox_with_label(
+                "Parameterized type?",
+                variant.is_parameterized(),
+                move |is_parameterized| {
+                    let mut neweneom = eneom1.clone();
+                    let mut newvariant = &mut neweneom.variants[current_variant_index];
+                    if is_parameterized {
+                        newvariant.variant_type = None;
+                    } else {
+                        newvariant.variant_type = Some(lang::Type::from_spec(&*lang::STRING_TYPESPEC));
+                    }
+                    cont1.borrow_mut().load_typespec(neweneom)
+                }
+            ));
+            if !variant.is_parameterized() {
+                let eneom1 = eneom.clone();
+                let cont1 = Rc::clone(&self.command_buffer);
+                to_draw.push(self.render_type_change_combo(
+                    "Type",
+                    variant.variant_type.as_ref().unwrap(),
+                    move |newtype| {
+                        let mut neweneom = eneom1.clone();
+                        let mut newvariant = &mut neweneom.variants[current_variant_index];
+                        newvariant.variant_type = Some(newtype);
+                        cont1.borrow_mut().load_typespec(neweneom)
+                    }
+                ));
+            }
+
+            let eneom1 = eneom.clone();
+            let cont1 = Rc::clone(&self.command_buffer);
+            to_draw.push(self.ui_toolkit.draw_button(
+                "Delete",
+                RED_COLOR,
+                move || {
+                    let mut neweneom = eneom1.clone();
+                    neweneom.variants.remove(current_variant_index);
+                    cont1.borrow_mut().load_typespec(neweneom)
+                }
+            ));
+        }
+
+        let eneom1 = eneom.clone();
+        let cont1 = Rc::clone(&self.command_buffer);
+        to_draw.push(self.ui_toolkit.draw_button("Add another variant", GREY_COLOR, move || {
+            let mut neweneom = eneom1.clone();
+            neweneom.variants.push(enums::EnumVariant::new(
+                format!("variant{}", neweneom.variants.len()),
+                None,
+            ));
+            cont1.borrow_mut().load_typespec(neweneom);
+        }));
+
+        self.ui_toolkit.draw_all(to_draw)
     }
 
     fn render_general_function_menu<F: lang::Function>(&self, func: &F) -> T::DrawResult {

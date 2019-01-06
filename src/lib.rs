@@ -113,6 +113,9 @@ fn load_structs(controller: &mut Controller, world: &code_loading::TheWorld) {
     for strukt in world.structs.iter() {
         controller.load_typespec(strukt.clone());
     }
+    for eneom in world.enums.iter() {
+        controller.load_typespec(eneom.clone());
+    }
 }
 
 pub fn main() {
