@@ -1331,6 +1331,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| {
                     let cont1 = Rc::clone(&self.command_buffer);
                     let cont2 = Rc::clone(&self.command_buffer);
+                    let cont3 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
                             cont1.borrow_mut().save();
@@ -1340,8 +1341,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             cont2.borrow_mut().load_function(pystuff::PyFunc::new());
                         }),
                         #[cfg(feature = "javascript")]
-                            self.ui_toolkit.draw_menu_item("Add JavaScript function", move || {
+                        self.ui_toolkit.draw_menu_item("Add JavaScript function", move || {
                             cont2.borrow_mut().load_function(jsstuff::JSFunc::new());
+                        }),
+                        self.ui_toolkit.draw_menu_item("Add Struct", move || {
+                            cont3.borrow_mut().load_typespec(structs::Struct::new());
                         }),
                         self.ui_toolkit.draw_menu_item("Exit", || {
                             std::process::exit(0);

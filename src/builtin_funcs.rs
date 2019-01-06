@@ -85,9 +85,7 @@ cfg_if! {
 
         use http::Request;
         use super::http_client;
-        use super::asynk::{backward,forward};
         use futures_util::future::FutureExt;
-        use futures::Future;
 
         impl lang::Function for HTTPGet {
             fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
