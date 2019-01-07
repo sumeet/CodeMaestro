@@ -7,12 +7,10 @@ pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::C
             lang::CodeNode::StructLiteralField(lang::StructLiteralField {
                 id: lang::new_id(),
                 struct_field_id: field.id,
-                expr: Box::new(lang::CodeNode::Placeholder(lang::Placeholder {
-                    id: lang::new_id(),
-                    description: field.name.clone(),
-                    // XXX: this is wrong... we need to store the whole type in there.
-                    type_id: field.field_type.typespec_id,
-                }))
+                expr: Box::new(new_placeholder(
+                    &field.name,
+                    field.field_type.clone(),
+                )),
             })
         })
         .collect();
@@ -29,12 +27,9 @@ pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::C
             lang::CodeNode::Argument(lang::Argument {
                 id: lang::new_id(),
                 argument_definition_id: arg_def.id,
-                expr: Box::new(lang::CodeNode::Placeholder(lang::Placeholder {
-                    id: lang::new_id(),
-                    description: arg_def.short_name.clone(),
-                    // XXX: this is wrong... we need to store the whole type in there.
-                    type_id: arg_def.arg_type.typespec_id
-                }))
+                expr: Box::new(
+                    new_placeholder(&arg_def.short_name, arg_def.arg_type.clone())
+                ),
             })
         })
         .collect();
@@ -62,14 +57,28 @@ pub fn new_string_literal(string: &str) -> lang::CodeNode {
     })
 }
 
-pub fn new_placeholder(description: &str, type_id: lang::ID) -> lang::CodeNode {
+pub fn new_placeholder(description: &str, typ: lang::Type) -> lang::CodeNode {
     lang::CodeNode::Placeholder(lang::Placeholder {
         id: lang::new_id(),
         description: description.to_string(),
-        type_id,
+        typ,
     })
 }
 
+pub fn new_conditional() -> lang::CodeNode {
+    lang::CodeNode::Conditional(lang::Conditional {
+        id: lang::new_id(),
+        // TODO: change to boolean type once we add it
+        condition: Box::new(new_placeholder(
+            "Condition",
+            lang::Type::from_spec(&*lang::NULL_TYPESPEC))),
+        // TODO: change to boolean type once we add it
+        true_branch: Box::new(new_placeholder(
+            "True branch",
+            lang::Type::from_spec(&*lang::NULL_TYPESPEC))),
+        else_branch: None,
+    })
+}
 
 pub fn new_null_literal() -> lang::CodeNode {
     lang::CodeNode::NullLiteral

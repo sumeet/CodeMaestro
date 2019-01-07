@@ -72,7 +72,10 @@ impl InsertCodeMenu {
     fn new_expression_inside_code_block(insertion_point: InsertionPoint) -> Self {
         Self {
             // TODO: should probably be able to insert new assignment expressions as well
-            option_generators: vec![Box::new(InsertFunctionOptionGenerator {})],
+            option_generators: vec![
+                Box::new(InsertFunctionOptionGenerator {}),
+                Box::new(InsertConditionalOptionGenerator {}),
+            ],
             selected_option_index: 0,
             search_params: CodeSearchParams::empty(),
             insertion_point,
@@ -329,13 +332,36 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                 InsertCodeMenuOption {
                     label: format!("{} {}", PLACEHOLDER_ICON, input_str),
                     is_selected: false,
-                    new_node: code_generation::new_placeholder(input_str, return_type.id()),
+                    new_node: code_generation::new_placeholder(input_str, return_type.clone()),
                 }
             );
         }
         options
     }
 }
+
+#[derive(Clone)]
+struct InsertConditionalOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
+    fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
+        let mut options = vec![];
+        let search_str = search_params.lowercased_trimmed_search_str();
+        if "if".contains(&search_str) || "conditional".contains(&search_str) {
+            options.push(
+                InsertCodeMenuOption {
+                    label: "If".to_string(),
+                    is_selected: false,
+                    // TODO: need a boolean
+                    new_node: code_generation::new_conditional()
+                }
+            )
+        }
+        options
+    }
+}
+
+
 
 #[derive(Debug, Clone, Copy)]
 pub enum InsertionPoint {
