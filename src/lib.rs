@@ -19,7 +19,7 @@ mod imgui_toolkit;
 mod yew_toolkit;
 
 mod asynk;
-pub mod builtin_funcs;
+pub mod builtins;
 pub mod lang;
 mod structs;
 mod enums;
@@ -134,9 +134,9 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     controller.borrow_env(&mut interpreter.env().borrow_mut(), |mut controller| {
         load_externalfuncs(&mut controller, &the_world);
         load_structs(&mut controller, &the_world);
-        controller.load_function(builtin_funcs::Print{});
-        controller.load_function(builtin_funcs::Capitalize{});
-        controller.load_function(builtin_funcs::HTTPGet{});
+        controller.load_function(builtins::Print{});
+        controller.load_function(builtins::Capitalize{});
+        controller.load_function(builtins::HTTPGet{});
     });
     controller
 }

@@ -3,6 +3,13 @@ use cfg_if::{cfg_if};
 use std::collections::HashMap;
 use super::lang;
 use super::env;
+use lazy_static::lazy_static;
+
+// this gets loaded through codesample.json... TODO: make a builtins.json file
+lazy_static! {
+    static ref RESULT_ENUM_ID : uuid::Uuid = uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap();
+}
+
 
 #[derive(Clone)]
 pub struct Print {}
@@ -156,4 +163,9 @@ cfg_if! {
             }
         }
     }
+}
+
+
+fn new_result(ok_type: lang::Type) -> lang::Type {
+    lang::Type { typespec_id: *RESULT_ENUM_ID, params: vec![ok_type] }
 }

@@ -181,6 +181,7 @@ impl ExecutionEnvironment {
         typespec_by_id.insert(lang::NUMBER_TYPESPEC.id, Box::new(lang::NUMBER_TYPESPEC.clone()));
         typespec_by_id.insert(lang::LIST_TYPESPEC.id, Box::new(lang::LIST_TYPESPEC.clone()));
         typespec_by_id.insert(lang::NULL_TYPESPEC.id, Box::new(lang::NULL_TYPESPEC.clone()));
+        typespec_by_id.insert(lang::ERROR_TYPESPEC.id, Box::new(lang::ERROR_TYPESPEC.clone()));
         typespec_by_id
     }
 

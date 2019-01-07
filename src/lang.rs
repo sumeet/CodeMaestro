@@ -31,13 +31,6 @@ lazy_static! {
         num_params: 0,
     };
 
-    pub static ref RESULT_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
-        readable_name: "Result".to_string(),
-        id: uuid::Uuid::parse_str("0613664d-eead-4d83-99a0-9759a5023887").unwrap(),
-        symbol: "\u{f493}".to_string(),
-        num_params: 0,
-    };
-
     pub static ref NUMBER_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Number".to_string(),
         id: uuid::Uuid::parse_str("6dbe9096-4ff5-42f1-b2ff-36eacc3ced59").unwrap(),
@@ -51,6 +44,13 @@ lazy_static! {
         id: uuid::Uuid::parse_str("4c726a5e-d9c2-481b-bbe8-ca5319176aad").unwrap(),
         symbol: "\u{f03a}".to_string(),
         num_params: 1,
+    };
+
+    pub static ref ERROR_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
+        readable_name: "Error".to_string(),
+        id: uuid::Uuid::parse_str("a6ad92ed-1b21-44fe-9ad0-e08326acd6f6").unwrap(),
+        symbol: "\u{f06a}".to_string(),
+        num_params: 0,
     };
 }
 
@@ -96,6 +96,14 @@ pub enum Error {
     PythonDeserializationError,
     JavaScriptDeserializationError,
     JavaScriptError(String, String),
+    // TODO: will need to think harder about this... just need this for code to specify errors
+    Custom(String),
+}
+
+impl Error {
+    fn _to_string(&self) -> String {
+        format!("{:?}", self)
+    }
 }
 
 use futures_util::future::Shared;

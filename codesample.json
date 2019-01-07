@@ -200,7 +200,10 @@
         {
           "name": "Error",
           "id": "9f22e23e-d9b9-49c2-acf2-43a59598ea86",
-          "variant_type": null
+          "variant_type": {
+            "typespec_id": "a6ad92ed-1b21-44fe-9ad0-e08326acd6f6",
+            "params": []
+          }
         }
       ]
     }
