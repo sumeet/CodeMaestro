@@ -158,6 +158,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
+    fn indent(&self, px: i16, draw_fn: &Fn()) {
+        unsafe { imgui_sys::igIndent(px as f32) }
+        draw_fn();
+        unsafe { imgui_sys::igUnindent(px as f32) }
+    }
+
+
     fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, f: &Fn(),
                                               handle_keypress: Option<F>) {
         let prev_window_size = self.state.borrow().prev_window_size;

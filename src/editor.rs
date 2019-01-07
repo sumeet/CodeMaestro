@@ -34,6 +34,7 @@ pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
 pub const SALMON_COLOR: Color = [0.996, 0.286, 0.322, 1.0];
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
+pub const PX_PER_INDENTATION_LEVEL : i16 = 20;
 
 pub type Color = [f32; 4];
 
@@ -529,6 +530,11 @@ impl<'a> CodeGenie<'a> {
                 let strukt = self.env.find_struct(strukt_literal.struct_id).unwrap();
                 strukt.field_by_id().get(&struct_literal_field.struct_field_id).unwrap()
                     .field_type.clone()
+            }
+            // this means that both branches of a conditional must be of the same type.we need to
+            // add a validation for that
+            CodeNode::Conditional(conditional) => {
+                self.guess_type(&conditional.true_branch)
             }
         }
     }
@@ -1170,6 +1176,7 @@ pub trait UiToolkit {
     fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult;
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn indent(&self, px: i16, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
 }
 
 // TODO: to simplify things for now, this thing just holds onto closures and
@@ -1302,6 +1309,7 @@ impl CommandBuffer {
 
 pub struct Renderer<'a, T> {
     arg_nesting_level: RefCell<u32>,
+    indentation_level: RefCell<u8>,
     ui_toolkit: &'a mut T,
     // TODO: take this through the constructor, but now we'll let ppl peek in here
     command_buffer: Rc<RefCell<CommandBuffer>>,
@@ -1313,6 +1321,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                command_buffer: Rc<RefCell<CommandBuffer>>) -> Renderer<'a, T> {
         Self {
             arg_nesting_level: RefCell::new(0),
+            indentation_level: RefCell::new(0),
             ui_toolkit,
             controller,
             command_buffer,
@@ -2001,6 +2010,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     // we would, except render_struct_literal_field isn't called from here...
                     //self.render_struct_literal_field(&field)
                 },
+                CodeNode::Conditional(conditional) => {
+                    self.render_conditional(&conditional)
+                }
             }
         };
 
@@ -2324,6 +2336,23 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             },
             &|| { self.render_code(&literal.expr) }
         ])
+    }
+
+    fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
+        self.ui_toolkit.draw_all(vec![
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| { self.ui_toolkit.draw_button("If", GREY_COLOR, &||{}) },
+                &|| { self.render_code(&conditional.condition) },
+            ]),
+            self.render_indented(&|| { self.render_code(&conditional.true_branch) }),
+        ])
+    }
+
+    fn render_indented(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
+        let indentation_level = self.indentation_level.replace_with(|i| *i + 1);
+        let drawn = self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL * indentation_level as i16, draw_fn);
+        self.indentation_level.replace_with(|i| *i - 1);
+        drawn
     }
 
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {

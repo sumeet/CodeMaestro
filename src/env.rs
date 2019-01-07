@@ -107,8 +107,27 @@ impl Interpreter {
                     }
                 })
             }
-            // i think these code nodes will actually never be evaluated
-            lang::CodeNode::StructLiteralField(_struct_literal_field) => Box::pin(async { lang::Value::Null }),
+            // i think these code nodes will actually never be evaluated, because they get evaluated
+            // as part of the struct itself
+            lang::CodeNode::StructLiteralField(_struct_literal_field) => panic!("struct literals are never evaluated"),
+            lang::CodeNode::Conditional(conditional) => {
+                let condition_fut = self.evaluate(conditional.condition.as_ref());
+                let true_branch_fut = self.evaluate(conditional.true_branch.as_ref());
+                // TODO: does the else branch get evaluated just by nature of creating the future,
+                // even if we never await it?
+                let else_branch_fut = match conditional.else_branch.as_ref() {
+                    Some(else_branch) => self.evaluate(else_branch.as_ref()),
+                    None => Box::pin(async { lang::Value::Null }),
+                };
+                Box::pin(async move {
+                    // TODO: whoops i need booleans...
+                    if true {//await!(condition_fut) {
+                        await!(true_branch_fut)
+                    } else {
+                        await!(else_branch_fut)
+                    }
+                })
+            }
         }
     }
 

@@ -85,6 +85,7 @@ pub enum CodeNode {
     Placeholder(Placeholder),
     StructLiteral(StructLiteral),
     StructLiteralField(StructLiteralField),
+    Conditional(Conditional),
 }
 
 #[derive(Clone, Debug)]
@@ -303,6 +304,9 @@ impl CodeNode {
             },
             CodeNode::StructLiteralField(field) => {
                 format!("Struct literal field: {}", field.id)
+            },
+            CodeNode::Conditional(conditional) => {
+                format!("Conditional: {}", conditional.id)
             }
         }
     }
@@ -343,6 +347,7 @@ impl CodeNode {
             },
             CodeNode::StructLiteral(struct_literal) => struct_literal.id,
             CodeNode::StructLiteralField(field) => field.id,
+            CodeNode::Conditional(conditional) => conditional.id,
         }
     }
 
@@ -412,6 +417,19 @@ impl CodeNode {
             },
             CodeNode::StructLiteralField(field) => {
                 Box::new(iter::once(field.expr.borrow()))
+            },
+            CodeNode::Conditional(ref conditional) => {
+                let i =
+                    iter::once(conditional.condition.as_ref())
+                        .chain(iter::once(conditional.true_branch.as_ref()));
+                match &conditional.else_branch {
+                    None => {
+                        Box::new(i)
+                       },
+                   Some(else_branch) => {
+                       Box::new(i.chain(iter::once(else_branch.as_ref())))
+                   }
+                }
             }
         }
     }
@@ -471,6 +489,19 @@ impl CodeNode {
             },
             CodeNode::StructLiteralField(field) => {
                 vec![field.expr.borrow_mut()]
+            }
+            CodeNode::Conditional(ref mut conditional) => {
+                let i =
+                    iter::once(conditional.condition.as_mut())
+                        .chain(iter::once(conditional.true_branch.as_mut()));
+                match &mut conditional.else_branch {
+                    None => {
+                        i.collect()
+                    },
+                    Some(else_branch) => {
+                        i.chain(iter::once(else_branch.as_mut())).collect()
+                    }
+                }
             }
         }
     }
@@ -644,4 +675,15 @@ pub struct StructLiteralField {
     pub id: ID,
     pub struct_field_id: ID,
     pub expr: Box<CodeNode>,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+pub struct Conditional {
+    pub id: ID,
+    // this can be any expression
+    pub condition: Box<CodeNode>,
+    // this'll be a block
+    pub true_branch: Box<CodeNode>,
+    // this'll be a block
+    pub else_branch: Option<Box<CodeNode>>,
 }
