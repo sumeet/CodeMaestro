@@ -30,6 +30,7 @@ http = "0.1"
 # need this for the old / new futures compat layer in wasm as well as native
 tokio-async-await = {version = "0.1.4", features = ["async-await-preview"]}
 cfg-if = "0.1"
+matches = "0.1.8"
 
 pyo3 = { version = "0.5.2", optional = true }
 glium = { version = "0.22", default-features = true, optional = true }

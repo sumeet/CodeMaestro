@@ -8,6 +8,7 @@
 #![feature(box_patterns)]
 #![feature(await_macro, async_await, futures_api)]
 #![feature(try_from)]
+#![feature(slice_patterns)]
 #![recursion_limit="256"]
 #![feature(fnbox)]
 
@@ -27,6 +28,7 @@ pub mod env;
 mod code_loading;
 mod editor;
 mod edit_types;
+mod json;
 mod undo;
 mod code_generation;
 mod external_func;

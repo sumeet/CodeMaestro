@@ -1,0 +1,64 @@
+{
+   "results" : [
+      {
+         "address_components" : [
+            {
+               "long_name" : "Dongbaek-dong",
+               "short_name" : "Dongbaek-dong",
+               "types" : [ "political", "sublocality", "sublocality_level_2" ]
+            },
+            {
+               "long_name" : "Giheung-gu",
+               "short_name" : "Giheung-gu",
+               "types" : [ "political", "sublocality", "sublocality_level_1" ]
+            },
+            {
+               "long_name" : "Yongin-si",
+               "short_name" : "Yongin-si",
+               "types" : [ "locality", "political" ]
+            },
+            {
+               "long_name" : "Gyeonggi-do",
+               "short_name" : "Gyeonggi-do",
+               "types" : [ "administrative_area_level_1", "political" ]
+            },
+            {
+               "long_name" : "South Korea",
+               "short_name" : "KR",
+               "types" : [ "country", "political" ]
+            }
+         ],
+         "formatted_address" : "Dongbaek-dong, Giheung-gu, Yongin-si, Gyeonggi-do, South Korea",
+         "geometry" : {
+            "bounds" : {
+               "northeast" : {
+                  "lat" : 37.3005629,
+                  "lng" : 127.1770779
+               },
+               "southwest" : {
+                  "lat" : 37.2535169,
+                  "lng" : 127.1358652
+               }
+            },
+            "location" : {
+               "lat" : 37.2722401,
+               "lng" : 127.1511556
+            },
+            "location_type" : "APPROXIMATE",
+            "viewport" : {
+               "northeast" : {
+                  "lat" : 37.3005629,
+                  "lng" : 127.1770779
+               },
+               "southwest" : {
+                  "lat" : 37.2535169,
+                  "lng" : 127.1358652
+               }
+            }
+         },
+         "place_id" : "ChIJZb6TfvBQezURLWdEQH9L_cY",
+         "types" : [ "political", "sublocality", "sublocality_level_2" ]
+      }
+   ],
+   "status" : "OK"
+}
