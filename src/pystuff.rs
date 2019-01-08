@@ -74,6 +74,7 @@ impl<'a> IntoPyObject for ValueWithEnv<'a> {
         use super::lang::Value::*;
         match (self.env, self.value) {
             (_, Null) => ().into_object(py),
+            (_, Boolean(b)) => b.into_object(py),
             (_, String(s)) => s.into_object(py),
             // not quite sure what to do with these...
             (_, Error(e)) => format!("{:?}", e).into_object(py),

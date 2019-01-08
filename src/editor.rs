@@ -352,8 +352,7 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
                 InsertCodeMenuOption {
                     label: "If".to_string(),
                     is_selected: false,
-                    // TODO: need a boolean
-                    new_node: code_generation::new_conditional()
+                    new_node: code_generation::new_conditional(&search_params.return_type)
                 }
             )
         }

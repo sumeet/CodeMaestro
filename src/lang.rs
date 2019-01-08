@@ -24,6 +24,13 @@ lazy_static! {
         num_params: 0,
     };
 
+    pub static ref BOOLEAN_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
+        readable_name: "Boolean".to_string(),
+        id: uuid::Uuid::parse_str(&"d00d688f-0c9e-43af-a19f-ab02e46b4c2c").unwrap(),
+        symbol: "\u{f6af}".to_string(),
+        num_params: 0,
+    };
+
     pub static ref STRING_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "String".to_string(),
         id: uuid::Uuid::parse_str("e0e8271e-5f94-4d00-bad9-46a2ce4d6568").unwrap(),
@@ -117,13 +124,14 @@ type StructValues = HashMap<ID, Value>;
 #[derive(Clone, Debug)]
 pub enum Value {
     Null,
+    Boolean(bool),
     String(String),
     Error(Error),
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Vec<Value>),
     Struct {struct_id: ID, values: StructValues},
-    Future(ValueFuture)
+    Future(ValueFuture),
 }
 
 impl Value {

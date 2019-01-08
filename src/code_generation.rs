@@ -65,17 +65,19 @@ pub fn new_placeholder(description: &str, typ: lang::Type) -> lang::CodeNode {
     })
 }
 
-pub fn new_conditional() -> lang::CodeNode {
+pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
+    let branch_type = for_type.clone().unwrap_or_else(
+        || lang::Type::from_spec(&*lang::NULL_TYPESPEC));
     lang::CodeNode::Conditional(lang::Conditional {
         id: lang::new_id(),
         // TODO: change to boolean type once we add it
         condition: Box::new(new_placeholder(
             "Condition",
-            lang::Type::from_spec(&*lang::NULL_TYPESPEC))),
-        // TODO: change to boolean type once we add it
+            lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC))),
         true_branch: Box::new(new_placeholder(
             "True branch",
-            lang::Type::from_spec(&*lang::NULL_TYPESPEC))),
+            branch_type,
+            )),
         else_branch: None,
     })
 }
