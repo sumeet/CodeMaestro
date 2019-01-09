@@ -2374,10 +2374,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_indented(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
-        let indentation_level = self.indentation_level.replace_with(|i| *i + 1);
-        let drawn = self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL * indentation_level as i16, draw_fn);
-        self.indentation_level.replace_with(|i| *i - 1);
-        drawn
+        self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL, draw_fn)
+//        let indentation_level = self.indentation_level.replace_with(|i| *i + 1);
+//        let drawn = self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL * indentation_level as i16, draw_fn);
+//        self.indentation_level.replace_with(|i| *i - 1);
+//        drawn
     }
 
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {

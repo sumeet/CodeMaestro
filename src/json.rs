@@ -22,7 +22,7 @@ enum Structure {
     NonHomogeneousCantParse,
 }
 
-fn guess_structure(j: &serde_json::Value) -> Structure {
+fn infer_structure(j: &serde_json::Value) -> Structure {
     match j {
         serde_json::Value::Null => Structure::Null,
         serde_json::Value::Bool(_) => Structure::Bool,
@@ -30,7 +30,7 @@ fn guess_structure(j: &serde_json::Value) -> Structure {
         serde_json::Value::String(_) => Structure::String,
         serde_json::Value::Array(vs) =>  {
             let mut types = vs.iter()
-                .map(guess_structure)
+                .map(infer_structure)
                 .filter(|v| !matches!(v, Structure::EmptyCantInfer))
                 .unique()
                 .collect_vec();
@@ -43,7 +43,7 @@ fn guess_structure(j: &serde_json::Value) -> Structure {
             }
         }
         serde_json::Value::Object(o) => {
-            Structure::Map(o.iter().map(|(k, v)| (k.clone(), guess_structure(v))).collect())
+            Structure::Map(o.iter().map(|(k, v)| (k.clone(), infer_structure(v))).collect())
         },
     }
 }

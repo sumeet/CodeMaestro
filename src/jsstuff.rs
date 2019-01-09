@@ -94,6 +94,7 @@ impl<'a> serde::Serialize for ValueWithEnv<'a> {
         use super::lang::Value::*;
         match (&self.env, &self.value) {
             (_, Null) => serializer.serialize_none(),
+            (_, Boolean(b)) => serializer.serialize_bool(*b),
             (_, String(s)) => serializer.serialize_str(&s),
             // not quite sure what to do with these...
             (_, Error(e)) => serializer.serialize_str(&format!("{:?}", e)),

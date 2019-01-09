@@ -385,6 +385,14 @@ impl UiToolkit for YewToolkit {
              </div>
         }
     }
+
+    fn indent(&self, px: i16, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div style=format!("margin-left: {}px", px), >
+                { draw_fn() }
+            </div>
+        }
+    }
 }
 
 impl YewToolkit {
