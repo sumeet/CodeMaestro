@@ -8,6 +8,7 @@ use std::future::Future;
 #[cfg(feature = "javascript")]
 use stdweb::{js,_js_impl};
 
+use itertools::Itertools;
 use uuid::Uuid;
 use lazy_static::lazy_static;
 use objekt::{clone_trait_object,__internal_clone_trait_object};
@@ -93,6 +94,7 @@ pub enum CodeNode {
     StructLiteral(StructLiteral),
     StructLiteralField(StructLiteralField),
     Conditional(Conditional),
+    ListLiteral(ListLiteral),
 }
 
 #[derive(Clone, Debug)]
@@ -319,6 +321,9 @@ impl CodeNode {
             },
             CodeNode::Conditional(conditional) => {
                 format!("Conditional: {}", conditional.id)
+            },
+            CodeNode::ListLiteral(list_literal) => {
+                format!("List litearl: {}", list_literal.id)
             }
         }
     }
@@ -360,6 +365,7 @@ impl CodeNode {
             CodeNode::StructLiteral(struct_literal) => struct_literal.id,
             CodeNode::StructLiteralField(field) => field.id,
             CodeNode::Conditional(conditional) => conditional.id,
+            CodeNode::ListLiteral(list_literal) => list_literal.id,
         }
     }
 
@@ -442,7 +448,8 @@ impl CodeNode {
                        Box::new(i.chain(iter::once(else_branch.as_ref())))
                    }
                 }
-            }
+            },
+            CodeNode::ListLiteral(list_literal) => Box::new(list_literal.elements.iter())
         }
     }
 
@@ -514,7 +521,8 @@ impl CodeNode {
                         i.chain(iter::once(else_branch.as_mut())).collect()
                     }
                 }
-            }
+            },
+            CodeNode::ListLiteral(list_literal) => list_literal.elements.iter_mut().collect_vec()
         }
     }
 
@@ -699,4 +707,11 @@ pub struct Conditional {
     pub true_branch: Box<CodeNode>,
     // this'll be a block
     pub else_branch: Option<Box<CodeNode>>,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+pub struct ListLiteral {
+    pub id: ID,
+    pub element_type: Type,
+    pub elements: Vec<CodeNode>,
 }

@@ -127,6 +127,19 @@ impl Interpreter {
                         await!(else_branch_fut)
                     }
                 })
+            },
+            lang::CodeNode::ListLiteral(list_literal) => {
+                let futures = list_literal
+                    .elements.iter().map(|e| self.evaluate(e))
+                    .collect_vec();
+                let mut output_vec = vec![];
+                Box::pin(async move {
+                    // TODO: this can be done in parallel
+                    for future in futures.into_iter() {
+                        output_vec.push(await!(future))
+                    }
+                    lang::Value::List(output_vec)
+                })
             }
         }
     }

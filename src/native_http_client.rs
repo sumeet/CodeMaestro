@@ -17,7 +17,7 @@ pub async fn fetch(request: Request<String>) -> Result<Response<String>> {
 
     let request_url: String = request.uri().to_string();
     let status = resp.status();
-    let body = await!(forward(resp.into_body().concat()))?;
+    let body = await!(forward(resp.into_body().concat2()))?;
     let body = String::from_utf8_lossy(&body);
     Ok(Response::builder()
         .status(status)

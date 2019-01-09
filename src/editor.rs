@@ -75,6 +75,7 @@ impl InsertCodeMenu {
             // TODO: should probably be able to insert new assignment expressions as well
             option_generators: vec![
                 Box::new(InsertFunctionOptionGenerator {}),
+                Box::new(InsertLiteralOptionGenerator {}),
                 Box::new(InsertConditionalOptionGenerator {}),
             ],
             selected_option_index: 0,
@@ -188,6 +189,15 @@ impl CodeSearchParams {
     pub fn lowercased_trimmed_search_str(&self) -> String {
         self.input_str.trim().to_lowercase()
     }
+
+    pub fn list_of_something(&self) -> Option<String> {
+        let input_str = self.lowercased_trimmed_search_str();
+        if input_str.starts_with("list") {
+            Some(input_str.trim_start_matches("list").trim().into())
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -285,61 +295,98 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
 #[derive(Clone)]
 struct InsertLiteralOptionGenerator {}
 
-// TODO: some literals we'll want to construct anywhere... you can put something down even if it's
-// not evaluated and just wrap it later!
-//impl InsertLiteralOptionGenerator {
-//    fn maybe_insert_string_literal(&self, options: &mut Vec<InsertCodeMenuOption>,
-//                                   search_params: &CodeSearchParams) {
-//        let input_str = &search_params.input_str;
-//    }
-//}
-
 impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
-        let input_str = &search_params.input_str;
+        let input_str = &search_params.lowercased_trimmed_search_str();
+        let return_type = &search_params.return_type;
         if let Some(ref return_type) = search_params.return_type {
             if return_type.matches_spec(&lang::STRING_TYPESPEC) {
-                options.push(
-                    InsertCodeMenuOption {
-                        label: format!("\u{f10d}{}\u{f10e}", input_str),
-                        is_selected: false,
-                        new_node: code_generation::new_string_literal(input_str)
-                    }
-                );
+                options.push(self.string_literal_option(input_str));
             } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
-                options.push(
-                    InsertCodeMenuOption {
-                        label: lang::NULL_TYPESPEC.symbol.clone(),
-                        is_selected: false,
-                        new_node: code_generation::new_null_literal(),
-                    }
-                );
+                options.push(self.null_literal_option());
+            } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
+                options.push(self.list_literal_option(genie, &return_type));
             } else if let Some(strukt) = genie.find_struct(return_type.typespec_id) {
-                options.push(
-                    InsertCodeMenuOption {
-                        label: format!("{} {}", strukt.symbol, strukt.name),
-                        is_selected: false,
-                        new_node: code_generation::new_struct_literal_with_placeholders(strukt),
-                    }
-                );
+                options.push(self.strukt_option(strukt));
             }
 
             // design decision made here: all placeholders have types. therefore, it is now
             // required for a placeholder node to have a type, meaning we need to know what the
             // type of a placeholder is to create it. under current conditions that's ok, but i
             // think we can make this less restrictive in the future if we need to
-            options.push(
-                InsertCodeMenuOption {
-                    label: format!("{} {}", PLACEHOLDER_ICON, input_str),
-                    is_selected: false,
-                    new_node: code_generation::new_placeholder(input_str, return_type.clone()),
-                }
-            );
+            options.push(self.placeholder_option(input_str, return_type));
+        } else {
+            if let Some(list_search_query) = search_params.list_of_something() {
+                let matching_list_type_options = genie
+                    .find_types_matching(&list_search_query)
+                    .map(|t| {
+                        let list_type = lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![t]);
+                        self.list_literal_option(genie, &list_type)
+                    });
+                options.extend(matching_list_type_options)
+            }
+            if "null".contains(input_str) {
+                options.push(self.null_literal_option())
+            }
+            if !input_str.is_empty() {
+                options.push(self.string_literal_option(input_str));
+            }
         }
         options
     }
 }
+
+impl InsertLiteralOptionGenerator {
+    fn string_literal_option(&self, input_str: &str) -> InsertCodeMenuOption {
+        InsertCodeMenuOption {
+            label: format!("\u{f10d}{}\u{f10e}", input_str),
+            is_selected: false,
+            new_node: code_generation::new_string_literal(input_str)
+        }
+    }
+
+
+    fn null_literal_option(&self) -> InsertCodeMenuOption {
+        InsertCodeMenuOption {
+            label: lang::NULL_TYPESPEC.symbol.clone(),
+            is_selected: false,
+            new_node: code_generation::new_null_literal(),
+        }
+    }
+
+    fn strukt_option(&self, strukt: &structs::Struct) -> InsertCodeMenuOption {
+        InsertCodeMenuOption {
+            label: format!("{} {}", strukt.symbol, strukt.name),
+            is_selected: false,
+            new_node: code_generation::new_struct_literal_with_placeholders(strukt),
+        }
+    }
+
+    fn placeholder_option(&self, input_str: &str, return_type: &lang::Type) -> InsertCodeMenuOption {
+        InsertCodeMenuOption {
+            label: format!("{} {}", PLACEHOLDER_ICON, input_str),
+            is_selected: false,
+            new_node: code_generation::new_placeholder(input_str, return_type.clone()),
+        }
+    }
+
+    fn list_literal_option(&self, genie: &CodeGenie, list_literal_type: &lang::Type) -> InsertCodeMenuOption {
+        let symbol = genie.get_symbol_for_type(list_literal_type);
+        let element_type = &list_literal_type.params[0];
+        let ts = genie.get_typespec(element_type.typespec_id).unwrap();
+        InsertCodeMenuOption {
+            label: format!("{}: {}", symbol, ts.readable_name()),
+            is_selected: false,
+            new_node: lang::CodeNode::ListLiteral(lang::ListLiteral {
+                id: lang::new_id(),
+                element_type: element_type.clone(),
+                elements: vec![]
+            })
+        }
+    }
+}
+
 
 #[derive(Clone)]
 struct InsertConditionalOptionGenerator {}
@@ -480,6 +527,29 @@ impl<'a> CodeGenie<'a> {
         None
     }
 
+    // this whole machinery cannot handle parameterized types yet :/
+    fn find_types_matching(&'a self, str: &'a str) -> impl Iterator<Item = lang::Type> + 'a {
+        self.env.list_typespecs()
+            .filter(|ts| ts.num_params() == 0)
+            .filter(move |ts| ts.readable_name().to_lowercase().contains(str))
+            .map(|ts| lang::Type::from_spec_id(ts.id(), vec![]))
+    }
+
+    fn get_symbol_for_type(&self, t: &lang::Type) -> String {
+        let typespec = self.env.find_typespec(t.typespec_id).unwrap();
+        if typespec.num_params() == 0 {
+            return typespec.symbol().to_string()
+        }
+        let joined_params = t.params.iter()
+            .map(|p| self.get_symbol_for_type(p))
+            .join(", ");
+        format!("{}\u{f053}{}\u{f054}", typespec.symbol(), joined_params)
+    }
+
+    fn get_typespec(&self, ts_id: lang::ID) -> Option<&lang::TypeSpec> {
+        self.env.find_typespec(ts_id).map(|b| b.as_ref())
+    }
+
     fn root(&self) -> &CodeNode {
         self.code
     }
@@ -504,6 +574,7 @@ impl<'a> CodeGenie<'a> {
         self.env.find_struct(id)
     }
 
+    // why can't this return a borrow?
     pub fn guess_type(&self, code_node: &CodeNode) -> lang::Type {
         match code_node {
             CodeNode::FunctionCall(function_call) => {
@@ -561,6 +632,10 @@ impl<'a> CodeGenie<'a> {
             // add a validation for that
             CodeNode::Conditional(conditional) => {
                 self.guess_type(&conditional.true_branch)
+            }
+            CodeNode::ListLiteral(list_literal) => {
+                lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                        vec![list_literal.element_type.clone()])
             }
         }
     }
@@ -736,7 +811,8 @@ impl<'a> Navigation<'a> {
             // let you edit the value of the hole
             CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => false,
             // you always want to move to literals
-            CodeNode::StringLiteral(_) | CodeNode::NullLiteral | CodeNode::StructLiteral(_) => true,
+            CodeNode::StringLiteral(_) | CodeNode::NullLiteral | CodeNode::StructLiteral(_)
+            | CodeNode::ListLiteral(_) => true,
             _ => match self.code_genie.find_parent(code_node.id()) {
                 Some(parent) => {
                     match parent {
@@ -2039,6 +2115,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 CodeNode::Conditional(conditional) => {
                     self.render_conditional(&conditional)
                 }
+                CodeNode::ListLiteral(list_literal) => {
+                    self.render_list_literal(&list_literal, code_node)
+                }
             }
         };
 
@@ -2168,6 +2247,24 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
+    fn render_list_literal(&self, list_literal: &lang::ListLiteral,
+                           code_node: &CodeNode) -> T::DrawResult {
+        let t = self.controller.code_genie().unwrap().guess_type(code_node);
+        // TODO: we can use smth better to express the nesting than ascii art, like our nesting scheme
+        //       with the black lines (can actually make that generic so we can swap it with something
+        //       else
+        let type_symbol = self.get_symbol_for_type(&t);
+        let mut to_draw = vec![
+            self.ui_toolkit.draw_button(&type_symbol, GREY_COLOR, &|| {}),
+        ];
+        for (i, el) in list_literal.elements.iter().enumerate() {
+            to_draw.push(self.render_indented(&|| {
+                self.render_code(el)
+            }))
+        }
+        self.ui_toolkit.draw_all(to_draw)
+    }
+
     fn render_variable_reference(&self, variable_reference: &VariableReference) -> T::DrawResult {
         let loaded_code = self.controller.loaded_code.as_ref().unwrap();
         let assignment = loaded_code.find_node(variable_reference.assignment_id);
@@ -2254,7 +2351,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn get_symbol_for_type(&self, t: &lang::Type) -> String {
-        self.controller.get_typespec(t.typespec_id).unwrap().symbol().to_string()
+        self.controller.code_genie().unwrap().get_symbol_for_type(t)
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
