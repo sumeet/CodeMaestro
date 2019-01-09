@@ -3,13 +3,16 @@ use cfg_if::{cfg_if};
 use std::collections::HashMap;
 use super::lang;
 use super::env;
+use super::structs;
+use serde_json::json;
 use lazy_static::lazy_static;
+
 
 // this gets loaded through codesample.json... TODO: make a builtins.json file
 lazy_static! {
-    static ref RESULT_ENUM_ID : uuid::Uuid = uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap();
+    pub static ref HTTP_RESPONSE_STRUCT_ID : uuid::Uuid = uuid::Uuid::parse_str("31d96c85-5966-4866-a90a-e6db3707b140").unwrap();
+    pub static ref RESULT_ENUM_ID : uuid::Uuid = uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap();
 }
-
 
 #[derive(Clone)]
 pub struct Print {}

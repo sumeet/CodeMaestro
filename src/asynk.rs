@@ -20,7 +20,7 @@ pub fn backward<I,E>(f: impl NewFuture<Output=Result<I,E>>) -> impl OldFuture<It
     backward::Compat::new(f)
 }
 
-pub fn _forward<I,E>(f: impl OldFuture<Item=I, Error=E> + Unpin) -> impl NewFuture<Output=Result<I,E>> {
+pub fn forward<I,E>(f: impl OldFuture<Item=I, Error=E> + Unpin) -> impl NewFuture<Output=Result<I,E>> {
     use tokio_async_await::compat::forward::IntoAwaitable;
     f.into_awaitable()
 }

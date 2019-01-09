@@ -30,7 +30,9 @@ mod editor;
 mod edit_types;
 mod json;
 mod undo;
+mod json_http_client;
 mod code_generation;
+mod function;
 mod external_func;
 #[cfg(feature = "default")]
 mod pystuff;
@@ -77,6 +79,15 @@ mod wasm_http_client;
 #[cfg(feature = "javascript")]
 mod http_client {
     pub use super::wasm_http_client::*;
+}
+
+
+#[cfg(feature = "default")]
+mod native_http_client;
+
+#[cfg(feature = "default")]
+mod http_client {
+    pub use super::native_http_client::*;
 }
 
 

@@ -1,10 +1,10 @@
 use super::env;
 use super::lang;
+use super::function;
 use std::collections::HashMap;
 
-pub trait ModifyableFunc: lang::Function {
+pub trait ModifyableFunc: lang::Function + function::SettableArgs {
     fn set_return_type(&mut self, return_type: lang::Type);
-    fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>);
     fn clone(&self) -> Self;
 }
 

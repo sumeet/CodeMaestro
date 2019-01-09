@@ -85,3 +85,4 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
 pub fn new_null_literal() -> lang::CodeNode {
     lang::CodeNode::NullLiteral
 }
+

@@ -5,6 +5,7 @@ use serde_derive::{Serialize,Deserialize};
 use super::lang;
 use super::env;
 use super::external_func;
+use super::function;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JSFunc {
@@ -41,9 +42,6 @@ impl external_func::ModifyableFunc for JSFunc {
     fn set_return_type(&mut self, _return_type: lang::Type) {
     }
 
-
-    fn set_args(&mut self, _args: Vec<lang::ArgumentDefinition>) {}
-
     fn clone(&self) -> Self {
         JSFunc {
             eval: self.eval.clone(),
@@ -52,4 +50,8 @@ impl external_func::ModifyableFunc for JSFunc {
             id: self.id.clone(),
         }
     }
+}
+
+impl function::SettableArgs for JSFunc {
+    fn set_args(&mut self, _args: Vec<lang::ArgumentDefinition>) {}
 }

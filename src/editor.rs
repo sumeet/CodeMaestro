@@ -21,6 +21,7 @@ use super::undo;
 use super::edit_types;
 use super::enums;
 use super::structs;
+use super::function;
 
 
 pub const SELECTION_COLOR: Color = [1., 1., 1., 0.3];
@@ -1758,7 +1759,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn render_arguments_selector<F: external_func::ModifyableFunc>(&self, func: F) -> T::DrawResult {
+    fn render_arguments_selector<F: function::SettableArgs + std::clone::Clone>(&self, func: F) -> T::DrawResult {
         let args = func.takes_args();
 
         let mut to_draw = vec![

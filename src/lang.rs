@@ -217,6 +217,10 @@ impl Type {
         }
     }
 
+    pub fn from_spec_id(typespec_id: ID, params: Vec<Self>) -> Self {
+        Self { typespec_id, params }
+    }
+
     pub fn id(&self) -> ID {
         let mut mashed_hashes = vec![self.typespec_id.to_string()];
         mashed_hashes.extend(self.params.iter().map(|t| t.id().to_string()));

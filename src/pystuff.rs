@@ -10,6 +10,7 @@ use pyo3::types::{PyIterator,PyObjectRef,PyDict};
 use serde_derive::{Serialize,Deserialize};
 
 use super::env;
+use super::function;
 use super::external_func;
 use super::external_func::{ValueWithEnv};
 use super::lang;
@@ -266,10 +267,6 @@ impl external_func::ModifyableFunc for PyFunc {
         self.return_type = return_type
     }
 
-    fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>) {
-        self.args = args
-    }
-
     fn clone(&self) -> Self {
         PyFunc {
             prelude: self.prelude.clone(),
@@ -279,6 +276,12 @@ impl external_func::ModifyableFunc for PyFunc {
             id: self.id.clone(),
             args: self.args.clone(),
         }
+    }
+}
+
+impl function::SettableArgs for PyFunc {
+    fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>) {
+        self.args = args
     }
 }
 
