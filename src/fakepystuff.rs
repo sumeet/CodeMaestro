@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use super::lang;
 use super::env;
 use super::external_func;
+use super::function;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PyFunc {
@@ -42,8 +43,6 @@ impl external_func::ModifyableFunc for PyFunc {
         self.return_type = return_type
     }
 
-    fn set_args(&mut self, _args: Vec<lang::ArgumentDefinition>) {}
-
     fn clone(&self) -> Self {
         PyFunc {
             prelude: self.prelude.clone(),
@@ -53,4 +52,8 @@ impl external_func::ModifyableFunc for PyFunc {
             id: self.id.clone(),
         }
     }
+}
+
+impl function::SettableArgs for PyFunc {
+    fn set_args(&mut self, _args: Vec<lang::ArgumentDefinition>) {}
 }

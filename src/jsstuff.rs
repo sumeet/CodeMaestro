@@ -3,6 +3,7 @@ use super::lang;
 use super::external_func;
 use super::external_func::ValueWithEnv;
 use super::structs;
+use super::function;
 
 use serde;
 use serde::ser::{SerializeSeq,SerializeMap};
@@ -187,10 +188,6 @@ impl external_func::ModifyableFunc for JSFunc {
         self.return_type = return_type
     }
 
-    fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>) {
-        self.args = args
-    }
-
     fn clone(&self) -> Self {
         JSFunc {
             eval: self.eval.clone(),
@@ -199,5 +196,11 @@ impl external_func::ModifyableFunc for JSFunc {
             id: self.id.clone(),
             args: self.args.clone(),
         }
+    }
+}
+
+impl function::SettableArgs for JSFunc {
+    fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>) {
+        self.args = args
     }
 }
