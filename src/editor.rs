@@ -936,7 +936,7 @@ impl<'a> Controller {
         let genie = self.code_genie();
         let (next_selection_id, editing) = post_insertion_cursor(&code_node, genie.as_ref().unwrap());
         if editing {
-            self.mark_as_editing(next_selection_id)
+            self.mark_as_editing(next_selection_id);
         } else {
             self.set_selected_node_id(Some(next_selection_id));
         }
@@ -1028,7 +1028,7 @@ impl<'a> Controller {
             },
             (false, Key::C) => {
                 if let Some(id) = self.selected_node_id {
-                    self.mark_as_editing(id)
+                    self.mark_as_editing(id);
                 }
             },
             (false, Key::D) => {
@@ -1069,10 +1069,10 @@ impl<'a> Controller {
     fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
         match self.code_genie()?.find_parent(self.selected_node_id?)? {
             CodeNode::Argument(cn) => {
-                self.mark_as_editing(cn.id)
+                self.mark_as_editing(cn.id);
             },
             CodeNode::StructLiteralField(cn) => {
-                self.mark_as_editing(cn.id)
+                self.mark_as_editing(cn.id);
             },
 //            CodeNode::Block(block) => {
 //                self.mark_as_editing(cn.id)
@@ -1125,16 +1125,9 @@ impl<'a> Controller {
         }
     }
 
-    fn mark_as_editing(&mut self, node_id: ID) {
-        {
-            let genie = self.code_genie();
-            if genie.is_none() {
-                return
-            }
-        }
-        self.save_current_state_to_undo_history();
-        let genie = self.code_genie().unwrap();
-        match genie.find_node(node_id) {
+    fn mark_as_editing(&mut self, node_id: ID) -> Option<()> {
+        let genie = self.code_genie()?;
+        match self.code_genie()?.find_node(node_id) {
             Some(CodeNode::Argument(_)) => {
                 let insertion_point = InsertionPoint::Argument(node_id);
                 self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(insertion_point, &genie));
@@ -1145,8 +1138,10 @@ impl<'a> Controller {
             }
             _ => ()
         }
+        self.save_current_state_to_undo_history();
         self.selected_node_id = Some(node_id);
         self.editing = true;
+        Some(())
     }
 
     fn currently_focused_block_expression(&self) -> Option<ID> {
@@ -1337,7 +1332,7 @@ impl CommandBuffer {
 
     pub fn mark_as_editing(&mut self, code_node_id: lang::ID) {
         self.add_controller_command(move |controller| {
-            controller.mark_as_editing(code_node_id)
+            controller.mark_as_editing(code_node_id);
         })
     }
 
