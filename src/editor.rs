@@ -59,14 +59,15 @@ struct InsertCodeMenu {
 impl InsertCodeMenu {
     // TODO: we could just construct all the generators and have them switch on insertion
     // point, intead of doing it here... maybe
-    pub fn for_insertion_point(insertion_point: InsertionPoint, genie: &CodeGenie) -> Self {
+    pub fn for_insertion_point(insertion_point: InsertionPoint, genie: &CodeGenie) -> Option<Self> {
         match insertion_point {
             InsertionPoint::Before(_) | InsertionPoint::After(_) => {
-                Self::new_expression_inside_code_block(insertion_point)
+                Some(Self::new_expression_inside_code_block(insertion_point))
             },
             InsertionPoint::Argument(field_id) | InsertionPoint::StructLiteralField(field_id) => {
-                Self::fill_in_field_with_exact_type(field_id, genie, insertion_point)
-            }
+                Some(Self::fill_in_field_with_exact_type(field_id, genie, insertion_point))
+            },
+            InsertionPoint::Editing(_) => None
         }
     }
 
@@ -416,15 +417,29 @@ pub enum InsertionPoint {
     After(ID),
     Argument(ID),
     StructLiteralField(ID),
+    Editing(ID),
 }
 
 impl InsertionPoint {
+    // the purpose of this method is unclear therefore it's dangerous. remove this in a refactoring
+    // because it's not really widely used
     fn node_id(&self) -> ID {
         match *self {
             InsertionPoint::Before(id) => id,
             InsertionPoint::After(id) => id,
             InsertionPoint::Argument(id) => id,
             InsertionPoint::StructLiteralField(id) => id,
+            InsertionPoint::Editing(id) => id,
+        }
+    }
+
+    fn selected_node_id(&self) -> Option<ID> {
+        match *self {
+            InsertionPoint::Before(id) => None,
+            InsertionPoint::After(id) => None,
+            InsertionPoint::Argument(id) => Some(id),
+            InsertionPoint::StructLiteralField(id) => Some(id),
+            InsertionPoint::Editing(id) => Some(id),
         }
     }
 }
@@ -934,11 +949,9 @@ impl<'a> Controller {
                                                         genie.as_ref().unwrap());
         self.loaded_code.as_mut().unwrap().replace(&new_code);
         let genie = self.code_genie();
-        let (next_selection_id, editing) = post_insertion_cursor(&code_node, genie.as_ref().unwrap());
-        if editing {
-            self.mark_as_editing(next_selection_id);
-        } else {
-            self.set_selected_node_id(Some(next_selection_id));
+        match post_insertion_cursor(&code_node, genie.as_ref().unwrap()) {
+            PostInsertionAction::SelectNode(id) => { self.set_selected_node_id(Some(id)); }
+            PostInsertionAction::MarkAsEditing(insertion_point) => { self.mark_as_editing(insertion_point); }
         }
     }
 
@@ -1028,7 +1041,7 @@ impl<'a> Controller {
             },
             (false, Key::C) => {
                 if let Some(id) = self.selected_node_id {
-                    self.mark_as_editing(id);
+                    self.mark_as_editing(InsertionPoint::Editing(id));
                 }
             },
             (false, Key::D) => {
@@ -1069,14 +1082,11 @@ impl<'a> Controller {
     fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
         match self.code_genie()?.find_parent(self.selected_node_id?)? {
             CodeNode::Argument(cn) => {
-                self.mark_as_editing(cn.id);
+                self.mark_as_editing(InsertionPoint::Argument(cn.id));
             },
             CodeNode::StructLiteralField(cn) => {
-                self.mark_as_editing(cn.id);
+                self.mark_as_editing(InsertionPoint::StructLiteralField(cn.id));
             },
-//            CodeNode::Block(block) => {
-//                self.mark_as_editing(cn.id)
-//            },
             _ => (),
         }
         Some(())
@@ -1099,13 +1109,7 @@ impl<'a> Controller {
     // TODO: factor duplicate code between this method and the next
     fn set_insertion_point_on_previous_line_in_block(&mut self) {
         if let Some(expression_id) = self.currently_focused_block_expression() {
-            self.save_current_state_to_undo_history();
-            self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(
-                InsertionPoint::Before(expression_id),
-                self.code_genie().as_ref().unwrap()
-            ));
-            self.editing = true;
-            self.selected_node_id = None;
+            self.mark_as_editing(InsertionPoint::Before(expression_id));
         } else {
             self.hide_insert_code_menu()
         }
@@ -1113,33 +1117,17 @@ impl<'a> Controller {
 
     fn set_insertion_point_on_next_line_in_block(&mut self) {
         if let Some(expression_id) = self.currently_focused_block_expression() {
-            self.save_current_state_to_undo_history();
-            self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(
-                InsertionPoint::After(expression_id),
-                self.code_genie().as_ref().unwrap()
-            ));
-            self.editing = true;
-            self.selected_node_id = None;
+            self.mark_as_editing(InsertionPoint::After(expression_id));
         } else {
             self.hide_insert_code_menu()
         }
     }
 
-    fn mark_as_editing(&mut self, node_id: ID) -> Option<()> {
-        let genie = self.code_genie()?;
-        match self.code_genie()?.find_node(node_id) {
-            Some(CodeNode::Argument(_)) => {
-                let insertion_point = InsertionPoint::Argument(node_id);
-                self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(insertion_point, &genie));
-            },
-            Some(CodeNode::StructLiteralField(_)) => {
-                let insertion_point = InsertionPoint::StructLiteralField(node_id);
-                self.insert_code_menu = Some(InsertCodeMenu::for_insertion_point(insertion_point, &genie));
-            }
-            _ => ()
-        }
+    fn mark_as_editing(&mut self, insertion_point: InsertionPoint) -> Option<()> {
+        self.insert_code_menu = InsertCodeMenu::for_insertion_point(insertion_point,
+                                                                    &self.code_genie()?);
         self.save_current_state_to_undo_history();
-        self.selected_node_id = Some(node_id);
+        self.selected_node_id = insertion_point.selected_node_id();
         self.editing = true;
         Some(())
     }
@@ -1330,11 +1318,11 @@ impl CommandBuffer {
         })
     }
 
-    pub fn mark_as_editing(&mut self, code_node_id: lang::ID) {
-        self.add_controller_command(move |controller| {
-            controller.mark_as_editing(code_node_id);
-        })
-    }
+//    pub fn mark_as_editing(&mut self, code_node_id: lang::ID) {
+//        self.add_controller_command(move |controller| {
+//            controller.mark_as_editing(code_node_id);
+//        })
+//    }
 
     pub fn replace_code(&mut self, code: lang::CodeNode) {
         self.add_controller_command(move |controller| {
@@ -2507,10 +2495,12 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_inline_editable_button(&self, label: &str, color: Color, code_node_id: lang::ID) -> T::DrawResult {
-        let controller = Rc::clone(&self.command_buffer);
+        let command_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_button(label, color, move || {
-            let mut controller = controller.borrow_mut();
-            controller.mark_as_editing(code_node_id);
+            let mut command_buffer = command_buffer.borrow_mut();
+            command_buffer.add_controller_command(move |controller| {
+                controller.mark_as_editing(InsertionPoint::Editing(code_node_id));
+            })
         })
     }
 
@@ -2621,7 +2611,9 @@ impl MutationMaster {
             },
             InsertionPoint::StructLiteralField(struct_literal_field_id) => {
                 self.insert_expression_into_struct_literal_field(node_to_insert, struct_literal_field_id, genie)
-            }
+            },
+            // TODO: perhaps we should have edits go through this codepath as well!
+            InsertionPoint::Editing(_) => panic!("this is currently unused")
         }
     }
 
@@ -2724,23 +2716,29 @@ impl MutationMaster {
     }
 }
 
-// return value: (CodeNode ID, editing: true/false)
-fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> (ID, bool) {
+enum PostInsertionAction {
+    SelectNode(ID),
+    MarkAsEditing(InsertionPoint),
+}
+
+fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> PostInsertionAction {
     if let CodeNode::FunctionCall(function_call) = code_node {
         // if we just inserted a function call, then go to the first arg if there is one
         if function_call.args.len() > 0 {
-            return (function_call.args.get(0).unwrap().id(), true)
+            let id = function_call.args[0].id();
+            return PostInsertionAction::MarkAsEditing(InsertionPoint::Argument(id))
         } else {
-            return (function_call.id, false)
+            return PostInsertionAction::SelectNode(function_call.id)
         }
     }
 
     if let CodeNode::StructLiteral(struct_literal) = code_node {
         // if we just inserted a function call, then go to the first arg if there is one
         if struct_literal.fields.len() > 0 {
-            return (struct_literal.fields.get(0).unwrap().id(), true)
+            let id = struct_literal.fields[0].id();
+            return PostInsertionAction::MarkAsEditing(InsertionPoint::StructLiteralField(id))
         } else {
-            return (struct_literal.id, false)
+            return PostInsertionAction::SelectNode(struct_literal.id)
         }
     }
 
@@ -2752,8 +2750,8 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> (ID, b
             let just_inserted_argument_position = function_call.args.iter()
                 .position(|arg| arg.id() == argument.id).unwrap();
             let maybe_next_arg = function_call.args.get(just_inserted_argument_position + 1);
-            if let Some(CodeNode::Argument(lang::Argument{ expr: box CodeNode::Placeholder(_), .. })) = maybe_next_arg {
-                return (maybe_next_arg.unwrap().id(), true)
+            if let Some(CodeNode::Argument(lang::Argument{ expr: box CodeNode::Placeholder(_), id, .. })) = maybe_next_arg {
+                return PostInsertionAction::MarkAsEditing(InsertionPoint::Argument(*id))
             }
         }
     } else if let Some(CodeNode::StructLiteralField(struct_literal_field)) = parent {
@@ -2763,14 +2761,14 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> (ID, b
             let just_inserted_argument_position = struct_literal.fields.iter()
                 .position(|field| field.id() == struct_literal_field.id).unwrap();
             let maybe_next_field = struct_literal.fields.get(just_inserted_argument_position + 1);
-            if let Some(CodeNode::StructLiteralField(lang::StructLiteralField{ expr: box CodeNode::Placeholder(_), .. })) = maybe_next_field {
-                return (maybe_next_field.unwrap().id(), true)
+            if let Some(CodeNode::StructLiteralField(lang::StructLiteralField{ expr: box CodeNode::Placeholder(_), id, .. })) = maybe_next_field {
+                return PostInsertionAction::MarkAsEditing(InsertionPoint::StructLiteralField(*id))
             }
         }
     }
 
     // nothing that we can think of to do next, just chill at the insertion point
-    (code_node.id(), false)
+    PostInsertionAction::SelectNode(code_node.id())
 }
 
 fn format_typespec_select(ts: &Box<lang::TypeSpec>, nesting_level: Option<&[usize]>) -> String {
