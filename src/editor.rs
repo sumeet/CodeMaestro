@@ -970,16 +970,15 @@ impl<'a> Controller {
         }
     }
 
-    fn delete_selected_code(&mut self) {
-        let node_to_delete = self.get_selected_node().cloned().unwrap();
-        let genie = self.code_genie();
+    fn delete_selected_code(&mut self) -> Option<()> {
         let deletion_result = self.mutation_master.delete_code(
-            &node_to_delete, genie.as_ref().unwrap(), self.selected_node_id);
+            self.selected_node_id?, &self.code_genie()?, self.selected_node_id);
         // TODO: these save current state calls can go inside of the mutation master
         self.save_current_state_to_undo_history();
         self.loaded_code.as_mut().unwrap().replace(&deletion_result.new_root);
         // TODO: intelligently select a nearby node to select after deleting
         self.set_selected_node_id(deletion_result.new_cursor_position);
+        Some(())
     }
 
     fn select_current_line(&mut self) {
@@ -1033,7 +1032,10 @@ impl<'a> Controller {
                 }
             },
             (false, Key::D) => {
-                self.delete_selected_code()
+                self.delete_selected_code();
+            },
+            (false, Key::A) => {
+                self.try_append_in_selected_node();
             },
             (false, Key::R) => {
                 if keypress.ctrl && keypress.shift {
@@ -1064,25 +1066,27 @@ impl<'a> Controller {
         }
     }
 
-    fn try_enter_replace_edit_for_selected_node(&mut self) {
-        if let Some(id) = self.selected_node_id {
-            if let Some(genie) = self.code_genie() {
-                if let Some(parent) = genie.find_parent(id) {
-                    match parent {
-                        CodeNode::Argument(cn) => {
-                            self.mark_as_editing(cn.id)
-                        },
-                        CodeNode::StructLiteralField(cn) => {
-                            self.mark_as_editing(cn.id)
-                        },
-//                        CodeNode::Block(block) => {
-//                            self.mark_as_editing(cn.id)
-//                        },
-                        _ => (),
-                    }
-                }
-            }
+    fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
+        match self.code_genie()?.find_parent(self.selected_node_id?)? {
+            CodeNode::Argument(cn) => {
+                self.mark_as_editing(cn.id)
+            },
+            CodeNode::StructLiteralField(cn) => {
+                self.mark_as_editing(cn.id)
+            },
+//            CodeNode::Block(block) => {
+//                self.mark_as_editing(cn.id)
+//            },
+            _ => (),
         }
+        Some(())
+    }
+
+    fn try_append_in_selected_node(&mut self) -> Option<()> {
+//        match self.get_selected_node()? {
+//
+//        }
+        Some(())
     }
 
     fn handle_cancel(&mut self) {
@@ -2675,9 +2679,9 @@ impl MutationMaster {
         }
     }
 
-    pub fn delete_code(&self, node_to_delete: &CodeNode, genie: &CodeGenie,
+    pub fn delete_code(&self, node_id_to_delete: ID, genie: &CodeGenie,
                        cursor_position: Option<ID>) -> DeletionResult {
-        let parent = genie.find_parent(node_to_delete.id());
+        let parent = genie.find_parent(node_id_to_delete);
         if parent.is_none() {
             panic!("idk when this happens, let's take care of this if / when it does")
         }
@@ -2685,10 +2689,10 @@ impl MutationMaster {
         match parent {
             CodeNode::Block(block) => {
                 let mut new_block = block.clone();
-                new_block.expressions.retain(|exp| exp.id() != node_to_delete.id());
+                new_block.expressions.retain(|exp| exp.id() != node_id_to_delete);
 
                 let deleted_expression_position_in_block = genie.find_position_in_block(
-                    &block, node_to_delete.id()).unwrap();
+                    &block, node_id_to_delete).unwrap();
                 let mut new_cursor_position = new_block.expressions
                     .get(deleted_expression_position_in_block)
                     .map(|code_node| code_node.id());
