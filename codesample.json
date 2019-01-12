@@ -101,6 +101,37 @@
             ],
             "id": "acf491c3-f970-474a-91db-0a8d98874ffb"
           }
+        },
+        {
+          "ListLiteral": {
+            "id": "af84189d-c277-45f2-bd13-44684f61b009",
+            "element_type": {
+              "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+              "params": []
+            },
+            "elements": [
+              {
+                "Placeholder": {
+                  "id": "dd1e97ab-f97b-4bfa-ab47-83f678880683",
+                  "description": "3987",
+                  "typ": {
+                    "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+                    "params": []
+                  }
+                }
+              },
+              {
+                "Placeholder": {
+                  "id": "5bf3fc94-cc01-476d-860e-5163fc6e14bf",
+                  "description": "21",
+                  "typ": {
+                    "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+                    "params": []
+                  }
+                }
+              }
+            ]
+          }
         }
       ],
       "id": "b702d87f-28bb-4c2c-b22a-318c342dbaa3"
@@ -131,29 +162,6 @@
   "jsfuncs": [],
   "structs": [
     {
-      "name": "HTTP Form param",
-      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-          "name": "key",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
-          "name": "value",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
       "name": "HTTP Response",
       "id": "31d96c85-5966-4866-a90a-e6db3707b140",
       "symbol": "",
@@ -171,6 +179,29 @@
           "name": "status code",
           "field_type": {
             "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           }
         }

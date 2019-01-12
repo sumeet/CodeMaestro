@@ -243,6 +243,13 @@ impl Type {
 }
 
 impl CodeNode {
+    pub fn into_list_literal(&self) -> &ListLiteral {
+        match self {
+            CodeNode::ListLiteral(ref list_literal) => list_literal,
+            _ => panic!("tried converting into list literal but this ain't an list literal")
+        }
+    }
+
     pub fn into_argument(&self) -> &Argument {
         match self {
             CodeNode::Argument(ref argument) => argument,

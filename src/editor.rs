@@ -65,9 +65,23 @@ impl InsertCodeMenu {
                 Some(Self::new_expression_inside_code_block(insertion_point))
             },
             InsertionPoint::Argument(field_id) | InsertionPoint::StructLiteralField(field_id) => {
-                Some(Self::fill_in_field_with_exact_type(field_id, genie, insertion_point))
+                let node = genie.find_node(field_id).unwrap();
+                let exact_type = genie.guess_type(node);
+                Some(Self::fill_in_field_with_exact_type(exact_type, genie, insertion_point))
             },
-            InsertionPoint::Editing(_) => None
+            InsertionPoint::Editing(_) => None,
+            InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
+                let list_literal = genie.find_node(list_literal_id).unwrap();
+                match list_literal {
+                    CodeNode::ListLiteral(list_literal) => {
+                        Some(Self::fill_in_field_with_exact_type(
+                            list_literal.element_type.clone(),
+                            genie,
+                            insertion_point))
+                    }
+                    _ => panic!("should always be a list literal... ugh"),
+                }
+            }
         }
     }
 
@@ -85,15 +99,13 @@ impl InsertCodeMenu {
         }
     }
 
-    fn fill_in_field_with_exact_type(id: lang::ID, genie: &CodeGenie,
+    fn fill_in_field_with_exact_type(exact_type: lang::Type, genie: &CodeGenie,
                                      insertion_point: InsertionPoint) -> Self {
-        let node = genie.find_node(id).unwrap();
-        let exact_type = genie.guess_type(node);
-
         Self {
             option_generators: vec![
                 Box::new(InsertVariableReferenceOptionGenerator {
-                    insertion_id: id
+                    // TODO: this is gonna bite me in the ass, but w/e
+                    insertion_id: insertion_point.node_id()
                 }),
                 Box::new(InsertFunctionOptionGenerator {}),
                 Box::new(InsertLiteralOptionGenerator {}),
@@ -418,6 +430,7 @@ pub enum InsertionPoint {
     Argument(ID),
     StructLiteralField(ID),
     Editing(ID),
+    ListLiteralElement { list_literal_id: ID, pos: usize },
 }
 
 impl InsertionPoint {
@@ -430,6 +443,9 @@ impl InsertionPoint {
             InsertionPoint::Argument(id) => id,
             InsertionPoint::StructLiteralField(id) => id,
             InsertionPoint::Editing(id) => id,
+            InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
+                list_literal_id
+            },
         }
     }
 
@@ -440,6 +456,8 @@ impl InsertionPoint {
             InsertionPoint::Argument(id) => Some(id),
             InsertionPoint::StructLiteralField(id) => Some(id),
             InsertionPoint::Editing(id) => Some(id),
+            // not sure if this is right....
+            InsertionPoint::ListLiteralElement { list_literal_id, .. } => Some(list_literal_id),
         }
     }
 }
@@ -493,6 +511,10 @@ impl<'a> CodeGenie<'a> {
 
     // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made
     // inside of conditionals... ugh scoping is tough
+    //
+    // update: yeah... for conditionals, we'll have to make another recursive call and keep searching
+    // up parent blocks. i think we can do this! just have to find assignments that come before the
+    // conditional itself
     fn find_assignments_that_come_before_code(&self, node_id: ID) -> Vec<&Assignment> {
         let block_expression_id = self.find_expression_inside_block_that_contains(node_id);
         if block_expression_id.is_none() {
@@ -551,7 +573,7 @@ impl<'a> CodeGenie<'a> {
     }
 
     fn get_symbol_for_type(&self, t: &lang::Type) -> String {
-        let typespec = self.env.find_typespec(t.typespec_id).unwrap();
+        let typespec = self.get_typespec(t.typespec_id).unwrap();
         if typespec.num_params() == 0 {
             return typespec.symbol().to_string()
         }
@@ -831,9 +853,8 @@ impl<'a> Navigation<'a> {
             _ => match self.code_genie.find_parent(code_node.id()) {
                 Some(parent) => {
                     match parent {
-                        // if our parent is an arg or struct literal field, then we're inside a hole.
-                        // let's make ourselves navigatable
-                        CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => true,
+                        // if our parent is one of these, then we're a hole, and therefore navigatable.
+                        CodeNode::Argument(_) | CodeNode::StructLiteralField(_) | CodeNode::ListLiteral(_) => true,
                         _ => false,
                     }
                 }
@@ -1093,9 +1114,31 @@ impl<'a> Controller {
     }
 
     fn try_append_in_selected_node(&mut self) -> Option<()> {
-//        match self.get_selected_node()? {
-//
-//        }
+        let selected_node = self.get_selected_node()?;
+        match selected_node {
+            CodeNode::ListLiteral(list_literal) => {
+                let insertion_point = InsertionPoint::ListLiteralElement {
+                    list_literal_id: list_literal.id,
+                    pos: 0
+                };
+                self.mark_as_editing(insertion_point);
+                return Some(());
+            }
+            _ => ()
+        }
+        match self.code_genie()?.find_parent(selected_node.id())? {
+            CodeNode::ListLiteral(list_literal) => {
+                let position_of_selected_node = list_literal.elements.iter()
+                    .position(|el| el.id() == selected_node.id())?;
+                let insertion_point = InsertionPoint::ListLiteralElement {
+                    list_literal_id: list_literal.id,
+                    pos: position_of_selected_node + 1
+                };
+                self.mark_as_editing(insertion_point);
+                return Some(());
+            }
+            _ => (),
+        }
         Some(())
     }
 
@@ -1317,12 +1360,6 @@ impl CommandBuffer {
                 .map(|m| {m.set_search_str(&input)});
         })
     }
-
-//    pub fn mark_as_editing(&mut self, code_node_id: lang::ID) {
-//        self.add_controller_command(move |controller| {
-//            controller.mark_as_editing(code_node_id);
-//        })
-//    }
 
     pub fn replace_code(&mut self, code: lang::CodeNode) {
         self.add_controller_command(move |controller| {
@@ -2242,13 +2279,45 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         //       else
         let type_symbol = self.get_symbol_for_type(&t);
         let mut to_draw = vec![
-            self.ui_toolkit.draw_button(&type_symbol, GREY_COLOR, &|| {}),
+            self.ui_toolkit.draw_button(&type_symbol, BLUE_COLOR, &|| {}),
         ];
-        for (i, el) in list_literal.elements.iter().enumerate() {
-            to_draw.push(self.render_indented(&|| {
-                self.render_code(el)
-            }))
+
+        let insert_pos = match self.controller.insert_code_menu {
+            Some(InsertCodeMenu {
+                     insertion_point: InsertionPoint::ListLiteralElement { list_literal_id, pos }, ..
+                 }) if list_literal_id == list_literal.id => Some(pos),
+            _ => None,
+        };
+
+        let mut position_label = 0;
+        let mut i = 0;
+        while i <= list_literal.elements.len() {
+            if insert_pos.map_or(false, |insert_pos| insert_pos == i) {
+                to_draw.push(self.render_indented(&|| {
+                    self.ui_toolkit.draw_all_on_same_line(&[
+                        &|| {
+                            self.ui_toolkit.draw_button(&position_label.to_string(), BLACK_COLOR, &||{})
+                        },
+                        &|| self.render_nested(&|| self.render_insert_code_node()),
+                    ])
+                }));
+                position_label += 1;
+            }
+
+            list_literal.elements.get(i).map(|el| {
+                to_draw.push(self.render_indented(&|| {
+                    self.ui_toolkit.draw_all_on_same_line(&[
+                        &|| {
+                            self.ui_toolkit.draw_button(&position_label.to_string(), BLACK_COLOR, &||{})
+                        },
+                        &|| self.render_nested(&|| self.render_code(el)),
+                    ])
+                }));
+                position_label += 1;
+            });
+            i += 1;
         }
+
         self.ui_toolkit.draw_all(to_draw)
     }
 
@@ -2301,18 +2370,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let mut function_name = format!("Error: function ID {} not found", function_id);
 
         if let Some(function) = self.controller.find_function(function_id) {
-            color = BLUE_COLOR;
+            color = GREY_COLOR;
             function_name = function.name().to_string();
         }
         self.ui_toolkit.draw_button(&function_name, color, &|| {})
     }
 
     fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> T::DrawResult {
-        let top_border_thickness = 1;
-        let right_border_thickness = 1;
-        let bottom_border_thickness = 1;
-
-        let draw = || {
+        let draw_fn = || {
             let function = self.controller.find_function(function_id)
                 .map(|func| func.clone());
             let args = args.clone();
@@ -2326,11 +2391,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             }
         };
 
+        self.render_nested(&draw_fn)
+    }
+
+    fn render_nested(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
+        let top_border_thickness = 1;
+        let right_border_thickness = 1;
+        let bottom_border_thickness = 1;
+
         let nesting_level = self.arg_nesting_level.replace_with(|i| *i + 1);
         let top_border_thickness = top_border_thickness + nesting_level + 1;
         let drawn = self.ui_toolkit.draw_top_border_inside(BLACK_COLOR, top_border_thickness as u8, &|| {
             self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &|| {
-                self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, &draw)
+                self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, draw_fn)
             })
         });
         self.arg_nesting_level.replace_with(|i| *i - 1);
@@ -2413,7 +2486,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_struct_identifier(&self, strukt: &structs::Struct,
                                 _struct_literal: &lang::StructLiteral) -> T::DrawResult {
         // TODO: handle when the typespec ain't available
-        self.ui_toolkit.draw_button(&strukt.name, SALMON_COLOR, &|| {})
+        self.ui_toolkit.draw_button(&strukt.name, BLUE_COLOR, &|| {})
     }
 
     fn render_struct_literal_fields(&self, strukt: &'a structs::Struct,
@@ -2444,7 +2517,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.render_inline_editable_button(&field_text, BLACK_COLOR, literal.id)
                 }
             },
-            &|| { self.render_code(&literal.expr) }
+            &|| self.render_nested(&|| self.render_code(&literal.expr))
         ])
     }
 
@@ -2544,6 +2617,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => {
                 self.render_insert_code_node()
             }
+            // the list literal renders its own editor inline
+            CodeNode::ListLiteral(list_literal) => {
+                self.render_list_literal(list_literal, code_node)
+            }
             _ => {
                 // TODO: this is super hacks. the editor just reaches in and makes something not
                 // editing while rendering lol
@@ -2593,15 +2670,11 @@ impl MutationMaster {
 
     fn insert_code(&self, node_to_insert: &CodeNode, insertion_point: InsertionPoint,
                    genie: &CodeGenie) -> CodeNode {
-        let parent = genie.find_parent(insertion_point.node_id());
-        if parent.is_none() {
-            panic!("unable to insert new code, couldn't find parent to insert into")
-
-        }
-        let parent = parent.unwrap();
         let node_to_insert = node_to_insert.clone();
         match insertion_point {
-            InsertionPoint::Before(_) | InsertionPoint::After(_) => {
+            InsertionPoint::Before(id) | InsertionPoint::After(id) => {
+                let parent = genie.find_parent(id)
+                    .expect("unable to insert new code, couldn't find parent to insert into");
                 self.insert_new_expression_in_block(
                     node_to_insert, insertion_point, parent.clone(), genie)
 
@@ -2612,9 +2685,21 @@ impl MutationMaster {
             InsertionPoint::StructLiteralField(struct_literal_field_id) => {
                 self.insert_expression_into_struct_literal_field(node_to_insert, struct_literal_field_id, genie)
             },
+            InsertionPoint::ListLiteralElement { list_literal_id, pos } => {
+                self.insertion_expression_into_list_literal(node_to_insert, list_literal_id, pos, genie)
+            }
             // TODO: perhaps we should have edits go through this codepath as well!
             InsertionPoint::Editing(_) => panic!("this is currently unused")
         }
+    }
+
+    fn insertion_expression_into_list_literal(&self, node_to_insert: CodeNode, list_literal_id: ID,
+                                              pos: usize, genie: &CodeGenie) -> CodeNode {
+        let mut list_literal = genie.find_node(list_literal_id).unwrap().into_list_literal().clone();
+        list_literal.elements.insert(pos, node_to_insert);
+        let mut root = genie.root().clone();
+        root.replace(&CodeNode::ListLiteral(list_literal));
+        root
     }
 
     fn insert_expression_into_argument(&self, code_node: CodeNode, argument_id: ID,
@@ -2643,10 +2728,8 @@ impl MutationMaster {
             CodeNode::Block(mut block) => {
                 let insertion_point_in_block_exprs = block.expressions.iter()
                     .position(|exp| exp.id() == insertion_point.node_id());
-                if insertion_point_in_block_exprs.is_none() {
-                    panic!("when the fuck does this happen?")
-                }
-                let insertion_point_in_block_exprs = insertion_point_in_block_exprs.unwrap();
+                let insertion_point_in_block_exprs = insertion_point_in_block_exprs
+                    .expect("when the fuck does this happen?");
 
                 match insertion_point {
                     InsertionPoint::Before(_) => {
@@ -2691,6 +2774,29 @@ impl MutationMaster {
 
                 let mut new_root = genie.root().clone();
                 new_root.replace(&CodeNode::Block(new_block));
+
+                DeletionResult::new(new_root, new_cursor_position)
+            }
+            CodeNode::ListLiteral(list_literal) => {
+                let mut new_list_literal = list_literal.clone();
+                let deleted_element_position_in_list = list_literal.elements.iter()
+                    .position(|e| e.id() == node_id_to_delete).unwrap();
+                new_list_literal.elements.remove(deleted_element_position_in_list);
+
+                let mut new_cursor_position = new_list_literal.elements
+                    .get(deleted_element_position_in_list)
+                    .map(|code_node| code_node.id());
+                if new_cursor_position.is_none() {
+                    new_cursor_position = new_list_literal.elements
+                        .get(deleted_element_position_in_list - 1)
+                        .map(|code_node| code_node.id());
+                }
+                if new_cursor_position.is_none() {
+                    new_cursor_position = Some(list_literal.id)
+                }
+
+                let mut new_root = genie.root().clone();
+                new_root.replace(&CodeNode::ListLiteral(new_list_literal));
 
 //                self.log_new_mutation(&new_root, new_cursor_position);
                 DeletionResult::new(new_root, new_cursor_position)
