@@ -1309,6 +1309,7 @@ pub trait UiToolkit {
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult;
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn indent(&self, px: i16, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn align(&self, lhs: &Fn() -> Self::DrawResult, rhs: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
 }
 
 // TODO: to simplify things for now, this thing just holds onto closures and
@@ -2271,7 +2272,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn render_list_literal(&self, list_literal: &lang::ListLiteral,
+    fn render_list_literal_old(&self, list_literal: &lang::ListLiteral,
                            code_node: &CodeNode) -> T::DrawResult {
         let t = self.controller.code_genie().unwrap().guess_type(code_node);
         // TODO: we can use smth better to express the nesting than ascii art, like our nesting scheme
@@ -2319,6 +2320,61 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
 
         self.ui_toolkit.draw_all(to_draw)
+    }
+
+    fn render_list_literal(&self, list_literal: &lang::ListLiteral,
+                           code_node: &CodeNode) -> T::DrawResult {
+        let t = self.controller.code_genie().unwrap().guess_type(code_node);
+
+        // TODO: we can use smth better to express the nesting than ascii art, like our nesting scheme
+        //       with the black lines (can actually make that generic so we can swap it with something
+        //       else
+        let type_symbol = self.get_symbol_for_type(&t);
+        let lhs = &|| self.ui_toolkit.draw_button(&type_symbol, BLUE_COLOR, &|| {});
+
+        let insert_pos = match self.controller.insert_code_menu {
+            Some(InsertCodeMenu {
+                     insertion_point: InsertionPoint::ListLiteralElement { list_literal_id, pos }, ..
+                 }) if list_literal_id == list_literal.id => Some(pos),
+            _ => None,
+        };
+
+        let mut rhs : Vec<Box<Fn() -> T::DrawResult>> = vec![];
+        let mut position_label = 0;
+        let mut i = 0;
+        while i <= list_literal.elements.len() {
+            if insert_pos.map_or(false, |insert_pos| insert_pos == i) {
+                let position_string = position_label.to_string();
+                rhs.push(Box::new(move || {
+                    self.ui_toolkit.draw_all_on_same_line(&[
+                        &|| {
+                            self.ui_toolkit.draw_button(&position_string, BLACK_COLOR, &||{})
+                        },
+                        &|| self.render_nested(&|| self.render_insert_code_node()),
+                    ])
+                }));
+                position_label += 1;
+            }
+
+            list_literal.elements.get(i).map(|el| {
+                rhs.push(Box::new(move || {
+                    self.ui_toolkit.draw_all_on_same_line(&[
+                        &|| {
+                            self.ui_toolkit.draw_button(&position_label.to_string(), BLACK_COLOR, &|| {})
+                        },
+                        &|| self.render_nested(&|| self.render_code(el)),
+                    ])
+                }));
+                position_label += 1;
+            });
+            i += 1;
+        }
+
+        self.ui_toolkit.align(lhs,
+                &rhs.iter()
+                    .map(|c| c.as_ref())
+                    .collect_vec()
+        )
     }
 
     fn render_variable_reference(&self, variable_reference: &VariableReference) -> T::DrawResult {

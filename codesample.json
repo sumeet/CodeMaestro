@@ -132,6 +132,16 @@
               }
             ]
           }
+        },
+        {
+          "ListLiteral": {
+            "id": "e638a110-41c8-47ea-a930-25114d9610d7",
+            "element_type": {
+              "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+              "params": []
+            },
+            "elements": []
+          }
         }
       ],
       "id": "b702d87f-28bb-4c2c-b22a-318c342dbaa3"

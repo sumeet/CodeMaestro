@@ -164,6 +164,37 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igUnindent(px as f32) }
     }
 
+    fn align(&self, lhs: &Fn(), rhss: &[&Fn()]) {
+        if rhss.is_empty() {
+            return lhs();
+        }
+        if rhss.len() == 1 {
+            return self.draw_all_on_same_line(&[lhs, rhss[0]]);
+        }
+
+        let (first_rhs, rest) = rhss.split_first().unwrap();
+        let (last_rhs, inner_rhs) = rest.split_last().unwrap();
+
+        unsafe { imgui_sys::igPushStyleVarVec(imgui_sys::ImGuiStyleVar::ItemSpacing, (0.0, -1.0).into()) };
+        self.ui.group(|| lhs());
+
+        let mut min = ImVec2::zero();
+        let mut max = ImVec2::zero();
+        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
+        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        let lhs_width = max.x - min.x;
+
+
+        self.ui.same_line_spacing(0., 0.);
+        first_rhs();
+
+        for draw in inner_rhs {
+            self.indent(lhs_width as i16, draw);
+        }
+        unsafe { imgui_sys::igPopStyleVar(1) };
+
+        self.indent(lhs_width as i16, last_rhs);
+    }
 
     fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, f: &Fn(),
                                               handle_keypress: Option<F>) {
