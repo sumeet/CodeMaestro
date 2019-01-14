@@ -33,6 +33,7 @@ mod undo;
 mod json_http_client;
 mod code_generation;
 mod function;
+mod code_function;
 mod external_func;
 #[cfg(feature = "default")]
 mod pystuff;

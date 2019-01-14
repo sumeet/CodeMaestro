@@ -421,8 +421,6 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
     }
 }
 
-
-
 #[derive(Debug, Clone, Copy)]
 pub enum InsertionPoint {
     Before(ID),
@@ -2022,7 +2020,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(drawn)
     }
 
-    fn render_return_type_selector<F: external_func::ModifyableFunc>(&self, func: &F) -> T::DrawResult {
+    fn render_return_type_selector<F: external_func::ModifyableFunc + std::clone::Clone>(&self, func: &F) -> T::DrawResult {
         // TODO: why doesn't this return a reference???
         let return_type = func.returns();
 

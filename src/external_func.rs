@@ -2,11 +2,13 @@ use super::env;
 use super::lang;
 use super::function;
 use std::collections::HashMap;
+use objekt::{clone_trait_object,__internal_clone_trait_object};
 
-pub trait ModifyableFunc: lang::Function + function::SettableArgs {
+pub trait ModifyableFunc: objekt::Clone + lang::Function + function::SettableArgs {
     fn set_return_type(&mut self, return_type: lang::Type);
-    fn clone(&self) -> Self;
 }
+
+clone_trait_object!(ModifyableFunc);
 
 pub struct ValueWithEnv<'a> {
     pub value: lang::Value,

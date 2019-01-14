@@ -41,15 +41,6 @@ impl lang::Function for JSFunc {
 impl external_func::ModifyableFunc for JSFunc {
     fn set_return_type(&mut self, _return_type: lang::Type) {
     }
-
-    fn clone(&self) -> Self {
-        JSFunc {
-            eval: self.eval.clone(),
-            return_type: self.return_type.clone(),
-            name: self.name.clone(),
-            id: self.id.clone(),
-        }
-    }
 }
 
 impl function::SettableArgs for JSFunc {
