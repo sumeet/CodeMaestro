@@ -42,16 +42,6 @@ impl external_func::ModifyableFunc for PyFunc {
     fn set_return_type(&mut self, return_type: lang::Type) {
         self.return_type = return_type
     }
-
-    fn clone(&self) -> Self {
-        PyFunc {
-            prelude: self.prelude.clone(),
-            eval: self.eval.clone(),
-            return_type: self.return_type.clone(),
-            name: self.name.clone(),
-            id: self.id.clone(),
-        }
-    }
 }
 
 impl function::SettableArgs for PyFunc {
