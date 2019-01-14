@@ -234,7 +234,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.new_line();
     }
 
-    // TODO: draw my own border using the draw list + a group... then it'll work right. jeez
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn()) {
         self.ui.group(draw_fn);
         let mut min = ImVec2::zero();
@@ -268,6 +267,20 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igGetItemRectMax(&mut max) };
         self.ui.get_window_draw_list()
             .add_rect((max.x - thickness as f32, min.y), max, color)
+            .thickness(1.)
+            .filled(true)
+            .build()
+    }
+
+    fn draw_left_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+        self.ui.group(draw_fn);
+        let mut min = ImVec2::zero();
+        let mut max = ImVec2::zero();
+        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
+        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        self.ui.get_window_draw_list()
+//            .add_rect((max.x - thickness as f32, min.y), max, color)
+            .add_rect(min, (min.x - thickness as f32, max.y), color)
             .thickness(1.)
             .filled(true)
             .build()

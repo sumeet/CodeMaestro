@@ -1300,7 +1300,9 @@ pub trait UiToolkit {
     fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8,
                               draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8,
-                                 draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+                                draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_left_border_inside(&self, color: [f32; 4], thickness: u8,
+                               draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8,
                                  draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -2433,7 +2435,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> T::DrawResult {
-        let draw_fn = || {
+//        let draw_fn = || {
             let function = self.controller.find_function(function_id)
                 .map(|func| func.clone());
             let args = args.clone();
@@ -2445,21 +2447,24 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.render_args_for_missing_function(args)
                 }
             }
-        };
-
-        self.render_nested(&draw_fn)
+//        };
+//
+//        self.render_nested(&draw_fn)
     }
 
     fn render_nested(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
         let top_border_thickness = 1;
         let right_border_thickness = 1;
+        let left_border_thickness = 1;
         let bottom_border_thickness = 1;
 
         let nesting_level = self.arg_nesting_level.replace_with(|i| *i + 1);
         let top_border_thickness = top_border_thickness + nesting_level + 1;
         let drawn = self.ui_toolkit.draw_top_border_inside(BLACK_COLOR, top_border_thickness as u8, &|| {
             self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &|| {
-                self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, draw_fn)
+                self.ui_toolkit.draw_left_border_inside(BLACK_COLOR, right_border_thickness, &|| {
+                    self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, draw_fn)
+                })
             })
         });
         self.arg_nesting_level.replace_with(|i| *i - 1);
@@ -2478,14 +2483,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 None => "\u{f059}".to_string(),
             }
         };
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| {
-                self.render_inline_editable_button(&type_symbol, BLACK_COLOR, argument.id)
-            },
-            &|| {
-                self.render_code(argument.expr.as_ref())
-            },
-        ])
+
+        self.render_nested(&|| {
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| {
+                    self.render_inline_editable_button(&type_symbol, BLACK_COLOR, argument.id)
+                },
+                &|| {
+                    self.render_code(argument.expr.as_ref())
+                },
+            ])
+        })
     }
 
     fn render_args_for_found_function(&self, function: &Function, args: Vec<&lang::Argument>) -> T::DrawResult {
