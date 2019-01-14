@@ -954,26 +954,21 @@ impl<'a> Controller {
         let theworld = code_loading::TheWorld {
             main_code: self.loaded_code.clone().unwrap(),
             pyfuncs: self.list_pyfuncs().cloned().collect(),
-            jsfuncs: self.list_jsfuncs(),
+            jsfuncs: self.list_jsfuncs().cloned().collect(),
             structs: self.list_structs().cloned().collect(),
             enums: self.list_enums().cloned().collect(),
         };
         code_loading::save("codesample.json", &theworld).unwrap();
     }
 
-    fn list_jsfuncs(&self) -> Vec<jsstuff::JSFunc> {
+    fn list_jsfuncs(&self) -> impl Iterator<Item = &jsstuff::JSFunc> {
         self.execution_environment().list_functions()
-            .filter_map(|f| Result::ok(f.clone().downcast::<jsstuff::JSFunc>()))
-            .map(|boxedjsfunc| *boxedjsfunc).collect()
+            .filter_map(|f| f.downcast_ref::<jsstuff::JSFunc>())
     }
 
     fn list_pyfuncs(&self) -> impl Iterator<Item = &pystuff::PyFunc> {
-//        self.execution_environment().list_functions()
-//            .filter_map(|f| Result::ok(f.clone().downcast::<pystuff::PyFunc>()))
-//            .map(|boxedpyfunc| *boxedpyfunc).collect()
         self.execution_environment().list_functions()
             .filter_map(|f| f.downcast_ref::<pystuff::PyFunc>())
-
     }
 
     // TODO: return a result instead of returning nothing? it seems like there might be places this
@@ -1584,9 +1579,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_jsfuncs(&self) -> T::DrawResult {
-        // TODO: this can return references now instead of cloning
         let jsfuncs = self.controller.list_jsfuncs();
-        self.ui_toolkit.draw_all(jsfuncs.iter().map(|f| self.render_edit_jsfunc(f)).collect())
+        self.ui_toolkit.draw_all(jsfuncs.map(|f| self.render_edit_jsfunc(f)).collect())
     }
 
     fn render_edit_jsfunc(&self, jsfunc: &jsstuff::JSFunc) -> T::DrawResult {
