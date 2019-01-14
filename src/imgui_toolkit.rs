@@ -279,7 +279,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igGetItemRectMin(&mut min) };
         unsafe { imgui_sys::igGetItemRectMax(&mut max) };
         self.ui.get_window_draw_list()
-//            .add_rect((max.x - thickness as f32, min.y), max, color)
             .add_rect(min, (min.x - thickness as f32, max.y), color)
             .thickness(1.)
             .filled(true)

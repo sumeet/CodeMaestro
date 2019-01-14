@@ -2400,17 +2400,32 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
         // one day fix this jumbledness
         if function_call.args.is_empty() {
-            self.render_code(&function_call.function_reference)
-        } else {
-            self.ui_toolkit.draw_all_on_same_line(&[
-                &|| { self.render_code(&function_call.function_reference) },
-                &|| {
-                    self.render_function_call_arguments(
-                        function_call.function_reference().function_id,
-                        function_call.args())
-                },
-            ])
+            return self.render_code(&function_call.function_reference)
         }
+
+//        self.ui_toolkit.draw_all_on_same_line(&[
+//            &|| { self.render_code(&function_call.function_reference) },
+//            &|| {
+//                self.render_function_call_arguments(
+//                    function_call.function_reference().function_id,
+//                    function_call.args())
+//            },
+//        ])
+        let rhs = self.render_function_call_arguments(
+                function_call.function_reference().function_id,
+                function_call.args());
+        let rhs : Vec<Box<Fn() -> T::DrawResult>> = rhs
+            .iter()
+            .map(|cl| {
+                let b : Box<Fn() -> T::DrawResult> = Box::new(move || cl(&self));
+                b
+            })
+            .collect_vec();
+
+        self.ui_toolkit.align(
+            &|| { self.render_code(&function_call.function_reference) },
+            &rhs.iter().map(|b| b.as_ref()).collect_vec()
+        )
     }
 
     fn render_function_reference(&self, function_reference: &FunctionReference) -> T::DrawResult {
@@ -2434,17 +2449,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_button(&function_name, color, &|| {})
     }
 
-    fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> T::DrawResult {
+    fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
 //        let draw_fn = || {
             let function = self.controller.find_function(function_id)
                 .map(|func| func.clone());
             let args = args.clone();
             match function {
                 Some(function) => {
-                    self.render_args_for_found_function(&*function, args)
+                    return self.render_args_for_found_function(&*function, args)
                 },
                 None => {
-                    self.render_args_for_missing_function(args)
+                    return self.render_args_for_missing_function(args)
                 }
             }
 //        };
@@ -2496,23 +2511,22 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    fn render_args_for_found_function(&self, function: &Function, args: Vec<&lang::Argument>) -> T::DrawResult {
+    fn render_args_for_found_function(&self, function: &Function, args: Vec<&lang::Argument>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
         let provided_arg_by_definition_id : HashMap<ID,lang::Argument> = args.into_iter()
             .map(|arg| (arg.argument_definition_id, arg.clone())).collect();
         let expected_args = function.takes_args();
 
-        let draw_results = expected_args.iter().map(|expected_arg| {
-            // TODO: display the argument name somewhere in here?
-            let c : Box<Fn() -> T::DrawResult> =
-                if let Some(provided_arg) = provided_arg_by_definition_id.get(&expected_arg.id) {
-                    Box::new(move || self.render_code(&CodeNode::Argument(provided_arg.clone())))
-                } else {
-                    Box::new(move || self.render_missing_function_argument(expected_arg))
-                };
-            c
-        }).collect_vec();
+        let mut draw_fns : Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> = vec![];
 
-        self.ui_toolkit.draw_all_on_same_line(&draw_results.iter().map(|c| c.as_ref()).collect_vec())
+        for expected_arg in expected_args.into_iter() {
+            if let Some(provided_arg) = provided_arg_by_definition_id.get(&expected_arg.id).clone() {
+                let provided_arg = provided_arg.clone();
+                draw_fns.push(Box::new(move |s: &Renderer<T>| s.render_code(&CodeNode::Argument(provided_arg.clone()))))
+            } else {
+                draw_fns.push(Box::new(move |s: &Renderer<T>| s.render_missing_function_argument(&expected_arg)))
+            }
+        }
+        draw_fns
     }
 
     fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {
@@ -2522,9 +2536,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {})
     }
 
-    fn render_args_for_missing_function(&self, _args: Vec<&lang::Argument>) -> T::DrawResult {
-        // TODO: implement this
-        self.ui_toolkit.draw_all(vec![])
+    fn render_args_for_missing_function(&self, _args: Vec<&lang::Argument>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
+        vec![Box::new(|s: &Renderer<T>| s.ui_toolkit.draw_all(vec![]))]
     }
 
     fn render_struct_literal(&self, struct_literal: &lang::StructLiteral) -> T::DrawResult {
