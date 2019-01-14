@@ -371,6 +371,21 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn draw_left_border_inside(&self, color: [f32; 4], thickness: u8,
+                               draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div class={"overlay-wrapper"}, >
+                <div>
+                     { draw_fn() }
+                 </div>
+                 <div class={"overlay"},
+                      style={ format!("height: 100%; width: {}px; background-color: {}", thickness, self.rgba(color)) }, >
+                      {" "}
+                 </div>
+             </div>
+        }
+    }
+
     fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8,
                                  draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
@@ -390,6 +405,21 @@ impl UiToolkit for YewToolkit {
         html! {
             <div style=format!("margin-left: {}px", px), >
                 { draw_fn() }
+            </div>
+        }
+    }
+
+    fn align(&self, lhs: &Fn() -> Self::DrawResult, rhs: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult {
+        html! {
+            <div>
+                <div style={"display: inline-block; vertical-align: top;"},>
+                    { lhs() }
+                </div>
+                <div style={"display: inline-block; vertical-align: top;"}, >
+                    { for rhs.into_iter().map(|draw_fn| html! {
+                        { draw_fn() }
+                    })}
+                </div>
             </div>
         }
     }

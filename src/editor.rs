@@ -553,6 +553,18 @@ impl<'a> CodeGenie<'a> {
         }
     }
 
+    fn get_arg_definition(&self, argument_definition_id: ID) -> Option<lang::ArgumentDefinition> {
+        // shouldn't all_functions not clone them????
+        for function in self.all_functions() {
+            for arg_def in function.takes_args() {
+                if arg_def.id == argument_definition_id {
+                    return Some(arg_def)
+                }
+            }
+        }
+        None
+    }
+
     fn get_type_for_arg(&self, argument_definition_id: ID) -> Option<lang::Type> {
         for function in self.all_functions() {
             for arg_def in function.takes_args() {
@@ -2274,56 +2286,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn render_list_literal_old(&self, list_literal: &lang::ListLiteral,
-                           code_node: &CodeNode) -> T::DrawResult {
-        let t = self.controller.code_genie().unwrap().guess_type(code_node);
-        // TODO: we can use smth better to express the nesting than ascii art, like our nesting scheme
-        //       with the black lines (can actually make that generic so we can swap it with something
-        //       else
-        let type_symbol = self.get_symbol_for_type(&t);
-        let mut to_draw = vec![
-            self.ui_toolkit.draw_button(&type_symbol, BLUE_COLOR, &|| {}),
-        ];
-
-        let insert_pos = match self.controller.insert_code_menu {
-            Some(InsertCodeMenu {
-                     insertion_point: InsertionPoint::ListLiteralElement { list_literal_id, pos }, ..
-                 }) if list_literal_id == list_literal.id => Some(pos),
-            _ => None,
-        };
-
-        let mut position_label = 0;
-        let mut i = 0;
-        while i <= list_literal.elements.len() {
-            if insert_pos.map_or(false, |insert_pos| insert_pos == i) {
-                to_draw.push(self.render_indented(&|| {
-                    self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| {
-                            self.ui_toolkit.draw_button(&position_label.to_string(), BLACK_COLOR, &||{})
-                        },
-                        &|| self.render_nested(&|| self.render_insert_code_node()),
-                    ])
-                }));
-                position_label += 1;
-            }
-
-            list_literal.elements.get(i).map(|el| {
-                to_draw.push(self.render_indented(&|| {
-                    self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| {
-                            self.ui_toolkit.draw_button(&position_label.to_string(), BLACK_COLOR, &||{})
-                        },
-                        &|| self.render_nested(&|| self.render_code(el)),
-                    ])
-                }));
-                position_label += 1;
-            });
-            i += 1;
-        }
-
-        self.ui_toolkit.draw_all(to_draw)
-    }
-
     fn render_list_literal(&self, list_literal: &lang::ListLiteral,
                            code_node: &CodeNode) -> T::DrawResult {
         let t = self.controller.code_genie().unwrap().guess_type(code_node);
@@ -2403,14 +2365,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             return self.render_code(&function_call.function_reference)
         }
 
-//        self.ui_toolkit.draw_all_on_same_line(&[
-//            &|| { self.render_code(&function_call.function_reference) },
-//            &|| {
-//                self.render_function_call_arguments(
-//                    function_call.function_reference().function_id,
-//                    function_call.args())
-//            },
-//        ])
         let rhs = self.render_function_call_arguments(
                 function_call.function_reference().function_id,
                 function_call.args());
@@ -2450,7 +2404,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
-//        let draw_fn = || {
             let function = self.controller.find_function(function_id)
                 .map(|func| func.clone());
             let args = args.clone();
@@ -2462,9 +2415,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     return self.render_args_for_missing_function(args)
                 }
             }
-//        };
-//
-//        self.render_nested(&draw_fn)
     }
 
     fn render_nested(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
@@ -2491,18 +2441,22 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
-        let type_symbol = {
+        let arg_display = {
             let genie = self.controller.code_genie().unwrap();
-            match genie.get_type_for_arg(argument.argument_definition_id) {
-                Some(arg_type) => self.get_symbol_for_type(&arg_type),
+            match genie.get_arg_definition(argument.argument_definition_id) {
+                Some(arg_def) => {
+                    let type_symbol = self.get_symbol_for_type(&arg_def.arg_type);
+                    format!("{} {}", type_symbol, arg_def.short_name)
+                },
                 None => "\u{f059}".to_string(),
             }
         };
 
+
         self.render_nested(&|| {
             self.ui_toolkit.draw_all_on_same_line(&[
                 &|| {
-                    self.render_inline_editable_button(&type_symbol, BLACK_COLOR, argument.id)
+                    self.render_inline_editable_button(&arg_display, BLACK_COLOR, argument.id)
                 },
                 &|| {
                     self.render_code(argument.expr.as_ref())
@@ -2548,16 +2502,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let strukt = self.get_struct(struct_literal.struct_id).unwrap();
 
         if struct_literal.fields.is_empty() {
-            self.render_struct_identifier(&strukt, struct_literal)
-        } else {
-            self.ui_toolkit.draw_all_on_same_line(&[
-                &|| { self.render_struct_identifier(&strukt, struct_literal) },
-                &|| {
-                    self.render_struct_literal_fields(&strukt,
-                                                      struct_literal.fields())
-                },
-            ])
+            return self.render_struct_identifier(&strukt, struct_literal)
         }
+        let rhs = self.render_struct_literal_fields(&strukt,
+                                                  struct_literal.fields());
+        let rhs : Vec<Box<Fn() -> T::DrawResult>> = rhs.into_iter()
+            .map(|draw_fn| {
+                let b : Box<Fn() -> T::DrawResult> = Box::new(move || draw_fn(&self));
+                b
+            }).collect_vec();
+        self.ui_toolkit.align(
+            &|| { self.render_struct_identifier(&strukt, struct_literal) },
+            &rhs.iter().map(|b| b.as_ref()).collect_vec()
+        )
     }
 
     fn render_struct_identifier(&self, strukt: &structs::Struct,
@@ -2567,19 +2524,21 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_struct_literal_fields(&self, strukt: &'a structs::Struct,
-        fields: impl Iterator<Item = &'a lang::StructLiteralField>) -> T::DrawResult {
+        fields: impl Iterator<Item = &'a lang::StructLiteralField>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
         // TODO: should this map just go inside the struct????
         let struct_field_by_id = strukt.field_by_id();
 
-        let mut to_draw : Vec<Box<Fn() -> T::DrawResult>> = vec![];
+        let mut to_draw : Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> = vec![];
         for literal_field in fields {
             // this is where the bug is
             let strukt_field = struct_field_by_id.get(&literal_field.struct_field_id).unwrap();
-            to_draw.push(Box::new(move || {
-                self.render_struct_literal_field(strukt_field, literal_field)
+            let strukt_field = (*strukt_field).clone();
+            let literal_feeld = literal_field.clone();
+            to_draw.push(Box::new(move |s: &Renderer<T>| {
+                s.render_struct_literal_field(&strukt_field, &literal_feeld)
             }));
         }
-        self.ui_toolkit.draw_all_on_same_line(&to_draw.iter().map(|td| td.as_ref()).collect_vec())
+        to_draw
     }
 
     fn render_struct_literal_field(&self, field: &structs::StructField,
@@ -2610,10 +2569,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_indented(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
         self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL, draw_fn)
-//        let indentation_level = self.indentation_level.replace_with(|i| *i + 1);
-//        let drawn = self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL * indentation_level as i16, draw_fn);
-//        self.indentation_level.replace_with(|i| *i - 1);
-//        drawn
     }
 
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
