@@ -191,8 +191,4 @@ impl App {
         });
         command_buffer.borrow_mut().flush_to_interpreter(&mut self.interpreter);
     }
-
-    pub fn turn_event_loop(&mut self) {
-        self.interpreter.turn()
-    }
 }
