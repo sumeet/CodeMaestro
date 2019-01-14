@@ -634,6 +634,15 @@ pub struct Block {
     pub id: ID,
 }
 
+impl Block {
+    pub fn new() -> Self {
+        Self {
+            id: new_id(),
+            expressions: vec![],
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct VariableReference {
     pub assignment_id: ID,

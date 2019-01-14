@@ -22,6 +22,7 @@ use super::edit_types;
 use super::enums;
 use super::structs;
 use super::function;
+use super::code_function;
 
 
 pub const SELECTION_COLOR: Color = [1., 1., 1., 0.3];
@@ -952,7 +953,7 @@ impl<'a> Controller {
     fn save(&self) {
         let theworld = code_loading::TheWorld {
             main_code: self.loaded_code.clone().unwrap(),
-            pyfuncs: self.list_pyfuncs(),
+            pyfuncs: self.list_pyfuncs().cloned().collect(),
             jsfuncs: self.list_jsfuncs(),
             structs: self.list_structs().cloned().collect(),
             enums: self.list_enums().cloned().collect(),
@@ -966,10 +967,13 @@ impl<'a> Controller {
             .map(|boxedjsfunc| *boxedjsfunc).collect()
     }
 
-    fn list_pyfuncs(&self) -> Vec<pystuff::PyFunc> {
+    fn list_pyfuncs(&self) -> impl Iterator<Item = &pystuff::PyFunc> {
+//        self.execution_environment().list_functions()
+//            .filter_map(|f| Result::ok(f.clone().downcast::<pystuff::PyFunc>()))
+//            .map(|boxedpyfunc| *boxedpyfunc).collect()
         self.execution_environment().list_functions()
-            .filter_map(|f| Result::ok(f.clone().downcast::<pystuff::PyFunc>()))
-            .map(|boxedpyfunc| *boxedpyfunc).collect()
+            .filter_map(|f| f.downcast_ref::<pystuff::PyFunc>())
+
     }
 
     // TODO: return a result instead of returning nothing? it seems like there might be places this
@@ -1490,9 +1494,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     let cont2 = Rc::clone(&self.command_buffer);
                     let cont3 = Rc::clone(&self.command_buffer);
                     let cont4 = Rc::clone(&self.command_buffer);
+                    let cont5 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
                             cont1.borrow_mut().save();
+                        }),
+                        self.ui_toolkit.draw_menu_item("Add new function", move || {
+                            cont5.borrow_mut().load_function(code_function::CodeFunction::new());
                         }),
                         #[cfg(feature = "default")]
                         self.ui_toolkit.draw_menu_item("Add Python function", move || {
@@ -1522,7 +1530,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
         // TODO: this can return references now instead of cloning
         let pyfuncs = self.controller.list_pyfuncs();
-        self.ui_toolkit.draw_all(pyfuncs.iter().map(|f| self.render_edit_pyfunc(f)).collect())
+        self.ui_toolkit.draw_all(pyfuncs.map(|f| self.render_edit_pyfunc(f)).collect())
     }
 
     fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc) -> T::DrawResult {
