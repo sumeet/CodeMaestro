@@ -134,13 +134,45 @@
           }
         },
         {
-          "ListLiteral": {
-            "id": "e638a110-41c8-47ea-a930-25114d9610d7",
-            "element_type": {
-              "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-              "params": []
+          "FunctionCall": {
+            "function_reference": {
+              "FunctionReference": {
+                "function_id": "21891732-8a74-4565-830b-5abedd4f9f17",
+                "id": "bde19d63-1dfc-4e34-8852-9e380844d399"
+              }
             },
-            "elements": []
+            "args": [
+              {
+                "Argument": {
+                  "id": "00de4a26-bdc8-4c42-8705-a5467431e35b",
+                  "argument_definition_id": "80b7cb78-57ce-494c-b9d9-f6cf055e9923",
+                  "expr": {
+                    "ListLiteral": {
+                      "id": "6a4621aa-3f9e-498f-9ae7-1f11eb704165",
+                      "element_type": {
+                        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                        "params": []
+                      },
+                      "elements": [
+                        {
+                          "VariableReference": {
+                            "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                            "id": "ebdcbd23-8c01-4c83-a67f-d2c29c54e686"
+                          }
+                        },
+                        {
+                          "VariableReference": {
+                            "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                            "id": "c861d3e1-d2d6-4914-a8c9-9801307cf2c1"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            ],
+            "id": "1baff645-881c-48a0-82f2-ff87837beb98"
           }
         }
       ],
@@ -167,33 +199,35 @@
           "short_name": "input"
         }
       ]
+    },
+    {
+      "prelude": "",
+      "eval": "jawieof + \"jaiweofjio\"",
+      "return_type": {
+        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+        "params": []
+      },
+      "name": "takes a list",
+      "id": "21891732-8a74-4565-830b-5abedd4f9f17",
+      "args": [
+        {
+          "id": "80b7cb78-57ce-494c-b9d9-f6cf055e9923",
+          "arg_type": {
+            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+            "params": [
+              {
+                "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                "params": []
+              }
+            ]
+          },
+          "short_name": "jawieof"
+        }
+      ]
     }
   ],
   "jsfuncs": [],
   "structs": [
-    {
-      "name": "HTTP Response",
-      "id": "31d96c85-5966-4866-a90a-e6db3707b140",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "34268b4f-e617-4e94-adbe-f5f0c9357865",
-          "name": "body",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "5e6cd734-fe98-47d2-9182-601a5a62e4d2",
-          "name": "status code",
-          "field_type": {
-            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-            "params": []
-          }
-        }
-      ]
-    },
     {
       "name": "HTTP Form param",
       "id": "b6566a28-8257-46a9-aa29-39d9add25173",
@@ -212,6 +246,29 @@
           "name": "value",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTP Response",
+      "id": "31d96c85-5966-4866-a90a-e6db3707b140",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "34268b4f-e617-4e94-adbe-f5f0c9357865",
+          "name": "body",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "5e6cd734-fe98-47d2-9182-601a5a62e4d2",
+          "name": "status code",
+          "field_type": {
+            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
             "params": []
           }
         }
