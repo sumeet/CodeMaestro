@@ -23,6 +23,7 @@ use super::enums;
 use super::structs;
 use super::function;
 use super::code_function;
+use super::code_editor;
 
 
 pub const SELECTION_COLOR: Color = [1., 1., 1., 0.3];
@@ -47,7 +48,7 @@ pub type Color = [f32; 4];
 // 4: placeholder
 
 #[derive(Clone, Debug)]
-struct InsertCodeMenu {
+pub struct InsertCodeMenu {
     option_generators: Vec<Box<InsertCodeMenuOptionGenerator>>,
     selected_option_index: isize,
     search_params: CodeSearchParams,
@@ -400,7 +401,6 @@ impl InsertLiteralOptionGenerator {
         }
     }
 }
-
 
 #[derive(Clone)]
 struct InsertConditionalOptionGenerator {}
@@ -897,6 +897,8 @@ pub struct Controller {
     error_console: String,
     mutation_master: MutationMaster,
     test_result_by_func_id: HashMap<ID, TestResult>,
+    // here it is
+    code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
 }
 
 impl<'a> Controller {
@@ -910,6 +912,7 @@ impl<'a> Controller {
             editing: false,
             mutation_master: MutationMaster::new(),
             test_result_by_func_id: HashMap::new(),
+            code_editor_by_id: HashMap::new(),
         }
     }
 
@@ -1252,7 +1255,12 @@ impl<'a> Controller {
     }
 
     pub fn load_code(&mut self, code_node: &CodeNode) {
+        // OLD
         self.loaded_code = Some(code_node.clone());
+
+        // NEW
+        self.code_editor_by_id.insert(code_node.id(),
+                                      code_editor::CodeEditor::new(code_node));
     }
 
     // should run the loaded code node
@@ -1414,12 +1422,6 @@ impl CommandBuffer {
             controller.undo()
         })
     }
-
-//    pub fn redo(&mut self) {
-//        self.add_controller_command(move |controller| {
-//            controller.redo()
-//        })
-//    }
 
     // environment actions
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {

@@ -27,6 +27,7 @@ mod enums;
 pub mod env;
 mod code_loading;
 mod editor;
+mod code_editor;
 mod edit_types;
 mod json;
 mod undo;
