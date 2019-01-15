@@ -966,6 +966,11 @@ impl<'a> Controller {
             .filter_map(|f| f.downcast_ref::<jsstuff::JSFunc>())
     }
 
+    fn list_code_funcs(&self) -> impl Iterator<Item = &code_function::CodeFunction> {
+        self.execution_environment().list_functions()
+            .filter_map(|f| f.downcast_ref::<code_function::CodeFunction>())
+    }
+
     fn list_pyfuncs(&self) -> impl Iterator<Item = &pystuff::PyFunc> {
         self.execution_environment().list_functions()
             .filter_map(|f| f.downcast_ref::<pystuff::PyFunc>())
@@ -1472,6 +1477,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_code_window(),
             self.render_console_window(),
             self.render_error_window(),
+            self.render_edit_code_funcs(),
             self.render_edit_pyfuncs(),
             self.render_edit_jsfuncs(),
             self.render_edit_structs(),
@@ -1517,13 +1523,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     ])
                 }
             )
-            // TODO: add a button for creating pyfuncs
-            // TODO: add an exit button
         })
     }
 
+    fn render_edit_code_funcs(&self) -> T::DrawResult {
+        let code_funcs = self.controller.list_code_funcs();
+        self.ui_toolkit.draw_all(code_funcs.map(|f| self.render_edit_code_func(f)).collect())
+    }
+
+    fn render_edit_code_func(&self, code_func: &code_function::CodeFunction) -> T::DrawResult {
+        self.ui_toolkit.draw_all(vec![])
+    }
+
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
-        // TODO: this can return references now instead of cloning
         let pyfuncs = self.controller.list_pyfuncs();
         self.ui_toolkit.draw_all(pyfuncs.map(|f| self.render_edit_pyfunc(f)).collect())
     }
