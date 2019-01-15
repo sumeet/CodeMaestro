@@ -28,6 +28,7 @@ pub mod env;
 mod code_loading;
 mod editor;
 mod code_editor;
+mod code_editor_renderer;
 mod edit_types;
 mod json;
 mod undo;

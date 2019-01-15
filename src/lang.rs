@@ -641,6 +641,10 @@ impl Block {
             expressions: vec![],
         }
     }
+
+    pub fn find_position(&self, exp_id: ID) -> Option<usize> {
+        self.expressions.iter().position(|code| code.id() == exp_id)
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
