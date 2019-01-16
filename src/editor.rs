@@ -38,6 +38,10 @@ pub const SALMON_COLOR: Color = [0.996, 0.286, 0.322, 1.0];
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 pub const PX_PER_INDENTATION_LEVEL : i16 = 20;
 
+
+// temp ass import
+use super::code_editor::InsertionPoint;
+
 pub type Color = [f32; 4];
 
 #[derive(Debug, Copy, Clone)]
@@ -78,47 +82,13 @@ pub enum Key {
 }
 
 pub struct CodeGenie<'a> {
-    code: &'a CodeNode,
     env: &'a env::ExecutionEnvironment,
 }
 
+// TODO: is this gonna be like EnvGenie now??? do we even need this anymore?
 impl<'a> CodeGenie<'a> {
-    fn new(code_node: &'a CodeNode, env: &'a env::ExecutionEnvironment) -> Self {
-        Self { code: code_node, env }
-    }
-
-    // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made
-    // inside of conditionals... ugh scoping is tough
-    //
-    // update: yeah... for conditionals, we'll have to make another recursive call and keep searching
-    // up parent blocks. i think we can do this! just have to find assignments that come before the
-    // conditional itself
-    fn find_assignments_that_come_before_code(&self, node_id: ID) -> Vec<&Assignment> {
-        let block_expression_id = self.find_expression_inside_block_that_contains(node_id);
-        if block_expression_id.is_none() {
-            return vec![]
-        }
-        let block_expression_id = block_expression_id.unwrap();
-        match self.find_parent(block_expression_id) {
-            Some(CodeNode::Block(block)) => {
-                // if this dies, it means we found a block that's a parent of a block expression,
-                // but then when we looked inside the block it didn't contain that expression. this
-                // really shouldn't happen
-                let position_in_block = self.find_position_in_block(&block, block_expression_id).unwrap();
-                block.expressions.iter()
-                    // position in the block is 0 indexed, so this will take every node up TO it
-                    .take(position_in_block)
-                    .map(|code| code.into_assignment())
-                    .filter(|opt| opt.is_some())
-                    .map(|opt| opt.unwrap())
-                    .collect()
-            },
-            _ => vec![]
-        }
-    }
-
-    fn find_position_in_block(&self, block: &lang::Block, block_expression_id: ID) -> Option<usize> {
-        block.expressions.iter().position(|code| code.id() == block_expression_id)
+    fn new(env: &'a env::ExecutionEnvironment) -> Self {
+        Self { env }
     }
 
 //    fn find_expression_inside_block_that_contains(&self, node_id: ID) -> Option<ID> {
@@ -177,10 +147,6 @@ impl<'a> CodeGenie<'a> {
         self.env.find_typespec(ts_id).map(|b| b.as_ref())
     }
 
-    fn root(&self) -> &CodeNode {
-        self.code
-    }
-
 //    fn find_node(&self, id: ID) -> Option<&CodeNode> {
 //        self.code.find_node(id)
 //    }
@@ -201,70 +167,6 @@ impl<'a> CodeGenie<'a> {
         self.env.find_struct(id)
     }
 
-    pub fn guess_type(&self, code_node: &CodeNode) -> lang::Type {
-        match code_node {
-            CodeNode::FunctionCall(function_call) => {
-                let func_id = function_call.function_reference().function_id;
-                match self.find_function(func_id) {
-                    Some(ref func) => func.returns().clone(),
-                    // TODO: do we really want to just return Null if we couldn't find the function?
-                    None => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
-                }
-            }
-            CodeNode::StringLiteral(_) => {
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC)
-            }
-            CodeNode::Assignment(assignment) => {
-                self.guess_type(&*assignment.expression)
-            }
-            CodeNode::Block(block) => {
-                if block.expressions.len() > 0 {
-                    let last_expression_in_block= &block.expressions[block.expressions.len() - 1];
-                    self.guess_type(last_expression_in_block)
-                } else {
-                    lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-                }
-            }
-            CodeNode::VariableReference(_) => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-            }
-            CodeNode::FunctionReference(_) => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-            }
-            CodeNode::FunctionDefinition(_) => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-            }
-            CodeNode::Argument(arg) => {
-                self.get_type_for_arg(arg.argument_definition_id).unwrap()
-            }
-            CodeNode::Placeholder(_) => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-            }
-            CodeNode::NullLiteral => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-            },
-            CodeNode::StructLiteral(struct_literal) => {
-                let strukt = self.env.find_struct(struct_literal.struct_id).unwrap();
-                lang::Type::from_spec(strukt)
-            }
-            CodeNode::StructLiteralField(struct_literal_field) => {
-                let strukt_literal = self.find_parent(struct_literal_field.id)
-                    .unwrap().into_struct_literal().unwrap();
-                let strukt = self.env.find_struct(strukt_literal.struct_id).unwrap();
-                strukt.field_by_id().get(&struct_literal_field.struct_field_id).unwrap()
-                    .field_type.clone()
-            }
-            // this means that both branches of a conditional must be of the same type.we need to
-            // add a validation for that
-            CodeNode::Conditional(conditional) => {
-                self.guess_type(&conditional.true_branch)
-            }
-            CodeNode::ListLiteral(list_literal) => {
-                lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                        vec![list_literal.element_type.clone()])
-            }
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -283,7 +185,7 @@ pub struct Controller {
     execution_environment: Option<env::ExecutionEnvironment>,
     selected_node_id: Option<ID>,
     pub editing: bool,
-    insert_code_menu: Option<InsertCodeMenu>,
+    //insert_code_menu: Option<InsertCodeMenu>,
     // TODO: i only need this to be public for hax, so i can make this unpublic later
     error_console: String,
 //    mutation_master: MutationMaster,
@@ -298,7 +200,7 @@ impl<'a> Controller {
             execution_environment: None,
             selected_node_id: None,
             error_console: String::new(),
-            insert_code_menu: None,
+            //insert_code_menu: None,
             editing: false,
 //            mutation_master: MutationMaster::new(),
             test_result_by_func_id: HashMap::new(),
@@ -343,6 +245,10 @@ impl<'a> Controller {
         self.execution_environment().find_typespec(id)
     }
 
+    pub fn get_editor(&mut self, id: lang::ID) -> Option<&mut code_editor::CodeEditor> {
+        self.code_editor_by_id.get_mut(&id)
+    }
+
     fn save(&self) {
         let theworld = code_loading::TheWorld {
             // this needs to be a list of funcs or smth
@@ -370,20 +276,6 @@ impl<'a> Controller {
             .filter_map(|f| f.downcast_ref::<pystuff::PyFunc>())
     }
 
-    // TODO: return a result instead of returning nothing? it seems like there might be places this
-    // thing can error
-    fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
-        let genie = self.code_genie();
-        let new_code = self.mutation_master.insert_code(&code_node, insertion_point,
-                                                        genie.as_ref().unwrap());
-        self.loaded_code.as_mut().unwrap().replace(&new_code);
-        let genie = self.code_genie();
-        match post_insertion_cursor(&code_node, genie.as_ref().unwrap()) {
-            PostInsertionAction::SelectNode(id) => { self.set_selected_node_id(Some(id)); }
-            PostInsertionAction::MarkAsEditing(insertion_point) => { self.mark_as_editing(insertion_point); }
-        }
-    }
-
     fn get_test_result(&self, func: &lang::Function) -> String {
         let test_result = self.test_result_by_func_id.get(&func.id());
         if let Some(test_result) = test_result {
@@ -393,48 +285,10 @@ impl<'a> Controller {
         }
     }
 
-    fn redo(&mut self) {
-        let loaded_code = self.loaded_code.as_ref().unwrap();
-        if let Some(next_root) = self.mutation_master.redo(loaded_code, self.selected_node_id) {
-            self.loaded_code.as_mut().unwrap().replace(&next_root.root);
-            self.set_selected_node_id(next_root.cursor_position);
-        }
-    }
-
-    fn delete_selected_code(&mut self) -> Option<()> {
-        let deletion_result = self.mutation_master.delete_code(
-            self.selected_node_id?, &self.code_genie()?, self.selected_node_id);
-        // TODO: these save current state calls can go inside of the mutation master
-        self.save_current_state_to_undo_history();
-        self.loaded_code.as_mut().unwrap().replace(&deletion_result.new_root);
-        // TODO: intelligently select a nearby node to select after deleting
-        self.set_selected_node_id(deletion_result.new_cursor_position);
-        Some(())
-    }
-
-    fn select_current_line(&mut self) {
-        let genie = self.code_genie();
-        if genie.is_none() || self.selected_node_id.is_none() {
-            return
-        }
-        let genie = genie.unwrap();
-        let selected_id = self.selected_node_id.unwrap();
-        if let Some(code_id) = genie.find_expression_inside_block_that_contains(selected_id) {
-            self.set_selected_node_id(Some(code_id))
-        }
-    }
-
 //    pub fn hide_insert_code_menu(&mut self) {
 //        self.insert_code_menu = None;
 //        self.editing = false
 //    }
-
-    pub fn insertion_point(&self) -> Option<InsertionPoint> {
-        match self.insert_code_menu.as_ref() {
-            None => None,
-            Some(menu) => Some(menu.insertion_point),
-        }
-    }
 
     // TODO: hax passing in the command buffer, we only need it to schedule things to run from the
     // controller :/
@@ -454,7 +308,6 @@ impl<'a> Controller {
 
     fn code_genie(&'a self) -> Option<CodeGenie> {
         Some(CodeGenie::new(
-            self.loaded_code.as_ref()?,
             self.execution_environment(),
         ))
     }
@@ -476,10 +329,6 @@ impl<'a> Controller {
     }
 
     pub fn load_code(&mut self, code_node: &CodeNode) {
-        // OLD
-        self.loaded_code = Some(code_node.clone());
-
-        // NEW
         self.code_editor_by_id.insert(code_node.id(),
                                       code_editor::CodeEditor::new(code_node));
     }
@@ -505,15 +354,6 @@ impl<'a> Controller {
         &self.selected_node_id
     }
 
-    pub fn get_selected_node(&self) -> Option<&CodeNode> {
-        self.loaded_code.as_ref()?.find_node(self.selected_node_id?)
-    }
-
-    pub fn save_current_state_to_undo_history(&mut self) {
-        if let Some(ref loaded_code) = self.loaded_code {
-            self.mutation_master.log_new_mutation(loaded_code, self.selected_node_id)
-        }
-    }
 }
 
 pub trait UiToolkit {
@@ -586,33 +426,13 @@ impl CommandBuffer {
         })
     }
 
-    pub fn hide_insert_code_menu(&mut self) {
-        self.add_controller_command(move |controller| {
-            controller.hide_insert_code_menu()
-        })
-    }
-
-    pub fn insert_code(&mut self, code: lang::CodeNode,
-                       insertion_point: InsertionPoint) {
-        self.add_controller_command(move |controller| {
-            controller.insert_code(code, insertion_point)
-        })
-    }
-
-    pub fn set_search_str_on_insert_code_menu(&mut self, input: &str) {
-        let input = input.to_owned();
-        self.add_controller_command(move |controller| {
-            controller.insert_code_menu.as_mut()
-                .map(|m| {m.set_search_str(&input)});
-        })
-    }
-
-    pub fn replace_code(&mut self, code: lang::CodeNode) {
-        self.add_controller_command(move |controller| {
-            controller.loaded_code.as_mut().unwrap()
-                .replace(&code)
-        })
-    }
+//    pub fn set_search_str_on_insert_code_menu(&mut self, input: &str) {
+//        let input = input.to_owned();
+//        self.add_controller_command(move |controller| {
+//            controller.insert_code_menu.as_mut()
+//                .map(|m| {m.set_search_str(&input)});
+//        })
+//    }
 
     pub fn mark_as_not_editing(&mut self) {
         self.add_controller_command(move |mut controller| {
@@ -629,12 +449,6 @@ impl CommandBuffer {
     pub fn load_typespec<T: lang::TypeSpec>(&mut self, ts: T) {
         self.add_controller_command(move |controller| {
             controller.load_typespec(ts)
-        })
-    }
-
-    pub fn undo(&mut self) {
-        self.add_controller_command(move |controller| {
-            controller.undo()
         })
     }
 
@@ -1282,15 +1096,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
+    // TODO: gotta redo this... it needs to know what's focused and stuff :/
     fn render_status_bar(&self) -> T::DrawResult {
         self.ui_toolkit.draw_statusbar(&|| {
-            if let Some(node) = self.controller.get_selected_node() {
-                self.ui_toolkit.draw_text(
-                    &format!("SELECTED: {}", node.description())
-                )
-            } else {
-                self.ui_toolkit.draw_all(vec![])
-            }
+            self.ui_toolkit.draw_text("status bar UNDER CONSTRUCTION")
+//            if let Some(node) = self.controller.get_selected_node() {
+//                self.ui_toolkit.draw_text(
+//                    &format!("SELECTED: {}", node.description())
+//                )
+//            } else {
+//                self.ui_toolkit.draw_all(vec![])
+//            }
         })
     }
 
@@ -1311,306 +1127,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_code_editors(&self) -> T::DrawResult {
-        self.ui_toolkit.draw_all(
-            self.controller.code_editor_by_id.values().map(|ce| self.render_code_editor(ce)).collect()
-        )
-    }
+        // TODO gotta allocate the code editor renderers in the constructor i think and then render
+        // em in here!
+        self.ui_toolkit.draw_all(vec![])
 
-    fn render_code_editor(&self, code_editor: &code_editor::CodeEditor) -> T::DrawResult {
-        let code = code_editor.get_code();
-        let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_window(&code.description(), &|| {
-            self.ui_toolkit.draw_layout_with_bottom_bar(
-                &||{ self.render_code(code) },
-                &||{ self.render_run_button(code) }
-            )},
-            Some(move |keypress| {
-                cmd_buffer.borrow_mut().add_controller_command(|controller| {
-                    controller.handle_keypress_in_code_editor(code_editor.id(), keypress)
-                })
-            })
-        )
-    }
-
-
-    fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
-        if self.is_editing(code_node.id()) {
-            return self.draw_inline_editor(code_node)
-        }
-        let draw = ||{
-            match code_node {
-                CodeNode::FunctionCall(function_call) => {
-                    self.render_function_call(&function_call)
-                }
-                CodeNode::StringLiteral(string_literal) => {
-                    self.render_string_literal(&string_literal)
-                }
-                CodeNode::Assignment(assignment) => {
-                    self.render_assignment(&assignment)
-                }
-                CodeNode::Block(block) => {
-                    self.render_block(&block)
-                }
-                CodeNode::VariableReference(variable_reference) => {
-                    self.render_variable_reference(&variable_reference)
-                }
-                CodeNode::FunctionDefinition(_function_definition) => {
-                    self.ui_toolkit.draw_button(
-                        &"Function defs are unimplemented",
-                        RED_COLOR,
-                        ||{}
-                    )
-                }
-                CodeNode::FunctionReference(function_reference) => {
-                    self.render_function_reference(&function_reference)
-                }
-                CodeNode::Argument(argument) => {
-                    self.render_function_call_argument(&argument)
-                }
-                CodeNode::Placeholder(placeholder) => {
-                    self.render_placeholder(&placeholder)
-                }
-                CodeNode::NullLiteral => {
-                    self.ui_toolkit.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol))
-                },
-                CodeNode::StructLiteral(struct_literal) => {
-                    self.render_struct_literal(&struct_literal)
-                },
-                CodeNode::StructLiteralField(_field) => {
-                    self.ui_toolkit.draw_all(vec![])
-                    // we would, except render_struct_literal_field isn't called from here...
-                    //self.render_struct_literal_field(&field)
-                },
-                CodeNode::Conditional(conditional) => {
-                    self.render_conditional(&conditional)
-                }
-                CodeNode::ListLiteral(list_literal) => {
-                    self.render_list_literal(&list_literal, code_node)
-                }
-            }
-        };
-
-        if self.is_selected(code_node.id()) {
-            self.draw_selected(&draw)
-        } else {
-            self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
-        }
+//        self.ui_toolkit.draw_all(
+//            self.controller.code_editor_by_id.values().map(
+//                |ce| ce.render()).collect()
+//        )
     }
 
     fn draw_selected(&self, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
         self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
     }
 
-    fn draw_code_node_and_insertion_point_if_before_or_after(&self, code_node: &CodeNode, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
-        let mut drawn: Vec<T::DrawResult> = vec![];
-        if self.is_insertion_pointer_immediately_before(code_node.id()) {
-            drawn.push(self.render_insert_code_node())
-        }
-        drawn.push(draw());
-        if self.is_insertion_pointer_immediately_after(code_node.id()) {
-            drawn.push(self.render_insert_code_node())
-        }
-        self.ui_toolkit.draw_all(drawn)
-    }
-
-    fn is_insertion_pointer_immediately_before(&self, id: ID) -> bool {
-        let insertion_point = self.controller.insertion_point();
-        match insertion_point {
-            Some(InsertionPoint::Before(code_node_id)) if code_node_id == id => {
-                true
-            }
-            _ => false
-        }
-    }
-
-    fn is_insertion_pointer_immediately_after(&self, id: ID) -> bool {
-        let insertion_point = self.controller.insertion_point();
-        match insertion_point {
-            Some(InsertionPoint::After(code_node_id)) if code_node_id == id => {
-                true
-            }
-            _ => false
-        }
-    }
-
-    fn render_insert_code_node(&self) -> T::DrawResult {
-        let menu = self.controller.insert_code_menu.as_ref().unwrap().clone();
-
-        self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit.focused(&||{
-                let controller_1 = Rc::clone(&self.command_buffer);
-                let controller_2 = Rc::clone(&self.command_buffer);
-                let insertion_point = menu.insertion_point.clone();
-                let new_code_node = menu.selected_option_code(&self.controller.code_genie().unwrap());
-
-                self.ui_toolkit.draw_text_input(
-                    menu.search_str(),
-                    move |input|{
-                        controller_1.borrow_mut()
-                            .set_search_str_on_insert_code_menu(input);
-                    },
-                    move ||{
-                        let mut controller = controller_2.borrow_mut();
-                        if let Some(ref new_code_node) = new_code_node {
-                            controller.hide_insert_code_menu();
-                            controller.insert_code(new_code_node.clone(), insertion_point);
-                        } else {
-                            controller.undo();
-                            controller.hide_insert_code_menu();
-                        }
-                    })
-            }),
-            self.render_insertion_options(&menu)
-        ])
-    }
-
-    fn render_insertion_options(&self, menu: &InsertCodeMenu) -> <T as UiToolkit>::DrawResult {
-        let options = menu.list_options(&self.controller.code_genie().unwrap());
-        let render_insertion_options : Vec<Box<Fn() -> T::DrawResult>> = options.iter()
-            .map(|option| {
-                let c : Box<Fn() -> T::DrawResult> = Box::new(move || {
-                    self.render_insertion_option(option, menu.insertion_point)
-                });
-                c
-            })
-            .collect();
-        self.ui_toolkit.draw_all_on_same_line(
-            &render_insertion_options.iter()
-                .map(|c| c.as_ref()).collect_vec()
-        )
-    }
-
-    fn render_insertion_option(
-        &self, option: &'a InsertCodeMenuOption, insertion_point: InsertionPoint) -> T::DrawResult {
-        let is_selected = option.is_selected;
-        let button_color = if is_selected { RED_COLOR } else { BLACK_COLOR };
-        let controller = Rc::clone(&self.command_buffer);
-        let new_code_node = Rc::new(option.new_node.clone());
-        let draw = move|| {
-            let cont = controller.clone();
-            let ncn = new_code_node.clone();
-            self.ui_toolkit.draw_small_button(&option.label, button_color, move|| {
-                let mut cont2 = cont.borrow_mut();
-                cont2.hide_insert_code_menu();
-                cont2.insert_code((*ncn).clone(), insertion_point);
-            })
-        };
-        if is_selected {
-            self.draw_selected(&draw)
-        } else {
-            draw()
-        }
-    }
-
-    fn render_assignment(&self, assignment: &Assignment) -> T::DrawResult {
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| {
-                self.render_inline_editable_button(
-                    &assignment.name,
-                    PURPLE_COLOR,
-                    assignment.id
-                )
-            },
-            &|| { self.ui_toolkit.draw_text(" = ") },
-            &|| { self.render_code(assignment.expression.as_ref()) }
-        ])
-    }
-
-    fn render_list_literal(&self, list_literal: &lang::ListLiteral,
-                           code_node: &CodeNode) -> T::DrawResult {
-        let t = self.controller.code_genie().unwrap().guess_type(code_node);
-
-        // TODO: we can use smth better to express the nesting than ascii art, like our nesting scheme
-        //       with the black lines (can actually make that generic so we can swap it with something
-        //       else
-        let type_symbol = self.get_symbol_for_type(&t);
-        let lhs = &|| self.ui_toolkit.draw_button(&type_symbol, BLUE_COLOR, &|| {});
-
-        let insert_pos = match self.controller.insert_code_menu {
-            Some(InsertCodeMenu {
-                     insertion_point: InsertionPoint::ListLiteralElement { list_literal_id, pos }, ..
-                 }) if list_literal_id == list_literal.id => Some(pos),
-            _ => None,
-        };
-
-        let mut rhs : Vec<Box<Fn() -> T::DrawResult>> = vec![];
-        let mut position_label = 0;
-        let mut i = 0;
-        while i <= list_literal.elements.len() {
-            if insert_pos.map_or(false, |insert_pos| insert_pos == i) {
-                let position_string = position_label.to_string();
-                rhs.push(Box::new(move || {
-                    self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| {
-                            self.ui_toolkit.draw_button(&position_string, BLACK_COLOR, &||{})
-                        },
-                        &|| self.render_nested(&|| self.render_insert_code_node()),
-                    ])
-                }));
-                position_label += 1;
-            }
-
-            list_literal.elements.get(i).map(|el| {
-                rhs.push(Box::new(move || {
-                    self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| {
-                            self.ui_toolkit.draw_button(&position_label.to_string(), BLACK_COLOR, &|| {})
-                        },
-                        &|| self.render_nested(&|| self.render_code(el)),
-                    ])
-                }));
-                position_label += 1;
-            });
-            i += 1;
-        }
-
-        self.ui_toolkit.align(lhs,
-                &rhs.iter()
-                    .map(|c| c.as_ref())
-                    .collect_vec()
-        )
-    }
-
-    fn render_variable_reference(&self, variable_reference: &VariableReference) -> T::DrawResult {
-        let loaded_code = self.controller.loaded_code.as_ref().unwrap();
-        let assignment = loaded_code.find_node(variable_reference.assignment_id);
-        if let Some(CodeNode::Assignment(assignment)) = assignment {
-            self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {})
-        } else {
-            self.ui_toolkit.draw_button("Variable reference not found", RED_COLOR, &|| {})
-        }
-    }
-
-    fn render_block(&self, block: &Block) -> T::DrawResult {
-        self.ui_toolkit.draw_all(
-            block.expressions.iter().map(|code| self.render_code(code)).collect())
-    }
-
-    fn render_function_call(&self, function_call: &FunctionCall) -> T::DrawResult {
-        // XXX: we've gotta have this conditional because of a quirk with the way the imgui
-        // toolkit works. if render_function_call_arguments doesn't actually draw anything, it
-        // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
-        // one day fix this jumbledness
-        if function_call.args.is_empty() {
-            return self.render_code(&function_call.function_reference)
-        }
-
-        let rhs = self.render_function_call_arguments(
-                function_call.function_reference().function_id,
-                function_call.args());
-        let rhs : Vec<Box<Fn() -> T::DrawResult>> = rhs
-            .iter()
-            .map(|cl| {
-                let b : Box<Fn() -> T::DrawResult> = Box::new(move || cl(&self));
-                b
-            })
-            .collect_vec();
-
-        self.ui_toolkit.align(
-            &|| { self.render_code(&function_call.function_reference) },
-            &rhs.iter().map(|b| b.as_ref()).collect_vec()
-        )
-    }
 
     fn render_function_reference(&self, function_reference: &FunctionReference) -> T::DrawResult {
         let function_id = function_reference.function_id;
@@ -1631,20 +1161,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             function_name = function.name().to_string();
         }
         self.ui_toolkit.draw_button(&function_name, color, &|| {})
-    }
-
-    fn render_function_call_arguments(&self, function_id: ID, args: Vec<&lang::Argument>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
-            let function = self.controller.find_function(function_id)
-                .map(|func| func.clone());
-            let args = args.clone();
-            match function {
-                Some(function) => {
-                    return self.render_args_for_found_function(&*function, args)
-                },
-                None => {
-                    return self.render_args_for_missing_function(args)
-                }
-            }
     }
 
     fn render_nested(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
@@ -1670,48 +1186,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.controller.code_genie().unwrap().get_symbol_for_type(t)
     }
 
-    fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
-        let arg_display = {
-            let genie = self.controller.code_genie().unwrap();
-            match genie.get_arg_definition(argument.argument_definition_id) {
-                Some(arg_def) => {
-                    let type_symbol = self.get_symbol_for_type(&arg_def.arg_type);
-                    format!("{} {}", type_symbol, arg_def.short_name)
-                },
-                None => "\u{f059}".to_string(),
-            }
-        };
-
-
-        self.render_nested(&|| {
-            self.ui_toolkit.draw_all_on_same_line(&[
-                &|| {
-                    self.render_inline_editable_button(&arg_display, BLACK_COLOR, argument.id)
-                },
-                &|| {
-                    self.render_code(argument.expr.as_ref())
-                },
-            ])
-        })
-    }
-
-    fn render_args_for_found_function(&self, function: &Function, args: Vec<&lang::Argument>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
-        let provided_arg_by_definition_id : HashMap<ID,lang::Argument> = args.into_iter()
-            .map(|arg| (arg.argument_definition_id, arg.clone())).collect();
-        let expected_args = function.takes_args();
-
-        let mut draw_fns : Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> = vec![];
-
-        for expected_arg in expected_args.into_iter() {
-            if let Some(provided_arg) = provided_arg_by_definition_id.get(&expected_arg.id).clone() {
-                let provided_arg = provided_arg.clone();
-                draw_fns.push(Box::new(move |s: &Renderer<T>| s.render_code(&CodeNode::Argument(provided_arg.clone()))))
-            } else {
-                draw_fns.push(Box::new(move |s: &Renderer<T>| s.render_missing_function_argument(&expected_arg)))
-            }
-        }
-        draw_fns
-    }
 
     fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {
         self.ui_toolkit.draw_button(
@@ -1724,77 +1198,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         vec![Box::new(|s: &Renderer<T>| s.ui_toolkit.draw_all(vec![]))]
     }
 
-    fn render_struct_literal(&self, struct_literal: &lang::StructLiteral) -> T::DrawResult {
-        // XXX: we've gotta have this conditional because of a quirk with the way the imgui
-        // toolkit works. if render_function_call_arguments doesn't actually draw anything, it
-        // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
-        // one day fix this jumbledness
-        let strukt = self.get_struct(struct_literal.struct_id).unwrap();
-
-        if struct_literal.fields.is_empty() {
-            return self.render_struct_identifier(&strukt, struct_literal)
-        }
-        let rhs = self.render_struct_literal_fields(&strukt,
-                                                  struct_literal.fields());
-        let rhs : Vec<Box<Fn() -> T::DrawResult>> = rhs.into_iter()
-            .map(|draw_fn| {
-                let b : Box<Fn() -> T::DrawResult> = Box::new(move || draw_fn(&self));
-                b
-            }).collect_vec();
-        self.ui_toolkit.align(
-            &|| { self.render_struct_identifier(&strukt, struct_literal) },
-            &rhs.iter().map(|b| b.as_ref()).collect_vec()
-        )
-    }
-
     fn render_struct_identifier(&self, strukt: &structs::Struct,
                                 _struct_literal: &lang::StructLiteral) -> T::DrawResult {
         // TODO: handle when the typespec ain't available
         self.ui_toolkit.draw_button(&strukt.name, BLUE_COLOR, &|| {})
-    }
-
-    fn render_struct_literal_fields(&self, strukt: &'a structs::Struct,
-        fields: impl Iterator<Item = &'a lang::StructLiteralField>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
-        // TODO: should this map just go inside the struct????
-        let struct_field_by_id = strukt.field_by_id();
-
-        let mut to_draw : Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> = vec![];
-        for literal_field in fields {
-            // this is where the bug is
-            let strukt_field = struct_field_by_id.get(&literal_field.struct_field_id).unwrap();
-            let strukt_field = (*strukt_field).clone();
-            let literal_feeld = literal_field.clone();
-            to_draw.push(Box::new(move |s: &Renderer<T>| {
-                s.render_struct_literal_field(&strukt_field, &literal_feeld)
-            }));
-        }
-        to_draw
-    }
-
-    fn render_struct_literal_field(&self, field: &structs::StructField,
-                                   literal: &lang::StructLiteralField) -> T::DrawResult {
-        let field_text = format!("{} {}", self.get_symbol_for_type(&field.field_type),
-                                        field.name);
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| {
-                if self.is_editing(literal.id) {
-                    self.render_insert_code_node()
-                } else {
-                    self.render_inline_editable_button(&field_text, BLACK_COLOR, literal.id)
-                }
-            },
-            &|| self.render_nested(&|| self.render_code(&literal.expr))
-        ])
-    }
-
-    fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
-        self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit.draw_all_on_same_line(&[
-                &|| { self.ui_toolkit.draw_button("If", GREY_COLOR, &||{}) },
-                &|| { self.render_code(&conditional.condition) },
-            ]),
-            self.render_indented(&|| { self.render_code(&conditional.true_branch) }),
-        ])
     }
 
     fn render_indented(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
@@ -1813,29 +1220,12 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {})
     }
 
-    fn render_string_literal(&self, string_literal: &StringLiteral) -> T::DrawResult {
-        self.render_inline_editable_button(
-            &format!("\u{F10D} {} \u{F10E}", string_literal.value),
-            CLEAR_COLOR,
-            string_literal.id)
-    }
-
     fn render_run_button(&self, code_node: &CodeNode) -> T::DrawResult {
         let controller = self.command_buffer.clone();
         let code_node = code_node.clone();
         self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
             let mut controller = controller.borrow_mut();
             controller.run(&code_node, |_|{});
-        })
-    }
-
-    fn render_inline_editable_button(&self, label: &str, color: Color, code_node_id: lang::ID) -> T::DrawResult {
-        let command_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_button(label, color, move || {
-            let mut command_buffer = command_buffer.borrow_mut();
-            command_buffer.add_controller_command(move |controller| {
-                controller.mark_as_editing(InsertionPoint::Editing(code_node_id));
-            })
         })
     }
 
@@ -1847,122 +1237,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.is_selected(code_node_id) && self.controller.editing
     }
 
-    fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
-        // this is kind of a mess. render_insert_code_node() does `focus` inside of
-        // it. the other parts of the branch need to be wrapped in focus() but not
-        // render_insert_code_node()
-        match code_node {
-            CodeNode::StringLiteral(string_literal) => {
-                self.ui_toolkit.focused(&move ||{
-                    let new_literal = string_literal.clone();
-                    self.draw_inline_text_editor(
-                        &string_literal.value,
-                        move |new_value| {
-                            let mut sl = new_literal.clone();
-                            sl.value = new_value.to_string();
-                            CodeNode::StringLiteral(sl)
-                        })
-                })
-            },
-            CodeNode::Assignment(assignment) => {
-                self.ui_toolkit.focused(&|| {
-                    let a = assignment.clone();
-                    self.draw_inline_text_editor(
-                        &assignment.name,
-                        move |new_value| {
-                            let mut new_assignment = a.clone();
-                            new_assignment.name = new_value.to_string();
-                            CodeNode::Assignment(new_assignment)
-                        })
-                })
-            },
-            CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => {
-                self.render_insert_code_node()
-            }
-            // the list literal renders its own editor inline
-            CodeNode::ListLiteral(list_literal) => {
-                self.render_list_literal(list_literal, code_node)
-            }
-            _ => {
-                // TODO: this is super hacks. the editor just reaches in and makes something not
-                // editing while rendering lol
-                self.command_buffer.borrow_mut().mark_as_not_editing();
-                self.ui_toolkit.draw_button(&format!("Not possible to edit {:?}", code_node), RED_COLOR, &||{})
-            }
-        }
-    }
-
-    fn draw_inline_text_editor<F: Fn(&str) -> CodeNode + 'static>(&self, initial_value: &str, new_node_fn: F) -> T::DrawResult {
-        let controller = Rc::clone(&self.command_buffer);
-        let controller2 = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_text_input(
-            initial_value,
-            move |new_value| {
-                controller.borrow_mut().replace_code(new_node_fn(new_value));
-            },
-            move || {
-                let mut controller = controller2.borrow_mut();
-                controller.mark_as_not_editing();
-            },
-            // TODO: i think we need another callback for what happens when you CANCEL
-        )
-    }
 }
 
-enum PostInsertionAction {
-    SelectNode(ID),
-    MarkAsEditing(InsertionPoint),
-}
-
-fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> PostInsertionAction {
-    if let CodeNode::FunctionCall(function_call) = code_node {
-        // if we just inserted a function call, then go to the first arg if there is one
-        if function_call.args.len() > 0 {
-            let id = function_call.args[0].id();
-            return PostInsertionAction::MarkAsEditing(InsertionPoint::Argument(id))
-        } else {
-            return PostInsertionAction::SelectNode(function_call.id)
-        }
-    }
-
-    if let CodeNode::StructLiteral(struct_literal) = code_node {
-        // if we just inserted a function call, then go to the first arg if there is one
-        if struct_literal.fields.len() > 0 {
-            let id = struct_literal.fields[0].id();
-            return PostInsertionAction::MarkAsEditing(InsertionPoint::StructLiteralField(id))
-        } else {
-            return PostInsertionAction::SelectNode(struct_literal.id)
-        }
-    }
-
-    let parent = code_genie.find_parent(code_node.id());
-    if let Some(CodeNode::Argument(argument)) = parent {
-        // if we just finished inserting into a function call argument, and the next argument is
-        // a placeholder, then let's insert into that arg!!!!
-        if let Some(CodeNode::FunctionCall(function_call)) = code_genie.find_parent(argument.id) {
-            let just_inserted_argument_position = function_call.args.iter()
-                .position(|arg| arg.id() == argument.id).unwrap();
-            let maybe_next_arg = function_call.args.get(just_inserted_argument_position + 1);
-            if let Some(CodeNode::Argument(lang::Argument{ expr: box CodeNode::Placeholder(_), id, .. })) = maybe_next_arg {
-                return PostInsertionAction::MarkAsEditing(InsertionPoint::Argument(*id))
-            }
-        }
-    } else if let Some(CodeNode::StructLiteralField(struct_literal_field)) = parent {
-        // if we just finished inserting into a function call argument, and the next argument is
-        // a placeholder, then let's insert into that arg!!!!
-        if let Some(CodeNode::StructLiteral(struct_literal)) = code_genie.find_parent(struct_literal_field.id) {
-            let just_inserted_argument_position = struct_literal.fields.iter()
-                .position(|field| field.id() == struct_literal_field.id).unwrap();
-            let maybe_next_field = struct_literal.fields.get(just_inserted_argument_position + 1);
-            if let Some(CodeNode::StructLiteralField(lang::StructLiteralField{ expr: box CodeNode::Placeholder(_), id, .. })) = maybe_next_field {
-                return PostInsertionAction::MarkAsEditing(InsertionPoint::StructLiteralField(*id))
-            }
-        }
-    }
-
-    // nothing that we can think of to do next, just chill at the insertion point
-    PostInsertionAction::SelectNode(code_node.id())
-}
 
 fn format_typespec_select(ts: &Box<lang::TypeSpec>, nesting_level: Option<&[usize]>) -> String {
     let indent = match nesting_level {
