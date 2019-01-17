@@ -23,6 +23,7 @@ use super::structs;
 use super::function;
 use super::code_function;
 use super::code_editor;
+use super::env_genie;
 
 
 pub const SELECTION_COLOR: Color = [1., 1., 1., 0.3];
@@ -113,17 +114,6 @@ impl<'a> CodeGenie<'a> {
         None
     }
 
-    fn get_type_for_arg(&self, argument_definition_id: ID) -> Option<lang::Type> {
-        for function in self.all_functions() {
-            for arg_def in function.takes_args() {
-                if arg_def.id == argument_definition_id {
-                    return Some(arg_def.arg_type)
-                }
-            }
-        }
-        None
-    }
-
     // this whole machinery cannot handle parameterized types yet :/
     fn find_types_matching(&'a self, str: &'a str) -> impl Iterator<Item = lang::Type> + 'a {
         self.env.list_typespecs()
@@ -132,20 +122,9 @@ impl<'a> CodeGenie<'a> {
             .map(|ts| lang::Type::from_spec_id(ts.id(), vec![]))
     }
 
-    fn get_symbol_for_type(&self, t: &lang::Type) -> String {
-        let typespec = self.get_typespec(t.typespec_id).unwrap();
-        if typespec.num_params() == 0 {
-            return typespec.symbol().to_string()
-        }
-        let joined_params = t.params.iter()
-            .map(|p| self.get_symbol_for_type(p))
-            .join(", ");
-        format!("{}\u{f053}{}\u{f054}", typespec.symbol(), joined_params)
-    }
-
-    fn get_typespec(&self, ts_id: lang::ID) -> Option<&lang::TypeSpec> {
-        self.env.find_typespec(ts_id).map(|b| b.as_ref())
-    }
+//    fn get_typespec(&self, ts_id: lang::ID) -> Option<&lang::TypeSpec> {
+//        self.env.find_typespec(ts_id).map(|b| b.as_ref())
+//    }
 
 //    fn find_node(&self, id: ID) -> Option<&CodeNode> {
 //        self.code.find_node(id)
@@ -155,18 +134,9 @@ impl<'a> CodeGenie<'a> {
 //        self.code.find_parent(id)
 //    }
 
-    fn find_function(&self, id: ID) -> Option<&Box<Function>> {
-        self.env.find_function(id)
-    }
-
     fn all_functions(&self) -> impl Iterator<Item = &Box<lang::Function>> {
         self.env.list_functions()
     }
-
-    fn find_struct(&self, id: lang::ID) -> Option<&structs::Struct> {
-        self.env.find_struct(id)
-    }
-
 }
 
 #[derive(Debug)]
@@ -182,7 +152,7 @@ impl TestResult {
 
 pub struct Controller {
     // TODO: i only need this to be public for hax, so i can make this unpublic later
-    execution_environment: Option<env::ExecutionEnvironment>,
+//    execution_environment: Option<env::ExecutionEnvironment>,
     selected_node_id: Option<ID>,
     pub editing: bool,
     //insert_code_menu: Option<InsertCodeMenu>,
@@ -197,7 +167,7 @@ pub struct Controller {
 impl<'a> Controller {
     pub fn new() -> Controller {
         Controller {
-            execution_environment: None,
+//            execution_environment: None,
             selected_node_id: None,
             error_console: String::new(),
             //insert_code_menu: None,
@@ -208,72 +178,41 @@ impl<'a> Controller {
         }
     }
 
-    pub fn borrow_env<R, F: FnMut(&mut Self) -> R>(&mut self,
-                                       env: &mut env::ExecutionEnvironment,
-                                       mut borrows_self: F) -> R {
-        take_mut::take(env, |env| {
-            self.execution_environment = Some(env);
-            let ret = borrows_self(self);
-            (self.execution_environment.take().unwrap(), ret)
-        })
-    }
+//    pub fn borrow_env<R, F: FnMut(&mut Self) -> R>(&mut self,
+//                                       env: &mut env::ExecutionEnvironment,
+//                                       mut borrows_self: F) -> R {
+//        take_mut::take(env, |env| {
+//            self.execution_environment = Some(env);
+//            let ret = borrows_self(self);
+//            (self.execution_environment.take().unwrap(), ret)
+//        })
+//    }
 
     // TODO: delete this to see what kinda things need to be moved into the CommandBuffer
-    fn execution_environment_mut(&mut self) -> &mut env::ExecutionEnvironment {
-        self.execution_environment.as_mut().unwrap()
-    }
-
-    fn execution_environment(&self) -> &env::ExecutionEnvironment {
-        self.execution_environment.as_ref().unwrap()
-    }
-
-    fn typespecs(&self) -> impl Iterator<Item = &Box<lang::TypeSpec>> {
-        self.execution_environment().list_typespecs()
-    }
-
-    fn list_structs(&self) -> impl Iterator<Item = &structs::Struct> {
-        self.typespecs()
-            .filter_map(|ts| ts.as_ref().downcast_ref::<structs::Struct>())
-    }
-
-    fn list_enums(&self) -> impl Iterator<Item = &enums::Enum> {
-        self.typespecs()
-            .filter_map(|ts| ts.as_ref().downcast_ref::<enums::Enum>())
-    }
-
-    fn get_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
-        self.execution_environment().find_typespec(id)
-    }
+//    fn execution_environment_mut(&mut self) -> &mut env::ExecutionEnvironment {
+//        self.execution_environment.as_mut().unwrap()
+//    }
+//
+//    fn execution_environment(&self) -> &env::ExecutionEnvironment {
+//        self.execution_environment.as_ref().unwrap()
+//    }
 
     pub fn get_editor(&mut self, id: lang::ID) -> Option<&mut code_editor::CodeEditor> {
         self.code_editor_by_id.get_mut(&id)
     }
 
     fn save(&self) {
-        let theworld = code_loading::TheWorld {
-            // this needs to be a list of funcs or smth
-            main_code: self.code_editor_by_id.values().next().unwrap().get_code().clone(),
-            pyfuncs: self.list_pyfuncs().cloned().collect(),
-            jsfuncs: self.list_jsfuncs().cloned().collect(),
-            structs: self.list_structs().cloned().collect(),
-            enums: self.list_enums().cloned().collect(),
-        };
-        code_loading::save("codesample.json", &theworld).unwrap();
-    }
-
-    fn list_jsfuncs(&self) -> impl Iterator<Item = &jsstuff::JSFunc> {
-        self.execution_environment().list_functions()
-            .filter_map(|f| f.downcast_ref::<jsstuff::JSFunc>())
-    }
-
-    fn list_code_funcs(&self) -> impl Iterator<Item = &code_function::CodeFunction> {
-        self.execution_environment().list_functions()
-            .filter_map(|f| f.downcast_ref::<code_function::CodeFunction>())
-    }
-
-    fn list_pyfuncs(&self) -> impl Iterator<Item = &pystuff::PyFunc> {
-        self.execution_environment().list_functions()
-            .filter_map(|f| f.downcast_ref::<pystuff::PyFunc>())
+        // TODO: i'll fix this later
+        unimplemented!()
+//        let theworld = code_loading::TheWorld {
+//            // this needs to be a list of funcs or smth
+//            main_code: self.code_editor_by_id.values().next().unwrap().get_code().clone(),
+//            pyfuncs: self.list_pyfuncs().cloned().collect(),
+//            jsfuncs: self.list_jsfuncs().cloned().collect(),
+//            structs: self.list_structs().cloned().collect(),
+//            enums: self.list_enums().cloned().collect(),
+//        };
+//        code_loading::save("codesample.json", &theworld).unwrap();
     }
 
     fn get_test_result(&self, func: &lang::Function) -> String {
@@ -306,27 +245,11 @@ impl<'a> Controller {
 //        Some(())
 //    }
 
-    fn code_genie(&'a self) -> Option<CodeGenie> {
-        Some(CodeGenie::new(
-            self.execution_environment(),
-        ))
-    }
-
-    pub fn load_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
-        self.execution_environment_mut().add_typespec(typespec)
-    }
-
-    pub fn load_function<F: Function>(&mut self, function: F) {
-        self.execution_environment_mut().add_function(Box::new(function))
-    }
-
-    pub fn remove_function(&mut self, id: lang::ID) {
-        self.execution_environment_mut().delete_function(id)
-    }
-
-    pub fn find_function(&self, id: ID) -> Option<&Box<Function>> {
-        self.execution_environment().find_function(id)
-    }
+//    fn code_genie(&'a self) -> Option<CodeGenie> {
+//        Some(CodeGenie::new(
+//            self.execution_environment(),
+//        ))
+//    }
 
     pub fn load_code(&mut self, code_node: &CodeNode) {
         self.code_editor_by_id.insert(code_node.id(),
@@ -338,13 +261,13 @@ impl<'a> Controller {
         // TODO: ugh this doesn't work
     }
 
-    pub fn read_console(&self) -> &str {
-        &self.execution_environment().console
-    }
-
-    pub fn read_error_console(&self) -> &str {
-        &self.error_console
-    }
+//    pub fn read_console(&self) -> &str {
+//        &self.execution_environment().console
+//    }
+//
+//    pub fn read_error_console(&self) -> &str {
+//        &self.error_console
+//    }
 
     pub fn set_selected_node_id(&mut self, code_node_id: Option<ID>) {
         self.selected_node_id = code_node_id;
@@ -420,12 +343,6 @@ impl CommandBuffer {
         })
     }
 
-    pub fn load_function<F: lang::Function>(&mut self, func: F) {
-        self.add_controller_command(move |controller| {
-            controller.load_function(func)
-        })
-    }
-
 //    pub fn set_search_str_on_insert_code_menu(&mut self, input: &str) {
 //        let input = input.to_owned();
 //        self.add_controller_command(move |controller| {
@@ -440,16 +357,16 @@ impl CommandBuffer {
         })
     }
 
-    pub fn remove_function(&mut self, func_id: lang::ID) {
-        self.add_controller_command(move |controller| {
-            controller.remove_function(func_id)
-        })
+    pub fn remove_function(&mut self, id: lang::ID) {
+        self.add_environment_command(move |env| env.delete_function(id))
     }
 
-    pub fn load_typespec<T: lang::TypeSpec>(&mut self, ts: T) {
-        self.add_controller_command(move |controller| {
-            controller.load_typespec(ts)
-        })
+    pub fn load_function(&mut self, func: impl lang::Function + 'static) {
+        self.add_environment_command(move |env| env.add_function(func))
+    }
+
+    pub fn load_typespec(&mut self, ts: impl lang::TypeSpec + 'static) {
+        self.add_environment_command(move |env| env.add_typespec(ts))
     }
 
     // environment actions
@@ -474,6 +391,12 @@ impl CommandBuffer {
         self.interpreter_commands.push(Box::new(f));
     }
 
+    pub fn add_environment_command<F: FnOnce(&mut env::ExecutionEnvironment) + 'static>(&mut self, f: F) {
+        self.add_interpreter_command(|interpreter| {
+            f(&mut interpreter.env().borrow_mut())
+        })
+    }
+
     pub fn flush_to_interpreter(&mut self, interpreter: &mut env::Interpreter) {
         for command in self.interpreter_commands.drain(..) {
             command.call_box((interpreter,))
@@ -488,17 +411,20 @@ pub struct Renderer<'a, T> {
     // TODO: take this through the constructor, but now we'll let ppl peek in here
     command_buffer: Rc<RefCell<CommandBuffer>>,
     controller: &'a Controller,
+    env_genie: &'a env_genie::EnvGenie<'a>,
 }
 
 impl<'a, T: UiToolkit> Renderer<'a, T> {
     pub fn new(ui_toolkit: &'a mut T, controller: &'a Controller,
-               command_buffer: Rc<RefCell<CommandBuffer>>) -> Renderer<'a, T> {
+               command_buffer: Rc<RefCell<CommandBuffer>>,
+               env_genie: &env_genie::EnvGenie) -> Renderer<'a, T> {
         Self {
             arg_nesting_level: RefCell::new(0),
             indentation_level: RefCell::new(0),
             ui_toolkit,
             controller,
             command_buffer,
+            env_genie,
         }
     }
 
@@ -522,31 +448,41 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.ui_toolkit.draw_menu(
                 "File",
                 &|| {
-                    let cont1 = Rc::clone(&self.command_buffer);
-                    let cont2 = Rc::clone(&self.command_buffer);
-                    let cont3 = Rc::clone(&self.command_buffer);
-                    let cont4 = Rc::clone(&self.command_buffer);
-                    let cont5 = Rc::clone(&self.command_buffer);
+                    let cmdb1 = Rc::clone(&self.command_buffer);
+                    let cmdb2 = Rc::clone(&self.command_buffer);
+                    let cmdb3 = Rc::clone(&self.command_buffer);
+                    let cmdb4 = Rc::clone(&self.command_buffer);
+                    let cmdb5 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
-                            cont1.borrow_mut().save();
+                            cmdb1.borrow_mut().save();
                         }),
                         self.ui_toolkit.draw_menu_item("Add new function", move || {
-                            cont5.borrow_mut().load_function(code_function::CodeFunction::new());
+                            cmdb5.borrow_mut().add_environment_command(|env| {
+                                env.add_function(code_function::CodeFunction::new());
+                            });
                         }),
                         #[cfg(feature = "default")]
                         self.ui_toolkit.draw_menu_item("Add Python function", move || {
-                            cont2.borrow_mut().load_function(pystuff::PyFunc::new());
+                            cmdb2.borrow_mut().add_environment_command(|env| {
+                                env.add_function(pystuff::PyFunc::new());
+                            });
                         }),
                         #[cfg(feature = "javascript")]
                         self.ui_toolkit.draw_menu_item("Add JavaScript function", move || {
-                            cont2.borrow_mut().load_function(jsstuff::JSFunc::new());
+                            cmdb2.borrow_mut().add_environment_command(|env| {
+                                env.add_function(jsstuff::JSFunc::new());
+                            });
                         }),
                         self.ui_toolkit.draw_menu_item("Add Struct", move || {
-                            cont3.borrow_mut().load_typespec(structs::Struct::new());
+                            cmdb3.borrow_mut().add_environment_command(|env| {
+                                env.add_typespec(structs::Struct::new());
+                            })
                         }),
                         self.ui_toolkit.draw_menu_item("Add Enum", move || {
-                            cont4.borrow_mut().load_typespec(enums::Enum::new());
+                            cmdb4.borrow_mut().add_environment_command(|env| {
+                                env.add_typespec(enums::Enum::new());
+                            })
                         }),
                         self.ui_toolkit.draw_menu_item("Exit", || {
                             std::process::exit(0);
@@ -558,7 +494,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_code_funcs(&self) -> T::DrawResult {
-        let code_funcs = self.controller.list_code_funcs();
+        let code_funcs = self.env_genie.list_code_funcs();
         self.ui_toolkit.draw_all(code_funcs.map(|f| self.render_edit_code_func(f)).collect())
     }
 
@@ -567,7 +503,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
-        let pyfuncs = self.controller.list_pyfuncs();
+        let pyfuncs = self.env_genie.list_pyfuncs();
         self.ui_toolkit.draw_all(pyfuncs.map(|f| self.render_edit_pyfunc(f)).collect())
     }
 
@@ -622,7 +558,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_jsfuncs(&self) -> T::DrawResult {
-        let jsfuncs = self.controller.list_jsfuncs();
+        let jsfuncs = self.env_genie.list_jsfuncs();
         self.ui_toolkit.draw_all(jsfuncs.map(|f| self.render_edit_jsfunc(f)).collect())
     }
 
@@ -665,18 +601,18 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn get_struct(&self, struct_id: lang::ID) -> Option<structs::Struct> {
-        let typespec = self.controller.get_typespec(struct_id).cloned()?;
+        let typespec = self.env_genie.find_typespec(struct_id).cloned()?;
         typespec.downcast::<structs::Struct>().map(|bawx| *bawx).ok()
     }
 
     fn render_edit_structs(&self) -> T::DrawResult {
-        let structs = self.controller.list_structs();
+        let structs = self.env_genie.list_structs();
         self.ui_toolkit.draw_all(structs.map(|s| self.render_edit_struct(s)).collect())
     }
 
     fn render_edit_enums(&self) -> T::DrawResult {
-        let structs = self.controller.list_enums();
-        self.ui_toolkit.draw_all(structs.map(|e| self.render_edit_enum(e)).collect())
+        let enums = self.env_genie.list_enums();
+        self.ui_toolkit.draw_all(enums.map(|e| self.render_edit_enum(e)).collect())
     }
 
     fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
@@ -997,8 +933,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     {
         // TODO: pretty sure we can get rid of the clone and let the borrow live until the end
         // but i don't want to mess around with it right now
-        let selected_ts = self.controller.get_typespec(selected_ts_id).unwrap().clone();
-        let typespecs = self.controller.typespecs().into_iter()
+        let selected_ts = self.env_genie.find_typespec(selected_ts_id).unwrap().clone();
+        let typespecs = self.env_genie.typespecs().into_iter()
             .map(|ts| ts.clone()).collect_vec();
         self.ui_toolkit.draw_combo_box_with_label(
             label,
@@ -1111,7 +1047,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_console_window(&self) -> T::DrawResult {
-        let console = self.controller.read_console();
+        let console = self.env_genie.read_console();
         self.ui_toolkit.draw_window("Console", &|| {
             self.ui_toolkit.draw_text_box(console)
         },
@@ -1119,7 +1055,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_error_window(&self) -> T::DrawResult {
-        let error_console = self.controller.read_error_console();
+//        let error_console = self.controller.read_error_console();
+        let error_console = "UNDER CONSTRUCTION";
         self.ui_toolkit.draw_window("Errors", &|| {
             self.ui_toolkit.draw_text_box(error_console)
         },
@@ -1156,7 +1093,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let mut color = RED_COLOR;
         let mut function_name = format!("Error: function ID {} not found", function_id);
 
-        if let Some(function) = self.controller.find_function(function_id) {
+        if let Some(function) = self.env_genie.find_function(function_id) {
             color = GREY_COLOR;
             function_name = function.name().to_string();
         }
@@ -1183,9 +1120,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn get_symbol_for_type(&self, t: &lang::Type) -> String {
-        self.controller.code_genie().unwrap().get_symbol_for_type(t)
+        self.env_genie.get_symbol_for_type(t)
     }
-
 
     fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {
         self.ui_toolkit.draw_button(

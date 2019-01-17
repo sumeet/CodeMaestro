@@ -11,24 +11,25 @@ use super::lang::CodeNode;
 use super::lang;
 use super::structs;
 use super::undo;
+use super::env_genie::EnvGenie;
 
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 
 pub struct CodeEditor {
-    pub genie: CodeGenie,
+    pub code_genie: CodeGenie,
     editing: bool,
     selected_node_id: Option<lang::ID>,
     insert_code_menu: Option<InsertCodeMenu>,
     mutation_master: MutationMaster,
     // THIS SHIT
-    env: Option<>
+    //env: Option<>
 }
 
 impl CodeEditor {
     pub fn new(code: &lang::CodeNode) -> Self {
         Self {
-            genie: CodeGenie::new(code.clone()),
+            code_genie: CodeGenie::new(code.clone()),
             editing: false,
             selected_node_id: None,
             insert_code_menu: None,
@@ -41,7 +42,7 @@ impl CodeEditor {
     }
 
     pub fn get_code(&self) -> &lang::CodeNode {
-        self.genie.root()
+        self.code_genie.root()
     }
 
     pub fn handle_keypress(&mut self, keypress: editor::Keypress) {
@@ -123,7 +124,7 @@ impl CodeEditor {
 
     pub fn mark_as_editing(&mut self, insertion_point: InsertionPoint) -> Option<()> {
         self.insert_code_menu = InsertCodeMenu::for_insertion_point(insertion_point,
-                                                                    &self.genie);
+                                                                    &self.code_genie);
         self.save_current_state_to_undo_history();
         self.selected_node_id = insertion_point.selected_node_id();
         self.editing = true;
@@ -142,39 +143,39 @@ impl CodeEditor {
     }
 
     pub fn replace_code(&mut self, code: &lang::CodeNode) {
-        self.genie.replace(code)
+        self.code_genie.replace(code)
     }
 
     fn try_select_up_one_node(&mut self) {
-        let navigation = Navigation::new(&self.genie);
+        let navigation = Navigation::new(&self.code_genie);
         if let Some(node_id) = navigation.navigate_up_from(self.selected_node_id) {
             self.set_selected_node_id(Some(node_id))
         }
     }
 
     fn try_select_down_one_node(&mut self) {
-        let navigation = Navigation::new(&self.genie);
+        let navigation = Navigation::new(&self.code_genie);
         if let Some(node_id) = navigation.navigate_down_from(self.selected_node_id) {
             self.set_selected_node_id(Some(node_id))
         }
     }
 
     pub fn try_select_back_one_node(&mut self) {
-        let navigation = Navigation::new(&self.genie);
+        let navigation = Navigation::new(&self.code_genie);
         if let Some(node_id) = navigation.navigate_back_from(self.selected_node_id) {
             self.set_selected_node_id(Some(node_id))
         }
     }
 
     pub fn try_select_forward_one_node(&mut self) {
-        let navigation = Navigation::new(&self.genie);
+        let navigation = Navigation::new(&self.code_genie);
         if let Some(node_id) = navigation.navigate_forward_from(self.selected_node_id) {
             self.set_selected_node_id(Some(node_id))
         }
     }
 
     fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
-        match self.genie.find_parent(self.selected_node_id?)? {
+        match self.code_genie.find_parent(self.selected_node_id?)? {
             lang::CodeNode::Argument(cn) => {
                 self.mark_as_editing(InsertionPoint::Argument(cn.id));
             },
@@ -187,7 +188,7 @@ impl CodeEditor {
     }
 
     fn get_selected_node(&self) -> Option<&lang::CodeNode> {
-        self.genie.find_node(self.selected_node_id?)
+        self.code_genie.find_node(self.selected_node_id?)
     }
 
     fn try_append_in_selected_node(&mut self) -> Option<()> {
@@ -203,7 +204,7 @@ impl CodeEditor {
             }
             _ => ()
         }
-        match self.genie.find_parent(selected_node.id())? {
+        match self.code_genie.find_parent(selected_node.id())? {
             lang::CodeNode::ListLiteral(list_literal) => {
                 let position_of_selected_node = list_literal.elements.iter()
                     .position(|el| el.id() == selected_node.id())?;
@@ -237,7 +238,7 @@ impl CodeEditor {
     }
 
     fn currently_focused_block_expression(&self) -> Option<lang::ID> {
-        self.genie
+        self.code_genie
             .find_expression_inside_block_that_contains(self.selected_node_id?)
     }
 
@@ -252,9 +253,9 @@ impl CodeEditor {
     // thing can error
     fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
         let new_code = self.mutation_master.insert_code(
-            &code_node, insertion_point, &self.genie);
+            &code_node, insertion_point, &self.code_genie);
         self.replace_code(&new_code);
-        match post_insertion_cursor(&code_node, &self.genie) {
+        match post_insertion_cursor(&code_node, &self.code_genie) {
             PostInsertionAction::SelectNode(id) => { self.set_selected_node_id(Some(id)); }
             PostInsertionAction::MarkAsEditing(insertion_point) => { self.mark_as_editing(insertion_point); }
         }
@@ -270,7 +271,7 @@ impl CodeEditor {
 
     fn delete_selected_code(&mut self) -> Option<()> {
         let deletion_result = self.mutation_master.delete_code(
-            self.selected_node_id?, &self.genie, self.selected_node_id);
+            self.selected_node_id?, &self.code_genie, self.selected_node_id);
         // TODO: these save current state calls can go inside of the mutation master
         self.save_current_state_to_undo_history();
         self.replace_code(&deletion_result.new_root);
@@ -280,7 +281,7 @@ impl CodeEditor {
     }
 
     fn select_current_line(&mut self) -> Option<()> {
-        let code_id = self.genie.find_expression_inside_block_that_contains(self.selected_node_id?)?;
+        let code_id = self.code_genie.find_expression_inside_block_that_contains(self.selected_node_id?)?;
         self.set_selected_node_id(Some(code_id));
         Some(())
     }
@@ -291,7 +292,7 @@ impl CodeEditor {
 }
 
 // the code genie traverses through the code, giving callers various information
-struct CodeGenie {
+pub struct CodeGenie {
     code: lang::CodeNode,
 }
 
@@ -318,7 +319,7 @@ impl CodeGenie {
     // update: yeah... for conditionals, we'll have to make another recursive call and keep searching
     // up parent blocks. i think we can do this! just have to find assignments that come before the
     // conditional itself
-    fn find_assignments_that_come_before_code(&self, node_id: lang::ID) -> Vec<&lang::Assignment> {
+    pub fn find_assignments_that_come_before_code(&self, node_id: lang::ID) -> Vec<&lang::Assignment> {
         let block_expression_id = self.find_expression_inside_block_that_contains(node_id);
         if block_expression_id.is_none() {
             return vec![]
@@ -353,7 +354,7 @@ impl CodeGenie {
         }
     }
 
-    fn find_node(&self, id: lang::ID) -> Option<&lang::CodeNode> {
+    pub fn find_node(&self, id: lang::ID) -> Option<&lang::CodeNode> {
         self.code.find_node(id)
     }
 
@@ -361,29 +362,29 @@ impl CodeGenie {
         self.code.find_parent(id)
     }
 
-    pub fn guess_type(&self, code_node: &lang::CodeNode) -> lang::Type {
+    // TODO: i think we can thread the environment through here
+    pub fn guess_type(&self, code_node: &lang::CodeNode,
+                      env_genie: &EnvGenie) -> lang::Type {
         use super::lang::CodeNode;
         match code_node {
             CodeNode::FunctionCall(function_call) => {
-                unimplemented!()
-                // TODO: FUCKKKKKK this needs the environment ://////
-//                let func_id = function_call.function_reference().function_id;
-//                match self.find_function(func_id) {
-//                    Some(ref func) => func.returns().clone(),
-//                    // TODO: do we really want to just return Null if we couldn't find the function?
-//                    None => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
-//                }
+                let func_id = function_call.function_reference().function_id;
+                match env_genie.find_function(func_id) {
+                    Some(ref func) => func.returns().clone(),
+                    // TODO: do we really want to just return Null if we couldn't find the function?
+                    None => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                }
             }
             CodeNode::StringLiteral(_) => {
                 lang::Type::from_spec(&*lang::STRING_TYPESPEC)
             }
             CodeNode::Assignment(assignment) => {
-                self.guess_type(&*assignment.expression)
+                self.guess_type(&*assignment.expression, env_genie)
             }
             CodeNode::Block(block) => {
                 if block.expressions.len() > 0 {
                     let last_expression_in_block= &block.expressions[block.expressions.len() - 1];
-                    self.guess_type(last_expression_in_block)
+                    self.guess_type(last_expression_in_block, env_genie)
                 } else {
                     lang::Type::from_spec(&*lang::NULL_TYPESPEC)
                 }
@@ -398,7 +399,7 @@ impl CodeGenie {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             }
             CodeNode::Argument(arg) => {
-                self.get_type_for_arg(arg.argument_definition_id).unwrap()
+                env_genie.get_type_for_arg(arg.argument_definition_id).unwrap()
             }
             CodeNode::Placeholder(_) => {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)
@@ -407,20 +408,20 @@ impl CodeGenie {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             },
             CodeNode::StructLiteral(struct_literal) => {
-                let strukt = self.env.find_struct(struct_literal.struct_id).unwrap();
+                let strukt = env_genie.find_struct(struct_literal.struct_id).unwrap();
                 lang::Type::from_spec(strukt)
             }
             CodeNode::StructLiteralField(struct_literal_field) => {
                 let strukt_literal = self.find_parent(struct_literal_field.id)
                     .unwrap().into_struct_literal().unwrap();
-                let strukt = self.env.find_struct(strukt_literal.struct_id).unwrap();
+                let strukt = env_genie.find_struct(strukt_literal.struct_id).unwrap();
                 strukt.field_by_id().get(&struct_literal_field.struct_field_id).unwrap()
                     .field_type.clone()
             }
             // this means that both branches of a conditional must be of the same type.we need to
             // add a validation for that
             CodeNode::Conditional(conditional) => {
-                self.guess_type(&conditional.true_branch)
+                self.guess_type(&conditional.true_branch, env_genie)
             }
             CodeNode::ListLiteral(list_literal) => {
                 lang::Type::with_params(&*lang::LIST_TYPESPEC,
@@ -726,8 +727,8 @@ impl MutationMaster {
                 let mut new_block = block.clone();
                 new_block.expressions.retain(|exp| exp.id() != node_id_to_delete);
 
-                let deleted_expression_position_in_block = genie.find_position_in_block(
-                    &block, node_id_to_delete).unwrap();
+                let deleted_expression_position_in_block = block.find_position(
+                    node_id_to_delete).unwrap();
                 let mut new_cursor_position = new_block.expressions
                     .get(deleted_expression_position_in_block)
                     .map(|code_node| code_node.id());
@@ -798,380 +799,6 @@ impl DeletionResult {
     }
 }
 
-// TODO: types of insert code generators
-// 1: variable
-// 2: function call to capitalize
-// 3: new string literal
-// 4: placeholder
-
-#[derive(Clone, Debug)]
-pub struct InsertCodeMenu {
-    option_generators: Vec<Box<InsertCodeMenuOptionGenerator>>,
-    selected_option_index: isize,
-    search_params: CodeSearchParams,
-    pub insertion_point: InsertionPoint,
-}
-
-// TODO: could probably have a single interface for generating this menu, inject the insertion point
-// into the search params (because we can copy it easily) and then we don't need to box the searchers.
-// every searcher can decide for itself if it can fill in that particular insertion point
-impl InsertCodeMenu {
-    // TODO: we could just construct all the generators and have them switch on insertion
-    // point, intead of doing it here... maybe
-    pub fn for_insertion_point(insertion_point: InsertionPoint, genie: &CodeGenie) -> Option<Self> {
-        match insertion_point {
-            InsertionPoint::Before(_) | InsertionPoint::After(_) => {
-                Some(Self::new_expression_inside_code_block(insertion_point))
-            },
-            InsertionPoint::Argument(field_id) | InsertionPoint::StructLiteralField(field_id) => {
-                let node = genie.find_node(field_id).unwrap();
-                let exact_type = genie.guess_type(node);
-                Some(Self::fill_in_field_with_exact_type(exact_type, genie, insertion_point))
-            },
-            InsertionPoint::Editing(_) => None,
-            InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
-                let list_literal = genie.find_node(list_literal_id).unwrap();
-                match list_literal {
-                    lang::CodeNode::ListLiteral(list_literal) => {
-                        Some(Self::fill_in_field_with_exact_type(
-                            list_literal.element_type.clone(),
-                            genie,
-                            insertion_point))
-                    }
-                    _ => panic!("should always be a list literal... ugh"),
-                }
-            }
-        }
-    }
-
-    fn new_expression_inside_code_block(insertion_point: InsertionPoint) -> Self {
-        Self {
-            // TODO: should probably be able to insert new assignment expressions as well
-            option_generators: vec![
-                Box::new(InsertFunctionOptionGenerator {}),
-                Box::new(InsertLiteralOptionGenerator {}),
-                Box::new(InsertConditionalOptionGenerator {}),
-            ],
-            selected_option_index: 0,
-            search_params: CodeSearchParams::empty(),
-            insertion_point,
-        }
-    }
-
-    fn fill_in_field_with_exact_type(exact_type: lang::Type, genie: &CodeGenie,
-                                     insertion_point: InsertionPoint) -> Self {
-        Self {
-            option_generators: vec![
-                Box::new(InsertVariableReferenceOptionGenerator {
-                    // TODO: this is gonna bite me in the ass, but w/e
-                    insertion_id: insertion_point.node_id()
-                }),
-                Box::new(InsertFunctionOptionGenerator {}),
-                Box::new(InsertLiteralOptionGenerator {}),
-            ],
-            selected_option_index: 0,
-            search_params: CodeSearchParams::with_type(&exact_type),
-            insertion_point,
-        }
-    }
-
-    fn selected_option_code(&self, code_genie: &CodeGenie) -> Option<lang::CodeNode> {
-        let all_options = self.list_options(code_genie);
-        if all_options.is_empty() {
-            return None
-        }
-        let selected_index = self.selected_index(all_options.len());
-        Some(all_options.get(selected_index)?.new_node.clone())
-    }
-
-    fn select_next(&mut self) {
-        // this could possibly overflow, but i wouldn't count on it... HAXXXXX
-        self.selected_option_index += 1;
-    }
-
-    fn search_str(&self) -> &str {
-        &self.search_params.input_str
-    }
-
-    fn set_search_str(&mut self, input_str: &str) {
-        if input_str != self.search_params.input_str {
-            self.search_params.input_str = input_str.to_string();
-            self.selected_option_index = 0;
-        }
-    }
-
-    // TODO: i think the selected option index can get out of sync with this generated list, leading
-    // to a panic, say if someone types something and changes the number of options without changing
-    // the selected index.
-    pub fn list_options(&self, code_genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
-        let mut all_options : Vec<InsertCodeMenuOption> = self.option_generators
-            .iter()
-            .flat_map(|generator| {
-                generator.options(&self.search_params, code_genie)
-            })
-            .collect();
-        if all_options.is_empty() {
-            return all_options
-        }
-        let selected_index = self.selected_index(all_options.len());
-        all_options.get_mut(selected_index).as_mut()
-            .map(|option| option.is_selected = true);
-        all_options
-    }
-
-    // HACK: this modulo stuff is an insane hack but it lets me not have to pass a code genie into
-    // select_next
-    fn selected_index(&self, num_options: usize) -> usize {
-        (self.selected_option_index % num_options as isize) as usize
-    }
-}
-
-trait InsertCodeMenuOptionGenerator : objekt::Clone {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie) -> Vec<InsertCodeMenuOption>;
-}
-
-clone_trait_object!(InsertCodeMenuOptionGenerator);
-
-// TODO: should the insertion point go inside here as well? that way we wouldn't have to store off
-// the ID in the variable reference searcher
-#[derive(Clone, Debug)]
-struct CodeSearchParams {
-    return_type: Option<lang::Type>,
-    input_str: String,
-}
-
-impl CodeSearchParams {
-    fn empty() -> Self {
-        Self { return_type: None, input_str: "".to_string() }
-    }
-
-    fn with_type(t: &lang::Type) -> Self {
-        Self { return_type: Some(t.clone()), input_str: "".to_string() }
-    }
-
-    pub fn lowercased_trimmed_search_str(&self) -> String {
-        self.input_str.trim().to_lowercase()
-    }
-
-    pub fn list_of_something(&self) -> Option<String> {
-        let input_str = self.lowercased_trimmed_search_str();
-        if input_str.starts_with("list") {
-            Some(input_str.trim_start_matches("list").trim().into())
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct InsertCodeMenuOption {
-    label: String,
-    new_node: lang::CodeNode,
-    is_selected: bool,
-}
-
-#[derive(Clone)]
-struct InsertFunctionOptionGenerator {}
-
-impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
-        return vec![];
-        // TODO: FIX THIS LATER... one thing at a time
-//        let mut functions : &mut Iterator<Item = &Box<Function>> = &mut genie.all_functions();
-//        let mut a;
-//        let mut b;
-//
-//        let input_str = search_params.lowercased_trimmed_search_str();
-//        if !input_str.is_empty() {
-//            a = functions
-//                .filter(|f| {
-//                    f.name().to_lowercase().contains(&input_str)
-//                });
-//            functions = &mut a;
-//        }
-//
-//        let return_type = &search_params.return_type;
-//        if return_type.is_some() {
-//            b = functions
-//                .filter(|f| f.returns().matches(return_type.as_ref().unwrap()));
-//            functions = &mut b;
-//        }
-//
-//        functions.map(|func| {
-//            InsertCodeMenuOption {
-//                label: func.name().to_string(),
-//                new_node: code_generation::new_function_call_with_placeholder_args(func.as_ref()),
-//                is_selected: false,
-//            }
-//        }).collect()
-    }
-}
-
-#[derive(Clone)]
-struct InsertVariableReferenceOptionGenerator {
-    insertion_id: lang::ID,
-}
-
-impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams,
-               genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
-        let assignments_by_type_id : HashMap<lang::ID, Vec<lang::Assignment>> = genie.find_assignments_that_come_before_code(self.insertion_id)
-            .into_iter()
-            .group_by(|assignment| {
-                let assignment : lang::Assignment = (**assignment).clone();
-                genie.guess_type(&lang::CodeNode::Assignment(assignment)).id()
-            })
-            .into_iter()
-            .map(|(id, assignments)| (id, assignments.cloned().collect::<Vec<lang::Assignment>>()))
-            .collect();
-
-        let mut assignments = if let Some(search_type) = &search_params.return_type {
-            // XXX: this won't work for generics i believe
-            assignments_by_type_id.get(&search_type.id()).map_or_else(
-                || vec![],
-                |assignments| assignments.iter()
-                    .map(|assignment| assignment.clone()).collect()
-            )
-        } else {
-            assignments_by_type_id.iter()
-                .flat_map(|(_id, assignments)| assignments)
-                .map(|assignment| assignment.clone())
-                .collect()
-        };
-
-        let input_str = search_params.lowercased_trimmed_search_str();
-        if !input_str.is_empty() {
-            assignments = assignments.into_iter()
-                .filter(|assignment| {
-                    assignment.name.to_lowercase().contains(&input_str)
-                }).collect()
-        }
-
-        assignments.into_iter().map(|assignment| {
-            InsertCodeMenuOption {
-                label: assignment.name.to_string(),
-                new_node: code_generation::new_variable_reference(&assignment),
-                is_selected: false,
-            }
-        }).collect()
-    }
-}
-
-#[derive(Clone)]
-struct InsertLiteralOptionGenerator {}
-
-impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
-        let mut options = vec![];
-        let input_str = &search_params.lowercased_trimmed_search_str();
-        let return_type = &search_params.return_type;
-        if let Some(ref return_type) = search_params.return_type {
-            if return_type.matches_spec(&lang::STRING_TYPESPEC) {
-                options.push(self.string_literal_option(input_str));
-            } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
-                options.push(self.null_literal_option());
-            } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
-                options.push(self.list_literal_option(genie, &return_type));
-            } else if let Some(strukt) = genie.find_struct(return_type.typespec_id) {
-                options.push(self.strukt_option(strukt));
-            }
-
-            // design decision made here: all placeholders have types. therefore, it is now
-            // required for a placeholder node to have a type, meaning we need to know what the
-            // type of a placeholder is to create it. under current conditions that's ok, but i
-            // think we can make this less restrictive in the future if we need to
-            options.push(self.placeholder_option(input_str, return_type));
-        } else {
-            if let Some(list_search_query) = search_params.list_of_something() {
-                let matching_list_type_options = genie
-                    .find_types_matching(&list_search_query)
-                    .map(|t| {
-                        let list_type = lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![t]);
-                        self.list_literal_option(genie, &list_type)
-                    });
-                options.extend(matching_list_type_options)
-            }
-            if "null".contains(input_str) {
-                options.push(self.null_literal_option())
-            }
-            if !input_str.is_empty() {
-                options.push(self.string_literal_option(input_str));
-            }
-        }
-        options
-    }
-}
-
-impl InsertLiteralOptionGenerator {
-    fn string_literal_option(&self, input_str: &str) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: format!("\u{f10d}{}\u{f10e}", input_str),
-            is_selected: false,
-            new_node: code_generation::new_string_literal(input_str)
-        }
-    }
-
-
-    fn null_literal_option(&self) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: lang::NULL_TYPESPEC.symbol.clone(),
-            is_selected: false,
-            new_node: code_generation::new_null_literal(),
-        }
-    }
-
-    fn strukt_option(&self, strukt: &structs::Struct) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: format!("{} {}", strukt.symbol, strukt.name),
-            is_selected: false,
-            new_node: code_generation::new_struct_literal_with_placeholders(strukt),
-        }
-    }
-
-    fn placeholder_option(&self, input_str: &str, return_type: &lang::Type) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: format!("{} {}", PLACEHOLDER_ICON, input_str),
-            is_selected: false,
-            new_node: code_generation::new_placeholder(input_str, return_type.clone()),
-        }
-    }
-
-    fn list_literal_option(&self, genie: &CodeGenie, list_literal_type: &lang::Type) -> InsertCodeMenuOption {
-        let symbol = genie.get_symbol_for_type(list_literal_type);
-        let element_type = &list_literal_type.params[0];
-        let ts = genie.get_typespec(element_type.typespec_id).unwrap();
-        InsertCodeMenuOption {
-            label: format!("{}: {}", symbol, ts.readable_name()),
-            is_selected: false,
-            new_node: lang::CodeNode::ListLiteral(lang::ListLiteral {
-                id: lang::new_id(),
-                element_type: element_type.clone(),
-                elements: vec![]
-            })
-        }
-    }
-}
-
-#[derive(Clone)]
-struct InsertConditionalOptionGenerator {}
-
-impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, genie: &CodeGenie) -> Vec<InsertCodeMenuOption> {
-        let mut options = vec![];
-        let search_str = search_params.lowercased_trimmed_search_str();
-        if "if".contains(&search_str) || "conditional".contains(&search_str) {
-            options.push(
-                InsertCodeMenuOption {
-                    label: "If".to_string(),
-                    is_selected: false,
-                    new_node: code_generation::new_conditional(&search_params.return_type)
-                }
-            )
-        }
-        options
-    }
-}
-
 #[derive(Debug, Clone, Copy)]
 pub enum InsertionPoint {
     Before(lang::ID),
@@ -1185,7 +812,7 @@ pub enum InsertionPoint {
 impl InsertionPoint {
     // the purpose of this method is unclear therefore it's dangerous. remove this in a refactoring
     // because it's not really widely used
-    fn node_id(&self) -> lang::ID {
+    pub fn node_id(&self) -> lang::ID {
         match *self {
             InsertionPoint::Before(id) => id,
             InsertionPoint::After(id) => id,
@@ -1207,6 +834,14 @@ impl InsertionPoint {
             InsertionPoint::Editing(id) => Some(id),
             // not sure if this is right....
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => Some(list_literal_id),
+        }
+    }
+
+    pub fn is_block_expression(&self) -> bool {
+        match *self {
+            InsertionPoint::Before(_) | InsertionPoint::After(_) => true,
+            InsertionPoint::Argument(_) | InsertionPoint::StructLiteralField(_) |
+                InsertionPoint::Editing(_) | InsertionPoint::ListLiteralElement {..} => false,
         }
     }
 }

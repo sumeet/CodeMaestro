@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 
 use super::code_editor;
-use super::code_editor::InsertCodeMenu;
+use super::insert_code_menu::InsertCodeMenu;
 use super::code_editor::InsertionPoint;
 use super::editor;
 use super::lang;
@@ -58,22 +58,6 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                     code_editor.handle_keypress(keypress)
                 })
             })
-        )
-    }
-
-    fn render_insertion_options(&mut self, menu: &InsertCodeMenu) -> T::DrawResult {
-        let options = menu.list_options(&self.code_editor.genie);
-        let render_insertion_options : Vec<Box<Fn() -> T::DrawResult>> = options.iter()
-            .map(|option| {
-                let c : Box<Fn() -> T::DrawResult> = Box::new(move || {
-                    self.render_insertion_option(option, menu.insertion_point)
-                });
-                c
-            })
-            .collect();
-        self.ui_toolkit.draw_all_on_same_line(
-            &render_insertion_options.iter()
-                .map(|c| c.as_ref()).collect_vec()
         )
     }
 
@@ -177,6 +161,22 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             }),
             self.render_insertion_options(&menu)
         ])
+    }
+
+    fn render_insertion_options(&mut self, menu: &InsertCodeMenu) -> T::DrawResult {
+        let options = menu.list_options(&self.code_editor.code_genie);
+        let render_insertion_options : Vec<Box<Fn() -> T::DrawResult>> = options.iter()
+            .map(|option| {
+                let c : Box<Fn() -> T::DrawResult> = Box::new(move || {
+                    self.render_insertion_option(option, menu.insertion_point)
+                });
+                c
+            })
+            .collect();
+        self.ui_toolkit.draw_all_on_same_line(
+            &render_insertion_options.iter()
+                .map(|c| c.as_ref()).collect_vec()
+        )
     }
 
     fn render_list_literal(&mut self, list_literal: &lang::ListLiteral,
@@ -299,7 +299,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_variable_reference(&mut self, variable_reference: &lang::VariableReference) -> T::DrawResult {
-        let assignment = self.code_editor.genie.find_node(variable_reference.assignment_id);
+        let assignment = self.code_editor.code_genie.find_node(variable_reference.assignment_id);
         if let Some(CodeNode::Assignment(assignment)) = assignment {
             self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {})
         } else {

@@ -217,8 +217,8 @@ impl ExecutionEnvironment {
         typespec_by_id
     }
 
-    pub fn add_function(&mut self, function: Box<lang::Function>) {
-        self.functions.insert(function.id(), function);
+    pub fn add_function(&mut self, function: impl lang::Function + 'static) {
+        self.functions.insert(function.id(), Box::new(function));
     }
 
     pub fn find_function(&self, id: lang::ID) -> Option<&Box<lang::Function>> {

@@ -25,8 +25,10 @@ pub mod lang;
 mod structs;
 mod enums;
 pub mod env;
+mod env_genie;
 mod code_loading;
 mod editor;
+mod insert_code_menu;
 mod code_editor;
 mod code_editor_renderer;
 mod edit_types;
@@ -112,25 +114,25 @@ pub fn draw_app(app: Rc<RefCell<App>>) {
 }
 
 #[cfg(feature = "default")]
-fn load_externalfuncs(controller: &mut Controller, world: &code_loading::TheWorld) {
+fn load_externalfuncs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) {
     for pyfunc in world.pyfuncs.iter() {
-        controller.load_function(pyfunc.clone());
+        env.add_function(pyfunc.clone());
     }
 }
 
 #[cfg(feature = "javascript")]
-fn load_externalfuncs(controller: &mut Controller, world: &code_loading::TheWorld) {
+fn load_externalfuncs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) {
     for jsfunc in world.jsfuncs.iter() {
-        controller.load_function(jsfunc.clone());
+        env.add_function(jsfunc.clone());
     }
 }
 
-fn load_structs(controller: &mut Controller, world: &code_loading::TheWorld) {
+fn load_structs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) {
     for strukt in world.structs.iter() {
-        controller.load_typespec(strukt.clone());
+        env.add_typespec(strukt.clone());
     }
     for eneom in world.enums.iter() {
-        controller.load_typespec(eneom.clone());
+        env.add_typespec(eneom.clone());
     }
 }
 
@@ -146,14 +148,14 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     let codestring = include_str!("../codesample.json");
     let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
     controller.load_code(&the_world.main_code);
-    // we could just load these into the env.... lol
-    controller.borrow_env(&mut interpreter.env().borrow_mut(), |mut controller| {
-        load_externalfuncs(&mut controller, &the_world);
-        load_structs(&mut controller, &the_world);
-        controller.load_function(builtins::Print{});
-        controller.load_function(builtins::Capitalize{});
-        controller.load_function(builtins::HTTPGet{});
-    });
+
+    let mut env = interpreter.env().borrow_mut();
+    load_externalfuncs(&mut env, &the_world);
+    load_structs(&mut env, &the_world);
+    env.add_function(builtins::Print{});
+    env.add_function(builtins::Capitalize{});
+    env.add_function(builtins::HTTPGet{});
+
     controller
 }
 
@@ -178,20 +180,19 @@ impl App {
 
     pub fn draw<T: UiToolkit>(&mut self, ui_toolkit: &mut T) -> T::DrawResult {
         let command_buffer = Rc::clone(&self.command_buffer);
-        self.controller.borrow_env(&mut self.interpreter.env().borrow_mut(), |controller| {
-            let renderer = editor::Renderer::new(
-                ui_toolkit,
-                controller,
-                Rc::clone(&command_buffer));
-            renderer.render_app()
-        })
+        let env = self.interpreter.env().borrow();
+        let env_genie = env_genie::EnvGenie::new(&env);
+        let renderer = editor::Renderer::new(
+            ui_toolkit,
+            &self.controller,
+            Rc::clone(&command_buffer),
+            &env_genie);
+        renderer.render_app()
     }
 
     pub fn flush_commands(&mut self) {
-        let command_buffer = Rc::clone(&self.command_buffer);
-        self.controller.borrow_env(&mut self.interpreter.env().borrow_mut(), |mut controller| {
-            command_buffer.borrow_mut().flush_to_controller(&mut controller);
-        });
-        command_buffer.borrow_mut().flush_to_interpreter(&mut self.interpreter);
+        let mut command_buffer = self.command_buffer.borrow_mut();
+        command_buffer.flush_to_controller(&mut self.controller);
+        command_buffer.flush_to_interpreter(&mut self.interpreter);
     }
 }
