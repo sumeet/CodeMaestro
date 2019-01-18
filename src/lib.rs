@@ -149,7 +149,8 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
     controller.load_code(&the_world.main_code);
 
-    let mut env = interpreter.env().borrow_mut();
+    let env = interpreter.env();
+    let mut env = env.borrow_mut();
     load_externalfuncs(&mut env, &the_world);
     load_structs(&mut env, &the_world);
     env.add_function(builtins::Print{});
@@ -180,7 +181,8 @@ impl App {
 
     pub fn draw<T: UiToolkit>(&mut self, ui_toolkit: &mut T) -> T::DrawResult {
         let command_buffer = Rc::clone(&self.command_buffer);
-        let env = self.interpreter.env().borrow();
+        let env = self.interpreter.env();
+        let env = env.borrow();
         let env_genie = env_genie::EnvGenie::new(&env);
         let renderer = editor::Renderer::new(
             ui_toolkit,

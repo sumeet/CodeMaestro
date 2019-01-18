@@ -8,22 +8,23 @@ use super::structs;
 
 use objekt::{clone_trait_object,__internal_clone_trait_object};
 use lazy_static::lazy_static;
+use itertools::Itertools;
 
 use std::collections::HashMap;
 
 lazy_static! {
-    pub static ref OPTIONS_GENERATORS : Vec<Box<InsertCodeMenuOptionGenerator>> = vec![
-        InsertVariableReferenceOptionGenerator {},
-        InsertFunctionOptionGenerator {},
-        InsertLiteralOptionGenerator {},
-        InsertConditionalOptionGenerator {},
+    static ref OPTIONS_GENERATORS : Vec<Box<InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
+        Box::new(InsertVariableReferenceOptionGenerator {}),
+        Box::new(InsertFunctionOptionGenerator {}),
+        Box::new(InsertLiteralOptionGenerator {}),
+        Box::new(InsertConditionalOptionGenerator {}),
     ];
 }
 
 pub struct InsertCodeMenu {
     input_str: String,
     selected_option_index: isize,
-    insertion_point: InsertionPoint,
+    pub insertion_point: InsertionPoint,
 }
 
 impl InsertCodeMenu {
@@ -43,11 +44,11 @@ impl InsertCodeMenu {
         self.selected_option_index += 1;
     }
 
-    fn input_str(&self) -> &str {
+    pub fn input_str(&self) -> &str {
         &self.input_str
     }
 
-    fn set_search_str(&mut self, input_str: &str) {
+    pub fn set_search_str(&mut self, input_str: &str) {
         if input_str != self.input_str {
             self.input_str = input_str.to_string();
             self.selected_option_index = 0;
@@ -60,6 +61,15 @@ impl InsertCodeMenu {
         (self.selected_option_index % num_options as isize) as usize
     }
 
+    pub fn selected_option_code(&self, code_genie: &CodeGenie, env_genie: &EnvGenie) -> Option<lang::CodeNode> {
+        let all_options = self.list_options(code_genie, env_genie);
+        if all_options.is_empty() {
+            return None
+        }
+        let selected_index = self.selected_index(all_options.len());
+        Some(all_options.get(selected_index)?.new_node.clone())
+    }
+
     // TODO: i think the selected option index can get out of sync with this generated list, leading
     // to a panic, say if someone types something and changes the number of options without changing
     // the selected index.
@@ -69,7 +79,7 @@ impl InsertCodeMenu {
         let mut all_options : Vec<InsertCodeMenuOption> = OPTIONS_GENERATORS
             .iter()
             .flat_map(|generator| {
-                generator.options(&self.search_params, code_genie, env_genie)
+                generator.options(&search_params, code_genie, env_genie)
             })
             .collect();
         if all_options.is_empty() {
@@ -154,9 +164,9 @@ clone_trait_object!(InsertCodeMenuOptionGenerator);
 
 #[derive(Clone)]
 pub struct InsertCodeMenuOption {
-    label: String,
-    new_node: lang::CodeNode,
-    is_selected: bool,
+    pub label: String,
+    pub new_node: lang::CodeNode,
+    pub is_selected: bool,
 }
 
 #[derive(Clone)]
@@ -201,7 +211,8 @@ struct InsertVariableReferenceOptionGenerator {}
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        let assignments_by_type_id : HashMap<lang::ID, Vec<lang::Assignment>> = code_genie.find_assignments_that_come_before_code(self.insertion_id)
+        let insertion_id = search_params.insertion_point.node_id();
+        let assignments_by_type_id : HashMap<lang::ID, Vec<lang::Assignment>> = code_genie.find_assignments_that_come_before_code(insertion_id)
             .into_iter()
             .group_by(|assignment| {
                 let assignment : lang::Assignment = (**assignment).clone();
@@ -258,7 +269,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
             } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
                 options.push(self.null_literal_option());
             } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
-                options.push(self.list_literal_option(code_genie, &return_type));
+                options.push(self.list_literal_option(env_genie, &return_type));
             } else if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
                 options.push(self.strukt_option(strukt));
             }
@@ -274,7 +285,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     .find_types_matching(&list_search_query)
                     .map(|t| {
                         let list_type = lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![t]);
-                        self.list_literal_option(code_genie, &list_type)
+                        self.list_literal_option(env_genie, &list_type)
                     });
                 options.extend(matching_list_type_options)
             }
@@ -323,10 +334,10 @@ impl InsertLiteralOptionGenerator {
         }
     }
 
-    fn list_literal_option(&self, genie: &CodeGenie, list_literal_type: &lang::Type) -> InsertCodeMenuOption {
-        let symbol = genie.get_symbol_for_type(list_literal_type);
+    fn list_literal_option(&self, env_genie: &EnvGenie, list_literal_type: &lang::Type) -> InsertCodeMenuOption {
+        let symbol = env_genie.get_symbol_for_type(list_literal_type);
         let element_type = &list_literal_type.params[0];
-        let ts = genie.get_typespec(element_type.typespec_id).unwrap();
+        let ts = env_genie.find_typespec(element_type.typespec_id).unwrap();
         InsertCodeMenuOption {
             label: format!("{}: {}", symbol, ts.readable_name()),
             is_selected: false,

@@ -12,15 +12,16 @@ use super::lang;
 use super::structs;
 use super::undo;
 use super::env_genie::EnvGenie;
+use super::insert_code_menu::InsertCodeMenu;
 
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 
 pub struct CodeEditor {
     pub code_genie: CodeGenie,
-    editing: bool,
+    pub editing: bool,
     selected_node_id: Option<lang::ID>,
-    insert_code_menu: Option<InsertCodeMenu>,
+    pub insert_code_menu: Option<InsertCodeMenu>,
     mutation_master: MutationMaster,
     // THIS SHIT
     //env: Option<>
@@ -123,19 +124,26 @@ impl CodeEditor {
     }
 
     pub fn mark_as_editing(&mut self, insertion_point: InsertionPoint) -> Option<()> {
-        self.insert_code_menu = InsertCodeMenu::for_insertion_point(insertion_point,
-                                                                    &self.code_genie);
+        self.insert_code_menu = InsertCodeMenu::for_insertion_point(insertion_point);
         self.save_current_state_to_undo_history();
         self.selected_node_id = insertion_point.selected_node_id();
         self.editing = true;
         Some(())
     }
 
-    fn undo(&mut self) {
+    pub fn mark_as_not_editing(&mut self) {
+        self.editing = false
+    }
+
+    pub fn undo(&mut self) {
         if let Some(history) = self.mutation_master.undo(self.get_code(), self.selected_node_id) {
             self.replace_code(&history.root);
             self.set_selected_node_id(history.cursor_position);
         }
+    }
+
+    pub fn get_selected_node_id(&self) -> &Option<lang::ID> {
+        &self.selected_node_id
     }
 
     fn set_selected_node_id(&mut self, code_node_id: Option<lang::ID>) {
@@ -251,7 +259,7 @@ impl CodeEditor {
 
     // TODO: return a result instead of returning nothing? it seems like there might be places this
     // thing can error
-    fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
+    pub fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
         let new_code = self.mutation_master.insert_code(
             &code_node, insertion_point, &self.code_genie);
         self.replace_code(&new_code);

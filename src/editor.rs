@@ -26,7 +26,6 @@ use super::code_editor;
 use super::env_genie;
 
 
-pub const SELECTION_COLOR: Color = [1., 1., 1., 0.3];
 pub const BLUE_COLOR: Color = [100.0 / 255.0, 149.0 / 255.0, 237.0 / 255.0, 1.0];
 pub const YELLOW_COLOR: Color = [253.0 / 255.0, 159.0 / 255.0, 19.0 / 255.0, 1.0];
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
@@ -37,11 +36,7 @@ pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
 pub const SALMON_COLOR: Color = [0.996, 0.286, 0.322, 1.0];
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
-pub const PX_PER_INDENTATION_LEVEL : i16 = 20;
 
-
-// temp ass import
-use super::code_editor::InsertionPoint;
 
 pub type Color = [f32; 4];
 
@@ -80,63 +75,6 @@ pub enum Key {
     DownArrow,
     LeftArrow,
     RightArrow,
-}
-
-pub struct CodeGenie<'a> {
-    env: &'a env::ExecutionEnvironment,
-}
-
-// TODO: is this gonna be like EnvGenie now??? do we even need this anymore?
-impl<'a> CodeGenie<'a> {
-    fn new(env: &'a env::ExecutionEnvironment) -> Self {
-        Self { env }
-    }
-
-//    fn find_expression_inside_block_that_contains(&self, node_id: ID) -> Option<ID> {
-//        let parent = self.code.find_parent(node_id);
-//        match parent {
-//            Some(CodeNode::Block(_)) => Some(node_id),
-//            Some(parent_node) => self.find_expression_inside_block_that_contains(
-//                parent_node.id()),
-//            None => None
-//        }
-//    }
-
-    fn get_arg_definition(&self, argument_definition_id: ID) -> Option<lang::ArgumentDefinition> {
-        // shouldn't all_functions not clone them????
-        for function in self.all_functions() {
-            for arg_def in function.takes_args() {
-                if arg_def.id == argument_definition_id {
-                    return Some(arg_def)
-                }
-            }
-        }
-        None
-    }
-
-    // this whole machinery cannot handle parameterized types yet :/
-    fn find_types_matching(&'a self, str: &'a str) -> impl Iterator<Item = lang::Type> + 'a {
-        self.env.list_typespecs()
-            .filter(|ts| ts.num_params() == 0)
-            .filter(move |ts| ts.readable_name().to_lowercase().contains(str))
-            .map(|ts| lang::Type::from_spec_id(ts.id(), vec![]))
-    }
-
-//    fn get_typespec(&self, ts_id: lang::ID) -> Option<&lang::TypeSpec> {
-//        self.env.find_typespec(ts_id).map(|b| b.as_ref())
-//    }
-
-//    fn find_node(&self, id: ID) -> Option<&CodeNode> {
-//        self.code.find_node(id)
-//    }
-
-//    fn find_parent(&self, id: ID) -> Option<&CodeNode> {
-//        self.code.find_parent(id)
-//    }
-
-    fn all_functions(&self) -> impl Iterator<Item = &Box<lang::Function>> {
-        self.env.list_functions()
-    }
 }
 
 #[derive(Debug)]
@@ -271,10 +209,6 @@ impl<'a> Controller {
 
     pub fn set_selected_node_id(&mut self, code_node_id: Option<ID>) {
         self.selected_node_id = code_node_id;
-    }
-
-    pub fn get_selected_node_id(&self) -> &Option<ID> {
-        &self.selected_node_id
     }
 
 }
@@ -417,7 +351,7 @@ pub struct Renderer<'a, T> {
 impl<'a, T: UiToolkit> Renderer<'a, T> {
     pub fn new(ui_toolkit: &'a mut T, controller: &'a Controller,
                command_buffer: Rc<RefCell<CommandBuffer>>,
-               env_genie: &env_genie::EnvGenie) -> Renderer<'a, T> {
+               env_genie: &'a env_genie::EnvGenie) -> Renderer<'a, T> {
         Self {
             arg_nesting_level: RefCell::new(0),
             indentation_level: RefCell::new(0),
@@ -1074,103 +1008,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 //        )
     }
 
-    fn draw_selected(&self, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
-        self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
-    }
-
-
-    fn render_function_reference(&self, function_reference: &FunctionReference) -> T::DrawResult {
-        let function_id = function_reference.function_id;
-
-        // TODO: don't do validation in here. this is just so i can see what this error looks
-        // like visually. for realz, i would probably be better off having a separate validation
-        // step. and THEN show the errors in here. or maybe overlay something on the codenode that
-        // contains the error
-        //
-        // UPDATE: so i tried that, but figured i still needed to have this code here. i guess maybe
-        // there's gonna be no avoiding doing double validation in some situations, and that's ok
-        // i think
-        let mut color = RED_COLOR;
-        let mut function_name = format!("Error: function ID {} not found", function_id);
-
-        if let Some(function) = self.env_genie.find_function(function_id) {
-            color = GREY_COLOR;
-            function_name = function.name().to_string();
-        }
-        self.ui_toolkit.draw_button(&function_name, color, &|| {})
-    }
-
-    fn render_nested(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
-        let top_border_thickness = 1;
-        let right_border_thickness = 1;
-        let left_border_thickness = 1;
-        let bottom_border_thickness = 1;
-
-        let nesting_level = self.arg_nesting_level.replace_with(|i| *i + 1);
-        let top_border_thickness = top_border_thickness + nesting_level + 1;
-        let drawn = self.ui_toolkit.draw_top_border_inside(BLACK_COLOR, top_border_thickness as u8, &|| {
-            self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &|| {
-                self.ui_toolkit.draw_left_border_inside(BLACK_COLOR, right_border_thickness, &|| {
-                    self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, draw_fn)
-                })
-            })
-        });
-        self.arg_nesting_level.replace_with(|i| *i - 1);
-        drawn
-    }
-
     fn get_symbol_for_type(&self, t: &lang::Type) -> String {
         self.env_genie.get_symbol_for_type(t)
-    }
-
-    fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {
-        self.ui_toolkit.draw_button(
-            "this shouldn't have happened, you've got a missing function arg somehow",
-            RED_COLOR,
-            &|| {})
-    }
-
-    fn render_args_for_missing_function(&self, _args: Vec<&lang::Argument>) -> Vec<Box<Fn(&Renderer<T>) -> T::DrawResult>> {
-        vec![Box::new(|s: &Renderer<T>| s.ui_toolkit.draw_all(vec![]))]
-    }
-
-    fn render_struct_identifier(&self, strukt: &structs::Struct,
-                                _struct_literal: &lang::StructLiteral) -> T::DrawResult {
-        // TODO: handle when the typespec ain't available
-        self.ui_toolkit.draw_button(&strukt.name, BLUE_COLOR, &|| {})
-    }
-
-    fn render_indented(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
-        self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL, draw_fn)
-    }
-
-    fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
-        let mut r = YELLOW_COLOR;
-        // LOL: mess around w/ some transparency
-        r[3] = 0.4;
-        // TODO: maybe use the traffic cone instead of the exclamation triangle,
-        // which is kinda hard to see
-        self.ui_toolkit.draw_button(
-            &format!("{} {}", PLACEHOLDER_ICON, placeholder.description),
-            r,
-            &|| {})
-    }
-
-    fn render_run_button(&self, code_node: &CodeNode) -> T::DrawResult {
-        let controller = self.command_buffer.clone();
-        let code_node = code_node.clone();
-        self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
-            let mut controller = controller.borrow_mut();
-            controller.run(&code_node, |_|{});
-        })
-    }
-
-    fn is_selected(&self, code_node_id: ID) -> bool {
-        Some(code_node_id) == *self.controller.get_selected_node_id()
-    }
-
-    fn is_editing(&self, code_node_id: ID) -> bool {
-        self.is_selected(code_node_id) && self.controller.editing
     }
 
 }
