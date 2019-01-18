@@ -90,25 +90,13 @@ impl TestResult {
 }
 
 pub struct Controller {
-    // TODO: i only need this to be public for hax, so i can make this unpublic later
-//    execution_environment: Option<env::ExecutionEnvironment>,
-    selected_node_id: Option<ID>,
-    pub editing: bool,
-    //insert_code_menu: Option<InsertCodeMenu>,
-    // TODO: i only need this to be public for hax, so i can make this unpublic later
-    error_console: String,
-//    mutation_master: MutationMaster,
     test_result_by_func_id: HashMap<ID, TestResult>,
-    // here it is
     code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
 }
 
 impl<'a> Controller {
     pub fn new() -> Controller {
         Controller {
-            selected_node_id: None,
-            error_console: String::new(),
-            editing: false,
             test_result_by_func_id: HashMap::new(),
             code_editor_by_id: HashMap::new(),
         }
@@ -145,13 +133,6 @@ impl<'a> Controller {
         }
     }
 
-    // TODO: hax passing in the command buffer, we only need it to schedule things to run from the
-    // controller :/
-    pub fn handle_keypress_in_code_editor(&mut self, id: lang::ID, keypress: Keypress) {
-        self.code_editor_by_id.get_mut(&id)
-            .map(|ce| ce.handle_keypress(keypress));
-    }
-
     pub fn load_code(&mut self, code_node: &CodeNode) {
         self.code_editor_by_id.insert(code_node.id(),
                                       code_editor::CodeEditor::new(code_node));
@@ -160,10 +141,6 @@ impl<'a> Controller {
     // should run the loaded code node
     pub fn run(&mut self, _code_node: &CodeNode) {
         // TODO: ugh this doesn't work
-    }
-
-    pub fn set_selected_node_id(&mut self, code_node_id: Option<ID>) {
-        self.selected_node_id = code_node_id;
     }
 }
 
@@ -231,12 +208,6 @@ impl CommandBuffer {
         })
     }
 
-    pub fn mark_as_not_editing(&mut self) {
-        self.add_controller_command(move |mut controller| {
-            controller.editing = false
-        })
-    }
-
     pub fn remove_function(&mut self, id: lang::ID) {
         self.add_environment_command(move |env| env.delete_function(id))
     }
@@ -285,8 +256,6 @@ impl CommandBuffer {
 }
 
 pub struct Renderer<'a, T> {
-    arg_nesting_level: RefCell<u32>,
-    indentation_level: RefCell<u8>,
     ui_toolkit: &'a mut T,
     // TODO: take this through the constructor, but now we'll let ppl peek in here
     command_buffer: Rc<RefCell<CommandBuffer>>,
@@ -299,8 +268,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                command_buffer: Rc<RefCell<CommandBuffer>>,
                env_genie: &'a env_genie::EnvGenie) -> Renderer<'a, T> {
         Self {
-            arg_nesting_level: RefCell::new(0),
-            indentation_level: RefCell::new(0),
             ui_toolkit,
             controller,
             command_buffer,
@@ -952,11 +919,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             }).collect()
         )
     }
-
-    fn get_symbol_for_type(&self, t: &lang::Type) -> String {
-        self.env_genie.get_symbol_for_type(t)
-    }
-
 }
 
 
