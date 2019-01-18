@@ -1,1 +1,224 @@
-{"pyfuncs": [{"prelude": "", "eval": "jawieof + \"jaiweofjio\"", "return_type": {"typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568", "params": []}, "name": "takes a list", "id": "21891732-8a74-4565-830b-5abedd4f9f17", "args": [{"id": "80b7cb78-57ce-494c-b9d9-f6cf055e9923", "arg_type": {"typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad", "params": [{"typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568", "params": []}]}, "short_name": "jawieof"}]}, {"prelude": "import random", "eval": "random.choice(['hi', 'bye']) + ' ' + input", "return_type": {"typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568", "params": []}, "name": "somerandomstuff", "id": "29436fad-b1cf-4525-85b7-e9133cd7a1fb", "args": [{"id": "b4e2e666-7467-4496-9d1d-52abdafc0a84", "arg_type": {"typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568", "params": []}, "short_name": "input"}]}, {"prelude": "", "eval": "", "return_type": {"typespec_id": "daa07233-b887-4512-b06e-d6a53d415213", "params": []}, "name": "New PyFunc", "id": "ad1f6711-7ed2-41a6-8da5-e01745221721", "args": [{"id": "6d4d9af2-d87e-4111-8e2a-29be072b2fca", "arg_type": {"typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173", "params": []}, "short_name": "arg0"}]}], "jsfuncs": [], "structs": [{"name": "HTTP Response", "id": "31d96c85-5966-4866-a90a-e6db3707b140", "symbol": "\uf57e", "fields": [{"id": "34268b4f-e617-4e94-adbe-f5f0c9357865", "name": "body", "field_type": {"typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568", "params": []}}, {"id": "5e6cd734-fe98-47d2-9182-601a5a62e4d2", "name": "status code", "field_type": {"typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59", "params": []}}]}, {"name": "HTTP Form param", "id": "b6566a28-8257-46a9-aa29-39d9add25173", "symbol": "\uf298", "fields": [{"id": "886a86df-1211-47c5-83c0-f9a410a6fdc8", "name": "key", "field_type": {"typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568", "params": []}}, {"id": "57607724-a63a-458e-9253-1e3efeb4de63", "name": "value", "field_type": {"typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568", "params": []}}]}], "enums": [{"name": "Result", "id": "ffd15538-175e-4f60-8acd-c24222ddd664", "symbol": "\uf493", "variants": [{"name": "Ok", "id": "f70c799a-1d63-4293-889d-55c07a7456a0", "variant_type": null}, {"name": "Error", "id": "9f22e23e-d9b9-49c2-acf2-43a59598ea86", "variant_type": {"typespec_id": "a6ad92ed-1b21-44fe-9ad0-e08326acd6f6", "params": []}}]}], "codes": [{"Block": {"expressions": [{"Assignment": {"name": "my variable", "expression": {"StringLiteral": {"value": "wefjio", "id": "4ef63614-a462-4de5-ae68-7671bb03ac4e"}}, "id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e"}}, {"FunctionCall": {"function_reference": {"FunctionReference": {"function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d", "id": "5208fb41-841a-441b-b631-e592d7d60a3b"}}, "args": [{"Argument": {"id": "335faeff-7822-4977-b0e5-ff8bd4acd61f", "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df", "expr": {"FunctionCall": {"function_reference": {"FunctionReference": {"function_id": "86ae2a51-5538-436f-b48e-3aa6c873b189", "id": "2e3e3870-4621-465b-97e3-2d7485a524fb"}}, "args": [{"Argument": {"id": "a169d9da-ed9f-412a-bb56-853525fb50b5", "argument_definition_id": "94e81ddc-843b-426d-847e-a215125c9593", "expr": {"VariableReference": {"assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e", "id": "ffdfaea4-428d-45ee-b27d-3fc11efa6b7c"}}}}], "id": "214c4591-4738-479b-9c6b-a015fe3f9bb0"}}}}], "id": "2db0744a-8384-4ffe-98cd-f8d7d33275fa"}}], "id": "b702d87f-28bb-4c2c-b22a-318c342dbaa3"}}, {"Block": {"expressions": [{"Assignment": {"name": "my variable", "expression": {"StringLiteral": {"value": "wefjio", "id": "4ef63614-a462-4de5-ae68-7671bb03ac4e"}}, "id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e"}}, {"FunctionCall": {"function_reference": {"FunctionReference": {"function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d", "id": "5208fb41-841a-441b-b631-e592d7d60a3b"}}, "args": [{"Argument": {"id": "335faeff-7822-4977-b0e5-ff8bd4acd61f", "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df", "expr": {"FunctionCall": {"function_reference": {"FunctionReference": {"function_id": "86ae2a51-5538-436f-b48e-3aa6c873b189", "id": "2e3e3870-4621-465b-97e3-2d7485a524fb"}}, "args": [{"Argument": {"id": "a169d9da-ed9f-412a-bb56-853525fb50b5", "argument_definition_id": "94e81ddc-843b-426d-847e-a215125c9593", "expr": {"VariableReference": {"assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e", "id": "ffdfaea4-428d-45ee-b27d-3fc11efa6b7c"}}}}], "id": "214c4591-4738-479b-9c6b-a015fe3f9bb0"}}}}], "id": "2db0744a-8384-4ffe-98cd-f8d7d33275fa"}}], "id": "68420882-9ef3-40b1-8572-b7a73b56353a"}}]}
+{
+  "codes": [
+    {
+      "Block": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "my variable",
+              "expression": {
+                "StringLiteral": {
+                  "value": "wefjio",
+                  "id": "4ef63614-a462-4de5-ae68-7671bb03ac4e"
+                }
+              },
+              "id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e"
+            }
+          },
+          {
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
+                  "id": "5208fb41-841a-441b-b631-e592d7d60a3b"
+                }
+              },
+              "args": [
+                {
+                  "Argument": {
+                    "id": "335faeff-7822-4977-b0e5-ff8bd4acd61f",
+                    "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df",
+                    "expr": {
+                      "FunctionCall": {
+                        "function_reference": {
+                          "FunctionReference": {
+                            "function_id": "86ae2a51-5538-436f-b48e-3aa6c873b189",
+                            "id": "2e3e3870-4621-465b-97e3-2d7485a524fb"
+                          }
+                        },
+                        "args": [
+                          {
+                            "Argument": {
+                              "id": "a169d9da-ed9f-412a-bb56-853525fb50b5",
+                              "argument_definition_id": "94e81ddc-843b-426d-847e-a215125c9593",
+                              "expr": {
+                                "VariableReference": {
+                                  "assignment_id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e",
+                                  "id": "ffdfaea4-428d-45ee-b27d-3fc11efa6b7c"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "id": "214c4591-4738-479b-9c6b-a015fe3f9bb0"
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "2db0744a-8384-4ffe-98cd-f8d7d33275fa"
+            }
+          }
+        ],
+        "id": "b702d87f-28bb-4c2c-b22a-318c342dbaa3"
+      }
+    },
+    {
+      "Block": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "my variable",
+              "expression": {
+                "StringLiteral": {
+                  "value": "wefjio",
+                  "id": "4ef63614-a462-4de5-ae68-7671bb03ac4e"
+                }
+              },
+              "id": "30ff1e6b-00c7-494d-86b2-b9fc636b7e7e"
+            }
+          }
+        ],
+        "id": "68420882-9ef3-40b1-8572-b7a73b56353a"
+      }
+    }
+  ],
+  "pyfuncs": [
+    {
+      "prelude": "import random",
+      "eval": "random.choice(['hi', 'bye']) + ' ' + input",
+      "return_type": {
+        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+        "params": []
+      },
+      "name": "somerandomstuff",
+      "id": "29436fad-b1cf-4525-85b7-e9133cd7a1fb",
+      "args": [
+        {
+          "id": "b4e2e666-7467-4496-9d1d-52abdafc0a84",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "input"
+        }
+      ]
+    },
+    {
+      "prelude": "",
+      "eval": "",
+      "return_type": {
+        "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+        "params": []
+      },
+      "name": "New PyFunc",
+      "id": "ad1f6711-7ed2-41a6-8da5-e01745221721",
+      "args": [
+        {
+          "id": "6d4d9af2-d87e-4111-8e2a-29be072b2fca",
+          "arg_type": {
+            "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+            "params": []
+          },
+          "short_name": "arg0"
+        }
+      ]
+    },
+    {
+      "prelude": "",
+      "eval": "jawieof + \"jaiweofjio\"",
+      "return_type": {
+        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+        "params": []
+      },
+      "name": "takes a list",
+      "id": "21891732-8a74-4565-830b-5abedd4f9f17",
+      "args": [
+        {
+          "id": "80b7cb78-57ce-494c-b9d9-f6cf055e9923",
+          "arg_type": {
+            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+            "params": [
+              {
+                "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                "params": []
+              }
+            ]
+          },
+          "short_name": "jawieof"
+        }
+      ]
+    }
+  ],
+  "jsfuncs": [],
+  "structs": [
+    {
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTP Response",
+      "id": "31d96c85-5966-4866-a90a-e6db3707b140",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "34268b4f-e617-4e94-adbe-f5f0c9357865",
+          "name": "body",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "5e6cd734-fe98-47d2-9182-601a5a62e4d2",
+          "name": "status code",
+          "field_type": {
+            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+            "params": []
+          }
+        }
+      ]
+    }
+  ],
+  "enums": [
+    {
+      "name": "Result",
+      "id": "ffd15538-175e-4f60-8acd-c24222ddd664",
+      "symbol": "",
+      "variants": [
+        {
+          "name": "Ok",
+          "id": "f70c799a-1d63-4293-889d-55c07a7456a0",
+          "variant_type": null
+        },
+        {
+          "name": "Error",
+          "id": "9f22e23e-d9b9-49c2-acf2-43a59598ea86",
+          "variant_type": {
+            "typespec_id": "a6ad92ed-1b21-44fe-9ad0-e08326acd6f6",
+            "params": []
+          }
+        }
+      ]
+    }
+  ]
+}

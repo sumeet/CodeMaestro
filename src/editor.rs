@@ -27,16 +27,8 @@ use super::env_genie;
 use super::code_editor_renderer::CodeEditorRenderer;
 
 
-pub const BLUE_COLOR: Color = [100.0 / 255.0, 149.0 / 255.0, 237.0 / 255.0, 1.0];
-pub const YELLOW_COLOR: Color = [253.0 / 255.0, 159.0 / 255.0, 19.0 / 255.0, 1.0];
-pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
-pub const PURPLE_COLOR: Color = [0.486, 0.353, 0.952, 1.0];
-pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
-pub const SALMON_COLOR: Color = [0.996, 0.286, 0.322, 1.0];
-
-pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 
 
 pub type Color = [f32; 4];
@@ -110,18 +102,17 @@ impl<'a> Controller {
         self.code_editor_by_id.get_mut(&id)
     }
 
-    fn save(&self) {
-        // TODO: i'll fix this later
-        unimplemented!()
-//        let theworld = code_loading::TheWorld {
-//            // this needs to be a list of funcs or smth
-//            main_code: self.code_editor_by_id.values().next().unwrap().get_code().clone(),
-//            pyfuncs: self.list_pyfuncs().cloned().collect(),
-//            jsfuncs: self.list_jsfuncs().cloned().collect(),
-//            structs: self.list_structs().cloned().collect(),
-//            enums: self.list_enums().cloned().collect(),
-//        };
-//        code_loading::save("codesample.json", &theworld).unwrap();
+    fn save(&self, env: &env::ExecutionEnvironment) {
+        let env_genie = env_genie::EnvGenie::new(env);
+        let theworld = code_loading::TheWorld {
+            // this needs to be a list of funcs or smth
+            codes: self.code_editor_by_id.values().map(|e| e.get_code()).cloned().collect_vec(),
+            pyfuncs: env_genie.list_pyfuncs().cloned().collect(),
+            jsfuncs: env_genie.list_jsfuncs().cloned().collect(),
+            structs: env_genie.list_structs().cloned().collect(),
+            enums: env_genie.list_enums().cloned().collect(),
+        };
+        code_loading::save("codesample.json", &theworld).unwrap();
     }
 
     fn get_test_result(&self, func: &lang::Function) -> String {
@@ -190,6 +181,8 @@ pub trait UiToolkit {
 // contents into an enum and match on it.... and change things other than the
 // controller. for now this is just easier to move us forward
 pub struct CommandBuffer {
+    // this is kind of messy, but i just need this to get saving to work
+    integrating_commands: Vec<Box<FnBox(&mut Controller, &mut env::ExecutionEnvironment)>>,
     controller_commands: Vec<Box<FnBox(&mut Controller)>>,
     interpreter_commands: Vec<Box<FnBox(&mut env::Interpreter)>>,
 }
@@ -197,14 +190,15 @@ pub struct CommandBuffer {
 impl CommandBuffer {
     pub fn new() -> Self {
         Self {
+            integrating_commands: vec![],
             controller_commands: vec![],
             interpreter_commands: vec![],
         }
     }
 
     pub fn save(&mut self) {
-        self.add_controller_command(move |controller| {
-            controller.save()
+        self.add_integrating_command(move |controller, env| {
+            controller.save(env)
         })
     }
 
@@ -226,6 +220,10 @@ impl CommandBuffer {
         self.add_interpreter_command(move |interpreter| {
             interpreter.run(&code, callback);
         })
+    }
+
+    pub fn add_integrating_command<F: FnOnce(&mut Controller, &mut env::ExecutionEnvironment) + 'static>(&mut self, f: F) {
+        self.integrating_commands.push(Box::new(f));
     }
 
     pub fn add_controller_command<F: FnOnce(&mut Controller) + 'static>(&mut self, f: F) {
@@ -251,6 +249,12 @@ impl CommandBuffer {
     pub fn flush_to_interpreter(&mut self, interpreter: &mut env::Interpreter) {
         for command in self.interpreter_commands.drain(..) {
             command.call_box((interpreter,))
+        }
+    }
+
+    pub fn flush_integrating(&mut self, controller: &mut Controller, env: &mut env::ExecutionEnvironment) {
+        for command in self.integrating_commands.drain(..) {
+            command.call_box((controller, env))
         }
     }
 }
