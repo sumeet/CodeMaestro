@@ -147,7 +147,9 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     // be in here
     let codestring = include_str!("../codesample.json");
     let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
-    controller.load_code(&the_world.main_code);
+    for code in &the_world.codes {
+        controller.load_code(code);
+    }
 
     let env = interpreter.env();
     let mut env = env.borrow_mut();
