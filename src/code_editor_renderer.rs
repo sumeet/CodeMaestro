@@ -27,8 +27,8 @@ pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const PURPLE_COLOR: Color = [0.486, 0.353, 0.952, 1.0];
 pub const PX_PER_INDENTATION_LEVEL : i16 = 20;
 
-struct CodeEditorRenderer<'a, T> {
-    ui_toolkit: &'a mut T,
+pub struct CodeEditorRenderer<'a, T> {
+    ui_toolkit: &'a T,
     arg_nesting_level: Rc<RefCell<u32>>,
     indentation_level: Rc<RefCell<u8>>,
     code_editor: &'a code_editor::CodeEditor,
@@ -39,7 +39,7 @@ struct CodeEditorRenderer<'a, T> {
 // ok stupid but all the methods on this take &self instead of &mut self because the ImGui closures
 // all take Fn instead of FnMut
 impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
-    pub fn new(ui_toolkit: &'a mut T, code_editor: &'a code_editor::CodeEditor,
+    pub fn new(ui_toolkit: &'a T, code_editor: &'a code_editor::CodeEditor,
                command_buffer: Rc<RefCell<editor::CommandBuffer>>, env_genie: &'a EnvGenie) -> Self {
         let command_buffer = PerEditorCommandBuffer::new(
             command_buffer, code_editor.id());
@@ -53,7 +53,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         }
     }
 
-    fn render(&self) -> T::DrawResult {
+    pub fn render(&self) -> T::DrawResult {
         let code = self.code_editor.get_code();
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_window(&code.description(),

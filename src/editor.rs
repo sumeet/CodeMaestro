@@ -24,6 +24,7 @@ use super::function;
 use super::code_function;
 use super::code_editor;
 use super::env_genie;
+use super::code_editor_renderer::CodeEditorRenderer;
 
 
 pub const BLUE_COLOR: Color = [100.0 / 255.0, 149.0 / 255.0, 237.0 / 255.0, 1.0];
@@ -105,35 +106,17 @@ pub struct Controller {
 impl<'a> Controller {
     pub fn new() -> Controller {
         Controller {
-//            execution_environment: None,
             selected_node_id: None,
             error_console: String::new(),
-            //insert_code_menu: None,
             editing: false,
-//            mutation_master: MutationMaster::new(),
             test_result_by_func_id: HashMap::new(),
             code_editor_by_id: HashMap::new(),
         }
     }
 
-//    pub fn borrow_env<R, F: FnMut(&mut Self) -> R>(&mut self,
-//                                       env: &mut env::ExecutionEnvironment,
-//                                       mut borrows_self: F) -> R {
-//        take_mut::take(env, |env| {
-//            self.execution_environment = Some(env);
-//            let ret = borrows_self(self);
-//            (self.execution_environment.take().unwrap(), ret)
-//        })
-//    }
-
-    // TODO: delete this to see what kinda things need to be moved into the CommandBuffer
-//    fn execution_environment_mut(&mut self) -> &mut env::ExecutionEnvironment {
-//        self.execution_environment.as_mut().unwrap()
-//    }
-//
-//    fn execution_environment(&self) -> &env::ExecutionEnvironment {
-//        self.execution_environment.as_ref().unwrap()
-//    }
+    pub fn all_editors(&self) -> impl Iterator<Item = &code_editor::CodeEditor> {
+        self.code_editor_by_id.values()
+    }
 
     pub fn get_editor(&mut self, id: lang::ID) -> Option<&mut code_editor::CodeEditor> {
         self.code_editor_by_id.get_mut(&id)
@@ -162,32 +145,12 @@ impl<'a> Controller {
         }
     }
 
-//    pub fn hide_insert_code_menu(&mut self) {
-//        self.insert_code_menu = None;
-//        self.editing = false
-//    }
-
     // TODO: hax passing in the command buffer, we only need it to schedule things to run from the
     // controller :/
     pub fn handle_keypress_in_code_editor(&mut self, id: lang::ID, keypress: Keypress) {
         self.code_editor_by_id.get_mut(&id)
             .map(|ce| ce.handle_keypress(keypress));
     }
-
-//    fn mark_as_editing(&mut self, insertion_point: InsertionPoint) -> Option<()> {
-//        self.insert_code_menu = InsertCodeMenu::for_insertion_point(insertion_point,
-//                                                                    &self.code_genie()?);
-//        self.save_current_state_to_undo_history();
-//        self.selected_node_id = insertion_point.selected_node_id();
-//        self.editing = true;
-//        Some(())
-//    }
-
-//    fn code_genie(&'a self) -> Option<CodeGenie> {
-//        Some(CodeGenie::new(
-//            self.execution_environment(),
-//        ))
-//    }
 
     pub fn load_code(&mut self, code_node: &CodeNode) {
         self.code_editor_by_id.insert(code_node.id(),
@@ -199,18 +162,9 @@ impl<'a> Controller {
         // TODO: ugh this doesn't work
     }
 
-//    pub fn read_console(&self) -> &str {
-//        &self.execution_environment().console
-//    }
-//
-//    pub fn read_error_console(&self) -> &str {
-//        &self.error_console
-//    }
-
     pub fn set_selected_node_id(&mut self, code_node_id: Option<ID>) {
         self.selected_node_id = code_node_id;
     }
-
 }
 
 pub trait UiToolkit {
@@ -276,14 +230,6 @@ impl CommandBuffer {
             controller.save()
         })
     }
-
-//    pub fn set_search_str_on_insert_code_menu(&mut self, input: &str) {
-//        let input = input.to_owned();
-//        self.add_controller_command(move |controller| {
-//            controller.insert_code_menu.as_mut()
-//                .map(|m| {m.set_search_str(&input)});
-//        })
-//    }
 
     pub fn mark_as_not_editing(&mut self) {
         self.add_controller_command(move |mut controller| {
@@ -998,14 +944,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_code_editors(&self) -> T::DrawResult {
-        // TODO gotta allocate the code editor renderers in the constructor i think and then render
-        // em in here!
-        self.ui_toolkit.draw_all(vec![])
-
-//        self.ui_toolkit.draw_all(
-//            self.controller.code_editor_by_id.values().map(
-//                |ce| ce.render()).collect()
-//        )
+        self.ui_toolkit.draw_all(
+            self.controller.all_editors().map(|code_editor| {
+                CodeEditorRenderer::new(self.ui_toolkit, code_editor,
+                                        Rc::clone(&self.command_buffer),
+                                        self.env_genie).render()
+            }).collect()
+        )
     }
 
     fn get_symbol_for_type(&self, t: &lang::Type) -> String {
