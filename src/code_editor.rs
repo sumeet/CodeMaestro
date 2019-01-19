@@ -23,18 +23,23 @@ pub struct CodeEditor {
     selected_node_id: Option<lang::ID>,
     pub insert_code_menu: Option<InsertCodeMenu>,
     mutation_master: MutationMaster,
-    // THIS SHIT
-    //env: Option<>
+    pub location: CodeLocation,
+}
+
+#[derive(Copy, Clone)]
+pub enum CodeLocation {
+   Function(lang::ID)
 }
 
 impl CodeEditor {
-    pub fn new(code: &lang::CodeNode) -> Self {
+    pub fn new(code: &lang::CodeNode, location: CodeLocation) -> Self {
         Self {
             code_genie: CodeGenie::new(code.clone()),
             editing: false,
             selected_node_id: None,
             insert_code_menu: None,
             mutation_master: MutationMaster::new(),
+            location,
         }
     }
 
@@ -151,7 +156,7 @@ impl CodeEditor {
     }
 
     pub fn replace_code(&mut self, code: &lang::CodeNode) {
-        self.code_genie.replace(code)
+        self.code_genie.replace(code);
     }
 
     fn try_select_up_one_node(&mut self) {
@@ -260,9 +265,9 @@ impl CodeEditor {
     // TODO: return a result instead of returning nothing? it seems like there might be places this
     // thing can error
     pub fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
-        let new_code = self.mutation_master.insert_code(
+        let new_root = self.mutation_master.insert_code(
             &code_node, insertion_point, &self.code_genie);
-        self.replace_code(&new_code);
+        self.replace_code(&new_root);
         match post_insertion_cursor(&code_node, &self.code_genie) {
             PostInsertionAction::SelectNode(id) => { self.set_selected_node_id(Some(id)); }
             PostInsertionAction::MarkAsEditing(insertion_point) => { self.mark_as_editing(insertion_point); }

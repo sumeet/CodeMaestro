@@ -124,9 +124,9 @@ impl<'a> Controller {
         }
     }
 
-    pub fn load_code(&mut self, code_node: &CodeNode) {
+    pub fn load_code(&mut self, code_node: &CodeNode, location: code_editor::CodeLocation) {
         self.code_editor_by_id.insert(code_node.id(),
-                                      code_editor::CodeEditor::new(code_node));
+                                      code_editor::CodeEditor::new(code_node, location));
     }
 
     // should run the loaded code node
@@ -196,9 +196,23 @@ impl CommandBuffer {
         }
     }
 
+    pub fn has_queued_commands(&self) -> bool {
+        !self.integrating_commands.is_empty() || !!self.controller_commands.is_empty() ||
+            !self.interpreter_commands.is_empty()
+    }
+
     pub fn save(&mut self) {
         self.add_integrating_command(move |controller, env| {
             controller.save(env)
+        })
+    }
+
+    pub fn load_code_func(&mut self, code_func: code_function::CodeFunction) {
+        self.add_integrating_command(move |controller, env| {
+            let code = code_func.code();
+            let func_id = code_func.id();
+            env.add_function(code_func);
+            controller.load_code(&code, code_editor::CodeLocation::Function(func_id));
         })
     }
 
@@ -309,9 +323,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             cmdb1.borrow_mut().save();
                         }),
                         self.ui_toolkit.draw_menu_item("Add new function", move || {
-                            cmdb5.borrow_mut().add_environment_command(|env| {
-                                env.add_function(code_function::CodeFunction::new());
-                            });
+                            cmdb5.borrow_mut().load_code_func(code_function::CodeFunction::new());
                         }),
                         #[cfg(feature = "default")]
                         self.ui_toolkit.draw_menu_item("Add Python function", move || {

@@ -36,6 +36,7 @@ mod json;
 mod undo;
 mod json_http_client;
 mod code_generation;
+mod code_validation;
 mod function;
 mod code_function;
 mod external_func;
@@ -147,9 +148,9 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     // be in here
     let codestring = include_str!("../codesample.json");
     let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
-    for code in &the_world.codes {
-        controller.load_code(code);
-    }
+//    for code in &the_world.codes {
+//        controller.load_code(code);
+//    }
 
     let env = interpreter.env();
     let mut env = env.borrow_mut();
@@ -196,9 +197,13 @@ impl App {
 
     pub fn flush_commands(&mut self) {
         let mut command_buffer = self.command_buffer.borrow_mut();
+        if !command_buffer.has_queued_commands() {
+            return;
+        }
         command_buffer.flush_to_controller(&mut self.controller);
         command_buffer.flush_to_interpreter(&mut self.interpreter);
         command_buffer.flush_integrating(&mut self.controller,
                                          &mut self.interpreter.env().borrow_mut());
+        code_validation::validate_and_fix(&mut self.interpreter.env().borrow_mut());
     }
 }

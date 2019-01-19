@@ -12,6 +12,7 @@ use super::lang;
 use super::structs;
 use super::lang::CodeNode;
 use super::env_genie::EnvGenie;
+use super::code_function;
 
 // TODO: move to colors.rs
 pub type Color = [f32; 4];
@@ -684,6 +685,20 @@ impl PerEditorCommandBuffer {
         let editor_id = self.editor_id;
         self.actual_command_buffer.borrow_mut().add_controller_command(move |controller| {
             controller.get_editor(editor_id).map(f);
-        })
+        });
+
+        // update the function that the code being edited belongs to
+        self.actual_command_buffer.borrow_mut().add_integrating_command(move |cont, env| {
+            let editor = cont.get_editor(editor_id).unwrap();
+            let code = editor.get_code();
+            match editor.location {
+                code_editor::CodeLocation::Function(func_id) => {
+                    let func = env.find_function(func_id).cloned().unwrap();
+                    let mut code_function = func.downcast::<code_function::CodeFunction>().unwrap();
+                    code_function.set_code(code.into_block().unwrap().clone());
+                    env.add_function(*code_function);
+                },
+            }
+        });
     }
 }

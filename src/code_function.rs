@@ -10,7 +10,7 @@ pub struct CodeFunction {
     name: String,
     args: Vec<lang::ArgumentDefinition>,
     return_type: lang::Type,
-    block: lang::Block,
+    pub block: lang::Block,
 }
 
 impl CodeFunction {
@@ -22,6 +22,14 @@ impl CodeFunction {
             args: vec![],
             return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
         }
+    }
+
+    pub fn code(&self) -> lang::CodeNode {
+        lang::CodeNode::Block(self.block.clone())
+    }
+
+    pub fn set_code(&mut self, block: lang::Block) {
+        self.block = block
     }
 }
 

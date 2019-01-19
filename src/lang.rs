@@ -272,6 +272,14 @@ impl CodeNode {
         }
     }
 
+    pub fn into_placeholder(&self) -> Option<&Placeholder> {
+        if let CodeNode::Placeholder(ref placeholder) = self {
+            Some(placeholder)
+        } else {
+            None
+        }
+    }
+
     pub fn into_struct_literal(&self) -> Option<&StructLiteral> {
         if let CodeNode::StructLiteral(ref struct_literal) = self {
             Some(struct_literal)
