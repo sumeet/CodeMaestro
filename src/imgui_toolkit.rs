@@ -219,6 +219,23 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             });
     }
 
+    fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn(), height_percentage: f32, handle_keypress: Option<F>) {
+        let height = height_percentage * unsafe { imgui_sys::igGetWindowHeight() };
+        self.ui.child_frame(&self.imlabel(""), (0., height))
+            .show_borders(true)
+            .build(&|| {
+                draw_fn();
+
+                if let Some(keypress) = self.keypress {
+                    if self.ui.is_child_window_focused() {
+                        if let Some(ref handle_keypress) = handle_keypress {
+                            handle_keypress(keypress)
+                        }
+                    }
+                }
+            });
+    }
+
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
         self.ui.child_frame(&self.imlabel(""), (0.0, -frame_height))

@@ -94,12 +94,12 @@ impl<'a> Controller {
         }
     }
 
-    pub fn all_editors(&self) -> impl Iterator<Item = &code_editor::CodeEditor> {
-        self.code_editor_by_id.values()
+    pub fn get_editor_mut(&mut self, id: lang::ID) -> Option<&mut code_editor::CodeEditor> {
+        self.code_editor_by_id.get_mut(&id)
     }
 
-    pub fn get_editor(&mut self, id: lang::ID) -> Option<&mut code_editor::CodeEditor> {
-        self.code_editor_by_id.get_mut(&id)
+    pub fn get_editor(&self, id: lang::ID) -> Option<&code_editor::CodeEditor> {
+        self.code_editor_by_id.get(&id)
     }
 
     fn save(&self, env: &env::ExecutionEnvironment) {
@@ -125,8 +125,15 @@ impl<'a> Controller {
     }
 
     pub fn load_code(&mut self, code_node: &CodeNode, location: code_editor::CodeLocation) {
-        self.code_editor_by_id.insert(code_node.id(),
-                                      code_editor::CodeEditor::new(code_node, location));
+        let id = code_node.id();
+        if !self.code_editor_by_id.contains_key(&id) {
+            println!("making  a new cde editor");
+            self.code_editor_by_id.insert(id, code_editor::CodeEditor::new(code_node, location));
+        } else {
+            println!("changing the existing code editor");
+            let mut code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
+            code_editor.replace_code(code_node);
+        }
     }
 
     // should run the loaded code node
@@ -140,6 +147,7 @@ pub trait UiToolkit {
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
     fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult;
+    fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, height_percentage: f32, handle_keypress: Option<F>) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_separator(&self) -> Self::DrawResult;
@@ -197,7 +205,7 @@ impl CommandBuffer {
     }
 
     pub fn has_queued_commands(&self) -> bool {
-        !self.integrating_commands.is_empty() || !!self.controller_commands.is_empty() ||
+        !self.integrating_commands.is_empty() || !self.controller_commands.is_empty() ||
             !self.interpreter_commands.is_empty()
     }
 
@@ -211,6 +219,12 @@ impl CommandBuffer {
         self.add_integrating_command(move |controller, env| {
             let code = code_func.code();
             let func_id = code_func.id();
+            use super::env_genie;
+            let env_genie = env_genie::EnvGenie::new(env);
+            let code_genie = code_editor::CodeGenie::new(code_func.code());
+            let ct = env_genie.get_name_for_type(&code_genie.guess_type(&code_func.code(), &env_genie));
+            println!("loading func that returns {}", ct);
+            println!("loading func that returns {:?}", code);
             env.add_function(code_func);
             controller.load_code(&code, code_editor::CodeLocation::Function(func_id));
         })
@@ -237,10 +251,12 @@ impl CommandBuffer {
     }
 
     pub fn add_integrating_command<F: FnOnce(&mut Controller, &mut env::ExecutionEnvironment) + 'static>(&mut self, f: F) {
+        println!("adding integrating command");
         self.integrating_commands.push(Box::new(f));
     }
 
     pub fn add_controller_command<F: FnOnce(&mut Controller) + 'static>(&mut self, f: F) {
+        println!("adding controller command");
         self.controller_commands.push(Box::new(f));
     }
 
@@ -251,10 +267,12 @@ impl CommandBuffer {
     }
 
     pub fn add_interpreter_command<F: FnOnce(&mut env::Interpreter) + 'static>(&mut self, f: F) {
+        println!("adding interp command");
         self.interpreter_commands.push(Box::new(f));
     }
 
     pub fn add_environment_command<F: FnOnce(&mut env::ExecutionEnvironment) + 'static>(&mut self, f: F) {
+        println!("adding env command");
         self.add_interpreter_command(|interpreter| {
             f(&mut interpreter.env().borrow_mut())
         })
@@ -296,7 +314,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     pub fn render_app(&self) -> T::DrawResult {
         self.ui_toolkit.draw_all(vec![
             self.render_main_menu_bar(),
-            self.render_code_editors(),
             self.render_console_window(),
             self.render_error_window(),
             self.render_edit_code_funcs(),
@@ -362,7 +379,33 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_code_func(&self, code_func: &code_function::CodeFunction) -> T::DrawResult {
-        self.ui_toolkit.draw_all(vec![])
+        self.ui_toolkit.draw_window(&format!("Edit function: {}", code_func.id()), &|| {
+            let cont1 = Rc::clone(&self.command_buffer);
+            let code_func1 = code_func.clone();
+            let cont2 = Rc::clone(&self.command_buffer);
+            let code_func2 = code_func.clone();
+            let cont3 = Rc::clone(&self.command_buffer);
+            let code_func3 = code_func.clone();
+
+            self.ui_toolkit.draw_all(vec![
+                self.ui_toolkit.draw_text_input_with_label(
+                    "Function name",
+                    code_func.name(),
+                    move |newvalue| {
+                        let mut code_func1 = code_func1.clone();
+                        code_func1.name = newvalue.to_string();
+                        cont1.borrow_mut().load_function(code_func1);
+                    },
+                    || {},
+                ),
+                self.render_arguments_selector(code_func.clone()),
+                self.render_code(code_func.code().id()),
+                self.render_return_type_selector(code_func),
+                self.ui_toolkit.draw_separator(),
+                self.render_general_function_menu(code_func),
+            ])
+        },
+        None::<fn(Keypress)>)
     }
 
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
@@ -926,14 +969,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         None::<fn(Keypress)>)
     }
 
-    fn render_code_editors(&self) -> T::DrawResult {
-        self.ui_toolkit.draw_all(
-            self.controller.all_editors().map(|code_editor| {
-                CodeEditorRenderer::new(self.ui_toolkit, code_editor,
-                                        Rc::clone(&self.command_buffer),
-                                        self.env_genie).render()
-            }).collect()
-        )
+    fn render_code(&self, code_id: lang::ID) -> T::DrawResult {
+        let code_editor = self.controller.get_editor(code_id).unwrap();
+        CodeEditorRenderer::new(self.ui_toolkit, code_editor,
+                                Rc::clone(&self.command_buffer),
+                                self.env_genie).render()
     }
 }
 

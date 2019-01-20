@@ -182,7 +182,9 @@ impl CodeEditor {
 
     pub fn try_select_forward_one_node(&mut self) {
         let navigation = Navigation::new(&self.code_genie);
+        println!("trying to navigate forward");
         if let Some(node_id) = navigation.navigate_forward_from(self.selected_node_id) {
+            println!("navigating fowrard");
             self.set_selected_node_id(Some(node_id))
         }
     }
@@ -375,7 +377,6 @@ impl CodeGenie {
         self.code.find_parent(id)
     }
 
-    // TODO: i think we can thread the environment through here
     pub fn guess_type(&self, code_node: &lang::CodeNode,
                       env_genie: &EnvGenie) -> lang::Type {
         use super::lang::CodeNode;
@@ -414,9 +415,7 @@ impl CodeGenie {
             CodeNode::Argument(arg) => {
                 env_genie.get_type_for_arg(arg.argument_definition_id).unwrap()
             }
-            CodeNode::Placeholder(_) => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-            }
+            CodeNode::Placeholder(placeholder) => placeholder.typ.clone(),
             CodeNode::NullLiteral => {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)
             },
@@ -599,34 +598,32 @@ impl<'a> Navigation<'a> {
     fn is_navigatable(&self, code_node: &lang::CodeNode) -> bool {
         use super::lang::CodeNode;
 
-        match code_node {
+        let parent = self.code_genie.find_parent(code_node.id());
+
+        match (code_node, parent) {
             // skip entire code blocks: you want to navigate individual elements, and entire codeblocks are
             // huge chunks of code
-            CodeNode::Block(_) => false,
+            (CodeNode::Block(_), _) => false,
             // you always want to be able to edit the name of an assignment
-            CodeNode::Assignment(_) => true,
+            (CodeNode::Assignment(_), _) => true,
             // instead of navigating over the entire function call, you want to navigate through its
             // innards. that is, the function reference (so you can change the function that's being
             // referred to), or the holes (arguments)
-            CodeNode::FunctionCall(_) => false,
-            CodeNode::FunctionReference(_) => true,
+            (CodeNode::FunctionCall(_), _) => false,
+            (CodeNode::FunctionReference(_), _) => true,
             // skip holes. function args and struct literal fields always contain inner elements
             // that can be changed. to change those, we can always invoke `r` (replace), which will
             // let you edit the value of the hole
-            CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => false,
+            (CodeNode::Argument(_), _) | (CodeNode::StructLiteralField(_), _) => false,
             // you always want to move to literals
-            CodeNode::StringLiteral(_) | CodeNode::NullLiteral | CodeNode::StructLiteral(_)
-            | CodeNode::ListLiteral(_) => true,
-            _ => match self.code_genie.find_parent(code_node.id()) {
-                Some(parent) => {
-                    match parent {
-                        // if our parent is one of these, then we're a hole, and therefore navigatable.
-                        CodeNode::Argument(_) | CodeNode::StructLiteralField(_) | CodeNode::ListLiteral(_) => true,
-                        _ => false,
-                    }
-                }
-                None => false
-            }
+            (CodeNode::StringLiteral(_), _) | (CodeNode::NullLiteral, _) | (CodeNode::StructLiteral(_), _)
+                | (CodeNode::ListLiteral(_), _) => true,
+            // if our parent is one of these, then we're a hole, and therefore navigatable.
+            (_, Some(CodeNode::Argument(_))) | (_, Some(CodeNode::StructLiteralField(_))) |
+                (_, Some(CodeNode::ListLiteral(_))) => true,
+            // sometimes placeholders chill by themselves.
+            (CodeNode::Placeholder(_), Some(CodeNode::Block(_))) => true,
+            _ => false,
         }
     }
 }
@@ -745,6 +742,7 @@ impl MutationMaster {
                 let mut new_cursor_position = new_block.expressions
                     .get(deleted_expression_position_in_block)
                     .map(|code_node| code_node.id());
+                // TODO: what to do if there's nothing left in the block?
                 if new_cursor_position.is_none() {
                     new_cursor_position = new_block.expressions
                         .get(deleted_expression_position_in_block - 1)

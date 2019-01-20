@@ -28,6 +28,17 @@ impl<'a> EnvGenie<'a> {
         format!("{}\u{f053}{}\u{f054}", typespec.symbol(), joined_params)
     }
 
+    pub fn get_name_for_type(&self, t: &lang::Type) -> String {
+        let typespec = self.find_typespec(t.typespec_id).unwrap();
+        if typespec.num_params() == 0 {
+            return typespec.readable_name().to_string()
+        }
+        let joined_params = t.params.iter()
+            .map(|p| self.get_symbol_for_type(p))
+            .join(", ");
+        format!("{}\u{f053}{}\u{f054}", typespec.readable_name(), joined_params)
+    }
+
     pub fn get_type_for_arg(&self, argument_definition_id: lang::ID) -> Option<lang::Type> {
         for function in self.env.list_functions() {
             for arg_def in function.takes_args() {

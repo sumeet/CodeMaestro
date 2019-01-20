@@ -702,7 +702,6 @@ pub struct Argument {
 pub struct Placeholder {
     pub id: ID,
     pub description: String,
-    // TODO: placeholders need a TYPE, not a type ID
     pub typ: Type,
 }
 

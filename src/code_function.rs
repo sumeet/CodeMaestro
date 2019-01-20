@@ -3,11 +3,12 @@ use super::external_func;
 use super::function;
 use super::env;
 use std::collections::HashMap;
+use super::code_generation;
 
 #[derive(Clone)]
 pub struct CodeFunction {
     id: lang::ID,
-    name: String,
+    pub name: String,
     args: Vec<lang::ArgumentDefinition>,
     return_type: lang::Type,
     pub block: lang::Block,
@@ -15,10 +16,12 @@ pub struct CodeFunction {
 
 impl CodeFunction {
     pub fn new() -> Self {
+        let mut block = lang::Block::new();
+//        block.expressions.push(code_generation::new_placeholder("hoohaw", lang::Type::from_spec(&*lang::NULL_TYPESPEC)));
         Self {
             id: lang::new_id(),
             name: "New function".to_string(),
-            block: lang::Block::new(),
+            block,
             args: vec![],
             return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
         }

@@ -57,12 +57,13 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     pub fn render(&self) -> T::DrawResult {
         let code = self.code_editor.get_code();
         let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_window(&code.description(),
+        self.ui_toolkit.draw_child_region(
             &|| {
                 self.ui_toolkit.draw_layout_with_bottom_bar(
                     &||{ self.render_code(code) },
                     &||{ self.render_run_button(code) })
             },
+            0.5,
             Some(move |keypress| {
                 cmd_buffer.borrow_mut().add_editor_command(move |code_editor| {
                     code_editor.handle_keypress(keypress)
@@ -684,12 +685,12 @@ impl PerEditorCommandBuffer {
     pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self, f: F) {
         let editor_id = self.editor_id;
         self.actual_command_buffer.borrow_mut().add_controller_command(move |controller| {
-            controller.get_editor(editor_id).map(f);
+            controller.get_editor_mut(editor_id).map(f);
         });
 
         // update the function that the code being edited belongs to
         self.actual_command_buffer.borrow_mut().add_integrating_command(move |cont, env| {
-            let editor = cont.get_editor(editor_id).unwrap();
+            let editor = cont.get_editor_mut(editor_id).unwrap();
             let code = editor.get_code();
             match editor.location {
                 code_editor::CodeLocation::Function(func_id) => {
