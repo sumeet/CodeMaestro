@@ -22,7 +22,7 @@ pub fn draw_app(app: Rc<RefCell<App>>) {
             let mut toolkit = ImguiToolkit::new(ui, keypress);
             app.draw(&mut toolkit);
             app.flush_commands();
-            app.interpreter.turn();
+            app.turn_event_loop();
             true
         },
     );

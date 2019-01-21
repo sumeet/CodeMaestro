@@ -13,33 +13,31 @@ use std::rc::Rc;
 use itertools::Itertools;
 
 pub struct Interpreter {
-    env: Rc<RefCell<ExecutionEnvironment>>,
-    pub async_executor: async_executor::AsyncExecutor,
+    pub env: Rc<RefCell<ExecutionEnvironment>>,
 }
+
+pub fn run<F: FnOnce(lang::Value) + 'static>(interpreter: &mut Interpreter,
+                                             async_executor: &mut async_executor::AsyncExecutor,
+                                             code_node: &lang::CodeNode,
+                                             callback: F) {
+    let fut = interpreter.evaluate(code_node);
+    async_executor.exec(async move {
+        let mut val = await!(fut);
+        while let lang::Value::Future(future) = val {
+            val = await!(future);
+        }
+        callback(val);
+        let ok : Result<(), ()> = Ok(());
+        ok
+    })
+}
+
 
 impl Interpreter {
     pub fn new() -> Self {
         Self {
             env: Rc::new(RefCell::new(ExecutionEnvironment::new())),
-            async_executor: async_executor::AsyncExecutor::new(),
         }
-    }
-
-    pub fn run<F: FnOnce(lang::Value) + 'static>(&mut self, code_node: &lang::CodeNode, callback: F) {
-        let fut = self.evaluate(code_node);
-        self.async_executor.exec(async move {
-            let mut val = await!(fut);
-            while let lang::Value::Future(future) = val {
-                val = await!(future);
-            }
-            callback(val);
-            let ok : Result<(), ()> = Ok(());
-            ok
-        })
-    }
-
-    pub fn turn(&mut self) {
-        self.async_executor.turn()
     }
 
     pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {

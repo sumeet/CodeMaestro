@@ -142,15 +142,11 @@ pub fn main() {
     draw_app(app);
 }
 
+// TODO: this is a mess
 fn init_controller(interpreter: &env::Interpreter) -> Controller {
     let mut controller = Controller::new();
-    // TODO: controller can load the world as well as saving it, i don't think the code should
-    // be in here
     let codestring = include_str!("../codesample.json");
     let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
-//    for code in &the_world.codes {
-//        controller.load_code(code);
-//    }
 
     let env = interpreter.env();
     let mut env = env.borrow_mut();
@@ -167,6 +163,7 @@ pub struct App {
     pub interpreter: env::Interpreter,
     command_buffer: Rc<RefCell<editor::CommandBuffer>>,
     controller: Controller,
+    pub async_executor: async_executor::AsyncExecutor,
 }
 
 impl App {
@@ -175,7 +172,16 @@ impl App {
         let command_buffer =
             Rc::new(RefCell::new(editor::CommandBuffer::new()));
         let controller = init_controller(&interpreter);
-        Self { interpreter, command_buffer, controller }
+        Self {
+            interpreter,
+            command_buffer,
+            controller,
+            async_executor: async_executor::AsyncExecutor::new(),
+        }
+    }
+
+    pub fn turn_event_loop(&mut self) {
+        self.async_executor.turn()
     }
 
     pub fn new_rc() -> Rc<RefCell<App>> {
@@ -202,7 +208,8 @@ impl App {
             command_buffer.flush_to_controller(&mut self.controller);
             command_buffer.flush_to_interpreter(&mut self.interpreter);
             command_buffer.flush_integrating(&mut self.controller,
-                                             &mut self.interpreter.env().borrow_mut());
+                                             &mut self.interpreter,
+                                             &mut self.async_executor);
             code_validation::validate_and_fix(&mut self.interpreter.env().borrow_mut(),
                                               &mut command_buffer);
         }

@@ -25,6 +25,7 @@ use super::code_function;
 use super::code_editor;
 use super::env_genie;
 use super::code_editor_renderer::CodeEditorRenderer;
+use super::async_executor;
 
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
@@ -190,7 +191,7 @@ pub trait UiToolkit {
 // controller. for now this is just easier to move us forward
 pub struct CommandBuffer {
     // this is kind of messy, but i just need this to get saving to work
-    integrating_commands: Vec<Box<FnBox(&mut Controller, &mut env::ExecutionEnvironment)>>,
+    integrating_commands: Vec<Box<FnBox(&mut Controller, &mut env::Interpreter, &mut async_executor::AsyncExecutor)>>,
     controller_commands: Vec<Box<FnBox(&mut Controller)>>,
     interpreter_commands: Vec<Box<FnBox(&mut env::Interpreter)>>,
 }
@@ -210,17 +211,19 @@ impl CommandBuffer {
     }
 
     pub fn save(&mut self) {
-        self.add_integrating_command(move |controller, env| {
-            controller.save(env)
+        self.add_integrating_command(move |controller, interpreter, _| {
+            controller.save(&mut interpreter.env().borrow_mut())
         })
     }
 
     pub fn load_code_func(&mut self, code_func: code_function::CodeFunction) {
-        self.add_integrating_command(move |controller, env| {
+        self.add_integrating_command(move |controller, interpreter, _| {
+            let mut env = interpreter.env.borrow_mut();
+
             let code = code_func.code();
             let func_id = code_func.id();
             use super::env_genie;
-            let env_genie = env_genie::EnvGenie::new(env);
+            let env_genie = env_genie::EnvGenie::new(&env);
             let code_genie = code_editor::CodeGenie::new(code_func.code());
             let ct = env_genie.get_name_for_type(&code_genie.guess_type(&code_func.code(), &env_genie));
             println!("loading func that returns {}", ct);
@@ -245,12 +248,16 @@ impl CommandBuffer {
     // environment actions
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
         let code = code.clone();
-        self.add_interpreter_command(move |interpreter| {
-            interpreter.run(&code, callback);
-        })
+        self.add_integrating_command(
+            move |controller, interpreter, async_executor| {
+                env::run(interpreter, async_executor, &code, callback);
+            }
+        )
     }
 
-    pub fn add_integrating_command<F: FnOnce(&mut Controller, &mut env::ExecutionEnvironment) + 'static>(&mut self, f: F) {
+    pub fn add_integrating_command<F: FnOnce(&mut Controller, &mut env::Interpreter,
+                                             &mut async_executor::AsyncExecutor) + 'static>(&mut self,
+                                                                                            f: F) {
         println!("adding integrating command");
         self.integrating_commands.push(Box::new(f));
     }
@@ -284,9 +291,11 @@ impl CommandBuffer {
         }
     }
 
-    pub fn flush_integrating(&mut self, controller: &mut Controller, env: &mut env::ExecutionEnvironment) {
+    pub fn flush_integrating(&mut self, controller: &mut Controller,
+                             interpreter: &mut env::Interpreter,
+                             async_executor: &mut async_executor::AsyncExecutor) {
         for command in self.integrating_commands.drain(..) {
-            command.call_box((controller, env))
+            command.call_box((controller, interpreter, async_executor))
         }
     }
 }

@@ -689,7 +689,9 @@ impl PerEditorCommandBuffer {
         });
 
         // update the function that the code being edited belongs to
-        self.actual_command_buffer.borrow_mut().add_integrating_command(move |cont, env| {
+        self.actual_command_buffer.borrow_mut().add_integrating_command(move |cont, interpreter, _| {
+            let mut env = interpreter.env.borrow_mut();
+
             let editor = cont.get_editor_mut(editor_id).unwrap();
             let code = editor.get_code();
             match editor.location {
