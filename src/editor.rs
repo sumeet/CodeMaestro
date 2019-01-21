@@ -418,10 +418,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_script(&self, script: &scripts::Script) -> T::DrawResult {
-        self.ui_toolkit.draw_layout_with_bottom_bar(
-            &|| self.render_code(script.id()),
-            &|| self.render_run_button(script.code())
-        )
+        self.ui_toolkit.draw_window(&format!("Script {}", script.id()),
+            &|| {
+                self.ui_toolkit.draw_layout_with_bottom_bar(
+                    &|| self.render_code(script.id()),
+                    &|| self.render_run_button(script.code()))
+            },
+            None::<fn(Keypress)>)
     }
 
     fn render_run_button(&self, code_node: CodeNode) -> T::DrawResult {

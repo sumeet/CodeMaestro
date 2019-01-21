@@ -145,10 +145,34 @@ impl Value {
         FutureExt::shared(Box::pin(async_fn))
     }
 
-    pub fn into_boolean(&self) -> Option<bool> {
+    // should we use TryFrom / TryInto here...
+    pub fn as_boolean(&self) -> Option<bool> {
         match self {
             Value::Boolean(b) => Some(*b),
             _ => None
+        }
+    }
+
+    pub fn as_str(&self) -> Option<&str> {
+        match self {
+            Value::String(s) => Some(s),
+            _ => None
+        }
+    }
+
+    pub fn as_vec(&self) -> Option<&Vec<Value>> {
+        match self {
+            Value::List(v) => Some(v),
+            _ => None
+        }
+    }
+
+    pub fn as_struct(&self) -> Option<(ID, &StructValues)> {
+        match self {
+            Value::Struct {struct_id, values} => Some((*struct_id, values)),
+            _ => {
+                None
+            }
         }
     }
 }

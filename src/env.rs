@@ -2,6 +2,7 @@ use super::lang;
 use super::structs;
 use super::async_executor;
 use super::external_func::preresolve_futures_if_external_func;
+use super::external_func::resolve_all_futures;
 
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -122,8 +123,7 @@ impl Interpreter {
                     None => Box::pin(async { lang::Value::Null }),
                 };
                 Box::pin(async move {
-                    // TODO: whoops i need booleans...
-                    if await!(condition_fut).into_boolean().unwrap() {
+                    if await!(condition_fut).as_boolean().unwrap() {
                         await!(true_branch_fut)
                     } else {
                         await!(else_branch_fut)
@@ -174,8 +174,18 @@ impl Interpreter {
             let mut args = HashMap::new();
             for (arg_id, arg_future) in args_futures {
                 let arg_value = await!(arg_future);
-                let arg_value = await!(preresolve_futures_if_external_func(arg_value));
-                args.insert(arg_id, arg_value);
+                let arg_value = await!(resolve_all_futures(arg_value));
+                let value_to_insert = match arg_value {
+                    lang::Value::Future(future) => {
+                        println!("contains futures, awaiting {:?}", future);
+                        await!(future)
+                    },
+                    _ => {
+                        println!("doesn't contain futures, not waiting {:?}", arg_value);
+                        arg_value
+                    },
+                };
+                args.insert(arg_id, value_to_insert);
             }
             match func {
                 Some(function) => {

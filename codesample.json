@@ -1,45 +1,88 @@
 {
-  "scripts": [],
-  "codefuncs": [
+  "scripts": [
     {
-      "id": "72133837-e060-4ddd-af6c-0bbe86dcf35c",
-      "name": "mycodefunc",
-      "args": [
-        {
-          "id": "5e455b83-f6a3-4dbe-8277-c53aef5c63b8",
-          "arg_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          },
-          "short_name": "jaioefjiowae"
-        }
-      ],
-      "return_type": {
-        "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
-        "params": [
-          {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        ]
-      },
-      "block": {
+      "code": {
         "expressions": [
           {
-            "ListLiteral": {
-              "id": "dcc1533d-43bd-44dd-a334-65b07efbac4b",
-              "element_type": {
-                "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-                "params": []
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "7a5952b5-f814-40a7-b555-e01ac6eb2d69",
+                  "id": "87d724ba-d721-4687-82ad-103cc93bf5ee"
+                }
               },
-              "elements": []
+              "args": [
+                {
+                  "Argument": {
+                    "id": "d728d833-ec23-431a-a590-70e54e27c94f",
+                    "argument_definition_id": "7a5952b5-f814-40a7-b555-e01ac6eb2d69",
+                    "expr": {
+                      "StringLiteral": {
+                        "value": "https://httpbin.org/get",
+                        "id": "1afb8297-66b8-4251-b729-4aaf7976385f"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Argument": {
+                    "id": "f0b2aa05-63c4-44ed-942d-84186b97c4e1",
+                    "argument_definition_id": "291b9156-db02-4d81-a965-4b5a95bb51a5",
+                    "expr": {
+                      "ListLiteral": {
+                        "id": "e51bd848-dc6e-4396-b504-2b25c2633674",
+                        "element_type": {
+                          "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                          "params": []
+                        },
+                        "elements": [
+                          {
+                            "StructLiteral": {
+                              "id": "124fd231-6603-4a4d-8509-5945d723c728",
+                              "struct_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                              "fields": [
+                                {
+                                  "StructLiteralField": {
+                                    "id": "3cf36144-5396-4753-afff-65f54663814b",
+                                    "struct_field_id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+                                    "expr": {
+                                      "StringLiteral": {
+                                        "value": "wjiefjeio",
+                                        "id": "9133a464-5422-4d05-9405-ac32484cd6aa"
+                                      }
+                                    }
+                                  }
+                                },
+                                {
+                                  "StructLiteralField": {
+                                    "id": "fd7d9a70-ed07-4aa5-8619-a3a79678c640",
+                                    "struct_field_id": "57607724-a63a-458e-9253-1e3efeb4de63",
+                                    "expr": {
+                                      "StringLiteral": {
+                                        "value": "ajiwfjoiwe",
+                                        "id": "43310f39-ceeb-4744-8eb0-621457185c9c"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "7341d846-f1f2-47f2-8875-de29c28411c1"
             }
           }
         ],
-        "id": "177fef65-0ba9-436a-b050-7338b858aa42"
+        "id": "1e6fd656-bfad-4ceb-a761-d30519423703"
       }
     }
   ],
+  "codefuncs": [],
   "pyfuncs": [],
   "jsfuncs": [],
   "structs": [

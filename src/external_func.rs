@@ -66,3 +66,32 @@ pub fn preresolve_futures_if_external_func(
         panic!("there's no way this could happen")
     }
 }
+
+pub async fn resolve_all_futures(mut val: lang::Value) -> lang::Value {
+    while contains_futures(&val) {
+        val = resolve_futures(val);
+        val = match val {
+            lang::Value::Future(value_future) => await!(value_future),
+            _ => val,
+        }
+    }
+    val
+}
+
+fn contains_futures(val: &lang::Value) -> bool {
+    match val {
+        lang::Value::Future(value_future) => {
+            // need to recursive call here because even after resolving the
+            // future, the Value could contain MORE nested futures!
+            true
+        }
+        lang::Value::List(v) => {
+            v.iter().any(contains_futures)
+        },
+        lang::Value::Struct { values, struct_id } => {
+            values.iter().any(|(_id, val)| contains_futures(val))
+        },
+        lang::Value::Null | lang::Value::String(_) | lang::Value::Error(_) |
+        lang::Value::Number(_) | lang::Value::Boolean(_) => false
+    }
+}
