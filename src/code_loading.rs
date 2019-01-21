@@ -5,6 +5,7 @@ use super::pystuff;
 use super::jsstuff;
 use super::structs;
 use super::enums;
+use super::code_function;
 
 use failure::{Error};
 use serde_json;
@@ -14,7 +15,7 @@ use serde_derive::{Serialize,Deserialize};
 // TODO: find a better name. til then, we're gonna save the world
 #[derive(Serialize, Deserialize)]
 pub struct TheWorld {
-    pub codes: Vec<CodeNode>,
+    pub codefuncs: Vec<code_function::CodeFunction>,
     pub pyfuncs: Vec<pystuff::PyFunc>,
     pub jsfuncs: Vec<jsstuff::JSFunc>,
     pub structs: Vec<structs::Struct>,

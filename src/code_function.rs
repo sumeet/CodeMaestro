@@ -2,10 +2,13 @@ use super::lang;
 use super::external_func;
 use super::function;
 use super::env;
-use std::collections::HashMap;
 use super::code_generation;
 
-#[derive(Clone)]
+use std::collections::HashMap;
+
+use serde_derive::{Serialize,Deserialize};
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CodeFunction {
     id: lang::ID,
     pub name: String,
@@ -16,12 +19,10 @@ pub struct CodeFunction {
 
 impl CodeFunction {
     pub fn new() -> Self {
-        let mut block = lang::Block::new();
-//        block.expressions.push(code_generation::new_placeholder("hoohaw", lang::Type::from_spec(&*lang::NULL_TYPESPEC)));
         Self {
             id: lang::new_id(),
             name: "New function".to_string(),
-            block,
+            block: lang::Block::new(),
             args: vec![],
             return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
         }

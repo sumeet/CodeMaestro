@@ -106,7 +106,7 @@ impl<'a> Controller {
         let env_genie = env_genie::EnvGenie::new(env);
         let theworld = code_loading::TheWorld {
             // this needs to be a list of funcs or smth
-            codes: self.code_editor_by_id.values().map(|e| e.get_code()).cloned().collect_vec(),
+            codefuncs: env_genie.list_code_funcs().cloned().collect(),
             pyfuncs: env_genie.list_pyfuncs().cloned().collect(),
             jsfuncs: env_genie.list_jsfuncs().cloned().collect(),
             structs: env_genie.list_structs().cloned().collect(),
