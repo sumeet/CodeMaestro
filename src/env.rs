@@ -52,7 +52,7 @@ impl Interpreter {
         let code_node = code_node.clone();
         match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
-                Box::pin(self.evaluate_function_call(function_call))
+                Box::pin(self.evaluate_function_call(&function_call))
             }
             lang::CodeNode::Argument(argument) => {
                 Box::pin(self.evaluate(argument.expr.borrow()))
@@ -157,7 +157,7 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_function_call(&mut self, function_call: lang::FunctionCall) -> impl Future<Output = lang::Value> {
+    fn evaluate_function_call(&mut self, function_call: &lang::FunctionCall) -> impl Future<Output = lang::Value> {
         let args_futures = function_call.args.iter()
             .map(|code_node| code_node.into_argument())
             .map(|arg| (arg.argument_definition_id, self.evaluate(&arg.expr)))
