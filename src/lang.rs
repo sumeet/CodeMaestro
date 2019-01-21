@@ -144,6 +144,13 @@ impl Value {
     pub fn new_value_future(async_fn: impl Future<Output = Value> + 'static) -> ValueFuture {
         FutureExt::shared(Box::pin(async_fn))
     }
+
+    pub fn into_boolean(&self) -> Option<bool> {
+        match self {
+            Value::Boolean(b) => Some(*b),
+            _ => None
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]

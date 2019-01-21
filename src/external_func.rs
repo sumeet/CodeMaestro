@@ -56,7 +56,7 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
 // an external func or not. we can update the Interpreter to be smarter about awaiting futures
 // at the last minute, however, later. this should simplify things for now
 pub fn preresolve_futures_if_external_func(
-    _func: Option<Box<lang::Function + 'static>>,
+//    _func: Option<Box<lang::Function + 'static>>,
     value: lang::Value) -> lang::ValueFuture {
 
     if let lang::Value::Future(fut) = resolve_futures(value) {

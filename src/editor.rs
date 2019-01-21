@@ -26,6 +26,7 @@ use super::code_editor;
 use super::env_genie;
 use super::code_editor_renderer::CodeEditorRenderer;
 use super::async_executor;
+use super::scripts;
 
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
@@ -85,6 +86,7 @@ impl TestResult {
 pub struct Controller {
     test_result_by_func_id: HashMap<ID, TestResult>,
     code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
+    script_by_id: HashMap<ID, scripts::Script>,
 }
 
 impl<'a> Controller {
@@ -92,6 +94,7 @@ impl<'a> Controller {
         Controller {
             test_result_by_func_id: HashMap::new(),
             code_editor_by_id: HashMap::new(),
+            script_by_id: HashMap::new(),
         }
     }
 
@@ -106,7 +109,7 @@ impl<'a> Controller {
     fn save(&self, env: &env::ExecutionEnvironment) {
         let env_genie = env_genie::EnvGenie::new(env);
         let theworld = code_loading::TheWorld {
-            // this needs to be a list of funcs or smth
+            scripts: self.script_by_id.values().cloned().collect(),
             codefuncs: env_genie.list_code_funcs().cloned().collect(),
             pyfuncs: env_genie.list_pyfuncs().cloned().collect(),
             jsfuncs: env_genie.list_jsfuncs().cloned().collect(),
@@ -123,6 +126,18 @@ impl<'a> Controller {
         } else {
             "Test not run yet".to_string()
         }
+    }
+
+    pub fn load_script(&mut self, script: scripts::Script) {
+        let id = script.id();
+        if !self.code_editor_by_id.contains_key(&id) {
+            let location = code_editor::CodeLocation::Script(id);
+            self.code_editor_by_id.insert(id, code_editor::CodeEditor::new(&script.code(), location));
+        } else {
+            let mut code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
+            code_editor.replace_code(&script.code());
+        }
+        self.script_by_id.insert(script.id(), script);
     }
 
     pub fn load_code(&mut self, code_node: &CodeNode, location: code_editor::CodeLocation) {
@@ -323,6 +338,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     pub fn render_app(&self) -> T::DrawResult {
         self.ui_toolkit.draw_all(vec![
             self.render_main_menu_bar(),
+            self.render_scripts(),
             self.render_console_window(),
             self.render_error_window(),
             self.render_edit_code_funcs(),
@@ -344,9 +360,15 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     let cmdb3 = Rc::clone(&self.command_buffer);
                     let cmdb4 = Rc::clone(&self.command_buffer);
                     let cmdb5 = Rc::clone(&self.command_buffer);
+                    let cmdb6 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
                             cmdb1.borrow_mut().save();
+                        }),
+                        self.ui_toolkit.draw_menu_item("Add new script", move || {
+                            cmdb6.borrow_mut().add_controller_command(|controller| {
+                                controller.load_script(scripts::Script::new());
+                            });
                         }),
                         self.ui_toolkit.draw_menu_item("Add new function", move || {
                             cmdb5.borrow_mut().load_code_func(code_function::CodeFunction::new());
@@ -385,6 +407,29 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_edit_code_funcs(&self) -> T::DrawResult {
         let code_funcs = self.env_genie.list_code_funcs();
         self.ui_toolkit.draw_all(code_funcs.map(|f| self.render_edit_code_func(f)).collect())
+    }
+
+    fn render_scripts(&self) -> T::DrawResult {
+        self.ui_toolkit.draw_all(
+            self.controller.script_by_id.values().map(|script| {
+                self.render_script(script)
+            }).collect()
+        )
+    }
+
+    fn render_script(&self, script: &scripts::Script) -> T::DrawResult {
+        self.ui_toolkit.draw_layout_with_bottom_bar(
+            &|| self.render_code(script.id()),
+            &|| self.render_run_button(script.code())
+        )
+    }
+
+    fn render_run_button(&self, code_node: CodeNode) -> T::DrawResult {
+        let cmd_buffer = self.command_buffer.clone();
+        self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
+            let mut cmd_buffer = cmd_buffer.borrow_mut();
+            cmd_buffer.run(&code_node, |val| println!("{:?}", val));
+        })
     }
 
     fn render_edit_code_func(&self, code_func: &code_function::CodeFunction) -> T::DrawResult {

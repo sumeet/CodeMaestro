@@ -39,6 +39,7 @@ mod code_generation;
 mod code_validation;
 mod function;
 mod code_function;
+mod scripts;
 mod external_func;
 #[cfg(feature = "default")]
 mod pystuff;
@@ -155,6 +156,10 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     env.add_function(builtins::Print{});
     env.add_function(builtins::Capitalize{});
     env.add_function(builtins::HTTPGet{});
+
+    for script in the_world.scripts {
+        controller.load_script(script)
+    }
 
     controller
 }

@@ -28,7 +28,8 @@ pub struct CodeEditor {
 
 #[derive(Copy, Clone)]
 pub enum CodeLocation {
-   Function(lang::ID)
+   Function(lang::ID),
+   Script(lang::ID),
 }
 
 impl CodeEditor {

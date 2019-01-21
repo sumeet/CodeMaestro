@@ -13,6 +13,7 @@ use super::structs;
 use super::lang::CodeNode;
 use super::env_genie::EnvGenie;
 use super::code_function;
+use super::scripts;
 
 // TODO: move to colors.rs
 pub type Color = [f32; 4];
@@ -58,11 +59,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         let code = self.code_editor.get_code();
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_child_region(
-            &|| {
-                self.ui_toolkit.draw_layout_with_bottom_bar(
-                    &||{ self.render_code(code) },
-                    &||{ self.render_run_button(code) })
-            },
+            &|| { self.render_code(code) },
             0.5,
             Some(move |keypress| {
                 cmd_buffer.borrow_mut().add_editor_command(move |code_editor| {
@@ -71,17 +68,6 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             })
         )
     }
-
-    fn render_run_button(&self, code_node: &CodeNode) -> T::DrawResult {
-        let controller = self.command_buffer.clone();
-        let code_node = code_node.clone();
-        self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
-//            let mut controller = controller.borrow_mut();
-            println!("have to fix running hahaha");
-            //controller.run(&code_node, |_|{});
-        })
-    }
-
 
     fn is_insertion_pointer_immediately_before(&self, id: lang::ID) -> bool {
         let insertion_point = self.code_editor.insertion_point();
@@ -701,6 +687,10 @@ impl PerEditorCommandBuffer {
                     code_function.set_code(code.into_block().unwrap().clone());
                     env.add_function(*code_function);
                 },
+                code_editor::CodeLocation::Script(script_id) => {
+                    let script = scripts::Script { code: code.into_block().unwrap().clone() };
+                    cont.load_script(script)
+                }
             }
         });
     }
