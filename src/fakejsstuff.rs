@@ -16,7 +16,7 @@ pub struct JSFunc {
 }
 
 impl lang::Function for JSFunc {
-    fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, _interpreter: env::Interpreter, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         lang::Value::Null
     }
 

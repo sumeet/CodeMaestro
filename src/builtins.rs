@@ -18,10 +18,10 @@ lazy_static! {
 pub struct Print {}
 
 impl lang::Function for Print {
-    fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         match args.get(&self.takes_args()[0].id) {
             Some(lang::Value::String(ref string)) =>  {
-                env.println(string);
+                interpreter.env.borrow_mut().println(string);
                 lang::Value::Null
             }
             _ => lang::Value::Error(lang::Error::ArgumentError)
@@ -55,7 +55,7 @@ impl lang::Function for Print {
 pub struct Capitalize {}
 
 impl lang::Function for Capitalize {
-    fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         match args.get(&self.takes_args()[0].id) {
             Some(lang::Value::String(ref string)) =>  {
                 lang::Value::String(string.to_uppercase())
@@ -140,7 +140,7 @@ cfg_if! {
         pub struct HTTPGet {}
 
         impl lang::Function for HTTPGet {
-            fn call(&self, _env: &mut env::ExecutionEnvironment, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+            fn call(&self, _interpreter: env::Interpreter, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
                 unimplemented ! ();
             }
 

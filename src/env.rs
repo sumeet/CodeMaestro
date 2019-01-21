@@ -40,6 +40,10 @@ impl Interpreter {
         }
     }
 
+    pub fn with_env(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
+        Self { env }
+    }
+
     pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {
         Rc::clone(&self.env)
     }
@@ -175,7 +179,8 @@ impl Interpreter {
             }
             match func {
                 Some(function) => {
-                    function.call(&mut env.borrow_mut(), args)
+                    let interp = Self::with_env(Rc::clone(&env));
+                    function.call(interp, args)
                 }
                 None => {
                     lang::Value::Error(lang::Error::UndefinedFunctionError(function_id))

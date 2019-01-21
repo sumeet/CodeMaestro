@@ -15,7 +15,7 @@ use objekt::{clone_trait_object,__internal_clone_trait_object};
 use downcast_rs::impl_downcast;
 use serde_derive::{Serialize,Deserialize};
 
-use super::ExecutionEnvironment;
+use super::env;
 
 lazy_static! {
     pub static ref NULL_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
@@ -63,7 +63,7 @@ lazy_static! {
 }
 
 pub trait Function: objekt::Clone + downcast_rs::Downcast {
-    fn call(&self, env: &mut ExecutionEnvironment, args: HashMap<ID,Value>) -> Value;
+    fn call(&self, interpreter: env::Interpreter, args: HashMap<ID,Value>) -> Value;
     fn name(&self) -> &str;
     fn id(&self) -> ID;
     fn takes_args(&self) -> Vec<ArgumentDefinition>;

@@ -50,8 +50,11 @@ impl function::SettableArgs for CodeFunction {
 }
 
 impl lang::Function for CodeFunction {
-    fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        unimplemented!()
+    fn call(&self, mut interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        for (id, value) in args {
+            interpreter.env.borrow_mut().set_local_variable(id, value);
+        }
+        lang::Value::new_future(interpreter.evaluate(&self.code()))
     }
 
     fn name(&self) -> &str {

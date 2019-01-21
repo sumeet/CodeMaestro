@@ -16,8 +16,7 @@ pub struct JSONHTTPClient {
 }
 
 impl lang::Function for JSONHTTPClient {
-    fn call(&self, env: &mut env::ExecutionEnvironment,
-            args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, _interpreter: env::Interpreter, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         unimplemented!()
     }
 

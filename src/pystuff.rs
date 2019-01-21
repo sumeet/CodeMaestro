@@ -211,7 +211,9 @@ fn mix_args_with_locals<'a>(py: Python, args: &'a PyDict, from: PyObject) -> &'a
 }
 
 impl lang::Function for PyFunc {
-    fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        let env = interpreter.env.borrow();
+
         let gil = getgil();
         let py = gil.python();
 
@@ -231,7 +233,7 @@ impl lang::Function for PyFunc {
         }
 
         let named_args : HashMap<String, ValueWithEnv> = external_func::to_named_args(self, args)
-            .map(|(name, value)| (name, ValueWithEnv { env, value: value })).collect();
+            .map(|(name, value)| (name, ValueWithEnv { env: &env, value: value })).collect();
 
         let args_dict = into_pyobject(named_args, py);
         let locals_with_params = mix_args_with_locals(py, locals, args_dict);
@@ -241,7 +243,7 @@ impl lang::Function for PyFunc {
         }
 
         let eval_result = eval_result.unwrap();
-        self.extract(eval_result, env)
+        self.extract(eval_result, &env)
     }
 
     fn name(&self) -> &str {
