@@ -32,6 +32,10 @@ tokio-async-await = {version = "0.1.4", features = ["async-await-preview"]}
 cfg-if = "0.1"
 matches = "0.1.8"
 url = "1.7.2"
+#yukikaze = "0.4.0"
+yukikaze = {path = "/home/sumeet/yukikaze" }
+tokio-timer = "*"
+tokio-executor = "*"
 
 pyo3 = { version = "0.5.2", optional = true }
 glium = { version = "0.22", default-features = true, optional = true }
@@ -56,4 +60,4 @@ futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs"
 futures-core-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 futures-sink-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
-
+#tokio = { git = "https://github.com/tokio-rs/tokio", tag = "tokio-0.1.13" }
