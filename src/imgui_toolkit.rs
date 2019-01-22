@@ -2,6 +2,7 @@ use super::{App};
 use super::editor::{UiToolkit};
 use super::editor::{Keypress};
 use super::imgui_support;
+use super::async_executor;
 use itertools::Itertools;
 
 use imgui::*;
@@ -15,14 +16,15 @@ const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 50.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (300.0, 200.0);
 
-pub fn draw_app(app: Rc<RefCell<App>>) {
+pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::AsyncExecutor) {
     imgui_support::run("cs".to_string(), CLEAR_COLOR,
        |ui, keypress| {
             let mut app = app.borrow_mut();
             let mut toolkit = ImguiToolkit::new(ui, keypress);
             app.draw(&mut toolkit);
-            app.flush_commands();
-            app.turn_event_loop();
+            app.flush_commands(&mut async_executor);
+            async_executor.turn();
+            //app.turn_event_loop();
             true
         },
     );

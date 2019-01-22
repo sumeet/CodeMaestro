@@ -106,8 +106,8 @@ use self::env::{ExecutionEnvironment};
 //use debug_cell::RefCell;
 
 #[cfg(feature = "default")]
-pub fn draw_app(app: Rc<RefCell<App>>) {
-    imgui_toolkit::draw_app(app);
+pub fn draw_app(app: Rc<RefCell<App>>, async_executor: async_executor::AsyncExecutor) {
+    imgui_toolkit::draw_app(app, async_executor);
 }
 
 #[cfg(feature = "javascript")]
@@ -139,8 +139,11 @@ fn load_structs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) 
 }
 
 pub fn main() {
-    let app = App::new_rc();
-    draw_app(app);
+    tokio_executor::with_executor_context(|executor| {
+        let app = App::new_rc();
+        let async_executor = tokio_executor::AsyncExecutor::new(executor);
+        draw_app(app, async_executor);
+    })
 }
 
 // TODO: this is a mess
@@ -168,7 +171,7 @@ pub struct App {
     pub interpreter: env::Interpreter,
     command_buffer: Rc<RefCell<editor::CommandBuffer>>,
     controller: Controller,
-    pub async_executor: async_executor::AsyncExecutor,
+//    pub async_executor: async_executor::AsyncExecutor,
 }
 
 impl App {
@@ -181,13 +184,12 @@ impl App {
             interpreter,
             command_buffer,
             controller,
-            async_executor: async_executor::AsyncExecutor::new(),
         }
     }
 
-    pub fn turn_event_loop(&mut self) {
-        self.async_executor.turn()
-    }
+//    pub fn turn_event_loop(&mut self) {
+//        self.async_executor.turn()
+//    }
 
     pub fn new_rc() -> Rc<RefCell<App>> {
         Rc::new(RefCell::new(Self::new()))
@@ -206,7 +208,7 @@ impl App {
         renderer.render_app()
     }
 
-    pub fn flush_commands(&mut self) {
+    pub fn flush_commands(&mut self, mut async_executor: &mut async_executor::AsyncExecutor) {
         let mut command_buffer = self.command_buffer.borrow_mut();
         while command_buffer.has_queued_commands() {
             println!("some queued commands, flushing");
@@ -214,7 +216,7 @@ impl App {
             command_buffer.flush_to_interpreter(&mut self.interpreter);
             command_buffer.flush_integrating(&mut self.controller,
                                              &mut self.interpreter,
-                                             &mut self.async_executor);
+                                             &mut async_executor);
             code_validation::validate_and_fix(&mut self.interpreter.env().borrow_mut(),
                                               &mut command_buffer);
         }

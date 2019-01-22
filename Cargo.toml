@@ -9,7 +9,7 @@ default-run = "cs"
 
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3", "slack",
-           "tokio", "tokio-reactor", "irc", "irc-proto", "tokio-current-thread", "reqwest"]
+           "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
@@ -32,10 +32,6 @@ tokio-async-await = {version = "0.1.4", features = ["async-await-preview"]}
 cfg-if = "0.1"
 matches = "0.1.8"
 url = "1.7.2"
-#yukikaze = "0.4.0"
-yukikaze = {path = "/home/sumeet/yukikaze" }
-tokio-timer = "*"
-tokio-executor = "*"
 
 pyo3 = { version = "0.5.2", optional = true }
 glium = { version = "0.22", default-features = true, optional = true }
@@ -46,6 +42,8 @@ imgui-glium-renderer = { version = "0.0.21", optional = true }
 tokio = {version = "0.1.13", features = ["async-await-preview"], optional = true }
 tokio-reactor = {version = "0.1.7", optional = true }
 tokio-current-thread = {version = "0.1.4", optional = true }
+tokio-timer = {version = "*", optional = true}
+tokio-executor = {version = "*", optional = true}
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 stdweb = {version = "0.4.12", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"], optional = true }
@@ -60,4 +58,3 @@ futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs"
 futures-core-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 futures-sink-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
-#tokio = { git = "https://github.com/tokio-rs/tokio", tag = "tokio-0.1.13" }
