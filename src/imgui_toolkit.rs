@@ -24,7 +24,6 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
             app.draw(&mut toolkit);
             app.flush_commands(&mut async_executor);
             async_executor.turn();
-            //app.turn_event_loop();
             true
         },
     );

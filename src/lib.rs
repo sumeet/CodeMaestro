@@ -106,14 +106,10 @@ use self::env::{ExecutionEnvironment};
 //use debug_cell::RefCell;
 
 #[cfg(feature = "default")]
-pub fn draw_app(app: Rc<RefCell<App>>, async_executor: async_executor::AsyncExecutor) {
-    imgui_toolkit::draw_app(app, async_executor);
-}
+use imgui_toolkit::draw_app;
 
 #[cfg(feature = "javascript")]
-pub fn draw_app(app: Rc<RefCell<App>>) {
-    yew_toolkit::draw_app(app);
-}
+use yew_toolkit::draw_app;
 
 #[cfg(feature = "default")]
 fn load_externalfuncs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) {
@@ -139,9 +135,8 @@ fn load_structs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) 
 }
 
 pub fn main() {
-    tokio_executor::with_executor_context(|executor| {
+    async_executor::with_executor_context(|async_executor| {
         let app = App::new_rc();
-        let async_executor = tokio_executor::AsyncExecutor::new(executor);
         draw_app(app, async_executor);
     })
 }

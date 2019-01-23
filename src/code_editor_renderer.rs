@@ -55,12 +55,12 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         }
     }
 
-    pub fn render(&self) -> T::DrawResult {
+    pub fn render(&self, height_percentage: f32) -> T::DrawResult {
         let code = self.code_editor.get_code();
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_child_region(
             &|| { self.render_code(code) },
-            0.5,
+            height_percentage,
             Some(move |keypress| {
                 cmd_buffer.borrow_mut().add_editor_command(move |code_editor| {
                     code_editor.handle_keypress(keypress)

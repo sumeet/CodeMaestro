@@ -3,6 +3,10 @@ use stdweb::{spawn_local};
 use std::future::Future as NewFuture;
 use std::rc::Rc;
 
+pub fn with_executor_context<F: FnOnce(AsyncExecutor)>(run: F) {
+    run(AsyncExecutor::new())
+}
+
 pub struct AsyncExecutor {
     onupdate: Option<Rc<Fn()>>,
 }

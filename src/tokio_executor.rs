@@ -41,8 +41,7 @@ use tokio_timer::timer::{self, Timer};
 use std::cell::RefCell;
 
 
-pub fn with_executor_context<F: FnOnce(tokio_current_thread::Entered<tokio_timer::timer::Timer<tokio_reactor::Reactor>>)>
-    (run: F) {
+pub fn with_executor_context<F: FnOnce(AsyncExecutor)>(run: F) {
     // We need a reactor to receive events about IO objects from kernel
     let reactor = Reactor::new().unwrap();
     let reactor_handle = reactor.handle();
@@ -66,7 +65,7 @@ pub fn with_executor_context<F: FnOnce(tokio_current_thread::Entered<tokio_timer
             let mut default_executor = tokio_current_thread::TaskExecutor::current();
             tokio_executor::with_default(&mut default_executor, enter, |enter| {
                 let mut executor = executor.enter(enter);
-                run(executor);
+                run(AsyncExecutor::new(executor));
             });
         });
     });

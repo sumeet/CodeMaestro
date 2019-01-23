@@ -1,6 +1,7 @@
 use super::{App as CSApp, UiToolkit};
 use super::editor;
 use super::editor::{Key as AppKey,Keypress};
+use super::async_executor::AsyncExecutor;
 use stdweb::{js,_js_impl};
 //use stdweb::{console,__internal_console_unsafe};
 use yew::{html,html_impl};
@@ -13,10 +14,11 @@ use itertools::Itertools;
 
 pub struct Model {
     app: Option<Rc<RefCell<CSApp>>>,
+    async_executor: Option<AsyncExecutor>,
 }
 
 pub enum Msg {
-    SetApp(Rc<RefCell<CSApp>>),
+    Init(Rc<RefCell<CSApp>>, AsyncExecutor),
     Redraw,
     DontRedraw,
 }
@@ -28,17 +30,21 @@ impl Component for Model {
     fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
         Model {
             app: None,
+            async_executor: None,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::SetApp(app) => {
+            Msg::Init(app, async_executor) => {
+                self.async_executor = Some(async_executor);
                 self.app = Some(app);
                 true
             }
             Msg::Redraw => {
-                self.app.clone().map(|app| app.borrow_mut().flush_commands());
+                if let (Some(app), Some(mut async_executor)) = (self.app.as_ref(), self.async_executor.as_mut()) {
+                    app.borrow_mut().flush_commands(&mut async_executor);
+                }
                 true
             },
             Msg::DontRedraw => false,
@@ -166,6 +172,56 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    // TODO: clean up bc code is duped between here and draw_code_window
+    fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, height_percentage: f32, handle_keypress: Option<F>) -> Self::DrawResult {
+        // if there's a keypress handler provided, then send those keypresses into the app, and like,
+        // prevent the tab key from doing anything
+        if let Some(handle_keypress) = handle_keypress {
+            let handle_keypress_1 = Rc::new(handle_keypress);
+            let handle_keypress_2 = Rc::clone(&handle_keypress_1);
+            html! {
+                <div style={ format!("min-height: {}%; overflow: auto;", height_percentage * 100.) },
+                    id={ self.incr_last_drawn_element_id().to_string() },
+                    tabindex=0,
+                    onkeypress=|e| {
+                        if let Some(keypress) = map_keypress_event(&e) {
+                            handle_keypress_1(keypress);
+                        }
+                        e.prevent_default();
+                        Msg::Redraw
+                    },
+                    onkeydown=|e| {
+                        // lol for these special keys we have to listen on keydown, but the
+                        // rest we can do keypress :/
+                        if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
+                            // LOL this is for ctrl+r
+                            ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
+                            //console!(log, e.key());
+                            if let Some(keypress) = map_keypress_event(&e) {
+                                //console!(log, format!("{:?}", keypress));
+                                handle_keypress_2(keypress);
+                            }
+                            e.prevent_default();
+                            Msg::Redraw
+                        } else {
+                            Msg::DontRedraw
+                        }
+                    }, >
+
+                    { draw_fn() }
+                </div>
+            }
+        } else {
+            html! {
+                <div style={ format!("height: {}%", height_percentage) },
+                    id={ self.incr_last_drawn_element_id().to_string() },
+                    tabindex=0, >
+                    { draw_fn() }
+                </div>
+            }
+        }
+
+    }
 
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         // JANK, make it better
@@ -507,7 +563,7 @@ fn was_shift_key_pressed(key: &str) -> bool {
     key.len() == 1 && key.chars().next().unwrap().is_uppercase()
 }
 
-pub fn draw_app(app: Rc<RefCell<CSApp>>) {
+pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     yew::initialize();
 
     js! {
@@ -545,14 +601,15 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>) {
     }
 
     let mut yew_app = App::<Model>::new().mount_to_body();
-    yew_app.send_message(Msg::SetApp(Rc::clone(&app)));
-    setup_ui_update_on_io_event_completion(app, yew_app);
+    let yew_app_rc = Rc::new(RefCell::new(yew_app));
+    setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&yew_app_rc));
+    yew_app_rc.borrow_mut().send_message(Msg::Init(Rc::clone(&app), async_executor));
     yew::run_loop();
 }
 
-fn setup_ui_update_on_io_event_completion(app: Rc<RefCell<CSApp>>, yew_app: html::Scope<Model>) {
-    let yew_app_rc = Rc::new(RefCell::new(yew_app));
-    app.borrow_mut().interpreter.async_executor.setonupdate(Rc::new(move || {
+fn setup_ui_update_on_io_event_completion(mut async_executor: &mut AsyncExecutor,
+                                          yew_app_rc: Rc<RefCell<html::Scope<Model>>>) {
+    async_executor.setonupdate(Rc::new(move || {
         yew_app_rc.borrow_mut().send_message(Msg::Redraw);
     }));
 }

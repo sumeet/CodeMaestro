@@ -421,7 +421,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_window(&format!("Script {}", script.id()),
             &|| {
                 self.ui_toolkit.draw_layout_with_bottom_bar(
-                    &|| self.render_code(script.id()),
+                    &|| self.render_code(script.id(), 1.),
                     &|| self.render_run_button(script.code()))
             },
             None::<fn(Keypress)>)
@@ -456,7 +456,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     || {},
                 ),
                 self.render_arguments_selector(code_func.clone()),
-                self.render_code(code_func.code().id()),
+                self.render_code(code_func.code().id(), 0.5),
                 self.render_return_type_selector(code_func),
                 self.ui_toolkit.draw_separator(),
                 self.render_general_function_menu(code_func),
@@ -1026,11 +1026,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         None::<fn(Keypress)>)
     }
 
-    fn render_code(&self, code_id: lang::ID) -> T::DrawResult {
+    fn render_code(&self, code_id: lang::ID, height_percentage: f32) -> T::DrawResult {
         let code_editor = self.controller.get_editor(code_id).unwrap();
         CodeEditorRenderer::new(self.ui_toolkit, code_editor,
                                 Rc::clone(&self.command_buffer),
-                                self.env_genie).render()
+                                self.env_genie).render(height_percentage)
     }
 }
 

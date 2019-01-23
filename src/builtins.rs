@@ -101,7 +101,7 @@ cfg_if! {
         use futures_util::future::FutureExt;
 
         impl lang::Function for HTTPGet {
-            fn call(&self, _env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+            fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
                 match args.get(&self.takes_args()[0].id) {
                     Some(lang::Value::String(ref url)) =>  {
                         let request = Request::get(url).body(()).unwrap();

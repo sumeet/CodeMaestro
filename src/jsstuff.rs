@@ -156,13 +156,14 @@ fn eval(js_code: &str, locals: HashMap<String, ValueWithEnv>) -> Result<stdweb::
 }
 
 impl lang::Function for JSFunc {
-    fn call(&self, env: &mut env::ExecutionEnvironment, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self, interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        let env = interpreter.env.borrow();
         let named_args : HashMap<String, ValueWithEnv> = external_func::to_named_args(self, args)
-            .map(|(name, value)| (name, ValueWithEnv { env, value })).collect();
+            .map(|(name, value)| (name, ValueWithEnv { env: &env, value })).collect();
 
         match eval(&self.eval, named_args) {
             Err((err_name, err_string)) => lang::Value::Error(lang::Error::JavaScriptError(err_name, err_string)),
-            Ok(value) => self.extract(value, env)
+            Ok(value) => self.extract(value, &env)
         }
     }
 
