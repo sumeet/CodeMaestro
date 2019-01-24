@@ -1,8 +1,6 @@
 use reqwest::{r#async::Client};
 use http::{Request,Response};
-use std::future::Future;
 use futures::stream::Stream;
-use futures::future::{Future as _};
 
 use super::asynk::forward;
 
@@ -15,14 +13,15 @@ pub async fn fetch(request: Request<String>) -> Result<Response<String>> {
         .body(request.body().clone())
         .send()))?;
 
-    let request_url: String = request.uri().to_string();
-    let status = resp.status();
+    let mut resp_builder = Response::builder();
+    resp_builder.status(resp.status());
+    for (key, val) in resp.headers().iter() {
+        resp_builder.header(key, val);
+    }
+
     let body = await!(forward(resp.into_body().concat2()))?;
     let body = String::from_utf8_lossy(&body);
-    Ok(Response::builder()
-        .status(status)
-        .body(body.into())
-        .unwrap())
+    Ok(resp_builder.body(body.into())?)
 }
 
 
