@@ -1,46 +1,12 @@
 use std::future::Future as NewFuture;
 use tokio_current_thread::CurrentThread;
-//use tokio_current_thread::TaskExecutor;
 use std::time;
 use super::asynk::{backward};
-use take_mut::take;
-//
-//#[derive(Debug)]
-//pub struct AsyncExecutor {
-//    current_thread: CurrentThread,
-//}
-//
-//impl AsyncExecutor {
-//    pub fn new() -> Self {
-//        Self { current_thread: CurrentThread::new() }
-//    }
-//
-//    pub fn turn(&mut self) {
-//        let duration = time::Duration::from_millis(30);
-//        self.current_thread.turn(Some(duration)).unwrap();
-//    }
-//
-//    pub fn exec<I, E: std::fmt::Debug, F: NewFuture<Output = Result<I, E>> + 'static>(&mut self, future: F) {
-//        self.current_thread.spawn(backward(async {
-//            await!(future).unwrap();
-//            Ok(())
-//        }));
-//    }
-//}
-
-use std::io::Error as IoError;
-use std::time::{Duration, Instant};
-
-use futures::{future, Future};
-//use tokio_current_thread::CurrentThread;
 use tokio_reactor::Reactor;
 use tokio_timer::timer::{self, Timer};
-//use std::time;
-//use super::asynk::{backward};
-//use std::future::Future as NewFuture;
-use std::cell::RefCell;
 
-
+// got this from
+// https://github.com/tokio-rs/tokio/blob/9b1a45cc/examples/manual-runtime.rs
 pub fn with_executor_context<F: FnOnce(AsyncExecutor)>(run: F) {
     // We need a reactor to receive events about IO objects from kernel
     let reactor = Reactor::new().unwrap();
@@ -64,7 +30,7 @@ pub fn with_executor_context<F: FnOnce(AsyncExecutor)>(run: F) {
             // use the fake one here as the default one.
             let mut default_executor = tokio_current_thread::TaskExecutor::current();
             tokio_executor::with_default(&mut default_executor, enter, |enter| {
-                let mut executor = executor.enter(enter);
+                let executor = executor.enter(enter);
                 run(AsyncExecutor::new(executor));
             });
         });
