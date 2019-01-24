@@ -1,15 +1,10 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::Rc;
 
 use itertools::Itertools;
-use objekt::{clone_trait_object,__internal_clone_trait_object};
 
-use super::code_generation;
 use super::editor;
 use super::lang::CodeNode;
 use super::lang;
-use super::structs;
 use super::undo;
 use super::env_genie::EnvGenie;
 use super::insert_code_menu::InsertCodeMenu;
@@ -839,8 +834,8 @@ impl InsertionPoint {
 
     fn selected_node_id(&self) -> Option<lang::ID> {
         match *self {
-            InsertionPoint::Before(id) => None,
-            InsertionPoint::After(id) => None,
+            InsertionPoint::Before(_) => None,
+            InsertionPoint::After(_) => None,
             InsertionPoint::Argument(id) => Some(id),
             InsertionPoint::StructLiteralField(id) => Some(id),
             InsertionPoint::Editing(id) => Some(id),

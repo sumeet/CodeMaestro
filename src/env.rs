@@ -1,7 +1,6 @@
 use super::lang;
 use super::structs;
 use super::async_executor;
-use super::external_func::preresolve_futures_if_external_func;
 use super::external_func::resolve_all_futures;
 
 use std::borrow::Borrow;

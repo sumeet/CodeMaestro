@@ -122,7 +122,7 @@ impl<'a> serde::Serialize for ValueWithEnv<'a> {
                 map.end()
             }
             // TODO: map it into a JS future
-            (env, Future(_old_fut)) => {
+            (_env, Future(_old_fut)) => {
                 serializer.serialize_none()
             }
         }

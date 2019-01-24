@@ -5,14 +5,11 @@ use std::collections::HashMap;
 use std::iter;
 use std::boxed::FnBox;
 
-use objekt::{clone_trait_object,__internal_clone_trait_object};
 use super::env;
 use super::lang;
 use super::code_loading;
 use super::code_generation;
-use super::lang::{
-    Value,CodeNode,Function,FunctionCall,FunctionReference,StringLiteral,ID,Assignment,Block,
-    VariableReference};
+use super::lang::{Value,CodeNode,Function,ID};
 use itertools::Itertools;
 use super::pystuff;
 use super::jsstuff;
@@ -134,7 +131,7 @@ impl<'a> Controller {
             let location = code_editor::CodeLocation::Script(id);
             self.code_editor_by_id.insert(id, code_editor::CodeEditor::new(&script.code(), location));
         } else {
-            let mut code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
+            let code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
             code_editor.replace_code(&script.code());
         }
         self.script_by_id.insert(script.id(), script);
@@ -147,15 +144,15 @@ impl<'a> Controller {
             self.code_editor_by_id.insert(id, code_editor::CodeEditor::new(code_node, location));
         } else {
             println!("changing the existing code editor");
-            let mut code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
+            let code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
             code_editor.replace_code(code_node);
         }
     }
 
-    // should run the loaded code node
-    pub fn run(&mut self, _code_node: &CodeNode) {
-        // TODO: ugh this doesn't work
-    }
+//    // should run the loaded code node
+//    pub fn run(&mut self, _code_node: &CodeNode) {
+//        // TODO: ugh this doesn't work
+//    }
 }
 
 pub trait UiToolkit {
@@ -264,7 +261,7 @@ impl CommandBuffer {
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
         let code = code.clone();
         self.add_integrating_command(
-            move |controller, interpreter, async_executor| {
+            move |_controller, interpreter, async_executor| {
                 env::run(interpreter, async_executor, &code, callback);
             }
         )
@@ -439,10 +436,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_window(&format!("Edit function: {}", code_func.id()), &|| {
             let cont1 = Rc::clone(&self.command_buffer);
             let code_func1 = code_func.clone();
-            let cont2 = Rc::clone(&self.command_buffer);
-            let code_func2 = code_func.clone();
-            let cont3 = Rc::clone(&self.command_buffer);
-            let code_func3 = code_func.clone();
 
             self.ui_toolkit.draw_all(vec![
                 self.ui_toolkit.draw_text_input_with_label(
@@ -561,11 +554,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             ])
         },
         None::<fn(Keypress)>)
-    }
-
-    fn get_struct(&self, struct_id: lang::ID) -> Option<structs::Struct> {
-        let typespec = self.env_genie.find_typespec(struct_id).cloned()?;
-        typespec.downcast::<structs::Struct>().map(|bawx| *bawx).ok()
     }
 
     fn render_edit_structs(&self) -> T::DrawResult {

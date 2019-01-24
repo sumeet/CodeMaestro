@@ -52,21 +52,6 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
     })
 }
 
-// right now to simplify execution, this just always gets called no matter if we're calling
-// an external func or not. we can update the Interpreter to be smarter about awaiting futures
-// at the last minute, however, later. this should simplify things for now
-pub fn preresolve_futures_if_external_func(
-//    _func: Option<Box<lang::Function + 'static>>,
-    value: lang::Value) -> lang::ValueFuture {
-
-    if let lang::Value::Future(fut) = resolve_futures(value) {
-        println!("preresolving taking path 2");
-        return lang::Value::new_value_future(async move { await!(fut) })
-    } else {
-        panic!("there's no way this could happen")
-    }
-}
-
 pub async fn resolve_all_futures(mut val: lang::Value) -> lang::Value {
     while contains_futures(&val) {
         val = resolve_futures(val);
@@ -80,7 +65,7 @@ pub async fn resolve_all_futures(mut val: lang::Value) -> lang::Value {
 
 fn contains_futures(val: &lang::Value) -> bool {
     match val {
-        lang::Value::Future(value_future) => {
+        lang::Value::Future(_value_future) => {
             // need to recursive call here because even after resolving the
             // future, the Value could contain MORE nested futures!
             true
@@ -88,7 +73,7 @@ fn contains_futures(val: &lang::Value) -> bool {
         lang::Value::List(v) => {
             v.iter().any(contains_futures)
         },
-        lang::Value::Struct { values, struct_id } => {
+        lang::Value::Struct { values, .. } => {
             values.iter().any(|(_id, val)| contains_futures(val))
         },
         lang::Value::Null | lang::Value::String(_) | lang::Value::Error(_) |

@@ -32,7 +32,6 @@ pub const PX_PER_INDENTATION_LEVEL : i16 = 20;
 pub struct CodeEditorRenderer<'a, T> {
     ui_toolkit: &'a T,
     arg_nesting_level: Rc<RefCell<u32>>,
-    indentation_level: Rc<RefCell<u8>>,
     code_editor: &'a code_editor::CodeEditor,
     command_buffer: Rc<RefCell<PerEditorCommandBuffer>>,
     env_genie: &'a EnvGenie<'a>,
@@ -50,7 +49,6 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             code_editor,
             command_buffer: Rc::new(RefCell::new(command_buffer)),
             arg_nesting_level: Rc::new(RefCell::new(0)),
-            indentation_level: Rc::new(RefCell::new(0)),
             env_genie,
         }
     }
@@ -269,7 +267,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         let top_border_thickness = top_border_thickness + nesting_level + 1;
         let drawn = self.ui_toolkit.draw_top_border_inside(BLACK_COLOR, top_border_thickness as u8, &|| {
             self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &|| {
-                self.ui_toolkit.draw_left_border_inside(BLACK_COLOR, right_border_thickness, &|| {
+                self.ui_toolkit.draw_left_border_inside(BLACK_COLOR, left_border_thickness, &|| {
                     self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, draw_fn)
                 })
             })
@@ -687,7 +685,7 @@ impl PerEditorCommandBuffer {
                     code_function.set_code(code.into_block().unwrap().clone());
                     env.add_function(*code_function);
                 },
-                code_editor::CodeLocation::Script(script_id) => {
+                code_editor::CodeLocation::Script(_script_id) => {
                     let script = scripts::Script { code: code.into_block().unwrap().clone() };
                     cont.load_script(script)
                 }

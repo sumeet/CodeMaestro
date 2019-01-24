@@ -1,4 +1,3 @@
-use super::asynk::forward;
 use stdweb::PromiseFuture;
 use http::{Request,Response};
 use stdweb::{js,_js_impl, js_deserializable, __js_deserializable_serde_boilerplate};
@@ -6,10 +5,10 @@ use stdweb::{js,_js_impl, js_deserializable, __js_deserializable_serde_boilerpla
 use stdweb::unstable::TryInto;
 use std::collections::HashMap;
 use serde_derive::{Serialize,Deserialize};
-use stdweb::{console,__internal_console_unsafe};
 
 // this conflicts with the js_deserializable macro definition if it's called Result, hence the rename
 // to EZResult
+#[allow(dead_code)] // bug in rustc warns for this
 type EZResult<T> = std::result::Result<T, Box<std::error::Error>>;
 
 pub async fn fetch<T>(request: Request<T>) -> EZResult<Response<String>> {

@@ -258,11 +258,10 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
 struct InsertLiteralOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
+    fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
         let input_str = &search_params.lowercased_trimmed_search_str();
-        let return_type = &search_params.return_type;
         if let Some(ref return_type) = search_params.return_type {
             if return_type.matches_spec(&lang::STRING_TYPESPEC) {
                 options.push(self.string_literal_option(input_str));

@@ -1,7 +1,6 @@
 use serde_derive::{Serialize,Deserialize};
 
 use super::lang;
-use uuid;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Enum {

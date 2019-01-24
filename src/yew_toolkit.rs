@@ -600,14 +600,14 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
         });
     }
 
-    let mut yew_app = App::<Model>::new().mount_to_body();
+    let yew_app = App::<Model>::new().mount_to_body();
     let yew_app_rc = Rc::new(RefCell::new(yew_app));
     setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&yew_app_rc));
     yew_app_rc.borrow_mut().send_message(Msg::Init(Rc::clone(&app), async_executor));
     yew::run_loop();
 }
 
-fn setup_ui_update_on_io_event_completion(mut async_executor: &mut AsyncExecutor,
+fn setup_ui_update_on_io_event_completion(async_executor: &mut AsyncExecutor,
                                           yew_app_rc: Rc<RefCell<html::Scope<Model>>>) {
     async_executor.setonupdate(Rc::new(move || {
         yew_app_rc.borrow_mut().send_message(Msg::Redraw);

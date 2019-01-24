@@ -45,7 +45,7 @@ impl<'a> Validator<'a> {
         }
     }
 
-    fn fix_return(&mut self, mut code_func: code_function::CodeFunction) {
+    fn fix_return(&mut self, code_func: code_function::CodeFunction) {
         let mut block = code_func.block.clone();
         if is_placeholder_expression(block.expressions.last()) {
             let mut placeholder = block.expressions.last().unwrap().into_placeholder().unwrap().clone();

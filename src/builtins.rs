@@ -1,10 +1,6 @@
-use cfg_if::{cfg_if};
-
 use std::collections::HashMap;
 use super::lang;
 use super::env;
-use super::structs;
-use serde_json::json;
 use lazy_static::lazy_static;
 use itertools::Itertools;
 use url;
@@ -162,6 +158,6 @@ impl HTTPGet {
 }
 
 
-fn new_result(ok_type: lang::Type) -> lang::Type {
-    lang::Type { typespec_id: *RESULT_ENUM_ID, params: vec![ok_type] }
-}
+//fn new_result(ok_type: lang::Type) -> lang::Type {
+//    lang::Type { typespec_id: *RESULT_ENUM_ID, params: vec![ok_type] }
+//}
