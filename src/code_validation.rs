@@ -45,6 +45,7 @@ impl<'a> Validator<'a> {
         }
     }
 
+    // fixes the return statement of code functions
     fn fix_return(&mut self, code_func: code_function::CodeFunction) {
         let mut block = code_func.block.clone();
         if is_placeholder_expression(block.expressions.last()) {
@@ -64,8 +65,6 @@ impl<'a> Validator<'a> {
 pub fn validate_and_fix(env: &mut env::ExecutionEnvironment, cmd_buffer: &mut editor::CommandBuffer) {
     Validator::new(env, cmd_buffer).validate_and_fix();
 }
-
-
 
 fn is_placeholder_expression(code_node: Option<&lang::CodeNode>) -> bool {
     match code_node {
