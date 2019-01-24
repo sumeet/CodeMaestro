@@ -22,7 +22,6 @@ pub async fn fetch<T>(request: Request<T>) -> EZResult<Response<String>> {
     Ok(resp_builder.body(js_resp.text)?)
 }
 
-
 fn js_fetch<T>(request: Request<T>) -> PromiseFuture<JSHTTPResponse> {
     let request_url: String = request.uri().to_string();
     js! (
