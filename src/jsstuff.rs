@@ -120,6 +120,9 @@ impl<'a> serde::Serialize for ValueWithEnv<'a> {
                     map.serialize_entry(name, &val_with_env)?;
                 }
                 map.end()
+            },
+            (env, Enum { box value, .. }) => {
+                Self { value: value.clone(), env }.serialize(serializer)
             }
             // TODO: map it into a JS future
             (_env, Future(_old_fut)) => {
