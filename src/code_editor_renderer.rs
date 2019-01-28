@@ -114,7 +114,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             let cmdb = cmd_buffer.clone();
             let new_code_node = new_code_node.clone();
 
-            self.ui_toolkit.draw_small_button(&option.label, button_color, move|| {
+            self.draw_small_button(&option.label, button_color, move|| {
                 let ncn = new_code_node.clone();
                 cmdb.borrow_mut().add_editor_command(move |editor| {
                     editor.hide_insert_code_menu();
@@ -139,7 +139,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                     assignment.id
                 )
             },
-            &|| { self.ui_toolkit.draw_text(" = ") },
+            &|| { self.draw_text(" = ") },
             &|| { self.render_code(assignment.expression.as_ref()) }
         ])
     }
@@ -156,7 +156,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 let insertion_point = menu.insertion_point.clone();
                 let new_code_node = menu.selected_option_code(&self.code_editor.code_genie, self.env_genie);
 
-                self.ui_toolkit.draw_text_input(
+                self.draw_text_input(
                     menu.input_str(),
                     move |input|{
                         let input = input.to_string();
@@ -210,7 +210,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         //       with the black lines (can actually make that generic so we can swap it with something
         //       else
         let type_symbol = self.env_genie.get_symbol_for_type(&t);
-        let lhs = &|| self.ui_toolkit.draw_button(&type_symbol, BLUE_COLOR, &|| {});
+        let lhs = &|| self.draw_button(&type_symbol, BLUE_COLOR, &|| {});
 
         let insert_pos = match self.code_editor.insert_code_menu {
             Some(InsertCodeMenu {
@@ -228,7 +228,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 rhs.push(Box::new(move || {
                     self.ui_toolkit.draw_all_on_same_line(&[
                         &|| {
-                            self.ui_toolkit.draw_button(&position_string, BLACK_COLOR, &||{})
+                            self.draw_button(&position_string, BLACK_COLOR, &||{})
                         },
                         &|| self.render_nested(&|| self.render_insert_code_node()),
                     ])
@@ -240,7 +240,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 rhs.push(Box::new(move || {
                     self.ui_toolkit.draw_all_on_same_line(&[
                         &|| {
-                            self.ui_toolkit.draw_button(&position_label.to_string(), BLACK_COLOR, &|| {})
+                            self.draw_button(&position_label.to_string(), BLACK_COLOR, &|| {})
                         },
                         &|| self.render_nested(&|| self.render_code(el)),
                     ])
@@ -258,21 +258,30 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_nested(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
-        let top_border_thickness = 1;
+        self.arg_nesting_level.replace_with(|l| *l + 1);
+        let drawn = draw_fn();
+        self.arg_nesting_level.replace_with(|l| *l - 1);
+        drawn
+    }
+
+    fn draw_nested_borders_around(&self, draw_element_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
+        let nesting_level = *self.arg_nesting_level.borrow();
+        if nesting_level == 0 {
+            return draw_element_fn()
+        }
+
+        let top_border_thickness = 1 + nesting_level + 1;
         let right_border_thickness = 1;
         let left_border_thickness = 1;
         let bottom_border_thickness = 1;
 
-        let nesting_level = self.arg_nesting_level.replace_with(|l| *l + 1);
-        let top_border_thickness = top_border_thickness + nesting_level + 1;
         let drawn = self.ui_toolkit.draw_top_border_inside(BLACK_COLOR, top_border_thickness as u8, &|| {
             self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &|| {
                 self.ui_toolkit.draw_left_border_inside(BLACK_COLOR, left_border_thickness, &|| {
-                    self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, draw_fn)
+                    self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, draw_element_fn)
                 })
             })
         });
-        self.arg_nesting_level.replace_with(|l| *l - 1);
         drawn
     }
 
@@ -307,7 +316,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                     self.render_variable_reference(&variable_reference)
                 }
                 CodeNode::FunctionDefinition(_function_definition) => {
-                    self.ui_toolkit.draw_button(
+                    self.draw_button(
                         &"Function defs are unimplemented",
                         RED_COLOR,
                         ||{}
@@ -323,7 +332,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                     self.render_placeholder(&placeholder)
                 }
                 CodeNode::NullLiteral => {
-                    self.ui_toolkit.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol))
+                    self.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol))
                 },
                 CodeNode::StructLiteral(struct_literal) => {
                     self.render_struct_literal(&struct_literal)
@@ -355,7 +364,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         r[3] = 0.4;
         // TODO: maybe use the traffic cone instead of the exclamation triangle,
         // which is kinda hard to see
-        self.ui_toolkit.draw_button(
+        self.draw_button(
             &format!("{} {}", PLACEHOLDER_ICON, placeholder.description),
             r,
             &|| {})
@@ -379,7 +388,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             color = GREY_COLOR;
             function_name = function.name().to_string();
         }
-        self.ui_toolkit.draw_button(&function_name, color, &|| {})
+        self.draw_button(&function_name, color, &|| {})
     }
 
 
@@ -387,9 +396,9 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_variable_reference(&self, variable_reference: &lang::VariableReference) -> T::DrawResult {
         let assignment = self.code_editor.code_genie.find_node(variable_reference.assignment_id);
         if let Some(CodeNode::Assignment(assignment)) = assignment {
-            self.ui_toolkit.draw_button(&assignment.name, PURPLE_COLOR, &|| {})
+            self.draw_button(&assignment.name, PURPLE_COLOR, &|| {})
         } else {
-            self.ui_toolkit.draw_button("Variable reference not found", RED_COLOR, &|| {})
+            self.draw_button("Variable reference not found", RED_COLOR, &|| {})
         }
     }
 
@@ -468,7 +477,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {
-        self.ui_toolkit.draw_button(
+        self.draw_button(
             "this shouldn't have happened, you've got a missing function arg somehow",
             RED_COLOR,
             &|| {})
@@ -552,13 +561,13 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_struct_identifier(&self, strukt: &structs::Struct,
                                 _struct_literal: &lang::StructLiteral) -> T::DrawResult {
         // TODO: handle when the typespec ain't available
-        self.ui_toolkit.draw_button(&strukt.name, BLUE_COLOR, &|| {})
+        self.draw_button(&strukt.name, BLUE_COLOR, &|| {})
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_all_on_same_line(&[
-                &|| { self.ui_toolkit.draw_button("If", GREY_COLOR, &||{}) },
+                &|| { self.draw_button("If", GREY_COLOR, &||{}) },
                 &|| { self.render_code(&conditional.condition) },
             ]),
             self.render_indented(&|| { self.render_code(&conditional.true_branch) }),
@@ -571,7 +580,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_inline_editable_button(&self, label: &str, color: Color, code_node_id: lang::ID) -> T::DrawResult {
         let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_button(label, color, move || {
+        self.draw_button(label, color, move || {
             cmd_buffer.borrow_mut().add_editor_command(move |editor| {
                 editor.mark_as_editing(InsertionPoint::Editing(code_node_id));
             })
@@ -625,7 +634,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 // TODO: this is super hacks. the editor just reaches in and makes something not
                 // editing while rendering lol
                 self.command_buffer.borrow_mut().add_editor_command(|e| e.mark_as_not_editing());
-                self.ui_toolkit.draw_button(&format!("Not possible to edit {:?}", code_node), RED_COLOR, &||{})
+                self.draw_button(&format!("Not possible to edit {:?}", code_node), RED_COLOR, &||{})
             }
         }
     }
@@ -636,7 +645,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
 
         let new_node_fn = Rc::new(new_node_fn);
 
-        self.ui_toolkit.draw_text_input(
+        self.draw_text_input(
             initial_value,
             move |new_value| {
                 let new_node_fn = Rc::clone(&new_node_fn);
@@ -653,6 +662,39 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             },
             // TODO: i think we need another callback for what happens when you CANCEL
         )
+    }
+
+    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, onclick: F) -> T::DrawResult {
+        let onclick_rc = Rc::new(RefCell::new(onclick));
+        self.draw_nested_borders_around(& || {
+            let onclick_rc = Rc::clone(&onclick_rc);
+            self.ui_toolkit.draw_button(label, color, move|| onclick_rc.borrow()())
+        })
+    }
+
+    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, onclick: F) -> T::DrawResult {
+        let onclick_rc = Rc::new(RefCell::new(onclick));
+        self.draw_nested_borders_around(& || {
+            let onclick_rc = Rc::clone(&onclick_rc);
+            self.ui_toolkit.draw_small_button(label, color, move|| onclick_rc.borrow()())
+        })
+    }
+
+    fn draw_text(&self, text: &str) -> T::DrawResult {
+        self.draw_nested_borders_around(&|| self.ui_toolkit.draw_text(text))
+    }
+
+    fn draw_text_input<F: Fn(&str) + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F,
+                                                                 ondone: D) -> T::DrawResult {
+        let onchange_rc = Rc::new(RefCell::new(onchange));
+        let ondone_rc = Rc::new(RefCell::new(ondone));
+        self.draw_nested_borders_around(&|| {
+            let onchange_rc = Rc::clone(&onchange_rc);
+            let ondone_rc = Rc::clone(&ondone_rc);
+            self.ui_toolkit.draw_text_input(existing_value,
+                                            move |v| onchange_rc.borrow()(v),
+                                            move || ondone_rc.borrow()())
+        })
     }
 }
 
