@@ -158,6 +158,6 @@ impl HTTPGet {
 }
 
 
-//fn new_result(ok_type: lang::Type) -> lang::Type {
-//    lang::Type { typespec_id: *RESULT_ENUM_ID, params: vec![ok_type] }
-//}
+pub fn new_result(ok_type: lang::Type) -> lang::Type {
+    lang::Type { typespec_id: *RESULT_ENUM_ID, params: vec![ok_type] }
+}

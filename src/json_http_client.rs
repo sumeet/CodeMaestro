@@ -2,6 +2,7 @@ use super::builtins;
 use super::lang;
 use super::env;
 use super::function;
+use super::builtins::new_result;
 
 use http;
 use std::collections::HashMap;
@@ -9,9 +10,11 @@ use std::collections::HashMap;
 #[derive(Clone)]
 pub struct JSONHTTPClient {
     pub url: String,
+    // for body params, we can use a JSON enum strings, ints, bools, etc.
     pub name: String,
-    pub method: http::Method,
-    pub url_params: Vec<(String, String)>,
+    // hardcoded to GET for now
+//    pub method: http::Method,
+    pub gen_url_params: lang::Block,
     pub args: Vec<lang::ArgumentDefinition>
 }
 
@@ -29,26 +32,14 @@ impl lang::Function for JSONHTTPClient {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![lang::ArgumentDefinition {
-            id: uuid::Uuid::parse_str("6c132cea-b6df-46e0-91e3-2a16616a9ac4").unwrap(),
-            arg_type: lang::Type {
-                typespec_id: lang::STRING_TYPESPEC.id,
-                params: vec![]
-            },
-            short_name: "URL".to_string(),
-        }]
+        self.args.clone()
     }
 
     fn returns(&self) -> lang::Type {
-        lang::Type {
-            typespec_id: *builtins::RESULT_ENUM_ID,
-            params: vec![
-                lang::Type {
-                    typespec_id: *builtins::HTTP_RESPONSE_STRUCT_ID,
-                    params: vec![],
-                }
-            ]
-        }
+        new_result(lang::Type {
+            typespec_id: *builtins::HTTP_RESPONSE_STRUCT_ID,
+            params: vec![],
+        })
     }
 }
 

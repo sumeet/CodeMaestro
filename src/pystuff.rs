@@ -80,6 +80,7 @@ impl<'a> IntoPyObject for ValueWithEnv<'a> {
             // not quite sure what to do with these...
             (_, Error(e)) => format!("{:?}", e).into_object(py),
             (_, Number(i)) => i.into_object(py),
+            (env, Enum { box value, .. }) => Self { value, env }.into_object(py),
             (env, List(v)) => {
                 v.into_iter().map(|item| Self { value: item, env: env }.into_object(py))
                     .collect_vec().into_object(py)

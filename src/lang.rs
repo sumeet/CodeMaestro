@@ -134,6 +134,7 @@ pub enum Value {
     List(Vec<Value>),
     Struct {struct_id: ID, values: StructValues},
     Future(ValueFuture),
+    Enum { variant_id: ID, value: Box<Value> },
 }
 
 impl Value {

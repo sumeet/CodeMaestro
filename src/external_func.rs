@@ -46,8 +46,9 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
                     }).collect()
                 }
             },
+            lang::Value::Enum { box value, .. } => resolve_futures(value),
             lang::Value::Null | lang::Value::String(_) | lang::Value::Error(_) |
-            lang::Value::Number(_) | lang::Value::Boolean(_) => value
+            lang::Value::Number(_) | lang::Value::Boolean(_) => value,
         }
     })
 }
@@ -76,6 +77,7 @@ fn contains_futures(val: &lang::Value) -> bool {
         lang::Value::Struct { values, .. } => {
             values.iter().any(|(_id, val)| contains_futures(val))
         },
+        lang::Value::Enum { box value, .. } => contains_futures(value),
         lang::Value::Null | lang::Value::String(_) | lang::Value::Error(_) |
         lang::Value::Number(_) | lang::Value::Boolean(_) => false
     }
