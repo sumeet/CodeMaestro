@@ -43,9 +43,9 @@ pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::C
     })
 }
 
-pub fn new_variable_reference(assignment: &lang::Assignment) -> lang::CodeNode {
+pub fn new_variable_reference(variable_id: lang::ID) -> lang::CodeNode {
     lang::CodeNode::VariableReference(lang::VariableReference {
-        assignment_id: assignment.id,
+        assignment_id: variable_id,
         id: lang::new_id(),
     })
 }

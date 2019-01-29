@@ -27,6 +27,10 @@ impl CodeFunction {
         }
     }
 
+    pub fn code_id(&self) -> lang::ID {
+        self.block.id
+    }
+
     pub fn code(&self) -> lang::CodeNode {
         lang::CodeNode::Block(self.block.clone())
     }

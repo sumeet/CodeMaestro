@@ -48,7 +48,7 @@ impl<'a> AsyncExecutor<'a> {
     }
 
     pub fn turn(&mut self) {
-        let duration = time::Duration::from_millis(30);
+        let duration = time::Duration::from_millis(10);
         self.executor.turn(Some(duration)).unwrap();
     }
 

@@ -391,15 +391,25 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         self.draw_button(&function_name, color, &|| {})
     }
 
-
-
     fn render_variable_reference(&self, variable_reference: &lang::VariableReference) -> T::DrawResult {
-        let assignment = self.code_editor.code_genie.find_node(variable_reference.assignment_id);
-        if let Some(CodeNode::Assignment(assignment)) = assignment {
-            self.draw_button(&assignment.name, PURPLE_COLOR, &|| {})
+//        let assignment = self.code_editor.code_genie.find_node(variable_reference.assignment_id);
+//        if let Some(CodeNode::Assignment(assignment)) = assignment {
+        if let Some(name) = self.lookup_variable_name(variable_reference) {
+            self.draw_button(&name, PURPLE_COLOR, &|| {})
         } else {
             self.draw_button("Variable reference not found", RED_COLOR, &|| {})
         }
+    }
+
+    fn lookup_variable_name(&self, variable_reference: &lang::VariableReference) -> Option<String> {
+        let assignment = self.code_editor.code_genie.find_node(variable_reference.assignment_id);
+        if let Some(CodeNode::Assignment(assignment)) = assignment {
+            return Some(assignment.name.clone())
+        }
+        // TODO: this searches all functions, but we could be smarter here because we already know which
+        //       function we're inside
+        let arg = self.env_genie.get_arg_definition(variable_reference.assignment_id)?;
+        Some(arg.short_name)
     }
 
     fn render_block(&self, block: &lang::Block) -> T::DrawResult {

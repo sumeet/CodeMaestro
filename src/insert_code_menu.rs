@@ -208,46 +208,52 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
 #[derive(Clone)]
 struct InsertVariableReferenceOptionGenerator {}
 
+struct Variable {
+    locals_id: lang::ID,
+    type_id: lang::ID,
+    name: String,
+}
+
+// also handles function arguments
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
         let insertion_id = search_params.insertion_point.node_id();
-        let assignments_by_type_id : HashMap<lang::ID, Vec<lang::Assignment>> = code_genie.find_assignments_that_come_before_code(insertion_id)
+
+        let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = code_genie.find_assignments_that_come_before_code(insertion_id)
             .into_iter()
-            .group_by(|assignment| {
-                let assignment : lang::Assignment = (**assignment).clone();
-                code_genie.guess_type(&lang::CodeNode::Assignment(assignment), env_genie).id()
+            .map(|assignment| {
+                let assignment_clone : lang::Assignment = (*assignment).clone();
+                let guessed_type_id = code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone), env_genie).id();
+                Variable { locals_id: assignment.id, type_id: guessed_type_id, name: assignment.name.clone() }
             })
+            .chain(
+                env_genie.code_takes_args(code_genie.root().id())
+                    .map(|arg| Variable { locals_id: arg.id, type_id: arg.arg_type.id(), name: arg.short_name })
+            )
+            .group_by(|variable| variable.type_id)
             .into_iter()
-            .map(|(id, assignments)| (id, assignments.cloned().collect::<Vec<lang::Assignment>>()))
+            .map(|(id, variables)| (id, variables.collect()))
             .collect();
 
-        let mut assignments = if let Some(search_type) = &search_params.return_type {
-            // XXX: this won't work for generics i believe
-            assignments_by_type_id.get(&search_type.id()).map_or_else(
-                || vec![],
-                |assignments| assignments.iter()
-                    .map(|assignment| assignment.clone()).collect()
-            )
+        let mut variables : Vec<Variable> = if let Some(search_type) = &search_params.return_type {
+            variables_by_type_id.remove(&search_type.id()).unwrap_or_else(|| vec![])
         } else {
-            assignments_by_type_id.iter()
-                .flat_map(|(_id, assignments)| assignments)
-                .map(|assignment| assignment.clone())
-                .collect()
+            Iterator::flatten(variables_by_type_id.drain().map(|(_, v)| v)).collect()
         };
 
         let input_str = search_params.lowercased_trimmed_search_str();
         if !input_str.is_empty() {
-            assignments = assignments.into_iter()
-                .filter(|assignment| {
-                    assignment.name.to_lowercase().contains(&input_str)
-                }).collect()
+            variables = variables.into_iter()
+                .filter(|variable| variable.name.to_lowercase().contains(&input_str))
+                .collect();
         }
 
-        assignments.into_iter().map(|assignment| {
+        variables.into_iter().map(|variable| {
+            let id = variable.locals_id;
             InsertCodeMenuOption {
-                label: assignment.name.to_string(),
-                new_node: code_generation::new_variable_reference(&assignment),
+                label: variable.name,
+                new_node: code_generation::new_variable_reference(id),
                 is_selected: false,
             }
         }).collect()

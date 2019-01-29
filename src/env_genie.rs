@@ -5,6 +5,7 @@ use super::structs;
 use super::code_function;
 use super::pystuff;
 use super::jsstuff;
+use super::lang::Function;
 
 use itertools::Itertools;
 
@@ -116,6 +117,12 @@ impl<'a> EnvGenie<'a> {
             }
         }
         None
+    }
+
+    pub fn code_takes_args(&'a self, root_id: lang::ID) -> impl Iterator<Item = lang::ArgumentDefinition> + 'a {
+        self.list_code_funcs()
+            .filter(move |cf| cf.code_id() == root_id)
+            .flat_map(|cf| cf.takes_args().into_iter())
     }
 }
 
