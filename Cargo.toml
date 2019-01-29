@@ -8,7 +8,7 @@ edition = "2018"
 default-run = "cs"
 
 [features]
-default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "pyo3", "slack",
+default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "pyo3", "slack",
            "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest"]
 javascript = ["yew", "stdweb"]
 
@@ -34,11 +34,12 @@ matches = "0.1.8"
 url = "1.7.2"
 
 pyo3 = { version = "0.5.2", optional = true }
-glium = { version = "0.22", default-features = true, optional = true }
-glutin = { version = "0.18", optional = true }
-imgui = { version = "0.0.21", optional = true }
-imgui-sys = { version = "0.0.21", optional = true }
-imgui-glium-renderer = { version = "0.0.21", optional = true }
+glium = { version = "0.23", default-features = true, optional = true }
+glutin = { version = "0.19", optional = true }
+imgui = { git = "https://github.com/Gekkio/imgui-rs", branch = "master", optional = true }
+imgui-sys = { git = "https://github.com/Gekkio/imgui-rs", branch = "master", optional = true }
+imgui-glium-renderer = { git = "https://github.com/Gekkio/imgui-rs", branch = "master", optional = true }
+imgui-winit-support = { git = "https://github.com/Gekkio/imgui-rs", branch = "master", optional = true }
 tokio = {version = "0.1.13", features = ["async-await-preview"], optional = true }
 tokio-reactor = {version = "0.1.7", optional = true }
 tokio-current-thread = {version = "0.1.4", optional = true }
@@ -52,9 +53,9 @@ yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
 slack = { git = "https://github.com/sumeet/slack-rs", features = ["future"], branch = "master", optional = true }
 
 # wow i can't believe i need this
-futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["tokio-compat"] }
+futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat"] }
 
 [patch.crates-io]
 futures-core-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 futures-sink-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
-futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
+futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat"] }

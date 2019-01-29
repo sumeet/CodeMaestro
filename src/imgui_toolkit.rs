@@ -176,11 +176,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let (first_rhs, rest) = rhss.split_first().unwrap();
         let (last_rhs, inner_rhs) = rest.split_last().unwrap();
 
-        unsafe { imgui_sys::igPushStyleVarVec(imgui_sys::ImGuiStyleVar::ItemSpacing, (0.0, -1.0).into()) };
+        unsafe { imgui_sys::igPushStyleVarVec2(imgui_sys::ImGuiStyleVar::ItemSpacing, (0.0, -1.0).into()) };
         self.ui.group(|| lhs());
 
-        let mut max = ImVec2::zero();
-        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
 
         self.ui.same_line_spacing(0., 0.);
         let cursor_pos = unsafe { imgui_sys::igGetCursorPosX() };
@@ -254,10 +253,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn()) {
         self.ui.group(draw_fn);
-        let mut min = ImVec2::zero();
-        let mut max = ImVec2::zero();
-        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
-        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        let mut mx = ImVec2::zero();
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui.get_window_draw_list()
             .add_rect(min, max, color)
             .filled(true)
@@ -266,10 +264,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
         self.ui.group(draw_fn);
-        let mut min = ImVec2::zero();
-        let mut max = ImVec2::zero();
-        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
-        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui.get_window_draw_list()
             .add_rect(min, (max.x, min.y + thickness as f32 - 1.), color)
             .thickness(1.)
@@ -279,10 +275,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
         self.ui.group(draw_fn);
-        let mut min = ImVec2::zero();
-        let mut max = ImVec2::zero();
-        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
-        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui.get_window_draw_list()
             .add_rect((max.x - thickness as f32, min.y), max, color)
             .thickness(1.)
@@ -292,10 +286,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_left_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
         self.ui.group(draw_fn);
-        let mut min = ImVec2::zero();
-        let mut max = ImVec2::zero();
-        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
-        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui.get_window_draw_list()
             .add_rect(min, (min.x - thickness as f32, max.y), color)
             .thickness(1.)
@@ -305,10 +297,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
         self.ui.group(draw_fn);
-        let mut min = ImVec2::zero();
-        let mut max = ImVec2::zero();
-        unsafe { imgui_sys::igGetItemRectMin(&mut min) };
-        unsafe { imgui_sys::igGetItemRectMax(&mut max) };
+        let min = unsafe { imgui_sys::igGetItemRectMin() };
+        let max = unsafe { imgui_sys::igGetItemRectMax() };
         self.ui.get_window_draw_list()
             .add_rect((min.x, max.y - thickness as f32), max, color)
             .thickness(1.)
