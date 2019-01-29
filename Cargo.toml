@@ -57,5 +57,5 @@ futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs"
 
 [patch.crates-io]
 futures-core-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
-futures-sink-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
+#futures-sink-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat"] }
