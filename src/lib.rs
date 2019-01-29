@@ -39,6 +39,7 @@ mod code_generation;
 mod code_validation;
 mod function;
 mod code_function;
+mod tests;
 mod scripts;
 mod external_func;
 #[cfg(feature = "default")]
@@ -142,7 +143,7 @@ pub fn main() {
 }
 
 // TODO: this is a mess
-fn init_controller(interpreter: &env::Interpreter) -> Controller {
+fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::CommandBuffer) -> Controller {
     let mut controller = Controller::new();
     let codestring = include_str!("../codesample.json");
     let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
@@ -158,6 +159,9 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     for script in the_world.scripts {
         controller.load_script(script)
     }
+    for code_func in the_world.codefuncs {
+        cmd_buffer.load_code_func(code_func)
+    }
 
     controller
 }
@@ -172,9 +176,10 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         let interpreter = env::Interpreter::new();
+        let mut command_buffer = editor::CommandBuffer::new();
+        let controller = init_controller(&interpreter, &mut command_buffer);
         let command_buffer =
-            Rc::new(RefCell::new(editor::CommandBuffer::new()));
-        let controller = init_controller(&interpreter);
+            Rc::new(RefCell::new(command_buffer));
         Self {
             interpreter,
             command_buffer,

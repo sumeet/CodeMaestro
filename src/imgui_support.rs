@@ -1,4 +1,4 @@
-use imgui::{FontGlyphRange, FrameSize, ImFontConfig, ImGui, Ui};
+use imgui::{FontGlyphRange, ImFontConfig, ImGui, Ui};
 use std::time::Instant;
 use glium::glutin::ElementState::Pressed;
 use glium::glutin::WindowEvent::*;

@@ -399,8 +399,14 @@ impl CodeGenie {
                     lang::Type::from_spec(&*lang::NULL_TYPESPEC)
                 }
             }
-            CodeNode::VariableReference(_) => {
-                lang::Type::from_spec(&*lang::NULL_TYPESPEC)
+            CodeNode::VariableReference(vr) => {
+                if let Some(assignment) = self.find_node(vr.assignment_id) {
+                    self.guess_type(assignment, env_genie)
+                } else {
+                    // couldn't find assignment with that variable name, looking for function args
+                    env_genie.get_type_for_arg(vr.assignment_id)
+                        .expect(&format!("couldn't find arg for assignment {}", vr.assignment_id))
+                }
             }
             CodeNode::FunctionReference(_) => {
                 lang::Type::from_spec(&*lang::NULL_TYPESPEC)

@@ -24,6 +24,7 @@ use super::env_genie;
 use super::code_editor_renderer::CodeEditorRenderer;
 use super::async_executor;
 use super::scripts;
+use super::tests;
 
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
@@ -84,6 +85,8 @@ pub struct Controller {
     test_result_by_func_id: HashMap<ID, TestResult>,
     code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
     script_by_id: HashMap<ID, scripts::Script>,
+    tests: Vec<tests::Test>,
+    selected_test_id_by_subject: HashMap<tests::TestSubject, ID>,
 }
 
 impl<'a> Controller {
@@ -92,7 +95,17 @@ impl<'a> Controller {
             test_result_by_func_id: HashMap::new(),
             code_editor_by_id: HashMap::new(),
             script_by_id: HashMap::new(),
+            tests: vec![],
+            selected_test_id_by_subject: HashMap::new(),
         }
+    }
+
+    pub fn add_test(&mut self, test: tests::Test) {
+        self.tests.push(test)
+    }
+
+    pub fn list_tests(&self, subject: tests::TestSubject) -> impl Iterator<Item = &tests::Test> {
+        self.tests.iter().filter(move |t| t.subject == subject)
     }
 
     pub fn get_editor_mut(&mut self, id: lang::ID) -> Option<&mut code_editor::CodeEditor> {
@@ -140,14 +153,22 @@ impl<'a> Controller {
     pub fn load_code(&mut self, code_node: &CodeNode, location: code_editor::CodeLocation) {
         let id = code_node.id();
         if !self.code_editor_by_id.contains_key(&id) {
-            println!("making  a new cde editor");
             self.code_editor_by_id.insert(id, code_editor::CodeEditor::new(code_node, location));
         } else {
-            println!("changing the existing code editor");
             let code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
             code_editor.replace_code(code_node);
         }
     }
+
+    // test section stuff
+    fn selected_test_id(&self, subject: tests::TestSubject) -> Option<ID> {
+        self.selected_test_id_by_subject.get(&subject).cloned()
+    }
+
+    fn mark_test_selected(&mut self, test_subject: tests::TestSubject, test_id: ID) {
+        self.selected_test_id_by_subject.insert(test_subject, test_id);
+    }
+    // end of test section stuff
 
 //    // should run the loaded code node
 //    pub fn run(&mut self, _code_node: &CodeNode) {
@@ -177,6 +198,11 @@ pub trait UiToolkit {
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
               H: Fn(&T) -> String;
+    fn draw_selectables<F, G, H, T>(&self, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
+        where T: 'static,
+              F: Fn(&T) -> () + 'static,
+              G: Fn(&T) -> bool,
+              H: Fn(&T) -> &str;
     fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool, onchange: F) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -231,15 +257,8 @@ impl CommandBuffer {
     pub fn load_code_func(&mut self, code_func: code_function::CodeFunction) {
         self.add_integrating_command(move |controller, interpreter, _| {
             let mut env = interpreter.env.borrow_mut();
-
             let code = code_func.code();
             let func_id = code_func.id();
-            use super::env_genie;
-            let env_genie = env_genie::EnvGenie::new(&env);
-            let code_genie = code_editor::CodeGenie::new(code_func.code());
-            let ct = env_genie.get_name_for_type(&code_genie.guess_type(&code_func.code(), &env_genie));
-            println!("loading func that returns {}", ct);
-            println!("loading func that returns {:?}", code);
             env.add_function(code_func);
             controller.load_code(&code, code_editor::CodeLocation::Function(func_id));
         })
@@ -270,12 +289,10 @@ impl CommandBuffer {
     pub fn add_integrating_command<F: FnOnce(&mut Controller, &mut env::Interpreter,
                                              &mut async_executor::AsyncExecutor) + 'static>(&mut self,
                                                                                             f: F) {
-        println!("adding integrating command");
         self.integrating_commands.push(Box::new(f));
     }
 
     pub fn add_controller_command<F: FnOnce(&mut Controller) + 'static>(&mut self, f: F) {
-        println!("adding controller command");
         self.controller_commands.push(Box::new(f));
     }
 
@@ -286,12 +303,10 @@ impl CommandBuffer {
     }
 
     pub fn add_interpreter_command<F: FnOnce(&mut env::Interpreter) + 'static>(&mut self, f: F) {
-        println!("adding interp command");
         self.interpreter_commands.push(Box::new(f));
     }
 
     pub fn add_environment_command<F: FnOnce(&mut env::ExecutionEnvironment) + 'static>(&mut self, f: F) {
-        println!("adding env command");
         self.add_interpreter_command(|interpreter| {
             f(&mut interpreter.env().borrow_mut())
         })
@@ -505,7 +520,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ),
                 self.render_return_type_selector(pyfunc),
                 self.ui_toolkit.draw_separator(),
-                self.render_test_section(pyfunc.clone()),
+                self.render_old_test_section(pyfunc.clone()),
                 self.ui_toolkit.draw_separator(),
                 self.render_general_function_menu(pyfunc),
             ])
@@ -548,7 +563,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ),
                 self.render_return_type_selector(jsfunc),
                 self.ui_toolkit.draw_separator(),
-                self.render_test_section(jsfunc.clone()),
+                self.render_old_test_section(jsfunc.clone()),
                 self.ui_toolkit.draw_separator(),
                 self.render_general_function_menu(jsfunc),
             ])
@@ -800,7 +815,34 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
                 cont1.borrow_mut().remove_function(func_id);
-            })
+            }),
+            self.render_test_section(func),
+        ])
+    }
+
+    fn render_test_section<F: lang::Function>(&self, func: &F) -> T::DrawResult {
+        let subject = tests::TestSubject::Function(func.id());
+        let tests = self.controller.list_tests(subject)
+            .collect_vec();
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        let cmd_buffer2 = Rc::clone(&self.command_buffer);
+        let selected_test_id = self.controller.selected_test_id(subject);
+        self.ui_toolkit.draw_all(vec![
+            self.ui_toolkit.draw_text("Tests:"),
+            self.ui_toolkit.draw_selectables(move |item| Some(item.id) == selected_test_id,
+                                             |t| &t.name,
+                                             &tests,
+                                             move |test| {
+                                                 let id = test.id;
+                                                 cmd_buffer2.borrow_mut().add_controller_command(move |cont| {
+                                                     cont.mark_test_selected(subject, id);
+                                                 })
+                                             }),
+            self.ui_toolkit.draw_button("Add a test", GREY_COLOR, move|| {
+                cmd_buffer.borrow_mut().add_controller_command(move |cont| {
+                    cont.add_test(tests::Test::new(subject))
+                })
+            }),
         ])
     }
 
@@ -972,7 +1014,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn render_test_section<F: lang::Function>(&self, func: F) -> T::DrawResult {
+    fn render_old_test_section<F: lang::Function>(&self, func: F) -> T::DrawResult {
         let test_result = self.controller.get_test_result(&func);
         let cont = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_all(vec![

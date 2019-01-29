@@ -385,6 +385,21 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
+    fn draw_selectables<F, G, H, T>(&self, is_item_selected: G, format_item: H, items: &[&T], onchange: F)
+        where T: 'static,
+              F: Fn(&T) -> () + 'static,
+              G: Fn(&T) -> bool,
+              H: Fn(&T) -> &str {
+        for item in items {
+            if self.ui.selectable(&self.imlabel(&format_item(item)),
+                                  is_item_selected(item),
+                                  ImGuiSelectableFlags::empty(),
+                                  (0., 0.)) {
+                onchange(item)
+            }
+        }
+    }
+
 
     fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool, onchange: F) {
         let mut val = value;
