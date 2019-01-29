@@ -11,7 +11,7 @@ use stdweb::{js,_js_impl};
 use itertools::Itertools;
 use uuid::Uuid;
 use lazy_static::lazy_static;
-use objekt::{clone_trait_object,__internal_clone_trait_object};
+use objekt::{clone_trait_object};
 use downcast_rs::impl_downcast;
 use serde_derive::{Serialize,Deserialize};
 

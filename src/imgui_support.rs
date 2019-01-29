@@ -1,4 +1,4 @@
-use imgui::{FontGlyphRange, FrameSize, ImFontConfig, ImGui, ImGuiMouseCursor, Ui};
+use imgui::{FontGlyphRange, FrameSize, ImFontConfig, ImGui, Ui};
 use std::time::Instant;
 use glium::glutin::ElementState::Pressed;
 use glium::glutin::WindowEvent::*;
@@ -7,13 +7,6 @@ use glium::glutin::VirtualKeyCode as Key;
 
 use super::editor::{Key as AppKey,Keypress};
 use imgui_winit_support;
-
-#[derive(Copy, Clone, PartialEq, Debug, Default)]
-struct MouseState {
-    pos: (i32, i32),
-    pressed: (bool, bool, bool),
-    wheel: f32,
-}
 
 pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                                                     clear_color: [f32; 4], mut run_ui: F) {
@@ -179,19 +172,6 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
             break;
         }
     }
-}
-
-fn update_mouse(imgui: &mut ImGui, mouse_state: &mut MouseState) {
-    imgui.set_mouse_pos(mouse_state.pos.0 as f32, mouse_state.pos.1 as f32);
-    imgui.set_mouse_down([
-        mouse_state.pressed.0,
-        mouse_state.pressed.1,
-        mouse_state.pressed.2,
-        false,
-        false,
-    ]);
-    imgui.set_mouse_wheel(mouse_state.wheel);
-    mouse_state.wheel = 0.0;
 }
 
 fn map_key(key: Key) -> Option<AppKey> {

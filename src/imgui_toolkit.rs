@@ -179,8 +179,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igPushStyleVarVec2(imgui_sys::ImGuiStyleVar::ItemSpacing, (0.0, -1.0).into()) };
         self.ui.group(|| lhs());
 
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-
         self.ui.same_line_spacing(0., 0.);
         let cursor_pos = unsafe { imgui_sys::igGetCursorPosX() };
 
@@ -253,7 +251,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn()) {
         self.ui.group(draw_fn);
-        let mut mx = ImVec2::zero();
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui.get_window_draw_list()
@@ -297,8 +294,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
         self.ui.group(draw_fn);
-        let min = unsafe { imgui_sys::igGetItemRectMin() };
-        let max = unsafe { imgui_sys::igGetItemRectMax() };
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui.get_window_draw_list()
             .add_rect((min.x, max.y - thickness as f32), max, color)
             .thickness(1.)
@@ -327,7 +324,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_text_box(&self, text: &str) {
         self.ui.text(text);
         // GHETTO: text box is always scrolled to the bottom
-        unsafe { imgui_sys::igSetScrollHere(1.0) };
+        unsafe { imgui_sys::igSetScrollHereY(1.0) };
     }
 
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str,

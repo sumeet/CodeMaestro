@@ -2,7 +2,7 @@ use super::env;
 use super::lang;
 use super::function;
 use std::collections::HashMap;
-use objekt::{clone_trait_object,__internal_clone_trait_object};
+use objekt::{clone_trait_object};
 
 pub trait ModifyableFunc: objekt::Clone + lang::Function + function::SettableArgs {
     fn set_return_type(&mut self, return_type: lang::Type);

@@ -6,7 +6,7 @@ use super::lang;
 use super::code_generation;
 use super::structs;
 
-use objekt::{clone_trait_object,__internal_clone_trait_object};
+use objekt::{clone_trait_object};
 use lazy_static::lazy_static;
 use itertools::Itertools;
 
