@@ -14,6 +14,7 @@ use super::lang::CodeNode;
 use super::env_genie::EnvGenie;
 use super::code_function;
 use super::scripts;
+use super::tests;
 
 // TODO: move to colors.rs
 pub type Color = [f32; 4];
@@ -392,8 +393,6 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_variable_reference(&self, variable_reference: &lang::VariableReference) -> T::DrawResult {
-//        let assignment = self.code_editor.code_genie.find_node(variable_reference.assignment_id);
-//        if let Some(CodeNode::Assignment(assignment)) = assignment {
         if let Some(name) = self.lookup_variable_name(variable_reference) {
             self.draw_button(&name, PURPLE_COLOR, &|| {})
         } else {
@@ -729,7 +728,7 @@ impl PerEditorCommandBuffer {
             let mut env = interpreter.env.borrow_mut();
 
             let editor = cont.get_editor_mut(editor_id).unwrap();
-            let code = editor.get_code();
+            let code = editor.get_code().clone();
             match editor.location {
                 code_editor::CodeLocation::Function(func_id) => {
                     let func = env.find_function(func_id).cloned().unwrap();
@@ -740,6 +739,10 @@ impl PerEditorCommandBuffer {
                 code_editor::CodeLocation::Script(_script_id) => {
                     let script = scripts::Script { code: code.into_block().unwrap().clone() };
                     cont.load_script(script)
+                },
+                code_editor::CodeLocation::Test(test_id) => {
+                    let mut test = cont.get_test(test_id).unwrap().clone();
+                    test.set_code(code.into_block().unwrap().clone());
                 }
             }
         });

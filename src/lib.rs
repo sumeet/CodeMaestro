@@ -159,6 +159,9 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
     for script in the_world.scripts {
         controller.load_script(script)
     }
+    for test in the_world.tests {
+        controller.load_test(test);
+    }
     for code_func in the_world.codefuncs {
         cmd_buffer.load_code_func(code_func)
     }
@@ -170,7 +173,6 @@ pub struct App {
     pub interpreter: env::Interpreter,
     command_buffer: Rc<RefCell<editor::CommandBuffer>>,
     controller: Controller,
-//    pub async_executor: async_executor::AsyncExecutor,
 }
 
 impl App {
@@ -186,10 +188,6 @@ impl App {
             controller,
         }
     }
-
-//    pub fn turn_event_loop(&mut self) {
-//        self.async_executor.turn()
-//    }
 
     pub fn new_rc() -> Rc<RefCell<App>> {
         Rc::new(RefCell::new(Self::new()))

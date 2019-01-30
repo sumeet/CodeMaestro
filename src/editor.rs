@@ -85,7 +85,8 @@ pub struct Controller {
     test_result_by_func_id: HashMap<ID, TestResult>,
     code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
     script_by_id: HashMap<ID, scripts::Script>,
-    tests: Vec<tests::Test>,
+    test_by_id: HashMap<ID, tests::Test>,
+    // this is GUI state:
     selected_test_id_by_subject: HashMap<tests::TestSubject, ID>,
 }
 
@@ -95,17 +96,17 @@ impl<'a> Controller {
             test_result_by_func_id: HashMap::new(),
             code_editor_by_id: HashMap::new(),
             script_by_id: HashMap::new(),
-            tests: vec![],
+            test_by_id: HashMap::new(),
             selected_test_id_by_subject: HashMap::new(),
         }
     }
 
-    pub fn add_test(&mut self, test: tests::Test) {
-        self.tests.push(test)
+    pub fn list_tests(&self, subject: tests::TestSubject) -> impl Iterator<Item = &tests::Test> {
+        self.test_by_id.values().filter(move |t| t.subject == subject)
     }
 
-    pub fn list_tests(&self, subject: tests::TestSubject) -> impl Iterator<Item = &tests::Test> {
-        self.tests.iter().filter(move |t| t.subject == subject)
+    pub fn get_test(&self, test_id: lang::ID) -> Option<&tests::Test> {
+        self.test_by_id.get(&test_id)
     }
 
     pub fn get_editor_mut(&mut self, id: lang::ID) -> Option<&mut code_editor::CodeEditor> {
@@ -125,6 +126,7 @@ impl<'a> Controller {
             jsfuncs: env_genie.list_jsfuncs().cloned().collect(),
             structs: env_genie.list_structs().cloned().collect(),
             enums: env_genie.list_enums().cloned().collect(),
+            tests: self.test_by_id.values().cloned().collect(),
         };
         code_loading::save("codesample.json", &theworld).unwrap();
     }
@@ -138,16 +140,15 @@ impl<'a> Controller {
         }
     }
 
+    pub fn load_test(&mut self, test: tests::Test) {
+        self.load_code(&test.code(), code_editor::CodeLocation::Test(test.id));
+        self.test_by_id.insert(test.id, test);
+    }
+
     pub fn load_script(&mut self, script: scripts::Script) {
         let id = script.id();
-        if !self.code_editor_by_id.contains_key(&id) {
-            let location = code_editor::CodeLocation::Script(id);
-            self.code_editor_by_id.insert(id, code_editor::CodeEditor::new(&script.code(), location));
-        } else {
-            let code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
-            code_editor.replace_code(&script.code());
-        }
-        self.script_by_id.insert(script.id(), script);
+        self.load_code(&script.code(), code_editor::CodeLocation::Script(id));
+        self.script_by_id.insert(id, script);
     }
 
     pub fn load_code(&mut self, code_node: &CodeNode, location: code_editor::CodeLocation) {
@@ -827,7 +828,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let cmd_buffer2 = Rc::clone(&self.command_buffer);
         let selected_test_id = self.controller.selected_test_id(subject);
-        self.ui_toolkit.draw_all(vec![
+        let mut to_draw = vec![
             self.ui_toolkit.draw_text("Tests:"),
             self.ui_toolkit.draw_selectables(move |item| Some(item.id) == selected_test_id,
                                              |t| &t.name,
@@ -840,9 +841,37 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                              }),
             self.ui_toolkit.draw_button("Add a test", GREY_COLOR, move|| {
                 cmd_buffer.borrow_mut().add_controller_command(move |cont| {
-                    cont.add_test(tests::Test::new(subject))
+                    cont.load_test(tests::Test::new(subject))
                 })
             }),
+        ];
+        if let Some(selected_test_id) = selected_test_id {
+            to_draw.push(self.render_test_details(selected_test_id));
+        }
+        self.ui_toolkit.draw_all(to_draw)
+    }
+
+    fn render_test_details(&self, test_id: lang::ID) -> T::DrawResult {
+        // just assume it exists because if someone called this, that test had to have existed
+        let test = self.controller.get_test(test_id).unwrap();
+
+        let cmd_buffer1 = Rc::clone(&self.command_buffer);
+        let test1 = test.clone();
+
+        self.ui_toolkit.draw_all(vec![
+            self.ui_toolkit.draw_text_input_with_label(
+                "Test name",
+                &test.name,
+                move |newname| {
+                    let mut test = test1.clone();
+                    test.name = newname.to_string();
+                    cmd_buffer1.borrow_mut().add_controller_command(move |cont| {
+                        cont.load_test(test)
+                    })
+                },
+                || {},
+            ),
+            self.render_code(test.code_id(), 0.3),
         ])
     }
 
