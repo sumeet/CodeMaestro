@@ -95,7 +95,7 @@ impl InsertCodeMenu {
         match self.insertion_point {
             // TODO: if it's the last line of a function, we might wanna use the function's type...
             // but that could be too limiting
-            InsertionPoint::Before(_) | InsertionPoint::After(_) => {
+            InsertionPoint::Before(_) | InsertionPoint::After(_) | InsertionPoint::BeginningOfBlock(_) => {
                 self.new_params(None)
             },
             InsertionPoint::Argument(field_id) | InsertionPoint::StructLiteralField(field_id) => {

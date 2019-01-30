@@ -412,8 +412,13 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_block(&self, block: &lang::Block) -> T::DrawResult {
-        self.ui_toolkit.draw_all(
-            block.expressions.iter().map(|code| self.render_code(code)).collect())
+        // TODO: i think i could move the is_insertion_point_before_or_after crapola to here
+        let mut to_draw = match self.code_editor.insertion_point() {
+            Some(InsertionPoint::BeginningOfBlock(block_id)) if block.id == block_id => vec![self.render_insert_code_node()],
+            _ => vec![],
+        };
+        to_draw.extend(block.expressions.iter().map(|code| self.render_code(code)));
+        self.ui_toolkit.draw_all(to_draw)
     }
 
     fn render_function_call(&self, function_call: &lang::FunctionCall) -> T::DrawResult {

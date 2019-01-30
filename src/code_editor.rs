@@ -128,7 +128,7 @@ impl CodeEditor {
     pub fn mark_as_editing(&mut self, insertion_point: InsertionPoint) -> Option<()> {
         self.insert_code_menu = InsertCodeMenu::for_insertion_point(insertion_point);
         self.save_current_state_to_undo_history();
-        self.selected_node_id = insertion_point.selected_node_id();
+        self.selected_node_id = insertion_point.node_id_to_select_when_marking_as_editing();
         self.editing = true;
         Some(())
     }
@@ -234,7 +234,11 @@ impl CodeEditor {
 
     // TODO: factor duplicate code between this method and the next
     fn set_insertion_point_on_previous_line_in_block(&mut self) {
-        if let Some(expression_id) = self.currently_focused_block_expression() {
+        if self.no_node_selected() {
+            let block_id = self.get_code().id();
+            println!("setting insertion point on previous line in block");
+            self.mark_as_editing(InsertionPoint::BeginningOfBlock(block_id));
+        } else if let Some(expression_id) = self.currently_focused_block_expression() {
             self.mark_as_editing(InsertionPoint::Before(expression_id));
         } else {
             self.hide_insert_code_menu()
@@ -242,11 +246,19 @@ impl CodeEditor {
     }
 
     fn set_insertion_point_on_next_line_in_block(&mut self) {
-        if let Some(expression_id) = self.currently_focused_block_expression() {
+        if self.no_node_selected() {
+            let block_id = self.get_code().id();
+            println!("setting insertion point on next line in block");
+            self.mark_as_editing(InsertionPoint::BeginningOfBlock(block_id));
+        } else if let Some(expression_id) = self.currently_focused_block_expression() {
             self.mark_as_editing(InsertionPoint::After(expression_id));
         } else {
             self.hide_insert_code_menu()
         }
+    }
+
+    fn no_node_selected(&self) -> bool {
+        self.get_selected_node().is_none()
     }
 
     fn currently_focused_block_expression(&self) -> Option<lang::ID> {
@@ -645,13 +657,16 @@ impl MutationMaster {
                    genie: &CodeGenie) -> lang::CodeNode {
         let node_to_insert = node_to_insert.clone();
         match insertion_point {
+            InsertionPoint::BeginningOfBlock(block_id) => {
+                self.insertion_expression_in_beginning_of_block(block_id, node_to_insert, genie)
+            },
             InsertionPoint::Before(id) | InsertionPoint::After(id) => {
                 let parent = genie.find_parent(id)
                     .expect("unable to insert new code, couldn't find parent to insert into");
                 self.insert_new_expression_in_block(
                     node_to_insert, insertion_point, parent.clone(), genie)
 
-            }
+            },
             InsertionPoint::Argument(argument_id) => {
                 self.insert_expression_into_argument(node_to_insert, argument_id, genie)
             },
@@ -693,6 +708,17 @@ impl MutationMaster {
         struct_literal_field.expr = Box::new(code_node);
         let mut root = genie.root().clone();
         root.replace(&lang::CodeNode::StructLiteralField(struct_literal_field));
+        root
+    }
+
+    fn insertion_expression_in_beginning_of_block(&self, block_id: lang::ID,
+                                                  node_to_insert: lang::CodeNode,
+                                                  genie: &CodeGenie) -> lang::CodeNode {
+        let mut block = genie.find_node(block_id).unwrap().into_block().unwrap().clone();
+        block.expressions.insert(0, node_to_insert);
+        let mut root = genie.root().clone();
+        // TODO: replace should take owned ref because it's going to do a clone anyway
+        root.replace(&lang::CodeNode::Block(block));
         root
     }
 
@@ -815,6 +841,7 @@ impl DeletionResult {
 
 #[derive(Debug, Clone, Copy)]
 pub enum InsertionPoint {
+    BeginningOfBlock(lang::ID),
     Before(lang::ID),
     After(lang::ID),
     Argument(lang::ID),
@@ -826,8 +853,12 @@ pub enum InsertionPoint {
 impl InsertionPoint {
     // the purpose of this method is unclear therefore it's dangerous. remove this in a refactoring
     // because it's not really widely used
+    // uses:
+    // 1. checking for code nodes that appear BEFORE this node id, to check for local variables
+    // 2. where to insert in a block (only used for Before and After cases)
     pub fn node_id(&self) -> lang::ID {
         match *self {
+            InsertionPoint::BeginningOfBlock(id) => id,
             InsertionPoint::Before(id) => id,
             InsertionPoint::After(id) => id,
             InsertionPoint::Argument(id) => id,
@@ -839,8 +870,9 @@ impl InsertionPoint {
         }
     }
 
-    fn selected_node_id(&self) -> Option<lang::ID> {
+    fn node_id_to_select_when_marking_as_editing(&self) -> Option<lang::ID> {
         match *self {
+            InsertionPoint::BeginningOfBlock(_) => None,
             InsertionPoint::Before(_) => None,
             InsertionPoint::After(_) => None,
             InsertionPoint::Argument(id) => Some(id),
@@ -853,7 +885,7 @@ impl InsertionPoint {
 
     pub fn is_block_expression(&self) -> bool {
         match *self {
-            InsertionPoint::Before(_) | InsertionPoint::After(_) => true,
+            InsertionPoint::BeginningOfBlock(_) | InsertionPoint::Before(_) | InsertionPoint::After(_) => true,
             InsertionPoint::Argument(_) | InsertionPoint::StructLiteralField(_) |
                 InsertionPoint::Editing(_) | InsertionPoint::ListLiteralElement {..} => false,
         }
