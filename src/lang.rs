@@ -573,14 +573,21 @@ impl CodeNode {
         }
     }
 
-    pub fn replace(&mut self, code_node: &CodeNode) {
+    // the return value is meaningless, it's just used to thread the code so we don't have to copy it
+    pub fn replace(&mut self, mut code_node: CodeNode) -> Option<CodeNode> {
         if self.id() == code_node.id() {
-            *self = code_node.clone()
-        } else {
-            for child in self.children_mut() {
-                child.replace(code_node)
+            *self = code_node;
+            return None
+        }
+        for child in self.children_mut() {
+            let ret = child.replace(code_node);
+            if let Some(cn) = ret {
+                code_node = cn;
+            } else {
+                return None
             }
         }
+        return Some(code_node)
     }
 
     pub fn find_node(&self, id: ID) -> Option<&CodeNode> {

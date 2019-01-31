@@ -29,9 +29,9 @@ pub enum CodeLocation {
 }
 
 impl CodeEditor {
-    pub fn new(code: &lang::CodeNode, location: CodeLocation) -> Self {
+    pub fn new(code: lang::CodeNode, location: CodeLocation) -> Self {
         Self {
-            code_genie: CodeGenie::new(code.clone()),
+            code_genie: CodeGenie::new(code),
             editing: false,
             selected_node_id: None,
             insert_code_menu: None,
@@ -139,7 +139,7 @@ impl CodeEditor {
 
     pub fn undo(&mut self) {
         if let Some(history) = self.mutation_master.undo(self.get_code(), self.selected_node_id) {
-            self.replace_code(&history.root);
+            self.replace_code(history.root);
             self.set_selected_node_id(history.cursor_position);
         }
     }
@@ -152,7 +152,7 @@ impl CodeEditor {
         self.selected_node_id = code_node_id;
     }
 
-    pub fn replace_code(&mut self, code: &lang::CodeNode) {
+    pub fn replace_code(&mut self, code: lang::CodeNode) {
         self.code_genie.replace(code);
     }
 
@@ -274,7 +274,7 @@ impl CodeEditor {
     pub fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
         let new_root = self.mutation_master.insert_code(
             &code_node, insertion_point, &self.code_genie);
-        self.replace_code(&new_root);
+        self.replace_code(new_root);
         match post_insertion_cursor(&code_node, &self.code_genie) {
             PostInsertionAction::SelectNode(id) => { self.set_selected_node_id(Some(id)); }
             PostInsertionAction::MarkAsEditing(insertion_point) => { self.mark_as_editing(insertion_point); }
@@ -284,7 +284,7 @@ impl CodeEditor {
     fn redo(&mut self) {
         if let Some(next_root) = self.mutation_master.redo(self.get_code(),
                                                            self.selected_node_id) {
-            self.replace_code(&next_root.root);
+            self.replace_code(next_root.root);
             self.set_selected_node_id(next_root.cursor_position);
         }
     }
@@ -294,7 +294,7 @@ impl CodeEditor {
             self.selected_node_id?, &self.code_genie, self.selected_node_id);
         // TODO: these save current state calls can go inside of the mutation master
         self.save_current_state_to_undo_history();
-        self.replace_code(&deletion_result.new_root);
+        self.replace_code(deletion_result.new_root);
         // TODO: intelligently select a nearby node to select after deleting
         self.set_selected_node_id(deletion_result.new_cursor_position);
         Some(())
@@ -321,8 +321,8 @@ impl CodeGenie {
         Self { code }
     }
 
-    pub fn replace(&mut self, code: &lang::CodeNode) {
-        self.code.replace(code)
+    pub fn replace(&mut self, code: lang::CodeNode) {
+        self.code.replace(code);
     }
 
     pub fn code_id(&self) -> lang::ID {
@@ -683,7 +683,7 @@ impl MutationMaster {
         let mut list_literal = genie.find_node(list_literal_id).unwrap().into_list_literal().clone();
         list_literal.elements.insert(pos, node_to_insert);
         let mut root = genie.root().clone();
-        root.replace(&lang::CodeNode::ListLiteral(list_literal));
+        root.replace(lang::CodeNode::ListLiteral(list_literal));
         root
     }
 
@@ -692,7 +692,7 @@ impl MutationMaster {
         let mut argument = genie.find_node(argument_id).unwrap().into_argument().clone();
         argument.expr = Box::new(code_node);
         let mut root = genie.root().clone();
-        root.replace(&lang::CodeNode::Argument(argument));
+        root.replace(lang::CodeNode::Argument(argument));
         root
     }
 
@@ -703,7 +703,7 @@ impl MutationMaster {
             .into_struct_literal_field().unwrap().clone();
         struct_literal_field.expr = Box::new(code_node);
         let mut root = genie.root().clone();
-        root.replace(&lang::CodeNode::StructLiteralField(struct_literal_field));
+        root.replace(lang::CodeNode::StructLiteralField(struct_literal_field));
         root
     }
 
@@ -713,8 +713,7 @@ impl MutationMaster {
         let mut block = genie.find_node(block_id).unwrap().into_block().unwrap().clone();
         block.expressions.insert(0, node_to_insert);
         let mut root = genie.root().clone();
-        // TODO: replace should take owned ref because it's going to do a clone anyway
-        root.replace(&lang::CodeNode::Block(block));
+        root.replace(lang::CodeNode::Block(block));
         root
     }
 
@@ -741,7 +740,7 @@ impl MutationMaster {
                 }
 
                 let mut root = genie.root().clone();
-                root.replace(&CodeNode::Block(block));
+                root.replace(CodeNode::Block(block));
                 root
             },
             _ => panic!("should be inserting into type parent, got {:?} instead", parent)
@@ -775,7 +774,7 @@ impl MutationMaster {
                 }
 
                 let mut new_root = genie.root().clone();
-                new_root.replace(&CodeNode::Block(new_block));
+                new_root.replace(CodeNode::Block(new_block));
 
                 DeletionResult::new(new_root, new_cursor_position)
             }
@@ -798,7 +797,7 @@ impl MutationMaster {
                 }
 
                 let mut new_root = genie.root().clone();
-                new_root.replace(&CodeNode::ListLiteral(new_list_literal));
+                new_root.replace(CodeNode::ListLiteral(new_list_literal));
 
 //                self.log_new_mutation(&new_root, new_cursor_position);
                 DeletionResult::new(new_root, new_cursor_position)

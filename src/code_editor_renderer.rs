@@ -666,7 +666,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
 
                 let new_value = new_value.to_string();
                 cmd_buffer.borrow_mut().add_editor_command(move |editor| {
-                    editor.replace_code(&new_node_fn(&new_value))
+                    editor.replace_code(new_node_fn(&new_value))
                 })
             },
             move || {

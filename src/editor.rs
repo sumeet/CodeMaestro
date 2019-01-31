@@ -150,17 +150,17 @@ impl<'a> Controller {
     }
 
     pub fn load_test(&mut self, test: tests::Test) {
-        self.load_code(&test.code(), code_editor::CodeLocation::Test(test.id));
+        self.load_code(test.code(), code_editor::CodeLocation::Test(test.id));
         self.test_by_id.insert(test.id, test);
     }
 
     pub fn load_script(&mut self, script: scripts::Script) {
         let id = script.id();
-        self.load_code(&script.code(), code_editor::CodeLocation::Script(id));
+        self.load_code(script.code(), code_editor::CodeLocation::Script(id));
         self.script_by_id.insert(id, script);
     }
 
-    pub fn load_code(&mut self, code_node: &CodeNode, location: code_editor::CodeLocation) {
+    pub fn load_code(&mut self, code_node: CodeNode, location: code_editor::CodeLocation) {
         let id = code_node.id();
         if !self.code_editor_by_id.contains_key(&id) {
             self.code_editor_by_id.insert(id, code_editor::CodeEditor::new(code_node, location));
@@ -274,7 +274,7 @@ impl CommandBuffer {
             let code = code_func.code();
             let func_id = code_func.id();
             env.add_function(code_func);
-            controller.load_code(&code, code_editor::CodeLocation::Function(func_id));
+            controller.load_code(code, code_editor::CodeLocation::Function(func_id));
         })
     }
 
@@ -282,6 +282,8 @@ impl CommandBuffer {
         self.add_integrating_command(move |controller, interpreter, _| {
             let mut env = interpreter.env.borrow_mut();
             controller.load_json_http_client_builder(JSONHTTPClientBuilder::new(json_http_client.id()));
+            let http_arg_generating_code = lang::CodeNode::Block(json_http_client.gen_url_params.clone());
+            controller.load_code(http_arg_generating_code, unimplemented!());
             env.add_function(json_http_client);
         })
     }
@@ -620,7 +622,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let client = self.env_genie.find_function(builder.json_http_client_id).unwrap()
                     .downcast_ref::<JSONHTTPClient>().unwrap();
                 let client1 = client.clone();
+                let client2 = client.clone();
                 let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                let cmd_buffer2 = Rc::clone(&self.command_buffer);
 
                 self.ui_toolkit.draw_all(vec![
                     self.ui_toolkit.draw_text_input_with_label(
@@ -630,6 +634,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             let mut client = client1.clone();
                             client.name = newvalue.to_string();
                             cmd_buffer1.borrow_mut().load_function(client);
+                        },
+                        || {},
+                    ),
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Base URL",
+                        &client.url,
+                        move |newvalue| {
+                            let mut client = client2.clone();
+                            client.url = newvalue.to_string();
+                            cmd_buffer2.borrow_mut().load_function(client);
                         },
                         || {},
                     ),
