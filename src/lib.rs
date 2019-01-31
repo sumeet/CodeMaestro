@@ -35,6 +35,7 @@ mod edit_types;
 mod json;
 mod undo;
 mod json_http_client;
+mod json_http_client_builder;
 mod code_generation;
 mod code_validation;
 mod function;

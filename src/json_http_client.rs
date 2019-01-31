@@ -3,12 +3,14 @@ use super::lang;
 use super::env;
 use super::function;
 use super::builtins::new_result;
+use super::external_func;
 
 use http;
 use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct JSONHTTPClient {
+    id: lang::ID,
     pub url: String,
     // for body params, we can use a JSON enum strings, ints, bools, etc.
     pub name: String,
@@ -24,13 +26,14 @@ impl lang::Function for JSONHTTPClient {
     }
 
     fn name(&self) -> &str {
-        "JSON HTTP Client"
+        &self.name
     }
 
     fn id(&self) -> lang::ID {
-        uuid::Uuid::parse_str("afa2b0b6-88fb-4003-97a1-a329279562b0").unwrap()
+        self.id
     }
 
+    // TODO: this should really return a reference
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
         self.args.clone()
     }
@@ -46,5 +49,17 @@ impl lang::Function for JSONHTTPClient {
 impl function::SettableArgs for JSONHTTPClient {
     fn set_args(&mut self, args: Vec<lang::ArgumentDefinition>) {
         self.args = args
+    }
+}
+
+impl JSONHTTPClient {
+    pub fn new() -> Self {
+        Self {
+            id: lang::new_id(),
+            url: "".to_string(),
+            name: "".to_string(),
+            gen_url_params: lang::Block::new(),
+            args: vec![]
+        }
     }
 }

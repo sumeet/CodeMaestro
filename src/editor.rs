@@ -25,6 +25,8 @@ use super::code_editor_renderer::CodeEditorRenderer;
 use super::async_executor;
 use super::scripts;
 use super::tests;
+use super::json_http_client::JSONHTTPClient;
+use super::json_http_client_builder::JSONHTTPClientBuilder;
 
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
@@ -82,12 +84,14 @@ impl TestResult {
 }
 
 pub struct Controller {
-    test_result_by_func_id: HashMap<ID, TestResult>,
-    code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
+    // these actually would need to get persisted to the filesystem
     script_by_id: HashMap<ID, scripts::Script>,
     test_by_id: HashMap<ID, tests::Test>,
-    // this is GUI state:
+    // this is purely ephemeral GUI state for display only:
     selected_test_id_by_subject: HashMap<tests::TestSubject, ID>,
+    code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
+    test_result_by_func_id: HashMap<ID, TestResult>,
+    json_client_builder_by_func_id: HashMap<ID, JSONHTTPClientBuilder>,
 }
 
 impl<'a> Controller {
@@ -98,11 +102,16 @@ impl<'a> Controller {
             script_by_id: HashMap::new(),
             test_by_id: HashMap::new(),
             selected_test_id_by_subject: HashMap::new(),
+            json_client_builder_by_func_id: HashMap::new(),
         }
     }
 
     pub fn list_tests(&self, subject: tests::TestSubject) -> impl Iterator<Item = &tests::Test> {
         self.test_by_id.values().filter(move |t| t.subject == subject)
+    }
+
+    pub fn list_json_http_client_builders(&self) -> impl Iterator<Item = &JSONHTTPClientBuilder> {
+        self.json_client_builder_by_func_id.values()
     }
 
     pub fn get_test(&self, test_id: lang::ID) -> Option<&tests::Test> {
@@ -159,6 +168,10 @@ impl<'a> Controller {
             let code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
             code_editor.replace_code(code_node);
         }
+    }
+
+    pub fn load_json_http_client_builder(&mut self, builder: JSONHTTPClientBuilder) {
+        self.json_client_builder_by_func_id.insert(builder.json_http_client_id, builder);
     }
 
     // test section stuff
@@ -265,6 +278,14 @@ impl CommandBuffer {
         })
     }
 
+    pub fn load_json_http_client(&mut self, json_http_client: JSONHTTPClient) {
+        self.add_integrating_command(move |controller, interpreter, _| {
+            let mut env = interpreter.env.borrow_mut();
+            controller.load_json_http_client_builder(JSONHTTPClientBuilder::new(json_http_client.id()));
+            env.add_function(json_http_client);
+        })
+    }
+
     pub fn remove_function(&mut self, id: lang::ID) {
         self.add_environment_command(move |env| env.delete_function(id))
     }
@@ -359,6 +380,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_edit_jsfuncs(),
             self.render_edit_structs(),
             self.render_edit_enums(),
+            self.render_json_http_client_builders(),
             self.render_status_bar()
         ])
     }
@@ -374,9 +396,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     let cmdb4 = Rc::clone(&self.command_buffer);
                     let cmdb5 = Rc::clone(&self.command_buffer);
                     let cmdb6 = Rc::clone(&self.command_buffer);
+                    let cmdb7 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
                             cmdb1.borrow_mut().save();
+                        }),
+                        self.ui_toolkit.draw_menu_item("Add new JSON HTTP client", move || {
+                            cmdb7.borrow_mut().load_json_http_client(JSONHTTPClient::new());
                         }),
                         self.ui_toolkit.draw_menu_item("Add new script", move || {
                             cmdb6.borrow_mut().add_controller_command(|controller| {
@@ -464,8 +490,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     },
                     || {},
                 ),
-                self.render_arguments_selector(code_func.clone()),
-                self.render_code(code_func.code().id(), 0.5),
+                self.render_arguments_selector(code_func),
+                self.render_code(code_func.code().id(), 0.4),
                 self.render_return_type_selector(code_func),
                 self.ui_toolkit.draw_separator(),
                 self.render_general_function_menu(code_func),
@@ -499,7 +525,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     },
                     || {},
                 ),
-                self.render_arguments_selector(pyfunc.clone()),
+                self.render_arguments_selector(pyfunc),
                 self.ui_toolkit.draw_multiline_text_input_with_label(
                     // TODO: add help text here
                     "Prelude",
@@ -552,7 +578,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     },
                     || {},
                 ),
-                self.render_arguments_selector(jsfunc.clone()),
+                self.render_arguments_selector(jsfunc),
                 self.ui_toolkit.draw_multiline_text_input_with_label(
                     "Code",
                     &jsfunc.eval,
@@ -580,6 +606,41 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_edit_enums(&self) -> T::DrawResult {
         let enums = self.env_genie.list_enums();
         self.ui_toolkit.draw_all(enums.map(|e| self.render_edit_enum(e)).collect())
+    }
+
+    fn render_json_http_client_builders(&self) -> T::DrawResult {
+        let builders = self.controller.list_json_http_client_builders();
+        self.ui_toolkit.draw_all(builders.map(|builder| self.render_json_http_client_builder(builder)).collect())
+    }
+
+    fn render_json_http_client_builder(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
+        self.ui_toolkit.draw_window(
+            &format!("Edit JSON HTTP Client: {}", builder.json_http_client_id),
+            &|| {
+                let client = self.env_genie.find_function(builder.json_http_client_id).unwrap()
+                    .downcast_ref::<JSONHTTPClient>().unwrap();
+                let client1 = client.clone();
+                let cmd_buffer1 = Rc::clone(&self.command_buffer);
+
+                self.ui_toolkit.draw_all(vec![
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Name",
+                        client.name(),
+                        move |newvalue| {
+                            let mut client = client1.clone();
+                            client.name = newvalue.to_string();
+                            cmd_buffer1.borrow_mut().load_function(client);
+                        },
+                        || {},
+                    ),
+                    self.render_arguments_selector(client),
+                    // TODO: this has a different kind of type selector
+                    self.ui_toolkit.draw_separator(),
+                    self.render_general_function_menu(client),
+                ])
+            },
+            None::<fn(Keypress)>,
+        )
     }
 
     fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
@@ -875,7 +936,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn render_arguments_selector<F: function::SettableArgs + std::clone::Clone>(&self, func: F) -> T::DrawResult {
+    fn render_arguments_selector<F: function::SettableArgs + std::clone::Clone>(&self, func: &F) -> T::DrawResult {
         let args = func.takes_args();
 
         let mut to_draw = vec![
