@@ -179,9 +179,7 @@ impl CodeEditor {
 
     pub fn try_select_forward_one_node(&mut self) {
         let navigation = Navigation::new(&self.code_genie);
-        println!("trying to navigate forward");
         if let Some(node_id) = navigation.navigate_forward_from(self.selected_node_id) {
-            println!("navigating fowrard");
             self.set_selected_node_id(Some(node_id))
         }
     }
@@ -236,7 +234,6 @@ impl CodeEditor {
     fn set_insertion_point_on_previous_line_in_block(&mut self) {
         if self.no_node_selected() {
             let block_id = self.get_code().id();
-            println!("setting insertion point on previous line in block");
             self.mark_as_editing(InsertionPoint::BeginningOfBlock(block_id));
         } else if let Some(expression_id) = self.currently_focused_block_expression() {
             self.mark_as_editing(InsertionPoint::Before(expression_id));
@@ -248,7 +245,6 @@ impl CodeEditor {
     fn set_insertion_point_on_next_line_in_block(&mut self) {
         if self.no_node_selected() {
             let block_id = self.get_code().id();
-            println!("setting insertion point on next line in block");
             self.mark_as_editing(InsertionPoint::BeginningOfBlock(block_id));
         } else if let Some(expression_id) = self.currently_focused_block_expression() {
             self.mark_as_editing(InsertionPoint::After(expression_id));
