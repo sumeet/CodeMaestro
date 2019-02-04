@@ -40,6 +40,12 @@ impl Interpreter {
         }
     }
 
+    // TODO: instead of setting local variables directly on `env`, set them on a per-interp `locals`
+    // object... i think. keep this here like this until we have one
+    pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
+        self.env.borrow_mut().set_local_variable(id, value.clone());
+    }
+
     pub fn with_env(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
         Self { env }
     }
