@@ -1,3 +1,4 @@
+use serde_json;
 use std::cell::RefCell;
 //use debug_cell::RefCell;
 use std::rc::Rc;
@@ -24,6 +25,7 @@ use super::env_genie;
 use super::code_editor_renderer::CodeEditorRenderer;
 use super::async_executor;
 use super::scripts;
+use super::json;
 use super::tests;
 use super::json_http_client::JSONHTTPClient;
 use super::json_http_client_builder::JSONHTTPClientBuilder;
@@ -175,6 +177,10 @@ impl<'a> Controller {
         self.json_client_builder_by_func_id.insert(builder.json_http_client_id, builder);
     }
 
+    pub fn get_json_http_client_builder(&self, id: lang::ID) -> Option<&JSONHTTPClientBuilder> {
+        self.json_client_builder_by_func_id.get(&id)
+    }
+
     // test section stuff
     fn selected_test_id(&self, subject: tests::TestSubject) -> Option<ID> {
         self.selected_test_id_by_subject.get(&subject).cloned()
@@ -233,6 +239,8 @@ pub trait UiToolkit {
     fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult;
+//    fn draw_tree_node(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+//    fn draw_tree_leaf(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn indent(&self, px: i16, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn align(&self, lhs: &Fn() -> Self::DrawResult, rhs: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
@@ -624,8 +632,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let client = self.env_genie.get_json_http_client(builder.json_http_client_id).unwrap();
                 let client1 = client.clone();
                 let client2 = client.clone();
+                let client_id = client.id();
+                let builder1 = builder.clone();
                 let cmd_buffer1 = Rc::clone(&self.command_buffer);
                 let cmd_buffer2 = Rc::clone(&self.command_buffer);
+                let cmd_buffer3 = Rc::clone(&self.command_buffer);
+                let cmd_buffer4 = Rc::clone(&self.command_buffer);
+                let cmd_buffer5 = Rc::clone(&self.command_buffer);
 
                 self.ui_toolkit.draw_all(vec![
                     self.ui_toolkit.draw_text_input_with_label(
@@ -651,13 +664,91 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.ui_toolkit.draw_text("URL params:"),
                     self.render_code(client.gen_url_params.id, 0.3),
                     self.render_arguments_selector(client),
-                    // TODO: this has a different kind of type selector
+                    self.ui_toolkit.draw_separator(),
+                    self.ui_toolkit.draw_text("Return type generator and test section"),
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Test URL",
+                        &builder.test_url,
+                        move |newvalue| {
+                            let builder1 = builder1.clone();
+                            let newvalue = newvalue.to_string();
+                            cmd_buffer3.borrow_mut().add_controller_command(move |cont| {
+                                let mut builder = builder1.clone();
+                                builder.test_url = newvalue;
+                                cont.load_json_http_client_builder(builder);
+                            })
+                        },
+                        || {}
+                    ),
+                    self.ui_toolkit.draw_button("Run test", GREY_COLOR, move || {
+                        let cmd_buffer5 = Rc::clone(&cmd_buffer5);
+                        cmd_buffer4.borrow_mut().add_integrating_command(move |cont, interp, async_executor| {
+                            let builder = cont.get_json_http_client_builder(client_id).unwrap();
+                            builder.run_test(async_executor, move |newbuilder| {
+                                cmd_buffer5.borrow_mut().add_controller_command(move |cont| {
+                                    cont.load_json_http_client_builder(newbuilder);
+                                })
+                            })
+                        })
+                    }),
+                    self.render_test_request_results(builder),
+                    // TODO: tree list here:
                     self.ui_toolkit.draw_separator(),
                     self.render_general_function_menu(client),
                 ])
             },
             None::<fn(Keypress)>,
         )
+    }
+
+    fn render_test_request_results(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
+        match builder.test_run_result {
+            Some(Ok(ref json_value)) => self.render_json_tree(json_value),
+            Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
+            _ => self.ui_toolkit.draw_all(vec![]),
+        }
+    }
+
+    fn render_json_tree(&self, json_value: &serde_json::Value) -> T::DrawResult {
+        let structure = json::infer_structure(json_value);
+        self.render_json_structure(&structure)
+    }
+
+    fn render_json_structure(&self, structure: &json::Structure) -> T::DrawResult {
+        use json::Structure::*;
+        match structure  {
+            Bool => self.ui_toolkit.draw_text("Boolean"),
+            String => self.ui_toolkit.draw_text("String"),
+            Number => self.ui_toolkit.draw_text("Number"),
+            Float => self.ui_toolkit.draw_text("Float"),
+            Null => self.ui_toolkit.draw_text("Null"),
+            List { box of } => {
+                self.ui_toolkit.draw_all(vec![
+                    self.ui_toolkit.draw_text("["),
+                    self.ui_toolkit.indent(10, &|| {
+                        self.render_json_structure(of)
+                    }),
+                    self.ui_toolkit.draw_text("]"),
+                ])
+            },
+            Map(map) => {
+                let drawn = vec![
+                    self.ui_toolkit.draw_text("{"),
+                    self.ui_toolkit.indent(10, &|| {
+                        self.ui_toolkit.draw_all(map.iter().map(|(key, value)| {
+                            self.ui_toolkit.align(
+                                &|| { self.ui_toolkit.draw_text(&format!("{}:", key))},
+                                &[&|| { self.render_json_structure(value)  }],
+                            )
+                        }).collect())
+                    }),
+                    self.ui_toolkit.draw_text("}"),
+                ];
+                self.ui_toolkit.draw_all(drawn)
+            },
+            EmptyCantInfer => self.ui_toolkit.draw_text("Empty list, cannot infer type"),
+            NonHomogeneousCantParse => self.ui_toolkit.draw_text("Non homogeneous list, cannot infer type"),
+        }
     }
 
     fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {

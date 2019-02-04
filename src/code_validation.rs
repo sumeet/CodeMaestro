@@ -133,7 +133,7 @@ impl<'a> ProblemFinder<'a> {
     fn type_that_should_be_returned(&self, func: &lang::Function) -> Option<lang::Type> {
         if let Some(code_func) = func.downcast_ref::<code_function::CodeFunction>() {
             Some(code_func.returns())
-        } else if let Some(json_http_client) = func.downcast_ref::<JSONHTTPClient>() {
+        } else if let Some(_) = func.downcast_ref::<JSONHTTPClient>() {
             Some(LIST_OF_FORM_PARAMS.clone())
         } else {
             None

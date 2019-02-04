@@ -34,6 +34,8 @@ mod code_editor_renderer;
 mod edit_types;
 mod json;
 mod undo;
+mod result;
+mod http_request;
 mod json_http_client;
 mod json_http_client_builder;
 mod code_generation;

@@ -4,12 +4,16 @@ use super::env;
 use super::function;
 use super::builtins::new_result;
 use super::external_func;
+use super::http_request;
+use super::result::Result;
+use super::http_client;
 
 use itertools::Itertools;
 use http;
 use std::future::Future;
 use std::collections::HashMap;
 use serde_derive::{Serialize,Deserialize};
+use serde_json;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JSONHTTPClient {
@@ -91,9 +95,12 @@ impl JSONHTTPClient {
                     pairs.append_pair(key, value);
                 }
             }
-            http::Request::get(url.to_string()).body("".to_owned()).unwrap()
+            http_request::get(&url.to_string()).unwrap()
         }
     }
 }
 
-//pub fn get_json(request: ) ->
+pub async fn get_json(request: http::Request<String>) -> Result<serde_json::Value> {
+    let resp = await!(http_client::fetch(request))?;
+    Ok(serde_json::from_str(resp.body())?)
+}
