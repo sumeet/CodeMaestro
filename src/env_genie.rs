@@ -93,6 +93,11 @@ impl<'a> EnvGenie<'a> {
             .filter_map(|f| f.downcast_ref::<code_function::CodeFunction>())
     }
 
+    pub fn list_json_http_clients(&self) -> impl Iterator<Item = &JSONHTTPClient> {
+        self.all_functions()
+            .filter_map(|f| f.downcast_ref::<JSONHTTPClient>())
+    }
+
     pub fn list_pyfuncs(&self) -> impl Iterator<Item = &pystuff::PyFunc> {
         self.env.list_functions()
             .filter_map(|f| f.downcast_ref::<pystuff::PyFunc>())
@@ -126,9 +131,22 @@ impl<'a> EnvGenie<'a> {
     }
 
     pub fn code_takes_args(&'a self, root_id: lang::ID) -> impl Iterator<Item = lang::ArgumentDefinition> + 'a {
-        self.list_code_funcs()
-            .filter(move |cf| cf.code_id() == root_id)
-            .flat_map(|cf| cf.takes_args().into_iter())
+        self.all_functions()
+            .flat_map(move |f| {
+                get_args_for_code_block(root_id, f.as_ref())
+            })
     }
 }
 
+fn get_args_for_code_block(code_block_id: lang::ID, function: &lang::Function) -> impl Iterator<Item = lang::ArgumentDefinition> {
+    if let Some(code_func) = function.downcast_ref::<code_function::CodeFunction>() {
+        if code_func.code_id() == code_block_id {
+            return code_func.takes_args().into_iter()
+        }
+    } else if let Some(json_http_client) = function.downcast_ref::<JSONHTTPClient>() {
+        if json_http_client.gen_url_params.id == code_block_id {
+            return json_http_client.takes_args().into_iter()
+        }
+    }
+    vec![].into_iter()
+}

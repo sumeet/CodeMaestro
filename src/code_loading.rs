@@ -7,6 +7,7 @@ use super::enums;
 use super::code_function;
 use super::scripts;
 use super::tests;
+use super::json_http_client::JSONHTTPClient;
 
 use failure::{Error};
 use serde_json;
@@ -23,6 +24,7 @@ pub struct TheWorld {
     pub structs: Vec<structs::Struct>,
     pub enums: Vec<enums::Enum>,
     pub tests: Vec<tests::Test>,
+    pub json_http_clients: Vec<JSONHTTPClient>,
 }
 
 // pub fn load(filename: &str) -> Result<CodeNode,Error> {

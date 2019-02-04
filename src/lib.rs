@@ -166,6 +166,9 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
     for code_func in the_world.codefuncs {
         cmd_buffer.load_code_func(code_func)
     }
+    for json_http_client in the_world.json_http_clients {
+        cmd_buffer.load_json_http_client(json_http_client)
+    }
 
     controller
 }

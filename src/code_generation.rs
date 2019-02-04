@@ -57,6 +57,14 @@ pub fn new_string_literal(string: &str) -> lang::CodeNode {
     })
 }
 
+pub fn new_list_literal(typ: lang::Type) -> lang::CodeNode {
+    lang::CodeNode::ListLiteral(lang::ListLiteral {
+        id: lang::new_id(),
+        element_type: typ,
+        elements: vec![]
+    })
+}
+
 pub fn new_placeholder(description: &str, typ: lang::Type) -> lang::CodeNode {
     lang::CodeNode::Placeholder(lang::Placeholder {
         id: lang::new_id(),

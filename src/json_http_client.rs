@@ -7,8 +7,9 @@ use super::external_func;
 
 use http;
 use std::collections::HashMap;
+use serde_derive::{Serialize,Deserialize};
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct JSONHTTPClient {
     id: lang::ID,
     pub url: String,

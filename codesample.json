@@ -90,13 +90,8 @@
         {
           "id": "0f33ad04-5e0e-4494-8ab2-b966632ba513",
           "arg_type": {
-            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
-            "params": [
-              {
-                "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
-                "params": []
-              }
-            ]
+            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+            "params": []
           },
           "short_name": "arg0"
         }
@@ -117,6 +112,63 @@
               "assignment_id": "0f33ad04-5e0e-4494-8ab2-b966632ba513",
               "id": "87f1975c-33d6-4a7e-841b-60470522dcfb"
             }
+          },
+          {
+            "Placeholder": {
+              "id": "b6a4213a-d81d-4b9d-956a-9ed5bc40a020",
+              "description": "Return value",
+              "typ": {
+                "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+                "params": [
+                  {
+                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+                    "params": []
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "VariableReference": {
+              "assignment_id": "0f33ad04-5e0e-4494-8ab2-b966632ba513",
+              "id": "3468c8cd-4e6b-465f-8901-5818b57a61a1"
+            }
+          },
+          {
+            "Placeholder": {
+              "id": "79e7a2ea-49d1-47d3-856e-a948ec7ebde4",
+              "description": "Return value",
+              "typ": {
+                "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+                "params": [
+                  {
+                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+                    "params": []
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "VariableReference": {
+              "assignment_id": "0f33ad04-5e0e-4494-8ab2-b966632ba513",
+              "id": "bc6ee42d-4454-4edd-8951-435d38b9dbf2"
+            }
+          },
+          {
+            "Placeholder": {
+              "id": "de152b80-68e5-49f5-a2c4-ed7569a3c454",
+              "description": "Return value",
+              "typ": {
+                "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+                "params": [
+                  {
+                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+                    "params": []
+                  }
+                ]
+              }
+            }
           }
         ],
         "id": "d7d40bc8-72f6-44c8-885d-e0a1a82e74f7"
@@ -126,29 +178,6 @@
   "pyfuncs": [],
   "jsfuncs": [],
   "structs": [
-    {
-      "name": "HTTP Form param",
-      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-          "name": "key",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
-          "name": "value",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
     {
       "name": "HTTP Response",
       "id": "31d96c85-5966-4866-a90a-e6db3707b140",
@@ -167,6 +196,29 @@
           "name": "status code",
           "field_type": {
             "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           }
         }
@@ -217,6 +269,38 @@
         "expressions": [],
         "id": "704015a2-c231-4082-8007-babca16f62a1"
       }
+    }
+  ],
+  "json_http_clients": [
+    {
+      "id": "db74ce0b-e606-4703-aa80-bf3f62c2c905",
+      "url": "https://blah.com/jawifoje",
+      "name": "Hoohaw",
+      "gen_url_params": {
+        "expressions": [
+          {
+            "ListLiteral": {
+              "id": "5d19cba5-e4e4-402c-9326-a84081b5c567",
+              "element_type": {
+                "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                "params": []
+              },
+              "elements": []
+            }
+          }
+        ],
+        "id": "ffb68e6a-91ad-4b4c-ab0f-8648e0cc32ae"
+      },
+      "args": [
+        {
+          "id": "443c19c0-aa25-40e9-86ee-42e5aa632339",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "location"
+        }
+      ]
     }
   ]
 }

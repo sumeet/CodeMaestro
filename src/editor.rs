@@ -136,6 +136,7 @@ impl<'a> Controller {
             structs: env_genie.list_structs().cloned().collect(),
             enums: env_genie.list_enums().cloned().collect(),
             tests: self.test_by_id.values().cloned().collect(),
+            json_http_clients: env_genie.list_json_http_clients().cloned().collect(),
         };
         code_loading::save("codesample.json", &theworld).unwrap();
     }
