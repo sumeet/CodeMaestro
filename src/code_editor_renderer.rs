@@ -748,6 +748,12 @@ impl PerEditorCommandBuffer {
                 code_editor::CodeLocation::Test(test_id) => {
                     let mut test = cont.get_test(test_id).unwrap().clone();
                     test.set_code(code.into_block().unwrap().clone());
+                },
+                code_editor::CodeLocation::JSONHTTPClientURLParams(client_id) => {
+                    let env_genie = EnvGenie::new(&env);
+                    let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
+                    client.gen_url_params = code.into_block().unwrap().clone();
+                    env.add_function(client);
                 }
             }
         });

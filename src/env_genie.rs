@@ -6,6 +6,7 @@ use super::code_function;
 use super::pystuff;
 use super::jsstuff;
 use super::lang::Function;
+use super::json_http_client::JSONHTTPClient;
 
 use itertools::Itertools;
 
@@ -59,13 +60,18 @@ impl<'a> EnvGenie<'a> {
         self.env.find_function(id)
     }
 
+    pub fn get_json_http_client(&self, id: lang::ID) -> Option<&JSONHTTPClient> {
+        self.env.find_function(id)
+            .and_then(|f| f.downcast_ref::<JSONHTTPClient>())
+    }
+
     pub fn find_struct(&self, id: lang::ID) -> Option<&structs::Struct> {
         self.env.find_struct(id)
     }
 
     pub fn list_structs(&self) -> impl Iterator<Item = &structs::Struct> {
         self.typespecs()
-            .filter_map(|ts| ts.as_ref().downcast_ref::<structs::Struct>())
+            .filter_map(|ts| ts.downcast_ref::<structs::Struct>())
     }
 
     pub fn list_enums(&self) -> impl Iterator<Item = &enums::Enum> {

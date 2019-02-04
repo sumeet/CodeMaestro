@@ -282,8 +282,9 @@ impl CommandBuffer {
         self.add_integrating_command(move |controller, interpreter, _| {
             let mut env = interpreter.env.borrow_mut();
             controller.load_json_http_client_builder(JSONHTTPClientBuilder::new(json_http_client.id()));
-            let http_arg_generating_code = lang::CodeNode::Block(json_http_client.gen_url_params.clone());
-            controller.load_code(http_arg_generating_code, unimplemented!());
+            let generate_url_params_code = lang::CodeNode::Block(json_http_client.gen_url_params.clone());
+            controller.load_code(generate_url_params_code,
+                                 code_editor::CodeLocation::JSONHTTPClientURLParams(json_http_client.id()));
             env.add_function(json_http_client);
         })
     }
@@ -619,8 +620,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_window(
             &format!("Edit JSON HTTP Client: {}", builder.json_http_client_id),
             &|| {
-                let client = self.env_genie.find_function(builder.json_http_client_id).unwrap()
-                    .downcast_ref::<JSONHTTPClient>().unwrap();
+                let client = self.env_genie.get_json_http_client(builder.json_http_client_id).unwrap();
                 let client1 = client.clone();
                 let client2 = client.clone();
                 let cmd_buffer1 = Rc::clone(&self.command_buffer);
@@ -647,6 +647,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         },
                         || {},
                     ),
+                    self.ui_toolkit.draw_text("URL params:"),
+                    self.render_code(client.gen_url_params.id, 0.3),
                     self.render_arguments_selector(client),
                     // TODO: this has a different kind of type selector
                     self.ui_toolkit.draw_separator(),

@@ -26,6 +26,7 @@ pub enum CodeLocation {
     Function(lang::ID),
     Script(lang::ID),
     Test(lang::ID),
+    JSONHTTPClientURLParams(lang::ID),
 }
 
 impl CodeEditor {
