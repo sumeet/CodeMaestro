@@ -710,46 +710,47 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_json_tree(&self, json_value: &serde_json::Value) -> T::DrawResult {
-        let structure = json::infer_structure(json_value);
-        self.render_json_structure(&structure)
+        unimplemented!()
+//        let structure = json::infer_structure(json_value);
+//        self.render_json_structure(&structure)
     }
 
-    fn render_json_structure(&self, structure: &json::Structure) -> T::DrawResult {
-        use json::Structure::*;
-        match structure  {
-            Bool => self.ui_toolkit.draw_text("Boolean"),
-            String => self.ui_toolkit.draw_text("String"),
-            Number => self.ui_toolkit.draw_text("Number"),
-            Float => self.ui_toolkit.draw_text("Float"),
-            Null => self.ui_toolkit.draw_text("Null"),
-            List { box of } => {
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text("["),
-                    self.ui_toolkit.indent(10, &|| {
-                        self.render_json_structure(of)
-                    }),
-                    self.ui_toolkit.draw_text("]"),
-                ])
-            },
-            Map(map) => {
-                let drawn = vec![
-                    self.ui_toolkit.draw_text("{"),
-                    self.ui_toolkit.indent(10, &|| {
-                        self.ui_toolkit.draw_all(map.iter().map(|(key, value)| {
-                            self.ui_toolkit.align(
-                                &|| { self.ui_toolkit.draw_text(&format!("{}:", key))},
-                                &[&|| { self.render_json_structure(value)  }],
-                            )
-                        }).collect())
-                    }),
-                    self.ui_toolkit.draw_text("}"),
-                ];
-                self.ui_toolkit.draw_all(drawn)
-            },
-            EmptyCantInfer => self.ui_toolkit.draw_text("Empty list, cannot infer type"),
-            NonHomogeneousCantParse => self.ui_toolkit.draw_text("Non homogeneous list, cannot infer type"),
-        }
-    }
+//    fn render_json_structure(&self, structure: &json::Structure) -> T::DrawResult {
+//        use json::Structure::*;
+//        match structure  {
+//            Bool => self.ui_toolkit.draw_text("Boolean"),
+//            String => self.ui_toolkit.draw_text("String"),
+//            Number => self.ui_toolkit.draw_text("Number"),
+//            Float => self.ui_toolkit.draw_text("Float"),
+//            Null => self.ui_toolkit.draw_text("Null"),
+//            List { box of } => {
+//                self.ui_toolkit.draw_all(vec![
+//                    self.ui_toolkit.draw_text("["),
+//                    self.ui_toolkit.indent(10, &|| {
+//                        self.render_json_structure(of)
+//                    }),
+//                    self.ui_toolkit.draw_text("]"),
+//                ])
+//            },
+//            Map(map) => {
+//                let drawn = vec![
+//                    self.ui_toolkit.draw_text("{"),
+//                    self.ui_toolkit.indent(10, &|| {
+//                        self.ui_toolkit.draw_all(map.iter().map(|(key, value)| {
+//                            self.ui_toolkit.align(
+//                                &|| { self.ui_toolkit.draw_text(&format!("{}:", key))},
+//                                &[&|| { self.render_json_structure(value)  }],
+//                            )
+//                        }).collect())
+//                    }),
+//                    self.ui_toolkit.draw_text("}"),
+//                ];
+//                self.ui_toolkit.draw_all(drawn)
+//            },
+//            EmptyCantInfer => self.ui_toolkit.draw_text("Empty list, cannot infer type"),
+//            NonHomogeneousCantParse => self.ui_toolkit.draw_text("Non homogeneous list, cannot infer type"),
+//        }
+//    }
 
     fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
         self.ui_toolkit.draw_window(

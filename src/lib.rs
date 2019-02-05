@@ -33,6 +33,7 @@ mod code_editor;
 mod code_editor_renderer;
 mod edit_types;
 mod json;
+mod json2;
 mod undo;
 mod result;
 mod http_request;
