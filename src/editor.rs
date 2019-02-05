@@ -26,6 +26,7 @@ use super::code_editor_renderer::CodeEditorRenderer;
 use super::async_executor;
 use super::scripts;
 use super::json;
+use super::json2;
 use super::tests;
 use super::json_http_client::JSONHTTPClient;
 use super::json_http_client_builder::JSONHTTPClientBuilder;
@@ -239,8 +240,8 @@ pub trait UiToolkit {
     fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult;
-//    fn draw_tree_node(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
-//    fn draw_tree_leaf(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_tree_node(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_tree_leaf(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn indent(&self, px: i16, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn align(&self, lhs: &Fn() -> Self::DrawResult, rhs: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
@@ -703,54 +704,83 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_test_request_results(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
         match builder.test_run_result {
-            Some(Ok(ref json_value)) => self.render_json_tree(json_value),
+            Some(Ok(ref json_value)) => self.render_json_tree(builder, json_value),
             Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
             _ => self.ui_toolkit.draw_all(vec![]),
         }
     }
 
-    fn render_json_tree(&self, json_value: &serde_json::Value) -> T::DrawResult {
-        unimplemented!()
-//        let structure = json::infer_structure(json_value);
-//        self.render_json_structure(&structure)
+    fn render_json_tree(&self, builder: &JSONHTTPClientBuilder, json_value: &serde_json::Value) -> T::DrawResult {
+        let parsed_json = json2::parse(json_value.clone());
+        self.render_parsed_doc(builder, &parsed_json)
     }
 
-//    fn render_json_structure(&self, structure: &json::Structure) -> T::DrawResult {
-//        use json::Structure::*;
-//        match structure  {
-//            Bool => self.ui_toolkit.draw_text("Boolean"),
-//            String => self.ui_toolkit.draw_text("String"),
-//            Number => self.ui_toolkit.draw_text("Number"),
-//            Float => self.ui_toolkit.draw_text("Float"),
-//            Null => self.ui_toolkit.draw_text("Null"),
-//            List { box of } => {
-//                self.ui_toolkit.draw_all(vec![
-//                    self.ui_toolkit.draw_text("["),
-//                    self.ui_toolkit.indent(10, &|| {
-//                        self.render_json_structure(of)
-//                    }),
-//                    self.ui_toolkit.draw_text("]"),
-//                ])
-//            },
-//            Map(map) => {
-//                let drawn = vec![
-//                    self.ui_toolkit.draw_text("{"),
-//                    self.ui_toolkit.indent(10, &|| {
-//                        self.ui_toolkit.draw_all(map.iter().map(|(key, value)| {
-//                            self.ui_toolkit.align(
-//                                &|| { self.ui_toolkit.draw_text(&format!("{}:", key))},
-//                                &[&|| { self.render_json_structure(value)  }],
-//                            )
-//                        }).collect())
-//                    }),
-//                    self.ui_toolkit.draw_text("}"),
-//                ];
-//                self.ui_toolkit.draw_all(drawn)
-//            },
-//            EmptyCantInfer => self.ui_toolkit.draw_text("Empty list, cannot infer type"),
-//            NonHomogeneousCantParse => self.ui_toolkit.draw_text("Non homogeneous list, cannot infer type"),
-//        }
-//    }
+    fn render_parsed_doc(&self, builder: &JSONHTTPClientBuilder, parsed_json: &json2::ParsedDocument) -> T::DrawResult {
+        use json2::ParsedDocument::*;
+        let nesting = parsed_json.nesting();
+        match parsed_json  {
+            Bool { value, .. } => self.render_parsed_doc_value(builder, &value.to_string(), nesting),
+            String { value, .. } => self.render_parsed_doc_value(builder, &value, nesting),
+            Number { value, .. } => self.render_parsed_doc_value(builder, &value.to_string(), nesting),
+            Null { .. } => self.ui_toolkit.draw_text("Null"),
+            List { value, .. } => {
+                self.ui_toolkit.draw_all(vec![
+                    self.ui_toolkit.draw_text("["),
+                    self.ui_toolkit.indent(10, &|| {
+                        // TODO: show the rest under a collapsible thingie
+                        self.render_parsed_doc(builder, &value[0])
+                    }),
+                    self.ui_toolkit.draw_text("]"),
+                ])
+            },
+            Map { value: map, .. } => {
+                let drawn = vec![
+                    self.ui_toolkit.draw_text("{"),
+                    self.ui_toolkit.indent(10, &|| {
+                        self.ui_toolkit.draw_all(map.iter().map(|(key, value)| {
+                            self.ui_toolkit.align(
+                                &|| { self.ui_toolkit.draw_text(&format!("{}:", key))},
+                                &[&|| { self.render_parsed_doc(builder, value)  }],
+                            )
+                        }).collect())
+                    }),
+                    self.ui_toolkit.draw_text("}"),
+                ];
+                self.ui_toolkit.draw_all(drawn)
+            },
+            EmptyCantInfer { .. } => self.render_parsed_doc_value(builder, "Empty list, cannot infer type", nesting),
+            NonHomogeneousCantParse { .. } => self.render_parsed_doc_value(builder, "Non homogeneous list, cannot infer type", nesting),
+        }
+    }
+
+    fn render_parsed_doc_value(&self, builder: &JSONHTTPClientBuilder, value: &str,
+                               nesting: &json2::Nesting) -> T::DrawResult {
+        let selected_field = builder.get_selected_field(nesting);
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        let client_id = builder.json_http_client_id;
+        let nesting = nesting.clone();
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &|| { self.ui_toolkit.draw_text(value) },
+            &move || {
+                let cmd_buffer = cmd_buffer.clone();
+                let nesting = nesting.clone();
+                self.ui_toolkit.draw_checkbox_with_label(
+                    "", selected_field.is_some(),
+                    move |newvalue| {
+                        let nesting = nesting.clone();
+                        cmd_buffer.borrow_mut().add_controller_command(move |cont| {
+                            let mut builder = cont.get_json_http_client_builder(client_id).unwrap().clone();
+                            if newvalue {
+                                builder.add_selected_field(nesting)
+                            } else {
+                                builder.selected_fields.drain_filter(|field| field.nesting != nesting);
+                            }
+                            cont.load_json_http_client_builder(builder)
+                        })
+                })
+            }
+        ])
+    }
 
     fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
         self.ui_toolkit.draw_window(

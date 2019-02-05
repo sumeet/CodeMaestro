@@ -1,36 +1,45 @@
 use super::lang;
 
-use std::collections::HashMap;
 use std::collections::BTreeMap;
 
 use matches::matches;
 use serde_json;
 use itertools::Itertools;
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Nest {
+    ListElement(usize),
+    MapKey(String),
+}
+
+pub type Nesting = Vec<Nest>;
+
 pub enum ParsedDocument {
     // Scalars
-    Null,
-    Bool(bool),
-    String(String),
-    Number(i128),
+    Null { nesting: Nesting },
+    Bool { value: bool, nesting: Nesting },
+    String { value: String, nesting: Nesting },
+    Number { value: i128, nesting: Nesting },
     // Composites
-    List(Vec<ParsedDocument>),
-    Map(HashMap<String,ParsedDocument>),
+    List { value: Vec<ParsedDocument>, nesting: Nesting },
+    // BTreeMaps have stable key order, which is a must when rendering otherwise the screen flickers
+    // like crazy lol
+    Map { value: BTreeMap<String,ParsedDocument>, nesting: Nesting },
     // these are /errors/ (when parsing Lists) but for simplicity we'll put these in the
     // actual structure enum instead of putting them in a separate one
-    EmptyCantInfer(serde_json::Value),
-    NonHomogeneousCantParse(serde_json::Value),
+    EmptyCantInfer { value: serde_json::Value, nesting: Nesting },
+    NonHomogeneousCantParse { value: serde_json::Value, nesting: Nesting },
 }
 
 impl ParsedDocument {
     fn doc_type(&self) -> DocType {
         match self {
-            ParsedDocument::Null => DocType::Null,
-            ParsedDocument::Bool(_) => DocType::Bool,
-            ParsedDocument::String(_) => DocType::String,
-            ParsedDocument::Number(_) => DocType::Number,
-            ParsedDocument::List(list) => {
-                let mut list_type = list.iter()
+            ParsedDocument::Null { .. } => DocType::Null,
+            ParsedDocument::Bool { .. } => DocType::Bool,
+            ParsedDocument::String { .. } => DocType::String,
+            ParsedDocument::Number { .. } => DocType::Number,
+            ParsedDocument::List { value, .. } => {
+                let mut list_type = value.iter()
                     .map(|d| d.doc_type())
                     .unique()
                     .collect_vec();
@@ -39,47 +48,75 @@ impl ParsedDocument {
                 }
                 DocType::List(Box::new(list_type.pop().unwrap()))
             }
-            ParsedDocument::Map(map) => {
-                let doc_type_by_key = map.iter()
+            ParsedDocument::Map { value, .. } => {
+                let doc_type_by_key = value.iter()
                     .map(|(key, doc)| (key.clone(), doc.doc_type()))
                     .collect();
                 DocType::Map(doc_type_by_key)
             },
-            ParsedDocument::EmptyCantInfer(_) => DocType::EmptyCantInfer,
-            ParsedDocument::NonHomogeneousCantParse(_) => DocType::NonHomogeneousCantParse,
+            ParsedDocument::EmptyCantInfer { .. } => DocType::EmptyCantInfer,
+            ParsedDocument::NonHomogeneousCantParse { .. } => DocType::NonHomogeneousCantParse,
+        }
+    }
+
+    pub fn nesting(&self) -> &Nesting {
+        match self {
+            ParsedDocument::Null { nesting, .. } |
+            ParsedDocument::NonHomogeneousCantParse { nesting, .. } |
+            ParsedDocument::EmptyCantInfer { nesting, .. } |
+            ParsedDocument::Bool { nesting, .. } |
+            ParsedDocument::Map { nesting, .. } |
+            ParsedDocument::List { nesting, .. } |
+            ParsedDocument::String { nesting, .. } |
+            ParsedDocument::Number { nesting, .. } => nesting
         }
     }
 }
 
 pub fn parse(j: serde_json::Value) -> ParsedDocument {
+    parse_nesting(j, vec![])
+}
+
+fn parse_nesting(j: serde_json::Value, nesting: Nesting) -> ParsedDocument {
     match j {
-        serde_json::Value::Null => ParsedDocument::Null,
-        serde_json::Value::Bool(b) => ParsedDocument::Bool(b),
-        serde_json::Value::String(s) => ParsedDocument::String(s),
+        serde_json::Value::Null => ParsedDocument::Null { nesting },
+        serde_json::Value::Bool(value) => ParsedDocument::Bool { value, nesting },
+        serde_json::Value::String(value) => ParsedDocument::String { value, nesting },
         serde_json::Value::Number(number) => {
             if number.is_f64() {
                 // yep we turn floats into strings
-                ParsedDocument::String(number.to_string())
+                ParsedDocument::String { value: number.to_string(), nesting }
             } else {
-                ParsedDocument::Number(number.as_i64().unwrap() as i128)
+                ParsedDocument::Number { value: number.as_i64().unwrap() as i128, nesting }
             }
         },
         serde_json::Value::Array(ref vs) => {
-            let parsed_docs = vs.into_iter().cloned().map(parse).collect_vec();
+            let parsed_docs = vs.into_iter().cloned().enumerate().map(|(index, value)| {
+                let mut nesting = nesting.clone();
+                nesting.push(Nest::ListElement(index));
+                parse_nesting(value, nesting)
+            }).collect_vec();
             let doc_types = parsed_docs.iter().map(|d| d.doc_type())
                 .filter(|t| !matches!(t, DocType::EmptyCantInfer))
                 .unique()
                 .collect_vec();
             if doc_types.is_empty() {
-                ParsedDocument::EmptyCantInfer(j)
+                ParsedDocument::EmptyCantInfer { value: j, nesting }
             } else if doc_types.len() > 1 {
-                ParsedDocument::NonHomogeneousCantParse(j)
+                ParsedDocument::NonHomogeneousCantParse { value: j, nesting }
             } else {
-                ParsedDocument::List(parsed_docs)
+                ParsedDocument::List { value: parsed_docs, nesting }
             }
         },
         serde_json::Value::Object(o) => {
-            ParsedDocument::Map(o.into_iter().map(|(k, v)| (k, parse(v))).collect())
+            ParsedDocument::Map {
+                value: o.into_iter().map(|(k, v)| {
+                    let mut nesting = nesting.clone();
+                    nesting.push(Nest::MapKey(k.clone()));
+                    (k, parse_nesting(v, nesting))
+                }).collect(),
+                nesting,
+            }
         }
     }
 }

@@ -9,6 +9,7 @@
 #![feature(await_macro, async_await, futures_api)]
 #![feature(try_from)]
 #![feature(slice_patterns)]
+#![feature(drain_filter)]
 #![recursion_limit="256"]
 #![feature(fnbox)]
 
