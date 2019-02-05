@@ -220,7 +220,7 @@ pub trait UiToolkit {
               G: Fn(&T) -> bool,
               H: Fn(&T) -> String;
     fn draw_selectables<F, G, H, T>(&self, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
-        where T: 'static,
+        where T: Clone + 'static,
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
               H: Fn(&T) -> &str;

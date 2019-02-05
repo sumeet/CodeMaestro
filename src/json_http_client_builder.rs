@@ -26,7 +26,7 @@ impl JSONHTTPClientBuilder {
                                                                 callback: F) {
         let url = self.test_url.clone();
         let mut new_builder = self.clone();
-        let val = async_executor.exec(async move {
+        async_executor.exec(async move {
             let val = await!(do_get_request(url));
             let result = val.map_err(|e| e.to_string());
             new_builder.test_run_result = Some(result);

@@ -345,7 +345,7 @@ impl UiToolkit for YewToolkit {
         let formatted_items = items.into_iter()
             .map(|i| format_item(i)).collect_vec();
         let selected_item_in_combo_box = items.into_iter()
-            .position(|i| is_item_selected(i)).unwrap();
+            .position(|i| is_item_selected(i));
         let items = items.into_iter().map(|i| (*i).clone()).collect_vec();
         html! {
             <select onchange=|event| {
@@ -362,7 +362,7 @@ impl UiToolkit for YewToolkit {
                         }
                     },>
                 { for formatted_items.into_iter().enumerate().map(|(index, item)| {
-                    let selected = index == selected_item_in_combo_box;
+                    let selected = Some(index) == selected_item_in_combo_box;
                     if selected {
                         html! {
                             <option selected=true, >
@@ -379,6 +379,51 @@ impl UiToolkit for YewToolkit {
                 })}
             </select>
             <label>{ label }</label>
+        }
+    }
+
+    // TODO: make this NOT a total copy and paste of draw_combo_box_with_label
+    fn draw_selectables<F, G, H, T>(&self, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
+        where T: Clone + 'static,
+              F: Fn(&T) -> () + 'static,
+              G: Fn(&T) -> bool,
+              H: Fn(&T) -> &str {
+        let formatted_items = items.into_iter()
+            .map(|i| format_item(i)).collect_vec();
+        let selected_item_in_combo_box = items.into_iter()
+            .position(|i| is_item_selected(i));
+        let items = items.into_iter().map(|i| (*i).clone()).collect_vec();
+        html! {
+            <select size={items.len().to_string()}, onchange=|event| {
+                        match event {
+                            ChangeData::Select(elem) => {
+                                if let Some(selected_index) = elem.selected_index() {
+                                    onchange(&items[selected_index as usize]);
+                                }
+                                Msg::Redraw
+                            }
+                            _ => {
+                                unreachable!();
+                            }
+                        }
+                    },>
+                { for formatted_items.into_iter().enumerate().map(|(index, item)| {
+                    let selected = Some(index) == selected_item_in_combo_box;
+                    if selected {
+                        html! {
+                            <option selected=true, >
+                                { item }
+                            </option>
+                        }
+                    } else {
+                        html! {
+                            <option>
+                                { item }
+                            </option>
+                        }
+                    }
+                })}
+            </select>
         }
     }
 
