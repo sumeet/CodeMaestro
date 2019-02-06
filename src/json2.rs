@@ -1,6 +1,7 @@
 use super::lang;
 
 use std::collections::BTreeMap;
+use std::iter;
 
 use matches::matches;
 use serde_json;
@@ -14,6 +15,7 @@ pub enum Nest {
 
 pub type Nesting = Vec<Nest>;
 
+#[derive(Clone)]
 pub enum ParsedDocument {
     // Scalars
     Null { nesting: Nesting },
@@ -69,6 +71,38 @@ impl ParsedDocument {
             ParsedDocument::List { nesting, .. } |
             ParsedDocument::String { nesting, .. } |
             ParsedDocument::Number { nesting, .. } => nesting
+        }
+    }
+
+    pub fn find(&self, nesting: &Nesting) -> Option<&Self> {
+        if self.nesting() == nesting {
+            return Some(self)
+        }
+        self.all_children_dfs().flat_map(|child| child.find(nesting)).next()
+    }
+
+    fn all_children_dfs<'a>(&'a self) -> Box<dyn Iterator<Item = &'a Self> + 'a> {
+        Box::new(self.iterate_children()
+            .flat_map(|child| {
+                iter::once(child).chain(child.all_children_dfs())
+            }))
+    }
+
+    fn iterate_children<'a>(&'a self) -> Box<dyn Iterator<Item = &'a Self> + 'a> {
+        match self {
+            ParsedDocument::List { value, .. } => {
+                Box::new(value.iter())
+            },
+            ParsedDocument::Map { value, .. } => {
+                Box::new(value.values())
+            },
+            // scalars don't have children
+            ParsedDocument::Null { .. } |
+            ParsedDocument::NonHomogeneousCantParse { .. } |
+            ParsedDocument::EmptyCantInfer { .. } |
+            ParsedDocument::Bool { .. } |
+            ParsedDocument::String { .. } |
+            ParsedDocument::Number { .. } => Box::new(iter::empty()),
         }
     }
 }

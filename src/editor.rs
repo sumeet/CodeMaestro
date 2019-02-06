@@ -704,15 +704,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_test_request_results(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
         match builder.test_run_result {
-            Some(Ok(ref json_value)) => self.render_json_tree(builder, json_value),
+            Some(Ok(_)) => self.render_parsed_doc(builder, builder.test_run_parsed_doc.as_ref().unwrap()),
             Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
-            _ => self.ui_toolkit.draw_all(vec![]),
+            None => self.ui_toolkit.draw_all(vec![]),
         }
-    }
-
-    fn render_json_tree(&self, builder: &JSONHTTPClientBuilder, json_value: &serde_json::Value) -> T::DrawResult {
-        let parsed_json = json2::parse(json_value.clone());
-        self.render_parsed_doc(builder, &parsed_json)
     }
 
     fn render_parsed_doc(&self, builder: &JSONHTTPClientBuilder, parsed_json: &json2::ParsedDocument) -> T::DrawResult {
@@ -748,8 +743,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ];
                 self.ui_toolkit.draw_all(drawn)
             },
-            EmptyCantInfer { .. } => self.render_parsed_doc_value(builder, "Empty list, cannot infer type", nesting),
-            NonHomogeneousCantParse { .. } => self.render_parsed_doc_value(builder, "Non homogeneous list, cannot infer type", nesting),
+            // TODO: maybe one day we'll want to try and put these kinds of things into json::Value
+            // containers, and just let you grab at it like in a normal programming language. for
+            // now though, just don't let you do anything with them.
+            EmptyCantInfer { .. } => self.ui_toolkit.draw_text("Empty list, cannot infer type"),
+            NonHomogeneousCantParse { .. } => self.ui_toolkit.draw_text("Non homogeneous list, cannot infer type"),
         }
     }
 
@@ -773,11 +771,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             if newvalue {
                                 builder.add_selected_field(nesting)
                             } else {
-                                builder.selected_fields.drain_filter(|field| field.nesting != nesting);
+                                builder.remove_selected_field(nesting)
                             }
                             cont.load_json_http_client_builder(builder)
                         })
                 })
+            },
+            &|| {
+                if let Some(selected_field) = selected_field {
+                    let symb = self.env_genie.get_symbol_for_type(&selected_field.typ);
+                    self.ui_toolkit.draw_text(&format!("{} {}", selected_field.name, symb))
+                } else {
+                    self.ui_toolkit.draw_text("")
+                }
             }
         ])
     }
