@@ -25,7 +25,7 @@ pub struct JSONHTTPClientBuilder {
 pub struct SelectedField {
     pub name: String,
     pub nesting: json2::Nesting,
-    pub typ: lang::Type,
+    pub typespec_id: lang::ID,
 }
 
 impl JSONHTTPClientBuilder {
@@ -50,7 +50,7 @@ impl JSONHTTPClientBuilder {
         self.selected_fields.push(SelectedField {
             name: gen_field_name(&nesting),
             nesting,
-            typ: get_type(field),
+            typespec_id: get_typespec_id(field),
         })
     }
 
@@ -98,18 +98,45 @@ async fn do_get_request(url: String) -> EZResult<serde_json::Value> {
     await!(json_http_client::get_json(http_request::get(&url)?))
 }
 
-pub fn get_type(parsed_doc: &json2::ParsedDocument) -> lang::Type {
+pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {
     use json2::ParsedDocument;
     match parsed_doc {
-        ParsedDocument::Null { .. } => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
-        ParsedDocument::Bool { .. } => lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC),
-        ParsedDocument::String { .. } => lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-        ParsedDocument::Number { .. } => lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+        ParsedDocument::Null { .. } => lang::NULL_TYPESPEC.id,
+        ParsedDocument::Bool { .. } => lang::BOOLEAN_TYPESPEC.id,
+        ParsedDocument::String { .. } => lang::STRING_TYPESPEC.id,
+        ParsedDocument::Number { .. } => lang::NUMBER_TYPESPEC.id,
         ParsedDocument::NonHomogeneousCantParse { .. } |
         ParsedDocument::EmptyCantInfer { .. } |
         ParsedDocument::Map { .. } |
         ParsedDocument::List { .. } => panic!("we don't support selecting these types, smth's wrong"),
     }
+}
+
+fn make_return_type_spec(selected_fields: &Vec<SelectedField>) -> Result<ReturnTypeSpec,&str> {
+    if selected_fields.is_empty() {
+        return Err("no selected fields")
+    }
+
+    if selected_fields.len() == 1 && selected_fields[0].nesting.is_empty() {
+        return Ok(ReturnTypeSpec::Scalar { typespec_id: selected_fields[0].typespec_id })
+    }
+
+    // TODO: i think this would need to handle arbitrarily nested lists, but for now let's
+    // make it work with one
+    if selected_fields.len() == 1 && selected_fields[0].nesting.len() == 1 {
+        if let json2::Nest::ListElement(_) = selected_fields[0].nesting[0] {
+            return Ok(ReturnTypeSpec::List(Box::new(ReturnTypeSpec::Scalar {
+                    typespec_id: selected_fields[0].typespec_id
+            })))
+        }
+    }
+
+    if selected_fields.len() == 1 {
+        return Err("don't know how to handle one field but not either a scalar or list of scalars")
+    }
+
+
+    unimplemented!()
 }
 
 #[derive(PartialEq, Eq, Hash)]
@@ -170,10 +197,14 @@ impl<'a> ReturnTypeBuilder<'a> {
         self.env_genie.list_structs()
             .find(|strukt| {
                 strukt.fields.len() == structfields.len() && {
-                    true
+                    normalize_struct_fields(&strukt.fields) == normalize_struct_fields(&structfields)
                 }
             })
     }
+}
+
+fn normalize_struct_fields(fields: &[structs::StructField]) -> BTreeMap<&str, &lang::Type> {
+    fields.iter().map(|field| (field.name.as_str(), &field.field_type)).collect()
 }
 
 struct ReturnTypeBuilderResult {

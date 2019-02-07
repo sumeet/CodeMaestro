@@ -779,8 +779,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             },
             &|| {
                 if let Some(selected_field) = selected_field {
-                    let symb = self.env_genie.get_symbol_for_type(&selected_field.typ);
-                    self.ui_toolkit.draw_text(&format!("{} {}", selected_field.name, symb))
+                    let ts = self.env_genie.find_typespec(selected_field.typespec_id).unwrap();
+                    self.ui_toolkit.draw_text(&format!("{} {}", selected_field.name, ts.readable_name()))
                 } else {
                     self.ui_toolkit.draw_text("")
                 }
