@@ -770,7 +770,7 @@ impl MutationMaster {
                 // TODO: what to do if there's nothing left in the block?
                 if new_cursor_position.is_none() {
                     new_cursor_position = new_block.expressions
-                        .get(deleted_expression_position_in_block - 1)
+                        .get(deleted_expression_position_in_block.checked_sub(1).unwrap_or(0))
                         .map(|code_node| code_node.id());
                 }
 

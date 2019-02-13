@@ -19,6 +19,7 @@ pub struct JSONHTTPClientBuilder {
     pub test_run_parsed_doc: Option<json2::ParsedDocument>,
     pub json_http_client_id: lang::ID,
     pub selected_fields: Vec<SelectedField>,
+    pub return_type_candidate: Option<ReturnTypeBuilderResult>,
 }
 
 #[derive(Clone)]
@@ -34,6 +35,7 @@ impl JSONHTTPClientBuilder {
             test_url: "https://httpbin.org/get".to_string(),
             test_run_result: None,
             test_run_parsed_doc: None,
+            return_type_candidate: None,
             json_http_client_id,
             selected_fields: vec![]
         }
@@ -44,19 +46,25 @@ impl JSONHTTPClientBuilder {
             .find(|field| &field.nesting == nesting)
     }
 
-    pub fn add_selected_field(&mut self, nesting: json2::Nesting) {
+    pub fn add_selected_field(&mut self, nesting: json2::Nesting, env_genie: &EnvGenie) {
         let field = self.test_run_parsed_doc.as_ref().unwrap().find(&nesting)
             .expect("couldn't find field for some reason");
         self.selected_fields.push(SelectedField {
             name: gen_field_name(&nesting),
             nesting,
             typespec_id: get_typespec_id(field),
-        })
+        });
+        self.rebuild_return_type(env_genie)
     }
 
-    pub fn remove_selected_field(&mut self, nesting: json2::Nesting) {
+    pub fn remove_selected_field(&mut self, nesting: json2::Nesting, env_genie: &EnvGenie) {
         self.selected_fields
             .drain_filter(|field| field.nesting == nesting);
+        self.rebuild_return_type(env_genie)
+    }
+
+    fn rebuild_return_type(&mut self, env_genie: &EnvGenie) {
+        self.return_type_candidate = build_return_type(env_genie, &self.selected_fields)
     }
 
     fn set_test_result(&mut self, result: Result<serde_json::Value,String>) {
@@ -94,6 +102,13 @@ fn gen_field_name(nesting: &json2::Nesting) -> String {
         }).last().unwrap_or("h00000what").to_string()
 }
 
+fn build_return_type(env_genie: &EnvGenie,
+                     selected_fields: &[SelectedField]) -> Option<ReturnTypeBuilderResult> {
+    let return_type_spec = make_return_type_spec(selected_fields)
+        .ok()?;
+    Some(ReturnTypeBuilder::new(env_genie, &return_type_spec).build())
+}
+
 async fn do_get_request(url: String) -> EZResult<serde_json::Value> {
     await!(json_http_client::get_json(http_request::get(&url)?))
 }
@@ -112,7 +127,7 @@ pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {
     }
 }
 
-fn make_return_type_spec(selected_fields: &Vec<SelectedField>) -> Result<ReturnTypeSpec,&str> {
+fn make_return_type_spec(selected_fields: &[SelectedField]) -> Result<ReturnTypeSpec,&str> {
     if selected_fields.is_empty() {
         return Err("no selected fields")
     }
@@ -121,35 +136,56 @@ fn make_return_type_spec(selected_fields: &Vec<SelectedField>) -> Result<ReturnT
         return Ok(ReturnTypeSpec::Scalar { typespec_id: selected_fields[0].typespec_id })
     }
 
-    // TODO: i think this would need to handle arbitrarily nested lists, but for now let's
-    // make it work with one
-    if selected_fields.len() == 1 && selected_fields[0].nesting.len() == 1 {
-        if let json2::Nest::ListElement(_) = selected_fields[0].nesting[0] {
-            return Ok(ReturnTypeSpec::List(Box::new(ReturnTypeSpec::Scalar {
-                    typespec_id: selected_fields[0].typespec_id
-            })))
+    // this is a placeholder, really this could be anything
+    let mut return_type_spec = ReturnTypeSpec::Struct(BTreeMap::new());
+    for selected_field in selected_fields {
+        let scalar = ReturnTypeSpec::Scalar { typespec_id: selected_field.typespec_id };
+
+        let mut current_return_type_spec = &mut return_type_spec;
+        for nest in &selected_field.nesting {
+            match nest {
+                json2::Nest::MapKey(key) => {
+                    current_return_type_spec = current_return_type_spec.insert_key(key, scalar.clone());
+                }
+                json2::Nest::ListElement(_) => {
+                    *current_return_type_spec = ReturnTypeSpec::List(Box::new(scalar.clone()));
+                },
+            }
         }
     }
-
-    if selected_fields.len() == 1 {
-        return Err("don't know how to handle one field but not either a scalar or list of scalars")
-    }
-
-
-    unimplemented!()
+    Ok(return_type_spec)
 }
 
-#[derive(PartialEq, Eq, Hash)]
-enum ReturnTypeSpec {
+#[derive(PartialEq, Eq, Hash, Clone)]
+pub enum ReturnTypeSpec {
     Struct(BTreeMap<String, ReturnTypeSpec>),
     List(Box<ReturnTypeSpec>),
     Scalar { typespec_id: lang::ID },
 }
 
-struct ReturnTypeBuilder<'a> {
-    built_structs: Vec<structs::Struct>,
-    env_genie: &'a EnvGenie<'a>,
-    return_type_spec: &'a ReturnTypeSpec,
+impl ReturnTypeSpec {
+    fn insert_key(&mut self, key: &String, rts: ReturnTypeSpec) -> &mut ReturnTypeSpec {
+       match self {
+           ReturnTypeSpec::Struct(map) => {
+               map.insert(key.clone(), rts);
+               map.get_mut(key).unwrap()
+           },
+           ReturnTypeSpec::List(box of) => {
+               of.insert_key(key, rts)
+           },
+           // in this instance, the Scalar acts as a placeholder. let's clobber it!
+           ReturnTypeSpec::Scalar { .. } => {
+               *self = ReturnTypeSpec::Struct(BTreeMap::new());
+               self.insert_key(key, rts)
+           }
+       }
+    }
+}
+
+pub struct ReturnTypeBuilder<'a> {
+    pub built_structs: Vec<structs::Struct>,
+    pub env_genie: &'a EnvGenie<'a>,
+    pub return_type_spec: &'a ReturnTypeSpec,
 }
 
 impl<'a> ReturnTypeBuilder<'a> {
@@ -171,11 +207,12 @@ impl<'a> ReturnTypeBuilder<'a> {
                 result
             }
             ReturnTypeSpec::Struct(map) => {
+                let mut structs_to_be_added = vec![];
                 let struct_fields = map.iter().map(|(key, returntypespec)| {
                     let result = ReturnTypeBuilder::new(self.env_genie, returntypespec).build();
+                    structs_to_be_added.extend(result.structs_to_be_added);
                     structs::StructField::new(key.clone(), result.typ)
                 }).collect_vec();
-                let mut structs_to_be_added = vec![];
                 let typespec_id = self.find_existing_struct_matching(&struct_fields)
                     .map(|strukt| strukt.id)
                     .unwrap_or_else(|| {
@@ -185,6 +222,8 @@ impl<'a> ReturnTypeBuilder<'a> {
                         structs_to_be_added.push(strukt);
                         id
                     });
+                // not sure if this actually works
+                structs_to_be_added.dedup_by_key(|s| normalize_struct_fields(&s.fields));
                 ReturnTypeBuilderResult {
                     structs_to_be_added,
                     typ: lang::Type::from_spec_id(typespec_id, vec![])
@@ -203,11 +242,12 @@ impl<'a> ReturnTypeBuilder<'a> {
     }
 }
 
-fn normalize_struct_fields(fields: &[structs::StructField]) -> BTreeMap<&str, &lang::Type> {
-    fields.iter().map(|field| (field.name.as_str(), &field.field_type)).collect()
+fn normalize_struct_fields(fields: &[structs::StructField]) -> BTreeMap<String, lang::ID> {
+    fields.iter().map(|field| (field.name.clone(), field.field_type.id())).collect()
 }
 
-struct ReturnTypeBuilderResult {
-    structs_to_be_added: Vec<structs::Struct>,
-    typ: lang::Type,
+#[derive(Debug, Clone)]
+pub struct ReturnTypeBuilderResult {
+    pub structs_to_be_added: Vec<structs::Struct>,
+    pub typ: lang::Type,
 }

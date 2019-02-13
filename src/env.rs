@@ -203,6 +203,10 @@ impl Interpreter {
             }
         }
     }
+
+    pub fn dup(&self) -> Self {
+        Self::with_env(Rc::clone(&self.env))
+    }
 }
 
 #[derive(Debug)]

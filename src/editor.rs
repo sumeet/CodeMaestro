@@ -240,8 +240,8 @@ pub trait UiToolkit {
     fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult;
-    fn draw_tree_node(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
-    fn draw_tree_leaf(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+//    fn draw_tree_node(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+//    fn draw_tree_leaf(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn indent(&self, px: i16, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn align(&self, lhs: &Fn() -> Self::DrawResult, rhs: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
@@ -641,6 +641,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let cmd_buffer4 = Rc::clone(&self.command_buffer);
                 let cmd_buffer5 = Rc::clone(&self.command_buffer);
 
+                let current_return_type_name = self.env_genie.get_name_for_type(&client.returns()).unwrap();
+
                 self.ui_toolkit.draw_all(vec![
                     self.ui_toolkit.draw_text_input_with_label(
                         "Name",
@@ -665,6 +667,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.ui_toolkit.draw_text("URL params:"),
                     self.render_code(client.gen_url_params.id, 0.3),
                     self.render_arguments_selector(client),
+                    self.ui_toolkit.draw_text(&format!("Current return type: {}", current_return_type_name)),
                     self.ui_toolkit.draw_separator(),
                     self.ui_toolkit.draw_text("Return type generator and test section"),
                     self.ui_toolkit.draw_text_input_with_label(
@@ -693,13 +696,53 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         })
                     }),
                     self.render_test_request_results(builder),
-                    // TODO: tree list here:
+                    self.render_json_return_type_selector(builder),
                     self.ui_toolkit.draw_separator(),
                     self.render_general_function_menu(client),
                 ])
             },
             None::<fn(Keypress)>,
         )
+    }
+
+    fn render_json_return_type_selector(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
+        if let Some(return_type_candidate) = &builder.return_type_candidate {
+            let type_description = if let Some(type_name) = self.env_genie.get_name_for_type(&return_type_candidate.typ) {
+                type_name
+            } else {
+                let new_struct_for_return_type = return_type_candidate.structs_to_be_added.iter().find(|s| {
+                    s.id == return_type_candidate.typ.typespec_id
+                }).unwrap();
+                new_struct_for_return_type.name.clone()
+            };
+            let cmd_buffer = Rc::clone(&self.command_buffer);
+            let client_id = builder.json_http_client_id;
+            self.ui_toolkit.draw_all(vec![
+                self.ui_toolkit.draw_text(&format!("Return type: {}", type_description)),
+                self.ui_toolkit.draw_button("Apply return type", GREY_COLOR, move || {
+                    cmd_buffer.borrow_mut().add_integrating_command(move |cont, interp, _| {
+                        let mut env = interp.env.borrow_mut();
+                        let mut json_http_client = {
+                            let env_genie = env_genie::EnvGenie::new(&env);
+                            env_genie.get_json_http_client(client_id).unwrap().clone()
+                        };
+
+                        let builder = cont.get_json_http_client_builder(client_id).unwrap();
+                        let return_type_candidate = builder.return_type_candidate.clone()
+                            .unwrap();
+                        for strukt in return_type_candidate.structs_to_be_added {
+                            env.add_typespec(strukt);
+                        }
+                        json_http_client.return_type = return_type_candidate.typ;
+                        env.add_function(json_http_client);
+                    })
+                }),
+                self.ui_toolkit.draw_text("Structs to be added:"),
+                self.ui_toolkit.draw_text(&format!("{:#?}", return_type_candidate.structs_to_be_added)),
+            ])
+        } else {
+            self.ui_toolkit.draw_text("")
+        }
     }
 
     fn render_test_request_results(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
@@ -766,12 +809,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     "", selected_field.is_some(),
                     move |newvalue| {
                         let nesting = nesting.clone();
-                        cmd_buffer.borrow_mut().add_controller_command(move |cont| {
+                        cmd_buffer.borrow_mut().add_integrating_command(move |cont, interp, _executor| {
+                            let env = interp.env.borrow();
+                            let env_genie = env_genie::EnvGenie::new(&env);
                             let mut builder = cont.get_json_http_client_builder(client_id).unwrap().clone();
                             if newvalue {
-                                builder.add_selected_field(nesting)
+                                builder.add_selected_field(nesting, &env_genie)
                             } else {
-                                builder.remove_selected_field(nesting)
+                                builder.remove_selected_field(nesting, &env_genie)
                             }
                             cont.load_json_http_client_builder(builder)
                         })
@@ -784,7 +829,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 } else {
                     self.ui_toolkit.draw_text("")
                 }
-            }
+            },
         ])
     }
 

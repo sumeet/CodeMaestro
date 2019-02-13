@@ -14,6 +14,20 @@ lazy_static! {
     pub static ref HTTP_FORM_PARAM_ID : uuid::Uuid = uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap();
 }
 
+pub fn ok_result(value: lang::Value) -> lang::Value {
+    lang::Value::Enum {
+        variant_id: uuid::Uuid::parse_str("f70c799a-1d63-4293-889d-55c07a7456a0").unwrap(),
+        value: Box::new(value),
+    }
+}
+
+pub fn err_result(value: lang::Value) -> lang::Value {
+    lang::Value::Enum {
+        variant_id: uuid::Uuid::parse_str("9f22e23e-d9b9-49c2-acf2-43a59598ea86").unwrap(),
+        value: Box::new(value),
+    }
+}
+
 #[derive(Clone)]
 pub struct Print {}
 
@@ -161,3 +175,4 @@ impl HTTPGet {
 pub fn new_result(ok_type: lang::Type) -> lang::Type {
     lang::Type { typespec_id: *RESULT_ENUM_ID, params: vec![ok_type] }
 }
+
