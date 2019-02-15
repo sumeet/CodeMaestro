@@ -8,6 +8,7 @@ use super::code_function;
 use super::scripts;
 use super::tests;
 use super::json_http_client::JSONHTTPClient;
+use super::chat_trigger::ChatTrigger;
 
 use failure::{Error};
 use serde_json;
@@ -25,6 +26,7 @@ pub struct TheWorld {
     pub enums: Vec<enums::Enum>,
     pub tests: Vec<tests::Test>,
     pub json_http_clients: Vec<JSONHTTPClient>,
+    pub chat_triggers: Vec<ChatTrigger>,
 }
 
 // pub fn load(filename: &str) -> Result<CodeNode,Error> {

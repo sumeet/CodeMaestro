@@ -6,12 +6,24 @@ use itertools::Itertools;
 use url;
 use http::Request;
 use super::http_client;
+use maplit::hashmap;
 
 // this gets loaded through codesample.json... TODO: make a builtins.json file
 lazy_static! {
     pub static ref HTTP_RESPONSE_STRUCT_ID : uuid::Uuid = uuid::Uuid::parse_str("31d96c85-5966-4866-a90a-e6db3707b140").unwrap();
     pub static ref RESULT_ENUM_ID : uuid::Uuid = uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap();
-    pub static ref HTTP_FORM_PARAM_ID : uuid::Uuid = uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap();
+    pub static ref HTTP_FORM_PARAM_STRUCT_ID : uuid::Uuid = uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap();
+    pub static ref MESSAGE_STRUCT_ID : uuid::Uuid = uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap();
+}
+
+pub fn new_message(sender: String, message: String) -> lang::Value {
+    lang::Value::Struct {
+        struct_id: *MESSAGE_STRUCT_ID,
+        values: hashmap!{
+            uuid::Uuid::parse_str("e01e6346-5c8f-4b1b-9723-cde0abf77ec0").unwrap() => lang::Value::String(sender),
+            uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(message),
+        }
+    }
 }
 
 pub fn ok_result(value: lang::Value) -> lang::Value {
@@ -134,7 +146,7 @@ impl lang::Function for HTTPGet {
                 uuid::Uuid::parse_str("291b9156-db02-4d81-a965-4b5a95bb51a5").unwrap(),
                 lang::Type::with_params(
                     &*lang::LIST_TYPESPEC,
-                    vec![lang::Type::from_spec_id(*HTTP_FORM_PARAM_ID, vec![])]),
+                    vec![lang::Type::from_spec_id(*HTTP_FORM_PARAM_STRUCT_ID, vec![])]),
                 "URL params".to_string()),
         ]
     }
@@ -176,3 +188,45 @@ pub fn new_result(ok_type: lang::Type) -> lang::Type {
     lang::Type { typespec_id: *RESULT_ENUM_ID, params: vec![ok_type] }
 }
 
+use std::cell::RefCell;
+use std::rc::Rc;
+#[derive(Clone)]
+pub struct ChatReply {
+    output_buffer: Rc<RefCell<Vec<String>>>,
+}
+
+impl ChatReply {
+    pub fn new(output_buffer: Rc<RefCell<Vec<String>>>) -> Self {
+        Self { output_buffer }
+    }
+}
+
+impl lang::Function for ChatReply {
+    fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        let text_to_send = args.get(&self.takes_args()[0].id).unwrap()
+            .as_str().unwrap();
+        self.output_buffer.borrow_mut().push(text_to_send.to_string());
+        lang::Value::Null
+    }
+
+    fn name(&self) -> &str {
+        "Reply"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("36052afd-cf12-4146-bbc7-f9df04148b73").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![
+            lang::ArgumentDefinition::new_with_id(
+                uuid::Uuid::parse_str("95bbed9a-6757-43c5-8e74-b15862e300c8").unwrap(),
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                "Message".to_string()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::NULL_TYPESPEC)
+    }
+}

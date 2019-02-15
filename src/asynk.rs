@@ -1,6 +1,6 @@
 use std::future::Future as NewFuture;
 use std::marker::Unpin;
-use futures::Future as OldFuture;
+pub use futures::Future as OldFuture;
 
 
 // converts from a new style Future to an old style one:

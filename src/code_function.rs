@@ -54,6 +54,7 @@ impl function::SettableArgs for CodeFunction {
 
 impl lang::Function for CodeFunction {
     fn call(&self, mut interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        // XXX: shouldn't the caller do this???? duped with ChatTrigger
         for (id, value) in args {
             interpreter.env.borrow_mut().set_local_variable(id, value);
         }

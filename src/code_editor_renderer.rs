@@ -755,6 +755,12 @@ impl PerEditorCommandBuffer {
                     client.gen_url_params = code.into_block().unwrap().clone();
                     env.add_function(client);
                 }
+                code_editor::CodeLocation::ChatTrigger(chat_trigger_id) => {
+                    let env_genie = EnvGenie::new(&env);
+                    let mut chat_trigger = env_genie.get_chat_trigger(chat_trigger_id).unwrap().clone();
+                    chat_trigger.code = code.into_block().unwrap().clone();
+                    env.add_function(chat_trigger);
+                }
             }
         });
     }

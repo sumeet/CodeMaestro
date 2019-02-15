@@ -27,6 +27,7 @@ pub enum CodeLocation {
     Script(lang::ID),
     Test(lang::ID),
     JSONHTTPClientURLParams(lang::ID),
+    ChatTrigger(lang::ID),
 }
 
 impl CodeEditor {

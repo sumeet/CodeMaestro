@@ -7,6 +7,7 @@ use super::pystuff;
 use super::jsstuff;
 use super::lang::Function;
 use super::json_http_client::JSONHTTPClient;
+use super::chat_trigger::ChatTrigger;
 
 use itertools::Itertools;
 
@@ -68,6 +69,11 @@ impl<'a> EnvGenie<'a> {
             .and_then(|f| f.downcast_ref::<JSONHTTPClient>())
     }
 
+    pub fn get_chat_trigger(&self, id: lang::ID) -> Option<&ChatTrigger> {
+        self.env.find_function(id)
+            .and_then(|f| f.downcast_ref::<ChatTrigger>())
+    }
+
     pub fn find_struct(&self, id: lang::ID) -> Option<&structs::Struct> {
         self.env.find_struct(id)
     }
@@ -99,6 +105,11 @@ impl<'a> EnvGenie<'a> {
     pub fn list_json_http_clients(&self) -> impl Iterator<Item = &JSONHTTPClient> {
         self.all_functions()
             .filter_map(|f| f.downcast_ref::<JSONHTTPClient>())
+    }
+
+    pub fn list_chat_triggers(&self) -> impl Iterator<Item = &ChatTrigger> {
+        self.all_functions()
+            .filter_map(|f| f.downcast_ref::<ChatTrigger>())
     }
 
     pub fn list_pyfuncs(&self) -> impl Iterator<Item = &pystuff::PyFunc> {

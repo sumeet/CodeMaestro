@@ -20,7 +20,7 @@ mod imgui_toolkit;
 #[cfg(feature = "javascript")]
 mod yew_toolkit;
 
-mod asynk;
+pub mod asynk;
 pub mod builtins;
 pub mod lang;
 mod structs;
@@ -45,6 +45,7 @@ mod code_validation;
 mod function;
 mod code_function;
 mod tests;
+mod chat_trigger;
 mod scripts;
 mod external_func;
 #[cfg(feature = "default")]
@@ -103,6 +104,9 @@ mod http_client {
     pub use super::native_http_client::*;
 }
 
+pub use external_func::resolve_all_futures;
+pub use env_genie::EnvGenie;
+
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -160,6 +164,7 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
     env.add_function(builtins::Print{});
     env.add_function(builtins::Capitalize{});
     env.add_function(builtins::HTTPGet{});
+    env.add_function(builtins::ChatReply::new(Rc::new(RefCell::new(vec![]))));
 
     for script in the_world.scripts {
         controller.load_script(script)
@@ -168,10 +173,16 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
         controller.load_test(test);
     }
     for code_func in the_world.codefuncs {
+        env.add_function(code_func.clone());
         cmd_buffer.load_code_func(code_func)
     }
     for json_http_client in the_world.json_http_clients {
+        env.add_function(json_http_client.clone());
         cmd_buffer.load_json_http_client(json_http_client)
+    }
+    for chat_trigger in the_world.chat_triggers {
+        env.add_function(chat_trigger.clone());
+        cmd_buffer.load_chat_trigger(chat_trigger)
     }
 
     controller

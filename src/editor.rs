@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use std::iter;
 use std::boxed::FnBox;
 
+use super::chat_trigger::ChatTrigger;
 use super::env;
 use super::lang;
 use super::code_loading;
@@ -140,6 +141,7 @@ impl<'a> Controller {
             enums: env_genie.list_enums().cloned().collect(),
             tests: self.test_by_id.values().cloned().collect(),
             json_http_clients: env_genie.list_json_http_clients().cloned().collect(),
+            chat_triggers: env_genie.list_chat_triggers().cloned().collect(),
         };
         code_loading::save("codesample.json", &theworld).unwrap();
     }
@@ -288,6 +290,25 @@ impl CommandBuffer {
         })
     }
 
+    pub fn change_chat_trigger(&mut self, chat_trigger_id: lang::ID, change: impl Fn(&mut ChatTrigger) + 'static) {
+        self.add_integrating_command(move |controller, interpreter, _| {
+            let mut env = interpreter.env.borrow_mut();
+            let env_genie = env_genie::EnvGenie::new(&env);
+            let mut chat_trigger = env_genie.get_chat_trigger(chat_trigger_id).unwrap().clone();
+            change(&mut chat_trigger);
+            env.add_function(chat_trigger);
+        })
+    }
+
+    pub fn load_chat_trigger(&mut self, chat_trigger: ChatTrigger) {
+        self.add_integrating_command(move |controller, interpreter, _| {
+            let mut env = interpreter.env.borrow_mut();
+            controller.load_code(lang::CodeNode::Block(chat_trigger.code.clone()),
+                                 code_editor::CodeLocation::ChatTrigger(chat_trigger.id()));
+            env.add_function(chat_trigger);
+        })
+    }
+
     pub fn load_json_http_client(&mut self, json_http_client: JSONHTTPClient) {
         self.add_integrating_command(move |controller, interpreter, _| {
             let mut env = interpreter.env.borrow_mut();
@@ -394,6 +415,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_edit_structs(),
             self.render_edit_enums(),
             self.render_json_http_client_builders(),
+            self.render_chat_triggers(),
             self.render_status_bar()
         ])
     }
@@ -410,9 +432,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     let cmdb5 = Rc::clone(&self.command_buffer);
                     let cmdb6 = Rc::clone(&self.command_buffer);
                     let cmdb7 = Rc::clone(&self.command_buffer);
+                    let cmdb8 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
                         self.ui_toolkit.draw_menu_item("Save", move || {
                             cmdb1.borrow_mut().save();
+                        }),
+                        self.ui_toolkit.draw_menu_item("Add new chat trigger", move || {
+                            cmdb8.borrow_mut().load_chat_trigger(ChatTrigger::new());
                         }),
                         self.ui_toolkit.draw_menu_item("Add new JSON HTTP client", move || {
                             cmdb7.borrow_mut().load_json_http_client(JSONHTTPClient::new());
@@ -619,6 +645,50 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_edit_enums(&self) -> T::DrawResult {
         let enums = self.env_genie.list_enums();
         self.ui_toolkit.draw_all(enums.map(|e| self.render_edit_enum(e)).collect())
+    }
+
+
+    fn render_chat_triggers(&self) -> T::DrawResult {
+        let triggers = self.env_genie.list_chat_triggers();
+        self.ui_toolkit.draw_all(triggers.map(|trigger| self.render_chat_trigger(trigger)).collect())
+    }
+
+    fn render_chat_trigger(&self, chat_trigger: &ChatTrigger) -> T::DrawResult {
+        let chat_trigger_id = chat_trigger.id;
+        self.ui_toolkit.draw_window(
+            &format!("Edit chat trigger: {}", chat_trigger.id()),
+            &|| {
+                let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                let cmd_buffer2 = Rc::clone(&self.command_buffer);
+
+                self.ui_toolkit.draw_all(vec![
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Trigger name",
+                        &chat_trigger.name,
+                        move |newvalue| {
+                            let newvalue = newvalue.to_string();
+                            cmd_buffer1.borrow_mut().change_chat_trigger(chat_trigger_id, move |mut ct| {
+                                ct.name = newvalue.to_string()
+                            })
+                        },
+                        &|| {},
+                    ),
+                    self.ui_toolkit.draw_text_input_with_label(
+                        "Prefix",
+                        &chat_trigger.prefix,
+                        move |newvalue| {
+                            let newvalue = newvalue.to_string();
+                            cmd_buffer2.borrow_mut().change_chat_trigger(chat_trigger_id, move |mut ct| {
+                                ct.prefix = newvalue.to_string()
+                            })
+                        },
+                        &|| {},
+                    ),
+                    self.render_code(chat_trigger.code.id, 0.3),
+                ])
+            },
+            None::<fn(Keypress)>,
+        )
     }
 
     fn render_json_http_client_builders(&self) -> T::DrawResult {

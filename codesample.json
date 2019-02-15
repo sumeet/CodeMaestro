@@ -33,125 +33,10 @@
       }
     }
   ],
-  "codefuncs": [
-    {
-      "id": "e367ac96-fd58-45c5-a462-3439d0eaefc7",
-      "name": "New function",
-      "args": [
-        {
-          "id": "0f33ad04-5e0e-4494-8ab2-b966632ba513",
-          "arg_type": {
-            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-            "params": []
-          },
-          "short_name": "arg0"
-        }
-      ],
-      "return_type": {
-        "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
-        "params": [
-          {
-            "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
-            "params": []
-          }
-        ]
-      },
-      "block": {
-        "expressions": [
-          {
-            "VariableReference": {
-              "assignment_id": "0f33ad04-5e0e-4494-8ab2-b966632ba513",
-              "id": "87f1975c-33d6-4a7e-841b-60470522dcfb"
-            }
-          },
-          {
-            "Placeholder": {
-              "id": "b6a4213a-d81d-4b9d-956a-9ed5bc40a020",
-              "description": "Return value",
-              "typ": {
-                "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
-                "params": [
-                  {
-                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
-                    "params": []
-                  }
-                ]
-              }
-            }
-          },
-          {
-            "VariableReference": {
-              "assignment_id": "0f33ad04-5e0e-4494-8ab2-b966632ba513",
-              "id": "3468c8cd-4e6b-465f-8901-5818b57a61a1"
-            }
-          },
-          {
-            "Placeholder": {
-              "id": "79e7a2ea-49d1-47d3-856e-a948ec7ebde4",
-              "description": "Return value",
-              "typ": {
-                "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
-                "params": [
-                  {
-                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
-                    "params": []
-                  }
-                ]
-              }
-            }
-          },
-          {
-            "VariableReference": {
-              "assignment_id": "0f33ad04-5e0e-4494-8ab2-b966632ba513",
-              "id": "bc6ee42d-4454-4edd-8951-435d38b9dbf2"
-            }
-          },
-          {
-            "Placeholder": {
-              "id": "de152b80-68e5-49f5-a2c4-ed7569a3c454",
-              "description": "Return value",
-              "typ": {
-                "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
-                "params": [
-                  {
-                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
-                    "params": []
-                  }
-                ]
-              }
-            }
-          }
-        ],
-        "id": "d7d40bc8-72f6-44c8-885d-e0a1a82e74f7"
-      }
-    }
-  ],
+  "codefuncs": [],
   "pyfuncs": [],
   "jsfuncs": [],
   "structs": [
-    {
-      "name": "HTTPBinResponse",
-      "id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "7077e04e-781e-4285-afc2-2d2a6321f602",
-          "name": "origin",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "d5989b41-d506-4bb5-8162-bb63bdc384ed",
-          "name": "url",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
     {
       "name": "HTTP Form param",
       "id": "b6566a28-8257-46a9-aa29-39d9add25173",
@@ -197,6 +82,52 @@
           }
         }
       ]
+    },
+    {
+      "name": "HTTPBinResponse",
+      "id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "7077e04e-781e-4285-afc2-2d2a6321f602",
+          "name": "origin",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "d5989b41-d506-4bb5-8162-bb63bdc384ed",
+          "name": "url",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Message",
+      "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
+          "name": "message",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
+          "name": "sender",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
     }
   ],
   "enums": [
@@ -223,6 +154,17 @@
   ],
   "tests": [
     {
+      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
+      "name": "test 1",
+      "subject": {
+        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
+      },
+      "code": {
+        "expressions": [],
+        "id": "704015a2-c231-4082-8007-babca16f62a1"
+      }
+    },
+    {
       "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
       "name": "test 2",
       "subject": {
@@ -242,17 +184,6 @@
       "code": {
         "expressions": [],
         "id": "d6057d0e-04df-4abb-b759-105f8e3dc15a"
-      }
-    },
-    {
-      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
-      "name": "test 1",
-      "subject": {
-        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
-      },
-      "code": {
-        "expressions": [],
-        "id": "704015a2-c231-4082-8007-babca16f62a1"
       }
     }
   ],
@@ -289,6 +220,43 @@
       "return_type": {
         "typespec_id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
         "params": []
+      }
+    }
+  ],
+  "chat_triggers": [
+    {
+      "id": "684a2a6c-8390-4233-8a43-d8e9306e5e37",
+      "prefix": ".hello",
+      "name": "Hello world",
+      "code": {
+        "expressions": [
+          {
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                  "id": "d1c4761e-e1c2-446f-9125-bbf2b5794396"
+                }
+              },
+              "args": [
+                {
+                  "Argument": {
+                    "id": "8e3fdf01-e24f-493a-9250-15f15a339d17",
+                    "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                    "expr": {
+                      "StringLiteral": {
+                        "value": "oh my god",
+                        "id": "bb03484a-0fae-4b6b-8764-b47ad80fb2b4"
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "cd4f3e4d-a652-452d-b335-c9178342efea"
+            }
+          }
+        ],
+        "id": "c80119a4-181c-4544-a9b6-2de350f1582a"
       }
     }
   ]

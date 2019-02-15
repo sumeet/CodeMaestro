@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 
 lazy_static! {
     static ref HTTP_FORM_PARAM_TYPE: lang::Type = {
-        lang::Type::from_spec_id(*builtins::HTTP_FORM_PARAM_ID, vec![])
+        lang::Type::from_spec_id(*builtins::HTTP_FORM_PARAM_STRUCT_ID, vec![])
     };
 
     static ref LIST_OF_FORM_PARAMS: lang::Type = {

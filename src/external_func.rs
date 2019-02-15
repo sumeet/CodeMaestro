@@ -33,7 +33,12 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
             lang::Value::Future(value_future) => {
                 // need to recursive call here because even after resolving the
                 // future, the Value could contain MORE nested futures!
-                resolve_futures(await!(value_future))
+                let awaited_value = await!(value_future);
+                if contains_futures(&awaited_value) {
+                    resolve_futures(awaited_value)
+                } else {
+                    awaited_value
+                }
             }
             lang::Value::List(v) => {
                 lang::Value::List(v.into_iter().map(resolve_futures).collect())
@@ -46,9 +51,16 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
                     }).collect()
                 }
             },
-            lang::Value::Enum { box value, .. } => resolve_futures(value),
+            lang::Value::Enum { box value, variant_id } => {
+                lang::Value::Enum {
+                    variant_id,
+                    value: Box::new(resolve_futures(value)),
+                }
+            },
             lang::Value::Null | lang::Value::String(_) | lang::Value::Error(_) |
-            lang::Value::Number(_) | lang::Value::Boolean(_) => value,
+            lang::Value::Number(_) | lang::Value::Boolean(_) => {
+                value
+            },
         }
     })
 }
@@ -57,8 +69,12 @@ pub async fn resolve_all_futures(mut val: lang::Value) -> lang::Value {
     while contains_futures(&val) {
         val = resolve_futures(val);
         val = match val {
-            lang::Value::Future(value_future) => await!(value_future),
-            _ => val,
+            lang::Value::Future(value_future) => {
+                await!(value_future)
+            },
+            _ => {
+                val
+            },
         }
     }
     val
