@@ -7,7 +7,6 @@ use super::code_generation;
 use super::structs;
 use super::builtins;
 
-use regex::Regex;
 use objekt::{clone_trait_object};
 use lazy_static::lazy_static;
 use itertools::Itertools;
