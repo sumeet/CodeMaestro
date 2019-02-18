@@ -10,6 +10,7 @@
 #![feature(try_from)]
 #![feature(slice_patterns)]
 #![feature(drain_filter)]
+#![feature(generators)]
 #![recursion_limit="256"]
 #![feature(fnbox)]
 

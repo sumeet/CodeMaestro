@@ -20,7 +20,7 @@ use irc::client::prelude::*;
 use irc::client::PackedIrcClient;
 use irc_proto::{Command};
 use tokio::runtime::current_thread::Runtime;
-//use irc::error;
+
 struct ChatThingy {
     interp: env::Interpreter,
     reply_buffer: Rc<RefCell<Vec<String>>>,

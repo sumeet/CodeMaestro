@@ -1,6 +1,7 @@
 use std::cell::RefCell;
 
 use itertools::Itertools;
+use gen_iter::GenIter;
 
 use super::editor;
 use super::lang::CodeNode;
@@ -384,6 +385,15 @@ impl CodeGenie {
         self.code.find_parent(id)
     }
 
+    pub fn all_parents_of(&self, mut id: lang::ID) -> impl Iterator<Item = &CodeNode> {
+        GenIter(move || {
+            while let Some(parent) = self.find_parent(id) {
+                yield parent;
+                id = parent.id();
+            }
+        })
+    }
+
     pub fn guess_type(&self, code_node: &lang::CodeNode,
                       env_genie: &EnvGenie) -> lang::Type {
         use super::lang::CodeNode;
@@ -443,14 +453,20 @@ impl CodeGenie {
                 strukt.field_by_id().get(&struct_literal_field.struct_field_id).unwrap()
                     .field_type.clone()
             }
+            CodeNode::ListLiteral(list_literal) => {
+                lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                        vec![list_literal.element_type.clone()])
+            }
             // this means that both branches of a conditional must be of the same type.we need to
             // add a validation for that
             CodeNode::Conditional(conditional) => {
                 self.guess_type(&conditional.true_branch, env_genie)
             }
-            CodeNode::ListLiteral(list_literal) => {
-                lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                        vec![list_literal.element_type.clone()])
+            // need the same validation for match ^
+            CodeNode::Match(mach) => {
+                let first_variant = mach.branch_by_variant_id.values().next()
+                    .expect("match statement must contain at least one variant");
+                self.guess_type(first_variant, env_genie)
             }
         }
     }

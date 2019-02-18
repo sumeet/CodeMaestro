@@ -33,6 +33,7 @@ cfg-if = "0.1"
 matches = "0.1.8"
 url = "1.7.2"
 maplit = "1.0.1"
+gen-iter = {git = "https://github.com/sumeet/gen-iter"}
 
 pyo3 = { version = "0.5.2", optional = true }
 glium = { version = "0.23", default-features = true, optional = true }

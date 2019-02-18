@@ -346,6 +346,9 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::Conditional(conditional) => {
                     self.render_conditional(&conditional)
                 }
+                CodeNode::Match(mach) => {
+                    self.render_match(&mach)
+                }
                 CodeNode::ListLiteral(list_literal) => {
                     self.render_list_literal(&list_literal, code_node)
                 }
@@ -585,6 +588,15 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 &|| { self.render_code(&conditional.condition) },
             ]),
             self.render_indented(&|| { self.render_code(&conditional.true_branch) }),
+        ])
+    }
+
+    fn render_match(&self, mach: &lang::Match) -> T::DrawResult {
+        self.ui_toolkit.draw_all(vec![
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| { self.draw_button("Match", GREY_COLOR, &||{}) },
+                &|| { self.render_code(&mach.match_expression) },
+            ])
         ])
     }
 

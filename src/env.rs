@@ -11,6 +11,7 @@ use std ::pin::Pin;
 use std::rc::Rc;
 
 use itertools::Itertools;
+use std::hash::Hash;
 
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
@@ -135,6 +136,21 @@ impl Interpreter {
                     }
                 })
             },
+            lang::CodeNode::Match(mach) => {
+                let match_exp_fut = self.evaluate(&mach.match_expression);
+                let mut branch_by_variant_id : HashMap<_, _> = mach.branch_by_variant_id.iter()
+                    .map(|(variant_id, branch_expression)| {
+                        (*variant_id, self.evaluate(branch_expression))
+                    }).collect();
+                let env = Rc::clone(&self.env);
+                let match_id = mach.id;
+                Box::pin(async move {
+                    let (variant_id, value) = await!(match_exp_fut).into_enum().unwrap();
+                    env.borrow_mut().set_local_variable(lang::Match::variable_id(match_id, variant_id),
+                                                        value);
+                    await!(branch_by_variant_id.remove(&variant_id).unwrap())
+                })
+            },
             lang::CodeNode::ListLiteral(list_literal) => {
                 let futures = list_literal
                     .elements.iter().map(|e| self.evaluate(e))
@@ -147,19 +163,18 @@ impl Interpreter {
                     }
                     lang::Value::List(output_vec)
                 })
-            }
+            },
         }
     }
 
     fn evaluate_assignment(&mut self, assignment: &lang::Assignment) -> impl Future<Output = lang::Value> {
         let value_future = self.evaluate(&assignment.expression);
-        // TODO: pretty sure i'll have to return an Rc<Value> in evaluate
-        // the result of an assignment is the value being assigned
         let env = Rc::clone(&self.env);
         let assignment_id = assignment.id;
         async move {
             let value = await!(value_future);
             env.borrow_mut().set_local_variable(assignment_id, value.clone());
+            // the result of an assignment is the value being assigned
             value
         }
     }

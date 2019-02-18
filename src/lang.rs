@@ -94,6 +94,7 @@ pub enum CodeNode {
     StructLiteral(StructLiteral),
     StructLiteralField(StructLiteralField),
     Conditional(Conditional),
+    Match(Match),
     ListLiteral(ListLiteral),
 }
 
@@ -119,6 +120,7 @@ impl Error {
 use futures_util::future::Shared;
 use futures_util::FutureExt;
 use std::pin::Pin;
+use std::collections::BTreeMap;
 
 
 pub type ValueFuture = Shared<Pin<Box<Future<Output = Value>>>>;
@@ -171,9 +173,21 @@ impl Value {
     pub fn as_struct(&self) -> Option<(ID, &StructValues)> {
         match self {
             Value::Struct {struct_id, values} => Some((*struct_id, values)),
-            _ => {
-                None
-            }
+            _ => None
+        }
+    }
+
+    pub fn as_enum(&self) -> Option<(ID, &Value)> {
+        match self {
+            Value::Enum { variant_id, box value } => Some((*variant_id, value)),
+            _ => None
+        }
+    }
+
+    pub fn into_enum(self) -> Option<(ID, Value)> {
+        match self {
+            Value::Enum { variant_id, box value } => Some((variant_id, value)),
+            _ => None
         }
     }
 }
@@ -370,7 +384,10 @@ impl CodeNode {
                 format!("Conditional: {}", conditional.id)
             },
             CodeNode::ListLiteral(list_literal) => {
-                format!("List litearl: {}", list_literal.id)
+                format!("List literal: {}", list_literal.id)
+            },
+            CodeNode::Match(mach) => {
+                format!("Match: {}", mach.id)
             }
         }
     }
@@ -413,6 +430,7 @@ impl CodeNode {
             CodeNode::StructLiteralField(field) => field.id,
             CodeNode::Conditional(conditional) => conditional.id,
             CodeNode::ListLiteral(list_literal) => list_literal.id,
+            CodeNode::Match(mach) => mach.id,
         }
     }
 
@@ -496,7 +514,10 @@ impl CodeNode {
                    }
                 }
             },
-            CodeNode::ListLiteral(list_literal) => Box::new(list_literal.elements.iter())
+            CodeNode::ListLiteral(list_literal) => Box::new(list_literal.elements.iter()),
+            CodeNode::Match(mach) => Box::new(
+                iter::once(mach.match_expression.borrow()).chain(mach.branch_by_variant_id.values())
+            )
         }
     }
 
@@ -519,7 +540,7 @@ impl CodeNode {
     pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                let mut children : Vec<&mut CodeNode> = function_call.args
+                let mut children: Vec<&mut CodeNode> = function_call.args
                     .iter_mut()
                     .collect();
                 children.insert(0, &mut function_call.function_reference);
@@ -569,7 +590,10 @@ impl CodeNode {
                     }
                 }
             },
-            CodeNode::ListLiteral(list_literal) => list_literal.elements.iter_mut().collect_vec()
+            CodeNode::ListLiteral(list_literal) => list_literal.elements.iter_mut().collect_vec(),
+            CodeNode::Match(mach) => {
+                iter::once(mach.match_expression.borrow_mut()).chain(mach.branch_by_variant_id.values_mut()).collect()
+            }
         }
     }
 
@@ -773,6 +797,23 @@ pub struct Conditional {
     pub true_branch: Box<CodeNode>,
     // this'll be a block
     pub else_branch: Option<Box<CodeNode>>,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+pub struct Match {
+    pub id: ID,
+    pub match_expression: Box<CodeNode>,
+    // BTreeMap because we want a consistent ordering for these branches. so they
+    // show up in the code in the same order, and so navigating them is stable
+    pub branch_by_variant_id: BTreeMap<ID, CodeNode>,
+}
+
+impl Match {
+    pub fn variable_id(match_id: ID, variant_id: ID) -> ID {
+        uuid::Uuid::new_v5(
+            &uuid::Uuid::NAMESPACE_OID,
+            [match_id, variant_id].iter().join(":").as_bytes())
+    }
 }
 
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
