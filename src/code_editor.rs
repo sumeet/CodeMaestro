@@ -345,7 +345,7 @@ impl CodeGenie {
     // update: yeah... for conditionals, we'll have to make another recursive call and keep searching
     // up parent blocks. i think we can do this! just have to find assignments that come before the
     // conditional itself
-    pub fn find_assignments_that_come_before_code(&self, node_id: lang::ID) -> Vec<&lang::Assignment> {
+    pub fn find_assignments_that_come_before_code(&self, node_id: lang::ID, is_inclusive: bool) -> Vec<&lang::Assignment> {
         let block_expression_id = self.find_expression_inside_block_that_contains(node_id);
         if block_expression_id.is_none() {
             return vec![]
@@ -356,7 +356,10 @@ impl CodeGenie {
                 // if this dies, it means we found a block that's a parent of a block expression,
                 // but then when we looked inside the block it didn't contain that expression. this
                 // really shouldn't happen
-                let position_in_block = block.find_position(block_expression_id).unwrap();
+                let mut position_in_block = block.find_position(block_expression_id).unwrap();
+                if is_inclusive {
+                    position_in_block += 1;
+                }
                 block.expressions.iter()
                     // position in the block is 0 indexed, so this will take every node up TO it
                     .take(position_in_block)
@@ -654,8 +657,9 @@ impl<'a> Navigation<'a> {
                 | (CodeNode::ListLiteral(_), _) => true,
             // if our parent is one of these, then we're a hole, and therefore navigatable.
             (_, Some(CodeNode::Argument(_))) | (_, Some(CodeNode::StructLiteralField(_))) |
-                (_, Some(CodeNode::ListLiteral(_))) => true,
-            // sometimes placeholders chill by themselves.
+                (_, Some(CodeNode::ListLiteral(_))) | (_, Some(CodeNode::Match(_))) |
+                (_, Some(CodeNode::Conditional(_))) => true,
+            // sometimes placeholders chill by themselves in a block
             (CodeNode::Placeholder(_), Some(CodeNode::Block(_))) => true,
             _ => false,
         }
@@ -759,17 +763,18 @@ impl MutationMaster {
         use super::lang::CodeNode;
         match parent {
             CodeNode::Block(mut block) => {
-                let insertion_point_in_block_exprs = block.expressions.iter()
-                    .position(|exp| exp.id() == insertion_point.node_id());
-                let insertion_point_in_block_exprs = insertion_point_in_block_exprs
-                    .expect("when the fuck does this happen?");
+                let get_insertion_point = |node_id| {
+                    let insertion_point_in_block_exprs = block.expressions.iter()
+                        .position(|exp| exp.id() == node_id);
+                    insertion_point_in_block_exprs.expect("when the fuck does this happen?")
+                };
 
                 match insertion_point {
-                    InsertionPoint::Before(_) => {
-                        block.expressions.insert(insertion_point_in_block_exprs, code_node)
+                    InsertionPoint::Before(id) => {
+                        block.expressions.insert(get_insertion_point(id), code_node)
                     },
-                    InsertionPoint::After(_) => {
-                        block.expressions.insert(insertion_point_in_block_exprs + 1, code_node)
+                    InsertionPoint::After(id) => {
+                        block.expressions.insert(get_insertion_point(id) + 1, code_node)
                     },
                     _ => panic!("bad insertion point type for a block: {:?}", insertion_point)
                 }
@@ -882,26 +887,7 @@ pub enum InsertionPoint {
 }
 
 impl InsertionPoint {
-    // the purpose of this method is unclear therefore it's dangerous. remove this in a refactoring
-    // because it's not really widely used
-    // uses:
-    // 1. checking for code nodes that appear BEFORE this node id, to check for local variables
-    // 2. where to insert in a block (only used for Before and After cases)
-    pub fn node_id(&self) -> lang::ID {
-        match *self {
-            InsertionPoint::BeginningOfBlock(id) => id,
-            InsertionPoint::Before(id) => id,
-            InsertionPoint::After(id) => id,
-            InsertionPoint::Argument(id) => id,
-            InsertionPoint::StructLiteralField(id) => id,
-            InsertionPoint::Editing(id) => id,
-            InsertionPoint::Assignment(id) => id,
-            InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
-                list_literal_id
-            },
-        }
-    }
-
+    // TODO: move this to the code editor? i mean we only use it in there...
     fn node_id_to_select_when_marking_as_editing(&self) -> Option<lang::ID> {
         match *self {
             InsertionPoint::BeginningOfBlock(_) => None,

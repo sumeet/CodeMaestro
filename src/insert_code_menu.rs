@@ -20,6 +20,7 @@ lazy_static! {
         Box::new(InsertFunctionOptionGenerator {}),
         Box::new(InsertLiteralOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
+        Box::new(InsertMatchOptionGenerator {}),
         Box::new(InsertAssignmentOptionGenerator {}),
     ];
 }
@@ -222,13 +223,31 @@ struct Variable {
     name: String,
 }
 
+// returns tuple -> (CodeNode position, is_inclusive)
+fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, bool) {
+    match insertion_point {
+        InsertionPoint::BeginningOfBlock(id) => (id, false),
+        InsertionPoint::Before(id) => (id, false),
+        InsertionPoint::After(id) => (id, true),
+        InsertionPoint::Argument(id) => (id, false),
+        InsertionPoint::StructLiteralField(id) => (id, false),
+        InsertionPoint::Editing(id) => (id, false),
+        InsertionPoint::Assignment(id) => (id, false),
+        InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
+            (list_literal_id, false)
+        },
+    }
+}
+
 // also handles function arguments
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        let insertion_id = search_params.insertion_point.node_id();
+        let (insertion_id, is_search_inclusive) = assignment_search_position(
+            search_params.insertion_point);
 
-        let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = code_genie.find_assignments_that_come_before_code(insertion_id)
+        let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = code_genie.find_assignments_that_come_before_code(
+            insertion_id, is_search_inclusive)
             .into_iter()
             .map(|assignment| {
                 let assignment_clone : lang::Assignment = (*assignment).clone();
@@ -399,11 +418,12 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         }
 
         let search_str = search_params.lowercased_trimmed_search_str();
-        if !"match".contains(&search_str) {
+        if !search_str.starts_with("match") {
             return vec![];
         }
-        let insertion_id = search_params.insertion_point.node_id();
-        code_genie.find_assignments_that_come_before_code(insertion_id)
+        let (insertion_id, is_search_inclusive) = assignment_search_position(
+            search_params.insertion_point);
+        code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
             .into_iter()
             .filter_map(|assignment| {
                 if let Some(var_name_to_march) = search_params.search_prefix("match") {
@@ -416,7 +436,7 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
                 let eneom = env_genie.find_enum(guessed_type.typespec_id)?;
 
                 Some(InsertCodeMenuOption {
-                    label: "Match".to_string(),
+                    label: format!("Match {}", assignment.name),
                     is_selected: false,
                     new_node: code_generation::new_match(eneom,
                                                          &guessed_type,
