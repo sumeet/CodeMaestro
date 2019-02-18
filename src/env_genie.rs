@@ -56,6 +56,17 @@ impl<'a> EnvGenie<'a> {
         None
     }
 
+    pub fn find_enum_variant(&self, variant_id: lang::ID) -> Option<&enums::EnumVariant> {
+        for eneom in self.list_enums() {
+            for enum_variant in &eneom.variants {
+                if variant_id == enum_variant.id {
+                    return Some(enum_variant)
+                }
+            }
+        }
+        None
+    }
+
     pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
         self.env.find_typespec(id)
     }

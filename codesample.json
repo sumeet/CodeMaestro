@@ -38,6 +38,52 @@
   "jsfuncs": [],
   "structs": [
     {
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTPBinResponse",
+      "id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "7077e04e-781e-4285-afc2-2d2a6321f602",
+          "name": "origin",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "d5989b41-d506-4bb5-8162-bb63bdc384ed",
+          "name": "url",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
       "name": "Message",
       "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
       "symbol": "",
@@ -82,52 +128,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "HTTPBinResponse",
-      "id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "7077e04e-781e-4285-afc2-2d2a6321f602",
-          "name": "origin",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "d5989b41-d506-4bb5-8162-bb63bdc384ed",
-          "name": "url",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTP Form param",
-      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-          "name": "key",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
-          "name": "value",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
     }
   ],
   "enums": [
@@ -154,17 +154,6 @@
   ],
   "tests": [
     {
-      "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
-      "name": "test 2",
-      "subject": {
-        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
-      },
-      "code": {
-        "expressions": [],
-        "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
-      }
-    },
-    {
       "id": "075a7a19-f98f-469e-b588-7c347186b694",
       "name": "Womper",
       "subject": {
@@ -173,6 +162,17 @@
       "code": {
         "expressions": [],
         "id": "d6057d0e-04df-4abb-b759-105f8e3dc15a"
+      }
+    },
+    {
+      "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
+      "name": "test 2",
+      "subject": {
+        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
+      },
+      "code": {
+        "expressions": [],
+        "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
       }
     },
     {
@@ -257,7 +257,7 @@
           },
           {
             "Assignment": {
-              "name": "blah",
+              "name": "response",
               "expression": {
                 "FunctionCall": {
                   "function_reference": {
