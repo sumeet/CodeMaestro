@@ -380,3 +380,28 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
     }
 }
 
+#[derive(Clone)]
+struct InsertMatchOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
+    fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
+               _env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+        let mut options = vec![];
+        if !search_params.insertion_point.is_block_expression() {
+            return options
+        }
+
+        let search_str = search_params.lowercased_trimmed_search_str();
+        if "match".contains(&search_str) {
+            options.push(
+                InsertCodeMenuOption {
+                    label: "Match".to_string(),
+                    is_selected: false,
+                    new_node: code_generation::new_conditional(&search_params.return_type)
+                }
+            )
+        }
+        options
+    }
+}
+

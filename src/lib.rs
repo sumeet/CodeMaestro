@@ -182,7 +182,7 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
         cmd_buffer.load_json_http_client(json_http_client)
     }
     for chat_trigger in the_world.chat_triggers {
-        env.add_function(chat_trigger.clone());
+//        env.add_function(chat_trigger.clone());
         cmd_buffer.load_chat_trigger(chat_trigger)
     }
 

@@ -90,6 +90,13 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
     })
 }
 
+pub fn new_match(for_type: &Option<lang::Type>) -> lang::CodeNode {
+    return unimplemented!();
+    let branch_type = for_type.clone().unwrap_or_else(
+        || lang::Type::from_spec(&*lang::NULL_TYPESPEC));
+
+}
+
 pub fn new_null_literal() -> lang::CodeNode {
     lang::CodeNode::NullLiteral
 }

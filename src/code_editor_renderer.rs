@@ -137,7 +137,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 self.render_inline_editable_button(
                     &assignment.name,
                     PURPLE_COLOR,
-                    assignment.id
+                    InsertionPoint::Editing(assignment.id)
                 )
             },
             &|| { self.draw_text(" = ") },
@@ -465,7 +465,8 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         self.render_nested(&|| {
             self.ui_toolkit.draw_all_on_same_line(&[
                 &|| {
-                    self.render_inline_editable_button(&arg_display, BLACK_COLOR, argument.id)
+                    self.render_inline_editable_button(&arg_display, BLACK_COLOR,
+                                                       InsertionPoint::Argument(argument.id))
                 },
                 &|| {
                     self.render_code(argument.expr.as_ref())
@@ -519,18 +520,19 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_struct_literal_field(&self, field: &structs::StructField,
-                                   literal: &lang::StructLiteralField) -> T::DrawResult {
+                                   literal_field: &lang::StructLiteralField) -> T::DrawResult {
         let field_text = format!("{} {}", self.env_genie.get_symbol_for_type(&field.field_type),
                                  field.name);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                if self.is_editing(literal.id) {
+                if self.is_editing(literal_field.id) {
                     self.render_insert_code_node()
                 } else {
-                    self.render_inline_editable_button(&field_text, BLACK_COLOR, literal.id)
+                    self.render_inline_editable_button(&field_text, BLACK_COLOR,
+                                                       InsertionPoint::StructLiteralField(literal_field.id))
                 }
             },
-            &|| self.render_nested(&|| self.render_code(&literal.expr))
+            &|| self.render_nested(&|| self.render_code(&literal_field.expr))
         ])
     }
 
@@ -604,11 +606,11 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL, draw_fn)
     }
 
-    fn render_inline_editable_button(&self, label: &str, color: Color, code_node_id: lang::ID) -> T::DrawResult {
+    fn render_inline_editable_button(&self, label: &str, color: Color, insertion_point: InsertionPoint) -> T::DrawResult {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.draw_button(label, color, move || {
             cmd_buffer.borrow_mut().add_editor_command(move |editor| {
-                editor.mark_as_editing(InsertionPoint::Editing(code_node_id));
+                editor.mark_as_editing(insertion_point);
             })
         })
     }
@@ -617,7 +619,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         self.render_inline_editable_button(
             &format!("\u{F10D} {} \u{F10E}", string_literal.value),
             CLEAR_COLOR,
-            string_literal.id)
+            InsertionPoint::Editing(string_literal.id))
     }
 
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
