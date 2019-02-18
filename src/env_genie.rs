@@ -88,6 +88,10 @@ impl<'a> EnvGenie<'a> {
             .filter_map(|ts| ts.as_ref().downcast_ref::<enums::Enum>())
     }
 
+    pub fn find_enum(&self, enum_id: lang::ID) -> Option<&enums::Enum> {
+        self.find_typespec(enum_id).and_then(|ts| ts.downcast_ref::<enums::Enum>())
+    }
+
     pub fn all_functions(&self) -> impl Iterator<Item = &Box<lang::Function>> {
         self.env.list_functions()
     }

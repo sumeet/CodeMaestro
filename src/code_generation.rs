@@ -1,5 +1,7 @@
+use super::enums::Enum;
 use super::lang;
 use super::structs;
+use std::collections::BTreeMap;
 
 pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::CodeNode {
     let fields = strukt.fields.iter()
@@ -43,9 +45,9 @@ pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::C
     })
 }
 
-pub fn new_variable_reference(variable_id: lang::ID) -> lang::CodeNode {
+pub fn new_variable_reference(assignment_id: lang::ID) -> lang::CodeNode {
     lang::CodeNode::VariableReference(lang::VariableReference {
-        assignment_id: variable_id,
+        assignment_id,
         id: lang::new_id(),
     })
 }
@@ -90,11 +92,21 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
     })
 }
 
-pub fn new_match(for_type: &Option<lang::Type>) -> lang::CodeNode {
-    return unimplemented!();
+pub fn new_match(eneom: &Enum, enum_type: &lang::Type, match_expr: lang::CodeNode,
+                 for_type: &Option<lang::Type>) -> lang::CodeNode {
     let branch_type = for_type.clone().unwrap_or_else(
         || lang::Type::from_spec(&*lang::NULL_TYPESPEC));
 
+    let branch_by_variant_id : BTreeMap<_, _> = eneom.variant_types(&enum_type.params).into_iter()
+        .map(|(variant, typ)| {
+            (variant.id, new_placeholder(&variant.name, typ.clone()))
+        }).collect();
+
+    lang::CodeNode::Match(lang::Match {
+        id: lang::new_id(),
+        match_expression: Box::new(match_expr),
+        branch_by_variant_id
+    })
 }
 
 pub fn new_null_literal() -> lang::CodeNode {

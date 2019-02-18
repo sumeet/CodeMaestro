@@ -36,7 +36,10 @@ impl Component for Model {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Init(app, async_executor) => {
+            Msg::Init(app, mut async_executor) => {
+                // flush commands initially before rendering for the first time
+                app.borrow_mut().flush_commands(&mut async_executor);
+
                 self.async_executor = Some(async_executor);
                 self.app = Some(app);
                 true

@@ -1,5 +1,6 @@
 use serde_derive::{Serialize,Deserialize};
 
+use super::lang::TypeSpec;
 use super::lang;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -18,6 +19,18 @@ impl Enum {
             symbol: "\u{f535}".to_string(),
             variants: vec![],
         }
+    }
+
+    pub fn variant_types<'a>(&'a self, params: &'a [lang::Type]) -> Vec<(&'a EnumVariant, &'a lang::Type)> {
+        if params.len() != self.num_params() {
+            panic!("# of variant types doesn't match")
+        }
+        let mut params = params.iter();
+        self.variants.iter().map(|variant| {
+            let typ = variant.variant_type.as_ref()
+                .unwrap_or_else(|| params.next().unwrap());
+            (variant, typ)
+        }).collect()
     }
 }
 

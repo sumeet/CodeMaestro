@@ -20,10 +20,10 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
     imgui_support::run("cs".to_string(), CLEAR_COLOR,
        |ui, keypress| {
             let mut app = app.borrow_mut();
-            let mut toolkit = ImguiToolkit::new(ui, keypress);
-            app.draw(&mut toolkit);
             app.flush_commands(&mut async_executor);
             async_executor.turn();
+            let mut toolkit = ImguiToolkit::new(ui, keypress);
+            app.draw(&mut toolkit);
             true
         },
     );

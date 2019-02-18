@@ -5,6 +5,7 @@ use super::code_editor::PLACEHOLDER_ICON;
 use super::lang;
 use super::code_generation;
 use super::structs;
+use super::builtins;
 
 use objekt::{clone_trait_object};
 use lazy_static::lazy_static;
@@ -139,10 +140,10 @@ impl CodeSearchParams {
         self.input_str.trim().to_lowercase()
     }
 
-    pub fn list_of_something(&self) -> Option<String> {
+    pub fn search_prefix(&self, prefix: &str) -> Option<String> {
         let input_str = self.lowercased_trimmed_search_str();
-        if input_str.starts_with("list") {
-            Some(input_str.trim_start_matches("list").trim().into())
+        if input_str.starts_with(prefix) {
+            Some(input_str.trim_start_matches(prefix).trim().into())
         } else {
             None
         }
@@ -285,7 +286,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
             // think we can make this less restrictive in the future if we need to
             options.push(self.placeholder_option(input_str, return_type));
         } else {
-            if let Some(list_search_query) = search_params.list_of_something() {
+            if let Some(list_search_query) = search_params.search_prefix("list") {
                 let matching_list_type_options = env_genie
                     .find_types_matching(&list_search_query)
                     .map(|t| {
@@ -384,24 +385,39 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
 struct InsertMatchOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
-               _env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
+               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
         if !search_params.insertion_point.is_block_expression() {
             return options
         }
 
         let search_str = search_params.lowercased_trimmed_search_str();
-        if "match".contains(&search_str) {
-            options.push(
-                InsertCodeMenuOption {
+        if !"match".contains(&search_str) {
+            return options
+        }
+        let insertion_id = search_params.insertion_point.node_id();
+        code_genie.find_assignments_that_come_before_code(insertion_id)
+            .into_iter()
+            .filter_map(|assignment| {
+                if let Some(var_name_to_march) = search_params.search_prefix("match") {
+                    if !assignment.name.starts_with(var_name_to_march.as_str()) {
+                        return None
+                    }
+                }
+
+                let guessed_type = code_genie.guess_type(&lang::CodeNode::Assignment(assignment.clone()), env_genie);
+                let eneom = env_genie.find_enum(guessed_type.typespec_id)?;
+
+                Some(InsertCodeMenuOption {
                     label: "Match".to_string(),
                     is_selected: false,
-                    new_node: code_generation::new_conditional(&search_params.return_type)
-                }
-            )
-        }
-        options
+                    new_node: code_generation::new_match(eneom,
+                                                         &guessed_type,
+                                                         code_generation::new_variable_reference(assignment.id),
+                                                         &search_params.return_type)
+                })
+            }).collect()
     }
 }
 
