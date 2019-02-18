@@ -13,7 +13,7 @@ impl Script {
         let mut block = lang::Block::new();
         let null_type = lang::Type::from_spec(&*lang::NULL_TYPESPEC);
         block.expressions.push(
-            code_generation::new_placeholder("End of script", null_type)
+            code_generation::new_placeholder("End of script".to_string(), null_type)
         );
         Self { code: block }
     }

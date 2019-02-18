@@ -7,6 +7,7 @@ use super::code_generation;
 use super::structs;
 use super::builtins;
 
+use regex::Regex;
 use objekt::{clone_trait_object};
 use lazy_static::lazy_static;
 use itertools::Itertools;
@@ -19,6 +20,7 @@ lazy_static! {
         Box::new(InsertFunctionOptionGenerator {}),
         Box::new(InsertLiteralOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
+        Box::new(InsertAssignmentOptionGenerator {}),
     ];
 }
 
@@ -268,10 +270,10 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
-        let input_str = &search_params.lowercased_trimmed_search_str();
+        let input_str = search_params.lowercased_trimmed_search_str();
         if let Some(ref return_type) = search_params.return_type {
             if return_type.matches_spec(&lang::STRING_TYPESPEC) {
-                options.push(self.string_literal_option(input_str));
+                options.push(self.string_literal_option(input_str.clone()));
             } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
                 options.push(self.null_literal_option());
             } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
@@ -295,7 +297,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     });
                 options.extend(matching_list_type_options)
             }
-            if "null".contains(input_str) {
+            if "null".contains(&input_str) {
                 options.push(self.null_literal_option())
             }
             if !input_str.is_empty() {
@@ -307,7 +309,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
 }
 
 impl InsertLiteralOptionGenerator {
-    fn string_literal_option(&self, input_str: &str) -> InsertCodeMenuOption {
+    fn string_literal_option(&self, input_str: String) -> InsertCodeMenuOption {
         InsertCodeMenuOption {
             label: format!("\u{f10d}{}\u{f10e}", input_str),
             is_selected: false,
@@ -332,7 +334,7 @@ impl InsertLiteralOptionGenerator {
         }
     }
 
-    fn placeholder_option(&self, input_str: &str, return_type: &lang::Type) -> InsertCodeMenuOption {
+    fn placeholder_option(&self, input_str: String, return_type: &lang::Type) -> InsertCodeMenuOption {
         InsertCodeMenuOption {
             label: format!("{} {}", PLACEHOLDER_ICON, input_str),
             is_selected: false,
@@ -387,14 +389,13 @@ struct InsertMatchOptionGenerator {}
 impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        let mut options = vec![];
         if !search_params.insertion_point.is_block_expression() {
-            return options
+            return vec![];
         }
 
         let search_str = search_params.lowercased_trimmed_search_str();
         if !"match".contains(&search_str) {
-            return options
+            return vec![];
         }
         let insertion_id = search_params.insertion_point.node_id();
         code_genie.find_assignments_that_come_before_code(insertion_id)
@@ -421,3 +422,30 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
     }
 }
 
+#[derive(Clone)]
+struct InsertAssignmentOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
+    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
+               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+        if !search_params.insertion_point.is_block_expression() {
+            return vec![];
+        }
+
+        let variable_name = if let Some(var_alias) = search_params.search_prefix("let") {
+            var_alias
+        } else {
+            search_params.lowercased_trimmed_search_str().trim_end_matches(|c| c == '=' || c == ' ').to_string()
+        };
+
+        vec![InsertCodeMenuOption {
+            label: format!("{} =", variable_name),
+            is_selected: false,
+            new_node: code_generation::new_assignment(
+                variable_name.clone(),
+                code_generation::new_placeholder(
+                    variable_name,
+                    lang::Type::from_spec(&*lang::NULL_TYPESPEC)))
+        }]
+    }
+}

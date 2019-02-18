@@ -38,6 +38,29 @@
   "jsfuncs": [],
   "structs": [
     {
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
       "name": "HTTP Response",
       "id": "31d96c85-5966-4866-a90a-e6db3707b140",
       "symbol": "",
@@ -76,29 +99,6 @@
         {
           "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
           "name": "sender",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTP Form param",
-      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-          "name": "key",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
-          "name": "value",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
@@ -154,17 +154,6 @@
   ],
   "tests": [
     {
-      "id": "075a7a19-f98f-469e-b588-7c347186b694",
-      "name": "Womper",
-      "subject": {
-        "Function": "db74ce0b-e606-4703-aa80-bf3f62c2c905"
-      },
-      "code": {
-        "expressions": [],
-        "id": "d6057d0e-04df-4abb-b759-105f8e3dc15a"
-      }
-    },
-    {
       "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
       "name": "test 2",
       "subject": {
@@ -184,6 +173,17 @@
       "code": {
         "expressions": [],
         "id": "704015a2-c231-4082-8007-babca16f62a1"
+      }
+    },
+    {
+      "id": "075a7a19-f98f-469e-b588-7c347186b694",
+      "name": "Womper",
+      "subject": {
+        "Function": "db74ce0b-e606-4703-aa80-bf3f62c2c905"
+      },
+      "code": {
+        "expressions": [],
+        "id": "d6057d0e-04df-4abb-b759-105f8e3dc15a"
       }
     }
   ],
@@ -234,31 +234,6 @@
             "FunctionCall": {
               "function_reference": {
                 "FunctionReference": {
-                  "function_id": "db74ce0b-e606-4703-aa80-bf3f62c2c905",
-                  "id": "b63443ce-12b6-4c69-bbba-bf45bc6f9616"
-                }
-              },
-              "args": [
-                {
-                  "Argument": {
-                    "id": "316c9e81-ee08-46fe-9c6c-50be3375af2e",
-                    "argument_definition_id": "443c19c0-aa25-40e9-86ee-42e5aa632339",
-                    "expr": {
-                      "StringLiteral": {
-                        "value": "hoahwiefoif",
-                        "id": "28dde757-d383-45bd-84ef-006c16d1739c"
-                      }
-                    }
-                  }
-                }
-              ],
-              "id": "6b2e2917-3d09-4463-9a93-e715583f0732"
-            }
-          },
-          {
-            "FunctionCall": {
-              "function_reference": {
-                "FunctionReference": {
                   "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
                   "id": "d1c4761e-e1c2-446f-9125-bbf2b5794396"
                 }
@@ -278,6 +253,22 @@
                 }
               ],
               "id": "cd4f3e4d-a652-452d-b335-c9178342efea"
+            }
+          },
+          {
+            "Assignment": {
+              "name": "blah",
+              "expression": {
+                "Placeholder": {
+                  "id": "ca4a9a64-847b-4459-a194-f7ec1ea74dab",
+                  "description": "blah",
+                  "typ": {
+                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+                    "params": []
+                  }
+                }
+              },
+              "id": "eeca6b2f-6408-48df-b771-4b24441d2e02"
             }
           }
         ],

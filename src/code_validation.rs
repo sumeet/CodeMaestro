@@ -83,7 +83,8 @@ impl<'a> Validator<'a> {
             placeholder.typ = code_func.returns();
             *(block.expressions.last_mut().unwrap()) = lang::CodeNode::Placeholder(placeholder);
         } else {
-            block.expressions.push(code_generation::new_placeholder("Return value", code_func.returns()))
+            block.expressions.push(code_generation::new_placeholder("Return value".to_string(),
+                                                                    code_func.returns()))
         }
 
         let mut new_cf = code_func.clone();

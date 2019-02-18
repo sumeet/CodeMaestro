@@ -121,7 +121,7 @@ fn slack(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl OldFuture<Error = impl st
                                              ref channel,
                                              ref user,
                                              ref text,
-                                             ref ts,
+                                             ts: _,
                                              ..
                                          }) = **message {
                     if let (Some(channel), Some(text), Some(user)) = (channel, text, user) {
@@ -136,7 +136,7 @@ fn slack(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl OldFuture<Error = impl st
                             await!(chat_thingy.borrow_mut().message_received(sender, text));
 
                             for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
-                                msg_sender.send_message(&channel, &reply).map_err(|err| {
+                                msg_sender.send_message(&channel, &reply).map_err(|_err| {
                                     ()
                                 })?;
                             }

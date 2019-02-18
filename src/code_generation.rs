@@ -2,6 +2,7 @@ use super::enums::Enum;
 use super::lang;
 use super::structs;
 use std::collections::BTreeMap;
+use crate::lang::CodeNode::Assignment;
 
 pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::CodeNode {
     let fields = strukt.fields.iter()
@@ -10,7 +11,7 @@ pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::C
                 id: lang::new_id(),
                 struct_field_id: field.id,
                 expr: Box::new(new_placeholder(
-                    &field.name,
+                    field.name.to_string(),
                     field.field_type.clone(),
                 )),
             })
@@ -24,13 +25,13 @@ pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::C
 }
 
 pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::CodeNode {
-    let args = func.takes_args().iter()
+    let args = func.takes_args().into_iter()
         .map(|arg_def| {
             lang::CodeNode::Argument(lang::Argument {
                 id: lang::new_id(),
                 argument_definition_id: arg_def.id,
                 expr: Box::new(
-                    new_placeholder(&arg_def.short_name, arg_def.arg_type.clone())
+                    new_placeholder(arg_def.short_name, arg_def.arg_type)
                 ),
             })
         })
@@ -52,9 +53,9 @@ pub fn new_variable_reference(assignment_id: lang::ID) -> lang::CodeNode {
     })
 }
 
-pub fn new_string_literal(string: &str) -> lang::CodeNode {
+pub fn new_string_literal(value: String) -> lang::CodeNode {
     lang::CodeNode::StringLiteral(lang::StringLiteral {
-        value: string.to_string(),
+        value,
         id: lang::new_id(),
     })
 }
@@ -67,10 +68,10 @@ pub fn new_list_literal(typ: lang::Type) -> lang::CodeNode {
     })
 }
 
-pub fn new_placeholder(description: &str, typ: lang::Type) -> lang::CodeNode {
+pub fn new_placeholder(description: String, typ: lang::Type) -> lang::CodeNode {
     lang::CodeNode::Placeholder(lang::Placeholder {
         id: lang::new_id(),
-        description: description.to_string(),
+        description,
         typ,
     })
 }
@@ -82,10 +83,10 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
         id: lang::new_id(),
         // TODO: change to boolean type once we add it
         condition: Box::new(new_placeholder(
-            "Condition",
+            "Condition".to_string(),
             lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC))),
         true_branch: Box::new(new_placeholder(
-            "True branch",
+            "True branch".to_string(),
             branch_type,
             )),
         else_branch: None,
@@ -99,7 +100,7 @@ pub fn new_match(eneom: &Enum, enum_type: &lang::Type, match_expr: lang::CodeNod
 
     let branch_by_variant_id : BTreeMap<_, _> = eneom.variant_types(&enum_type.params).into_iter()
         .map(|(variant, typ)| {
-            (variant.id, new_placeholder(&variant.name, typ.clone()))
+            (variant.id, new_placeholder(variant.name.clone(), typ.clone()))
         }).collect();
 
     lang::CodeNode::Match(lang::Match {
@@ -113,3 +114,10 @@ pub fn new_null_literal() -> lang::CodeNode {
     lang::CodeNode::NullLiteral
 }
 
+pub fn new_assignment(name: String, expression: lang::CodeNode) -> lang::CodeNode {
+    lang::CodeNode::Assignment(lang::Assignment {
+        id: lang::new_id(),
+        name,
+        expression: Box::new(expression),
+    })
+}

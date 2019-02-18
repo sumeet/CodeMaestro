@@ -630,6 +630,8 @@ impl<'a> Navigation<'a> {
         let parent = self.code_genie.find_parent(code_node.id());
 
         match (code_node, parent) {
+            // if you've assigned something, you definitely want to change what's assigned.
+            (_, Some(CodeNode::Assignment(_))) => true,
             // skip entire code blocks: you want to navigate individual elements, and entire codeblocks are
             // huge chunks of code
             (CodeNode::Block(_), _) => false,
