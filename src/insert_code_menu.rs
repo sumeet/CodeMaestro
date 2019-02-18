@@ -106,7 +106,11 @@ impl InsertCodeMenu {
                 let exact_type = code_genie.guess_type(node, env_genie);
                 self.new_params(Some(exact_type))
             },
-            InsertionPoint::Editing(_) => panic!("shouldn't have gotten here"),
+            InsertionPoint::Assignment(assignment_id) => {
+                // TODO: if the assignment is used later on, then lock the assignment to its current
+                // type, otherwise we're free to change it to anything.
+                self.new_params(None)
+            }
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
                 let list_literal = code_genie.find_node(list_literal_id).unwrap();
                 match list_literal {
@@ -116,6 +120,7 @@ impl InsertCodeMenu {
                     _ => panic!("should always be a list literal... ugh"),
                 }
             }
+            InsertionPoint::Editing(_) => panic!("shouldn't have gotten here"),
         }
     }
 
@@ -365,7 +370,7 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
                _env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
-        if !search_params.insertion_point.is_block_expression() {
+        if !should_insert_block_expression(search_params.insertion_point) {
             return options
         }
 
@@ -389,7 +394,7 @@ struct InsertMatchOptionGenerator {}
 impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        if !search_params.insertion_point.is_block_expression() {
+        if !should_insert_block_expression(search_params.insertion_point) {
             return vec![];
         }
 
@@ -428,7 +433,7 @@ struct InsertAssignmentOptionGenerator {}
 impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        if !search_params.insertion_point.is_block_expression() {
+        if !should_insert_block_expression(search_params.insertion_point) {
             return vec![];
         }
 
@@ -447,5 +452,17 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
                     variable_name,
                     lang::Type::from_spec(&*lang::NULL_TYPESPEC)))
         }]
+    }
+}
+
+// hmmm this is used by code search
+// TODO: move into insert_code_menu.rs
+pub fn should_insert_block_expression(insertion_point: InsertionPoint) -> bool {
+    match insertion_point {
+        InsertionPoint::BeginningOfBlock(_) | InsertionPoint::Before(_) | InsertionPoint::After(_) |
+        InsertionPoint::Assignment(_) => true,
+
+        InsertionPoint::Argument(_) | InsertionPoint::StructLiteralField(_) |
+        InsertionPoint::Editing(_) | InsertionPoint::ListLiteralElement {..} => false,
     }
 }

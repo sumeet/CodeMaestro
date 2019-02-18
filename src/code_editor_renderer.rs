@@ -141,7 +141,14 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 )
             },
             &|| { self.draw_text(" = ") },
-            &|| { self.render_code(assignment.expression.as_ref()) }
+            &|| {
+                match self.insertion_point() {
+                    Some(InsertionPoint::Assignment(id)) if id == assignment.id => {
+                        self.render_insert_code_node()
+                    }
+                    _ => self.render_code(assignment.expression.as_ref())
+                }
+            }
         ])
     }
 
@@ -723,6 +730,10 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                                             move |v| onchange_rc.borrow()(v),
                                             move || ondone_rc.borrow()())
         })
+    }
+
+    fn insertion_point(&self) -> Option<InsertionPoint> {
+        Some(self.code_editor.insert_code_menu.as_ref()?.insertion_point)
     }
 }
 

@@ -195,6 +195,9 @@ impl CodeEditor {
             lang::CodeNode::StructLiteralField(cn) => {
                 self.mark_as_editing(InsertionPoint::StructLiteralField(cn.id));
             },
+            lang::CodeNode::Assignment(assignment) => {
+                self.mark_as_editing(InsertionPoint::Assignment(assignment.id));
+            }
             _ => (),
         }
         Some(())
@@ -692,6 +695,9 @@ impl MutationMaster {
             InsertionPoint::ListLiteralElement { list_literal_id, pos } => {
                 self.insertion_expression_into_list_literal(node_to_insert, list_literal_id, pos, genie)
             }
+            InsertionPoint::Assignment(assignment_id) => {
+                self.insert_expression_into_assignment(node_to_insert, assignment_id, genie)
+            }
             // TODO: perhaps we should have edits go through this codepath as well!
             InsertionPoint::Editing(_) => panic!("this is currently unused")
         }
@@ -713,6 +719,15 @@ impl MutationMaster {
         argument.expr = Box::new(code_node);
         let mut root = genie.root().clone();
         root.replace(lang::CodeNode::Argument(argument));
+        root
+    }
+
+    fn insert_expression_into_assignment(&self, code_node: lang::CodeNode, assignment_id: lang::ID,
+                                         genie: &CodeGenie) -> lang::CodeNode {
+        let mut assignment = genie.find_node(assignment_id).unwrap().into_assignment().unwrap().clone();
+        assignment.expression = Box::new(code_node);
+        let mut root = genie.root().clone();
+        root.replace(lang::CodeNode::Assignment(assignment));
         root
     }
 
@@ -862,6 +877,7 @@ pub enum InsertionPoint {
     Argument(lang::ID),
     StructLiteralField(lang::ID),
     Editing(lang::ID),
+    Assignment(lang::ID),
     ListLiteralElement { list_literal_id: lang::ID, pos: usize },
 }
 
@@ -879,6 +895,7 @@ impl InsertionPoint {
             InsertionPoint::Argument(id) => id,
             InsertionPoint::StructLiteralField(id) => id,
             InsertionPoint::Editing(id) => id,
+            InsertionPoint::Assignment(id) => id,
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
                 list_literal_id
             },
@@ -890,19 +907,12 @@ impl InsertionPoint {
             InsertionPoint::BeginningOfBlock(_) => None,
             InsertionPoint::Before(_) => None,
             InsertionPoint::After(_) => None,
+            InsertionPoint::Assignment(id) => None,
             InsertionPoint::Argument(id) => Some(id),
             InsertionPoint::StructLiteralField(id) => Some(id),
             InsertionPoint::Editing(id) => Some(id),
             // not sure if this is right....
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => Some(list_literal_id),
-        }
-    }
-
-    pub fn is_block_expression(&self) -> bool {
-        match *self {
-            InsertionPoint::BeginningOfBlock(_) | InsertionPoint::Before(_) | InsertionPoint::After(_) => true,
-            InsertionPoint::Argument(_) | InsertionPoint::StructLiteralField(_) |
-                InsertionPoint::Editing(_) | InsertionPoint::ListLiteralElement {..} => false,
         }
     }
 }
