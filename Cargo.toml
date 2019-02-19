@@ -1,11 +1,11 @@
-cargo-features = ["default-run"]
+#cargo-features = ["default-run"]
 
 [package]
 name = "cs"
 version = "0.1.0"
 authors = ["Sumeet Agarwal <sumeet.a@gmail.com>"]
 edition = "2018"
-default-run = "cs"
+#default-run = "cs"
 
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "pyo3", "slack",
@@ -20,7 +20,7 @@ serde_derive = "1.0.79"
 serde_json = "1.0.31"
 erased-serde = "0.3.6"
 failure = "0.1.2"
-uuid = { version = "0.7.1", features = ["serde", "v4", "v5"] }
+uuid = { git = "https://github.com/uuid-rs/uuid", tag = "0.7.1", features = ["serde", "v4", "v5"] }
 lazy_static = "1.1.0"
 itertools = "0.7.8"
 downcast-rs = "1.0.3"
@@ -49,7 +49,7 @@ tokio-timer = {version = "*", optional = true}
 tokio-executor = {version = "*", optional = true}
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
-stdweb = {version = "0.4.13", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"], optional = true }
+stdweb = {version = "0.4.14", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"], optional = true }
 reqwest = {version = "0.9.6", optional = true, features=["hyper-011"] }
 yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
 slack = { git = "https://github.com/sumeet/slack-rs", features = ["future"], branch = "master", optional = true }
