@@ -124,7 +124,7 @@ impl<'a> ProblemFinder<'a> {
             // we'll surface this to users and ask them to accept the changes (or undo)
             let t1_symbol = self.env_genie.get_name_for_type(actual_type_returned.as_ref().unwrap()).unwrap();
             let t2_symbol = self.env_genie.get_name_for_type(type_that_should_be_returned.as_ref().unwrap()).unwrap();
-            println!("block has type {} but func returns type {}", t1_symbol, t2_symbol);
+            //println!("block has type {} but func returns type {}", t1_symbol, t2_symbol);
             Box::new(std::iter::once(Problem::InvalidReturnType { function_id: func.id() }))
         } else {
             Box::new(std::iter::empty())

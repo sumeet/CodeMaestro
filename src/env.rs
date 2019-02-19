@@ -198,11 +198,11 @@ impl Interpreter {
                 let arg_value = await!(resolve_all_futures(arg_value));
                 let value_to_insert = match arg_value {
                     lang::Value::Future(future) => {
-                        println!("contains futures, awaiting {:?}", future);
+                        //println!("contains futures, awaiting {:?}", future);
                         await!(future)
                     },
                     _ => {
-                        println!("doesn't contain futures, not waiting {:?}", arg_value);
+                        //println!("doesn't contain futures, not waiting {:?}", arg_value);
                         arg_value
                     },
                 };

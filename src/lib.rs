@@ -229,7 +229,7 @@ impl App {
     pub fn flush_commands(&mut self, mut async_executor: &mut async_executor::AsyncExecutor) {
         let mut command_buffer = self.command_buffer.borrow_mut();
         while command_buffer.has_queued_commands() {
-            println!("some queued commands, flushing");
+            //println!("some queued commands, flushing");
             command_buffer.flush_to_controller(&mut self.controller);
             command_buffer.flush_to_interpreter(&mut self.interpreter);
             command_buffer.flush_integrating(&mut self.controller,

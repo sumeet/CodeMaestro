@@ -88,7 +88,6 @@ impl CodeEditor {
             (false, Key::R) => {
                 if keypress.ctrl && keypress.shift {
                     // TODO: this doesn't work right now
-                    println!("running with hotkey doesn't owrk lol");
                     //self.run(&self.get_code().clone());
                 } else if keypress.ctrl {
                     self.redo()

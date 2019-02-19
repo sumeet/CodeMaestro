@@ -49,7 +49,7 @@ tokio-timer = {version = "*", optional = true}
 tokio-executor = {version = "*", optional = true}
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
-stdweb = {version = "0.4.14", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"], optional = true }
+stdweb = {version = "0.4.13", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"], optional = true }
 reqwest = {version = "0.9.6", optional = true, features=["hyper-011"] }
 yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
 slack = { git = "https://github.com/sumeet/slack-rs", features = ["future"], branch = "master", optional = true }
