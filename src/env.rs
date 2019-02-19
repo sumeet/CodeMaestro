@@ -145,7 +145,8 @@ impl Interpreter {
                 let env = Rc::clone(&self.env);
                 let match_id = mach.id;
                 Box::pin(async move {
-                    let (variant_id, value) = await!(match_exp_fut).into_enum().unwrap();
+                    // TODO: i think we need a more ergonomic way of doing this
+                    let (variant_id, value) = await!(resolve_all_futures(await!(match_exp_fut))).into_enum().unwrap();
                     env.borrow_mut().set_local_variable(lang::Match::variable_id(match_id, variant_id),
                                                         value);
                     await!(branch_by_variant_id.remove(&variant_id).unwrap())
