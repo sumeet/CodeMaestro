@@ -38,29 +38,6 @@
   "jsfuncs": [],
   "structs": [
     {
-      "name": "HTTPBinResponse",
-      "id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "7077e04e-781e-4285-afc2-2d2a6321f602",
-          "name": "origin",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "d5989b41-d506-4bb5-8162-bb63bdc384ed",
-          "name": "url",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
       "name": "HTTP Form param",
       "id": "b6566a28-8257-46a9-aa29-39d9add25173",
       "symbol": "",
@@ -76,6 +53,29 @@
         {
           "id": "57607724-a63a-458e-9253-1e3efeb4de63",
           "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTPBinResponse",
+      "id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "7077e04e-781e-4285-afc2-2d2a6321f602",
+          "name": "origin",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "d5989b41-d506-4bb5-8162-bb63bdc384ed",
+          "name": "url",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
@@ -154,14 +154,14 @@
   ],
   "tests": [
     {
-      "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
-      "name": "test 2",
+      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
+      "name": "test 1",
       "subject": {
         "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
       },
       "code": {
         "expressions": [],
-        "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
+        "id": "704015a2-c231-4082-8007-babca16f62a1"
       }
     },
     {
@@ -176,14 +176,14 @@
       }
     },
     {
-      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
-      "name": "test 1",
+      "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
+      "name": "test 2",
       "subject": {
         "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
       },
       "code": {
         "expressions": [],
-        "id": "704015a2-c231-4082-8007-babca16f62a1"
+        "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
       }
     }
   ],
@@ -288,32 +288,102 @@
           },
           {
             "Match": {
-              "id": "6fb0a036-26f6-463b-98e7-28576405bee3",
+              "id": "b9ca5c2a-d521-4f40-aa02-56a66b222fdd",
               "match_expression": {
                 "VariableReference": {
                   "assignment_id": "eeca6b2f-6408-48df-b771-4b24441d2e02",
-                  "id": "dd013f7b-55a4-4445-8aa8-ec13d928a2bb"
+                  "id": "7094e9a2-666e-45d0-84a4-64bb659e7f38"
                 }
               },
               "branch_by_variant_id": {
                 "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
-                  "Placeholder": {
-                    "id": "eae1197d-52cf-40b3-ac22-0ce81af7bb65",
-                    "description": "Error",
-                    "typ": {
-                      "typespec_id": "a6ad92ed-1b21-44fe-9ad0-e08326acd6f6",
-                      "params": []
-                    }
+                  "Block": {
+                    "expressions": [
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d",
+                              "id": "d0537084-30bf-471e-abd4-a842965cb65d"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "ae377872-9005-4719-8a7a-eb58621f5fa5",
+                                "argument_definition_id": "feff08f0-7319-4b47-964e-1f470eca81df",
+                                "expr": {
+                                  "StringLiteral": {
+                                    "value": "hi",
+                                    "id": "e93ca241-43c5-4842-99a0-111e392ba268"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "98de4178-c3fe-4fa3-94a7-16b44f5ab1b7"
+                        }
+                      },
+                      {
+                        "VariableReference": {
+                          "assignment_id": "dc3d0fa1-873c-560d-a4d7-9d2680f04fd6",
+                          "id": "55114f93-2db2-403e-85c4-77e02335b65a"
+                        }
+                      }
+                    ],
+                    "id": "38595314-9330-4865-9ce8-5e90b62cb5d6"
                   }
                 },
                 "f70c799a-1d63-4293-889d-55c07a7456a0": {
-                  "Placeholder": {
-                    "id": "80457f62-c848-411d-837f-dd4bd42dbc07",
-                    "description": "Ok",
-                    "typ": {
-                      "typespec_id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
-                      "params": []
-                    }
+                  "Block": {
+                    "expressions": [
+                      {
+                        "VariableReference": {
+                          "assignment_id": "57ba048c-0e30-57a3-9b8a-33625d8c1ad9",
+                          "id": "bc50f8ee-9255-486f-8efe-2740d8abb375"
+                        }
+                      },
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                              "id": "ef2cb16e-2e6f-4dd9-ba2e-c40bd7a991ea"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "fa24c1fb-b696-484f-bef3-6086a3ea7dc5",
+                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                "expr": {
+                                  "Placeholder": {
+                                    "id": "ae57849f-105c-4491-a270-abb57e2316c6",
+                                    "description": "Message",
+                                    "typ": {
+                                      "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                                      "params": []
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "8be27133-d121-4190-bb5a-3d66c8459270"
+                        }
+                      },
+                      {
+                        "Placeholder": {
+                          "id": "8019fe70-1cc2-4ec6-9495-144bf6b490be",
+                          "description": "Ok",
+                          "typ": {
+                            "typespec_id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
+                            "params": []
+                          }
+                        }
+                      }
+                    ],
+                    "id": "f2b7b264-e138-465a-8f97-62bb9be68be6"
                   }
                 }
               }

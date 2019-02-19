@@ -25,6 +25,7 @@ lazy_static! {
         Box::new(InsertConditionalOptionGenerator {}),
         Box::new(InsertMatchOptionGenerator {}),
         Box::new(InsertAssignmentOptionGenerator {}),
+        Box::new(InsertEnumVariantFromMatch {}),
     ];
 }
 
@@ -436,7 +437,7 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
             .into_iter()
             .filter_map(|assignment| {
                 if let Some(var_name_to_march) = search_params.search_prefix("match") {
-                    if !assignment.name.starts_with(var_name_to_march.as_str()) {
+                    if !assignment.name.to_lowercase().starts_with(var_name_to_march.as_str()) {
                         return None
                     }
                 }
@@ -499,14 +500,13 @@ impl InsertCodeMenuOptionGenerator for InsertEnumVariantFromMatch {
                         return None
                     }
                 }
-                if !match_variant.enum_variant.name.starts_with(&search_params.lowercased_trimmed_search_str()) {
+                if !match_variant.enum_variant.name.to_lowercase().starts_with(&search_params.lowercased_trimmed_search_str()) {
                     return None
                 }
+                let assignment_id = match_variant.assignment_id();
                 Some(InsertCodeMenuOption {
                     label: match_variant.enum_variant.name,
-                    new_node: code_generation::new_variable_reference(
-                        lang::Match::variable_id(match_variant.match_id, match_variant.enum_variant.id)
-                    ),
+                    new_node: code_generation::new_variable_reference(assignment_id),
                     is_selected: false
                 })
             }).collect()
@@ -516,23 +516,8 @@ impl InsertCodeMenuOptionGenerator for InsertEnumVariantFromMatch {
 impl InsertEnumVariantFromMatch {
     pub fn find_enum_variants_preceding(&self, insertion_point: InsertionPoint, code_genie: &CodeGenie,
                                         env_genie: &EnvGenie) -> Vec<MatchVariant> {
-        let mut node_and_parents = insertion_node_and_parents(code_genie, insertion_point);
-        let mut prev = node_and_parents.next().unwrap();
-        let mut variants = vec![];
-        for node in node_and_parents {
-            if let lang::CodeNode::Match(mach) = node {
-                for (variant_id, branch) in mach.branch_by_variant_id.iter() {
-                    if branch.id() == prev.id() {
-                        let mut type_and_enum_by_variant_id =
-                            code_genie.enum_type_and_variant_by_variant_id(mach, env_genie);
-                        variants.push(type_and_enum_by_variant_id.remove(variant_id).unwrap());
-                    }
-                }
-
-            }
-            prev = node;
-        }
-        variants
+        let (node_id, _) = assignment_search_position(insertion_point);
+        code_genie.find_enum_variants_preceding(node_id, env_genie)
     }
 }
 

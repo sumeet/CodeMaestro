@@ -100,7 +100,11 @@ pub fn new_match(eneom: &Enum, enum_type: &lang::Type, match_expr: lang::CodeNod
 
     let branch_by_variant_id : BTreeMap<_, _> = eneom.variant_types(&enum_type.params).into_iter()
         .map(|(variant, typ)| {
-            (variant.id, new_placeholder(variant.name.clone(), typ.clone()))
+            let mut block = lang::Block::new();
+            block.expressions.push(
+                new_placeholder(variant.name.clone(),
+                                typ.clone()));
+            (variant.id, lang::CodeNode::Block(block))
         }).collect();
 
     lang::CodeNode::Match(lang::Match {

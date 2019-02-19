@@ -479,8 +479,8 @@ impl CodeGenie {
         }
     }
 
-    pub fn enum_type_and_variant_by_variant_id(&self, mach: &lang::Match, env_genie: &EnvGenie)
-        -> HashMap<lang::ID, MatchVariant> {
+    pub fn match_variant_by_variant_id(&self, mach: &lang::Match, env_genie: &EnvGenie)
+                                       -> HashMap<lang::ID, MatchVariant> {
         let enum_type = self.guess_type(&mach.match_expression, env_genie);
         let eneom = env_genie.find_enum(enum_type.typespec_id).unwrap();
         eneom.variant_types(&enum_type.params).into_iter()
@@ -489,12 +489,37 @@ impl CodeGenie {
                  MatchVariant { typ: typ.clone(), enum_variant: variant.clone(), match_id: mach.id })
             }).collect()
     }
+
+    pub fn find_enum_variants_preceding(&self, node_id: lang::ID, env_genie: &EnvGenie) -> Vec<MatchVariant> {
+        let mut prev = self.find_node(node_id).unwrap();
+        let mut variants = vec![];
+        for node in self.all_parents_of(node_id) {
+            if let lang::CodeNode::Match(mach) = node {
+                for (variant_id, branch) in mach.branch_by_variant_id.iter() {
+                    if branch.id() == prev.id() {
+                        let mut type_and_enum_by_variant_id =
+                            self.match_variant_by_variant_id(mach, env_genie);
+                        variants.push(type_and_enum_by_variant_id.remove(variant_id).unwrap());
+                    }
+                }
+
+            }
+            prev = node;
+        }
+        variants
+    }
 }
 
 pub struct MatchVariant {
     pub typ: lang::Type,
     pub enum_variant: EnumVariant,
     pub match_id: lang::ID,
+}
+
+impl MatchVariant {
+    pub fn assignment_id(&self) -> lang::ID {
+        lang::Match::variable_id(self.match_id, self.enum_variant.id)
+    }
 }
 
 pub struct Navigation<'a> {
@@ -680,6 +705,8 @@ impl<'a> Navigation<'a> {
                 (_, Some(CodeNode::Conditional(_))) => true,
             // sometimes placeholders chill by themselves in a block
             (CodeNode::Placeholder(_), Some(CodeNode::Block(_))) => true,
+            // sometimes variable references also chill by themselves in  block
+            (CodeNode::VariableReference(_), Some(CodeNode::Block(_))) => true,
             _ => false,
         }
     }

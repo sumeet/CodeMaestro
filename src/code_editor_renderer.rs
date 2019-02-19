@@ -417,8 +417,14 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         }
         // TODO: this searches all functions, but we could be smarter here because we already know which
         //       function we're inside
-        let arg = self.env_genie.get_arg_definition(variable_reference.assignment_id)?;
-        Some(arg.short_name)
+        if let Some(arg) = self.env_genie.get_arg_definition(variable_reference.assignment_id) {
+            return Some(arg.short_name)
+        }
+        // variables can also refer to enum variants
+        self.code_editor.code_genie.find_enum_variants_preceding(variable_reference.id,
+                                                                 self.env_genie).into_iter()
+            .find(|match_variant| match_variant.assignment_id() == variable_reference.assignment_id)
+            .map(|match_variant| match_variant.enum_variant.name)
     }
 
     fn render_block(&self, block: &lang::Block) -> T::DrawResult {
@@ -608,27 +614,24 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             ])];
 
         let type_and_enum_by_variant_id =
-            self.code_editor.code_genie.enum_type_and_variant_by_variant_id(mach, self.env_genie);
+            self.code_editor.code_genie.match_variant_by_variant_id(mach, self.env_genie);
 
         drawn.extend(mach.branch_by_variant_id.iter().map(|(variant_id, branch)| {
             let match_variant = type_and_enum_by_variant_id.get(variant_id).unwrap();
             self.render_indented(&|| {
-                self.ui_toolkit.align(
-                    &|| {
-                        self.ui_toolkit.draw_all_on_same_line(&[
-                            &|| {
-                                let type_symbol = self.env_genie.get_symbol_for_type(&match_variant.typ);
-                                self.ui_toolkit.draw_button(&type_symbol, BLACK_COLOR, &|| {})
-                            },
-                            &|| {
-                                self.ui_toolkit.draw_button(&match_variant.enum_variant.name, PURPLE_COLOR,
-                                                            &|| {})
-                            },
-                        ])
-
-                    },
-                    &[&|| self.render_nested(&|| self.render_code(branch))],
-                )
+                self.ui_toolkit.draw_all(vec![
+                    self.ui_toolkit.draw_all_on_same_line(&[
+                        &|| {
+                            let type_symbol = self.env_genie.get_symbol_for_type(&match_variant.typ);
+                            self.ui_toolkit.draw_button(&type_symbol, BLACK_COLOR, &|| {})
+                        },
+                        &|| {
+                            self.ui_toolkit.draw_button(&match_variant.enum_variant.name, PURPLE_COLOR,
+                                                        &|| {})
+                        },
+                    ]),
+                    self.render_indented(&|| self.render_code(branch))
+                ])
             })
         }));
         self.ui_toolkit.draw_all(drawn)
