@@ -607,25 +607,21 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 &|| { self.render_code(&mach.match_expression) },
             ])];
 
-        let enum_type = self.code_editor.code_genie.guess_type(&mach.match_expression, self.env_genie);
-        let eneom = self.env_genie.find_enum(enum_type.typespec_id).unwrap();
-        let type_and_enum_by_variant_id : HashMap<_, _> = eneom.variant_types(&enum_type.params).into_iter()
-            .map(|(variant, typ)| {
-                (variant.id, (typ, variant))
-            }).collect();
+        let type_and_enum_by_variant_id =
+            self.code_editor.code_genie.enum_type_and_variant_by_variant_id(mach, self.env_genie);
 
         drawn.extend(mach.branch_by_variant_id.iter().map(|(variant_id, branch)| {
-            let (typ, variant) = type_and_enum_by_variant_id.get(variant_id).unwrap();
+            let match_variant = type_and_enum_by_variant_id.get(variant_id).unwrap();
             self.render_indented(&|| {
                 self.ui_toolkit.align(
                     &|| {
                         self.ui_toolkit.draw_all_on_same_line(&[
                             &|| {
-                                let type_symbol = self.env_genie.get_symbol_for_type(typ);
+                                let type_symbol = self.env_genie.get_symbol_for_type(&match_variant.typ);
                                 self.ui_toolkit.draw_button(&type_symbol, BLACK_COLOR, &|| {})
                             },
                             &|| {
-                                self.ui_toolkit.draw_button(&variant.name, PURPLE_COLOR,
+                                self.ui_toolkit.draw_button(&match_variant.enum_variant.name, PURPLE_COLOR,
                                                             &|| {})
                             },
                         ])

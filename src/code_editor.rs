@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::collections::HashMap;
 
 use itertools::Itertools;
 use gen_iter::GenIter;
@@ -9,6 +10,7 @@ use super::lang;
 use super::undo;
 use super::env_genie::EnvGenie;
 use super::insert_code_menu::InsertCodeMenu;
+use super::enums::EnumVariant;
 
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
@@ -476,6 +478,23 @@ impl CodeGenie {
             }
         }
     }
+
+    pub fn enum_type_and_variant_by_variant_id(&self, mach: &lang::Match, env_genie: &EnvGenie)
+        -> HashMap<lang::ID, MatchVariant> {
+        let enum_type = self.guess_type(&mach.match_expression, env_genie);
+        let eneom = env_genie.find_enum(enum_type.typespec_id).unwrap();
+        eneom.variant_types(&enum_type.params).into_iter()
+            .map(|(variant, typ)| {
+                (variant.id,
+                 MatchVariant { typ: typ.clone(), enum_variant: variant.clone(), match_id: mach.id })
+            }).collect()
+    }
+}
+
+pub struct MatchVariant {
+    pub typ: lang::Type,
+    pub enum_variant: EnumVariant,
+    pub match_id: lang::ID,
 }
 
 pub struct Navigation<'a> {

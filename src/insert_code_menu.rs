@@ -1,6 +1,7 @@
 use super::code_editor::InsertionPoint;
 use super::env_genie::EnvGenie;
 use super::code_editor::CodeGenie;
+use super::code_editor::MatchVariant;
 use super::code_editor::PLACEHOLDER_ICON;
 use super::lang;
 use super::code_generation;
@@ -12,6 +13,9 @@ use lazy_static::lazy_static;
 use itertools::Itertools;
 
 use std::collections::HashMap;
+use crate::enums::EnumVariant;
+use std::iter;
+use gen_iter::GenIter;
 
 lazy_static! {
     static ref OPTIONS_GENERATORS : Vec<Box<InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
@@ -220,6 +224,12 @@ struct Variable {
     locals_id: lang::ID,
     type_id: lang::ID,
     name: String,
+}
+
+fn insertion_node_and_parents(code_genie: &CodeGenie,
+                              insertion_point: InsertionPoint) -> impl Iterator<Item = &lang::CodeNode> {
+    let (node_id, _) = assignment_search_position(insertion_point);
+    iter::once(code_genie.find_node(node_id).unwrap()).chain(code_genie.all_parents_of(node_id))
 }
 
 // returns tuple -> (CodeNode position, is_inclusive)
@@ -471,6 +481,58 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
                     variable_name,
                     lang::Type::from_spec(&*lang::NULL_TYPESPEC)))
         }]
+    }
+}
+
+
+#[derive(Clone)]
+struct InsertEnumVariantFromMatch {}
+
+impl InsertCodeMenuOptionGenerator for InsertEnumVariantFromMatch {
+    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
+               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+        self.find_enum_variants_preceding(search_params.insertion_point, code_genie, env_genie)
+            .into_iter()
+            .filter_map(|match_variant| {
+                if let Some(search_type) = &search_params.return_type {
+                    if search_type != &match_variant.typ {
+                        return None
+                    }
+                }
+                if !match_variant.enum_variant.name.starts_with(&search_params.lowercased_trimmed_search_str()) {
+                    return None
+                }
+                Some(InsertCodeMenuOption {
+                    label: match_variant.enum_variant.name,
+                    new_node: code_generation::new_variable_reference(
+                        lang::Match::variable_id(match_variant.match_id, match_variant.enum_variant.id)
+                    ),
+                    is_selected: false
+                })
+            }).collect()
+    }
+}
+
+impl InsertEnumVariantFromMatch {
+    pub fn find_enum_variants_preceding(&self, insertion_point: InsertionPoint, code_genie: &CodeGenie,
+                                        env_genie: &EnvGenie) -> Vec<MatchVariant> {
+        let mut node_and_parents = insertion_node_and_parents(code_genie, insertion_point);
+        let mut prev = node_and_parents.next().unwrap();
+        let mut variants = vec![];
+        for node in node_and_parents {
+            if let lang::CodeNode::Match(mach) = node {
+                for (variant_id, branch) in mach.branch_by_variant_id.iter() {
+                    if branch.id() == prev.id() {
+                        let mut type_and_enum_by_variant_id =
+                            code_genie.enum_type_and_variant_by_variant_id(mach, env_genie);
+                        variants.push(type_and_enum_by_variant_id.remove(variant_id).unwrap());
+                    }
+                }
+
+            }
+            prev = node;
+        }
+        variants
     }
 }
 
