@@ -44,13 +44,16 @@ impl ChatThingy {
         };
 
         let mut triggered_values = vec![];
-        let message = new_message(sender, text);
+        let message = new_message(sender, text.clone());
 
         for chat_trigger in triggers {
-            let message_arg_id = chat_trigger.takes_args()[0].id;
-            triggered_values.push(chat_trigger.call(self.interp.dup(), hashmap! {
-                message_arg_id => message.clone(),
-            }));
+            // TODO: this starts_with stuff is hax but i just wanna test it!!!
+            if text.starts_with(&chat_trigger.prefix) {
+                let message_arg_id = chat_trigger.takes_args()[0].id;
+                triggered_values.push(chat_trigger.call(self.interp.dup(), hashmap! {
+                    message_arg_id => message.clone(),
+                }));
+            }
         }
         async move {
             for value in triggered_values {
@@ -89,12 +92,36 @@ fn main() {
         Ok::<(), ()>(())
     });
 
+    let thingy2 = Rc::clone(&chat_thingy);
+    let irc_interaction_future = backward(async move {
+        let mut stream = client.stream();
+        while let Some(message) = await!(stream.next()) {
+            if message.is_err() {
+                println!("there was an error: {:?}", message)
+            } else {
+                let message = message.unwrap();
+                println!("{:?}", message);
+                if let Command::PRIVMSG(sender, text) = &message.command {
+                    if let Some(response_target) = message.response_target() {
+                        await!(thingy2.borrow_mut().message_received(sender.clone(), text.clone()));
+                        for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
+                            client.send_privmsg(response_target, &reply).map_err(|_err| {
+                                ()
+                            })?;
+                        }
+                    }
+                }
+            }
+        }
+        Ok::<(), ()>(())
+    });
+
     let irc_future = backward(async move {
         await!(forward(irc_future)).unwrap();
         Ok::<(), ()>(())
     });
 
-    runtime.block_on(slack_future.join(irc_future)).unwrap();
+    runtime.block_on(slack_future.join(irc_future).join(irc_interaction_future)).unwrap();
 
 }
 
@@ -163,29 +190,3 @@ fn slack(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl OldFuture<Error = impl st
     Client::login_and_run(token, MyHandler { chat_thingy })
 }
 
-//    runtime.block_on(backward(async move {
-////        let app = cs::App::new();
-////        let loaded_code = app.controller.borrow().loaded_code.clone().unwrap();
-////        let mut controller = app.controller.borrow_mut();
-////        let env = &mut controller.execution_environment;
-////
-////        let mut stream = client.stream();
-////        while let Some(message) = await!(stream.next()) {
-////            if message.is_err() {
-////                println!("there was an error: {:?}", message)
-////            } else {
-////                let message = message.unwrap();
-////                println!("{:?}", message);
-////                if let Command::PRIVMSG(_, _) = message.command {
-////                    if let Some(response_target) = message.response_target() {
-////                        let output_from_lang = env.evaluate(&loaded_code);
-////                        if let Value::String(output_string) = output_from_lang {
-////                            client.send_privmsg(response_target, output_string).unwrap();
-////                        }
-////                    }
-////                }
-////            }
-////        }
-////        Ok(())
-//        Ok(())
-//    }).join(future).join(slack(&runtime))).unwrap();
