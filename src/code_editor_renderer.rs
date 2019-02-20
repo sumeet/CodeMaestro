@@ -359,6 +359,9 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::ListLiteral(list_literal) => {
                     self.render_list_literal(&list_literal, code_node)
                 }
+                CodeNode::StructFieldGet(sfg) => {
+                    self.render_struct_field_get(&sfg)
+                }
             }
         };
 
@@ -588,6 +591,15 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             &|| { self.render_struct_identifier(&strukt, struct_literal) },
             &rhs.iter().map(|b| b.as_ref()).collect_vec()
         )
+    }
+
+    fn render_struct_field_get(&self, sfg: &lang::StructFieldGet) -> T::DrawResult {
+        let struct_field = self.env_genie.find_struct_field(sfg.struct_field_id).unwrap();
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &|| self.render_code(&sfg.struct_expr),
+            &|| self.ui_toolkit.draw_text("."),
+            &|| self.ui_toolkit.draw_button(&struct_field.name, BLUE_COLOR, &|| {})
+        ])
     }
 
     fn render_struct_identifier(&self, strukt: &structs::Struct,

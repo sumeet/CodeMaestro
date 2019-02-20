@@ -165,6 +165,15 @@ impl Interpreter {
                     lang::Value::List(output_vec)
                 })
             },
+            lang::CodeNode::StructFieldGet(sfg) => {
+                let struct_fut = self.evaluate(
+                    sfg.struct_expr.as_ref());
+                let field_id = sfg.struct_field_id;
+                Box::pin(async move {
+                    let strukt = await!(await_eval_result(struct_fut));
+                    strukt.into_struct().unwrap().1.remove(&field_id).unwrap()
+                })
+            }
         }
     }
 
@@ -223,6 +232,10 @@ impl Interpreter {
     pub fn dup(&self) -> Self {
         Self::with_env(Rc::clone(&self.env))
     }
+}
+
+async fn await_eval_result(val_fut: impl Future<Output= lang::Value>) -> lang::Value {
+    await!(resolve_all_futures(await!(val_fut)))
 }
 
 #[derive(Debug)]

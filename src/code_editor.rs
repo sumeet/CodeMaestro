@@ -474,6 +474,10 @@ impl CodeGenie {
                 let first_variant = mach.branch_by_variant_id.values().next()
                     .expect("match statement must contain at least one variant");
                 self.guess_type(first_variant, env_genie)
+            },
+            CodeNode::StructFieldGet(sfg) => {
+                let struct_field = env_genie.find_struct_field(sfg.struct_field_id).unwrap();
+                struct_field.field_type.clone()
             }
         }
     }

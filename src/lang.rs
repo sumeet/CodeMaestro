@@ -96,6 +96,7 @@ pub enum CodeNode {
     Conditional(Conditional),
     Match(Match),
     ListLiteral(ListLiteral),
+    StructFieldGet(StructFieldGet),
 }
 
 #[derive(Clone, Debug)]
@@ -173,6 +174,13 @@ impl Value {
     pub fn as_struct(&self) -> Option<(ID, &StructValues)> {
         match self {
             Value::Struct {struct_id, values} => Some((*struct_id, values)),
+            _ => None
+        }
+    }
+
+    pub fn into_struct(self) -> Option<(ID, StructValues)> {
+        match self {
+            Value::Struct {struct_id, values} => Some((struct_id, values)),
             _ => None
         }
     }
@@ -371,9 +379,7 @@ impl CodeNode {
             CodeNode::Placeholder(placeholder) => {
                 format!("Placeholder: {}", placeholder.description)
             },
-            CodeNode::NullLiteral => {
-                "NullLiteral".to_string()
-            },
+            CodeNode::NullLiteral => "NullLiteral".to_string(),
             CodeNode::StructLiteral(struct_literal) => {
                 format!("Struct literal: {}", struct_literal.id)
             },
@@ -386,9 +392,8 @@ impl CodeNode {
             CodeNode::ListLiteral(list_literal) => {
                 format!("List literal: {}", list_literal.id)
             },
-            CodeNode::Match(mach) => {
-                format!("Match: {}", mach.id)
-            }
+            CodeNode::Match(mach) => format!("Match: {}", mach.id),
+            CodeNode::StructFieldGet(sfg) => format!("Struct field get: {}", sfg.id),
         }
     }
 
@@ -396,18 +401,10 @@ impl CodeNode {
     // need to further disambiguate
     pub fn id(&self) -> ID {
         match self {
-            CodeNode::FunctionCall(function_call) => {
-                function_call.id
-            }
-            CodeNode::StringLiteral(string_literal) => {
-                string_literal.id
-            }
-            CodeNode::Assignment(assignment) => {
-                assignment.id
-            }
-            CodeNode::Block(block) => {
-                block.id
-            }
+            CodeNode::FunctionCall(function_call) => function_call.id,
+            CodeNode::StringLiteral(string_literal) => string_literal.id,
+            CodeNode::Assignment(assignment) => assignment.id,
+            CodeNode::Block(block) => block.id,
             CodeNode::VariableReference(variable_reference) => {
                 variable_reference.id
             }
@@ -417,12 +414,8 @@ impl CodeNode {
             CodeNode::FunctionReference(function_reference) => {
                 function_reference.id
             }
-            CodeNode::Argument(argument) => {
-                argument.id
-            }
-            CodeNode::Placeholder(placeholder) => {
-                placeholder.id
-            },
+            CodeNode::Argument(argument) => argument.id,
+            CodeNode::Placeholder(placeholder) => placeholder.id,
             CodeNode::NullLiteral => {
                 uuid::Uuid::parse_str("1a2de9c5-043c-43c8-ad05-622bb278d5ab").unwrap()
             },
@@ -431,6 +424,7 @@ impl CodeNode {
             CodeNode::Conditional(conditional) => conditional.id,
             CodeNode::ListLiteral(list_literal) => list_literal.id,
             CodeNode::Match(mach) => mach.id,
+            CodeNode::StructFieldGet(sfg) => sfg.id,
         }
     }
 
@@ -517,7 +511,8 @@ impl CodeNode {
             CodeNode::ListLiteral(list_literal) => Box::new(list_literal.elements.iter()),
             CodeNode::Match(mach) => Box::new(
                 iter::once(mach.match_expression.borrow()).chain(mach.branch_by_variant_id.values())
-            )
+            ),
+            CodeNode::StructFieldGet(sfg) => Box::new(iter::once(sfg.struct_expr.as_ref())),
         }
     }
 
@@ -593,6 +588,9 @@ impl CodeNode {
             CodeNode::ListLiteral(list_literal) => list_literal.elements.iter_mut().collect_vec(),
             CodeNode::Match(mach) => {
                 iter::once(mach.match_expression.borrow_mut()).chain(mach.branch_by_variant_id.values_mut()).collect()
+            },
+            CodeNode::StructFieldGet(sfg) => {
+                vec![sfg.struct_expr.borrow_mut()]
             }
         }
     }
@@ -821,4 +819,11 @@ pub struct ListLiteral {
     pub id: ID,
     pub element_type: Type,
     pub elements: Vec<CodeNode>,
+}
+
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+pub struct StructFieldGet {
+    pub id: ID,
+    pub struct_expr: Box<CodeNode>,
+    pub struct_field_id: ID,
 }

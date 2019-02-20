@@ -56,6 +56,12 @@ impl<'a> EnvGenie<'a> {
         None
     }
 
+    // ONEDAY: this search could be made faster if we kept an index!
+    pub fn find_struct_field(&self, struct_field_id: lang::ID) -> Option<&structs::StructField> {
+        self.list_structs().flat_map(|strukt| &strukt.fields)
+            .find(|field| field.id == struct_field_id)
+    }
+
     pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
         self.env.find_typespec(id)
     }
