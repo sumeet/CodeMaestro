@@ -523,7 +523,8 @@ struct InsertStructFieldGetOfLocal {}
 impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        let optionss = find_all_locals_preceding(search_params.insertion_point, code_genie, env_genie)
+        let optionss = find_all_locals_preceding(
+            search_params.insertion_point, code_genie, env_genie)
             .filter_map(|variable| {
                 let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
 
@@ -536,7 +537,7 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                         return None
                     }
                     if let Some(search_type) = &search_params.return_type {
-                        if !search_type.matches(&variable.typ) {
+                        if !search_type.matches(&struct_field.field_type) {
                             return None
                         }
                     }

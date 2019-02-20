@@ -38,29 +38,6 @@
   "jsfuncs": [],
   "structs": [
     {
-      "name": "HTTP Form param",
-      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-          "name": "key",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
-          "name": "value",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
       "name": "HTTPBinResponse",
       "id": "13c9dc24-ca91-4f0a-a07a-eddc848e4848",
       "symbol": "",
@@ -99,6 +76,29 @@
         {
           "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
           "name": "sender",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
@@ -231,31 +231,6 @@
       "code": {
         "expressions": [
           {
-            "FunctionCall": {
-              "function_reference": {
-                "FunctionReference": {
-                  "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
-                  "id": "d1c4761e-e1c2-446f-9125-bbf2b5794396"
-                }
-              },
-              "args": [
-                {
-                  "Argument": {
-                    "id": "8e3fdf01-e24f-493a-9250-15f15a339d17",
-                    "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
-                    "expr": {
-                      "StringLiteral": {
-                        "value": "oh my god",
-                        "id": "bb03484a-0fae-4b6b-8764-b47ad80fb2b4"
-                      }
-                    }
-                  }
-                }
-              ],
-              "id": "cd4f3e4d-a652-452d-b335-c9178342efea"
-            }
-          },
-          {
             "Assignment": {
               "name": "response",
               "expression": {
@@ -323,12 +298,6 @@
                           ],
                           "id": "1c963db8-1a66-4d28-b309-faba58f9f61e"
                         }
-                      },
-                      {
-                        "VariableReference": {
-                          "assignment_id": "dc3d0fa1-873c-560d-a4d7-9d2680f04fd6",
-                          "id": "55114f93-2db2-403e-85c4-77e02335b65a"
-                        }
                       }
                     ],
                     "id": "38595314-9330-4865-9ce8-5e90b62cb5d6"
@@ -357,9 +326,15 @@
                                 "id": "fa24c1fb-b696-484f-bef3-6086a3ea7dc5",
                                 "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
                                 "expr": {
-                                  "StringLiteral": {
-                                    "value": "success",
-                                    "id": "27e21b46-df5a-4636-a0a2-b7eab61d1eee"
+                                  "StructFieldGet": {
+                                    "id": "2586bc2b-106b-4e05-ab5f-e43e20c9ae59",
+                                    "struct_expr": {
+                                      "VariableReference": {
+                                        "assignment_id": "57ba048c-0e30-57a3-9b8a-33625d8c1ad9",
+                                        "id": "34a585da-fc35-40f5-ae77-d133f4ac0be7"
+                                      }
+                                    },
+                                    "struct_field_id": "d5989b41-d506-4bb5-8162-bb63bdc384ed"
                                   }
                                 }
                               }
