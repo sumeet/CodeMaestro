@@ -511,6 +511,24 @@ impl CodeGenie {
         }
         variants
     }
+
+    pub fn find_enum_variants_preceding_iter<'a>(&'a self, node_id: lang::ID, env_genie: &'a EnvGenie) -> impl Iterator<Item = MatchVariant> + 'a {
+        let mut prev = self.find_node(node_id).unwrap();
+        GenIter(move || {
+            for node in self.all_parents_of(node_id) {
+                if let lang::CodeNode::Match(mach) = node {
+                    for (variant_id, branch) in mach.branch_by_variant_id.iter() {
+                        if branch.id() == prev.id() {
+                            let mut type_and_enum_by_variant_id =
+                                self.match_variant_by_variant_id(mach, env_genie);
+                            yield type_and_enum_by_variant_id.remove(variant_id).unwrap()
+                        }
+                    }
+                }
+                prev = node;
+            }
+        })
+    }
 }
 
 pub struct MatchVariant {

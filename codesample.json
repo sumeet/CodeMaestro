@@ -38,21 +38,21 @@
   "jsfuncs": [],
   "structs": [
     {
-      "name": "Message",
-      "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
-      "symbol": "",
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
       "fields": [
         {
-          "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
-          "name": "message",
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           }
         },
         {
-          "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
-          "name": "sender",
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
@@ -84,6 +84,29 @@
       ]
     },
     {
+      "name": "Message",
+      "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
+          "name": "message",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
+          "name": "sender",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
       "name": "HTTP Response",
       "id": "31d96c85-5966-4866-a90a-e6db3707b140",
       "symbol": "",
@@ -101,29 +124,6 @@
           "name": "status code",
           "field_type": {
             "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTP Form param",
-      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-          "name": "key",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
-          "name": "value",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           }
         }
@@ -154,14 +154,14 @@
   ],
   "tests": [
     {
-      "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
-      "name": "test 2",
+      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
+      "name": "test 1",
       "subject": {
         "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
       },
       "code": {
         "expressions": [],
-        "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
+        "id": "704015a2-c231-4082-8007-babca16f62a1"
       }
     },
     {
@@ -176,14 +176,14 @@
       }
     },
     {
-      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
-      "name": "test 1",
+      "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
+      "name": "test 2",
       "subject": {
         "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
       },
       "code": {
         "expressions": [],
-        "id": "704015a2-c231-4082-8007-babca16f62a1"
+        "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
       }
     }
   ],

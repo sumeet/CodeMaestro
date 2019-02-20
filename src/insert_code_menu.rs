@@ -8,6 +8,7 @@ use super::code_generation;
 use super::structs;
 use super::builtins;
 
+use downcast_rs::impl_downcast;
 use objekt::{clone_trait_object};
 use lazy_static::lazy_static;
 use itertools::Itertools;
@@ -18,14 +19,16 @@ use std::iter;
 use gen_iter::GenIter;
 
 lazy_static! {
+    // the order is significant here. it defines which order the options appear in (no weighting
+    // system yet)
     static ref OPTIONS_GENERATORS : Vec<Box<InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
         Box::new(InsertVariableReferenceOptionGenerator {}),
+        Box::new(InsertStructFieldGetOfLocal {}),
         Box::new(InsertFunctionOptionGenerator {}),
-        Box::new(InsertLiteralOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
         Box::new(InsertMatchOptionGenerator {}),
         Box::new(InsertAssignmentOptionGenerator {}),
-        Box::new(InsertEnumVariantFromMatch {}),
+        Box::new(InsertLiteralOptionGenerator {}),
     ];
 }
 
@@ -152,6 +155,11 @@ impl CodeSearchParams {
         self.input_str.trim().to_lowercase()
     }
 
+    // TODO: stil have to replace this in more places
+    pub fn search_matches_identifier(&self, identifier: &str) -> bool {
+        identifier.to_lowercase().contains(&self.lowercased_trimmed_search_str())
+    }
+
     pub fn search_prefix(&self, prefix: &str) -> Option<String> {
         let input_str = self.lowercased_trimmed_search_str();
         if input_str.starts_with(prefix) {
@@ -168,14 +176,15 @@ impl CodeSearchParams {
 // 3: new string literal
 // 4: placeholder
 
-trait InsertCodeMenuOptionGenerator : objekt::Clone {
+trait InsertCodeMenuOptionGenerator : objekt::Clone + downcast_rs::Downcast {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption>;
 }
 
 clone_trait_object!(InsertCodeMenuOptionGenerator);
+impl_downcast!(InsertCodeMenuOptionGenerator);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct InsertCodeMenuOption {
     pub label: String,
     pub new_node: lang::CodeNode,
@@ -196,7 +205,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
         if !input_str.is_empty() {
             a = functions
                 .filter(|f| {
-                    f.name().to_lowercase().contains(&input_str)
+                    search_params.search_matches_identifier(&f.name())
                 });
             functions = &mut a;
         }
@@ -223,14 +232,8 @@ struct InsertVariableReferenceOptionGenerator {}
 
 struct Variable {
     locals_id: lang::ID,
-    type_id: lang::ID,
+    typ: lang::Type,
     name: String,
-}
-
-fn insertion_node_and_parents(code_genie: &CodeGenie,
-                              insertion_point: InsertionPoint) -> impl Iterator<Item = &lang::CodeNode> {
-    let (node_id, _) = assignment_search_position(insertion_point);
-    iter::once(code_genie.find_node(node_id).unwrap()).chain(code_genie.all_parents_of(node_id))
 }
 
 // returns tuple -> (CodeNode position, is_inclusive)
@@ -249,26 +252,16 @@ fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, boo
     }
 }
 
-// also handles function arguments
+// shows insertion options for "locals", which are:
+// 1. local variables via Assignment
+// 2. function arguments
+// 3. enum variants if you're inside a match branch
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        let (insertion_id, is_search_inclusive) = assignment_search_position(
-            search_params.insertion_point);
-
-        let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = code_genie.find_assignments_that_come_before_code(
-            insertion_id, is_search_inclusive)
-            .into_iter()
-            .map(|assignment| {
-                let assignment_clone : lang::Assignment = (*assignment).clone();
-                let guessed_type_id = code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone), env_genie).id();
-                Variable { locals_id: assignment.id, type_id: guessed_type_id, name: assignment.name.clone() }
-            })
-            .chain(
-                env_genie.code_takes_args(code_genie.root().id())
-                    .map(|arg| Variable { locals_id: arg.id, type_id: arg.arg_type.id(), name: arg.short_name })
-            )
-            .group_by(|variable| variable.type_id)
+        let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = find_all_locals_preceding(
+            search_params.insertion_point, code_genie, env_genie)
+            .group_by(|variable| variable.typ.id())
             .into_iter()
             .map(|(id, variables)| (id, variables.collect()))
             .collect();
@@ -279,12 +272,9 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             Iterator::flatten(variables_by_type_id.drain().map(|(_, v)| v)).collect()
         };
 
-        let input_str = search_params.lowercased_trimmed_search_str();
-        if !input_str.is_empty() {
-            variables = variables.into_iter()
-                .filter(|variable| variable.name.to_lowercase().contains(&input_str))
-                .collect();
-        }
+        variables = variables.into_iter()
+            .filter(|variable| search_params.search_matches_identifier(&variable.name))
+            .collect();
 
         variables.into_iter().map(|variable| {
             let id = variable.locals_id;
@@ -295,6 +285,46 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             }
         }).collect()
     }
+}
+
+fn find_all_locals_preceding<'a>(insertion_point: InsertionPoint, code_genie: &'a CodeGenie,
+                                 env_genie: &'a EnvGenie) -> impl Iterator<Item = Variable> + 'a {
+    find_assignments_and_function_args_preceding(insertion_point, code_genie, env_genie)
+        .chain(find_enum_variants_preceding(insertion_point, code_genie, env_genie))
+}
+
+
+fn find_assignments_and_function_args_preceding<'a>(insertion_point: InsertionPoint,
+                                                    code_genie: &'a CodeGenie, env_genie: &'a EnvGenie)
+                                                    -> impl Iterator<Item = Variable> + 'a {
+    let (insertion_id,
+         is_search_inclusive) = assignment_search_position(insertion_point);
+    code_genie.find_assignments_that_come_before_code(
+        insertion_id, is_search_inclusive)
+        .into_iter()
+        .map(move |assignment| {
+            let assignment_clone : lang::Assignment = (*assignment).clone();
+            let guessed_type = code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone), env_genie);
+            Variable { locals_id: assignment.id, typ: guessed_type, name: assignment.name.clone() }
+        })
+        .chain(
+            env_genie.code_takes_args(code_genie.root().id())
+                .map(|arg| Variable { locals_id: arg.id, typ: arg.arg_type, name: arg.short_name })
+        )
+}
+
+fn find_enum_variants_preceding<'a>(insertion_point: InsertionPoint,
+                                    code_genie: &'a CodeGenie,
+                                    env_genie: &'a EnvGenie) -> impl Iterator<Item = Variable> + 'a {
+    let (node_id, _) = assignment_search_position(insertion_point);
+    code_genie.find_enum_variants_preceding_iter(node_id, env_genie)
+        .map(|match_variant| {
+            Variable {
+                locals_id: match_variant.assignment_id(),
+                typ: match_variant.typ,
+                name: match_variant.enum_variant.name,
+            }
+        })
 }
 
 #[derive(Clone)]
@@ -436,8 +466,10 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
             .into_iter()
             .filter_map(|assignment| {
-                if let Some(var_name_to_march) = search_params.search_prefix("match") {
-                    if !assignment.name.to_lowercase().starts_with(var_name_to_march.as_str()) {
+                // TODO: also add a method similar to search_matches_identifier for search_prefix
+                // searches
+                if let Some(var_name_to_match) = search_params.search_prefix("match") {
+                    if !assignment.name.to_lowercase().contains(var_name_to_match.as_str()) {
                         return None
                     }
                 }
@@ -485,41 +517,43 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
     }
 }
 
-
 #[derive(Clone)]
-struct InsertEnumVariantFromMatch {}
+struct InsertStructFieldGetOfLocal {}
 
-impl InsertCodeMenuOptionGenerator for InsertEnumVariantFromMatch {
+impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        self.find_enum_variants_preceding(search_params.insertion_point, code_genie, env_genie)
-            .into_iter()
-            .filter_map(|match_variant| {
-                if let Some(search_type) = &search_params.return_type {
-                    if search_type != &match_variant.typ {
+        let optionss = find_all_locals_preceding(search_params.insertion_point, code_genie, env_genie)
+            .filter_map(|variable| {
+                let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
+
+                Some(strukt.fields.iter().filter_map(move |struct_field| {
+                    let dotted_name = format!("{}.{}", variable.name, struct_field.name);
+
+                    if !(search_params.search_matches_identifier(&variable.name) ||
+                         search_params.search_matches_identifier(&struct_field.name) ||
+                         search_params.search_matches_identifier(&dotted_name)) {
                         return None
                     }
-                }
-                if !match_variant.enum_variant.name.to_lowercase().starts_with(&search_params.lowercased_trimmed_search_str()) {
-                    return None
-                }
-                let assignment_id = match_variant.assignment_id();
-                Some(InsertCodeMenuOption {
-                    label: match_variant.enum_variant.name,
-                    new_node: code_generation::new_variable_reference(assignment_id),
-                    is_selected: false
-                })
-            }).collect()
+                    if let Some(search_type) = &search_params.return_type {
+                        if !search_type.matches(&variable.typ) {
+                            return None
+                        }
+                    }
+                    Some(InsertCodeMenuOption {
+                        label: dotted_name,
+                        new_node: code_generation::new_struct_field_get(
+                            code_generation::new_variable_reference(variable.locals_id),
+                            struct_field.id,
+                        ),
+                        is_selected: false,
+                    })
+                }))
+            });
+        itertools::Itertools::flatten(optionss).collect()
     }
 }
 
-impl InsertEnumVariantFromMatch {
-    pub fn find_enum_variants_preceding(&self, insertion_point: InsertionPoint, code_genie: &CodeGenie,
-                                        env_genie: &EnvGenie) -> Vec<MatchVariant> {
-        let (node_id, _) = assignment_search_position(insertion_point);
-        code_genie.find_enum_variants_preceding(node_id, env_genie)
-    }
-}
 
 // hmmm this is used by code search
 // TODO: move into insert_code_menu.rs

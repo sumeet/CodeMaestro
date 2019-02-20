@@ -125,3 +125,11 @@ pub fn new_assignment(name: String, expression: lang::CodeNode) -> lang::CodeNod
         expression: Box::new(expression),
     })
 }
+
+pub fn new_struct_field_get(struct_expr: lang::CodeNode, struct_field_id: lang::ID) -> lang::CodeNode {
+    lang::CodeNode::StructFieldGet(lang::StructFieldGet {
+        id: lang::new_id(),
+        struct_expr: Box::new(struct_expr),
+        struct_field_id,
+    })
+}
