@@ -38,36 +38,6 @@
   "jsfuncs": [],
   "structs": [
     {
-      "name": "HTTPBinResp2",
-      "id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "03dab062-205a-430a-91f0-ae56744e1c38",
-          "name": "headers",
-          "field_type": {
-            "typespec_id": "004780b6-843d-423f-9a27-b5c7e8482d02",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTPBinHeaders",
-      "id": "004780b6-843d-423f-9a27-b5c7e8482d02",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c",
-          "name": "User-Agent",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
       "name": "HTTP Response",
       "id": "31d96c85-5966-4866-a90a-e6db3707b140",
       "symbol": "",
@@ -114,6 +84,115 @@
       ]
     },
     {
+      "name": "Geometry",
+      "id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "34b6ea41-b900-466a-89da-7f12786964e5",
+          "name": "location",
+          "field_type": {
+            "typespec_id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReverseGeocoderResult",
+      "id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "2d974f25-bdcd-4a70-978f-af5275eb6556",
+          "name": "address_components",
+          "field_type": {
+            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+            "params": [
+              {
+                "typespec_id": "047390c9-217b-4023-b35a-f66e93393f0e",
+                "params": []
+              }
+            ]
+          }
+        },
+        {
+          "id": "e722a8c6-9e2a-4c5a-918e-9c5f90df0b98",
+          "name": "formatted_address",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "69c50dac-4464-4ad3-a33b-c55795e95e62",
+          "name": "geometry",
+          "field_type": {
+            "typespec_id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTPBinHeaders",
+      "id": "004780b6-843d-423f-9a27-b5c7e8482d02",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c",
+          "name": "User-Agent",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "AddressComponents",
+      "id": "047390c9-217b-4023-b35a-f66e93393f0e",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "e70b8eb6-0359-46cb-abea-a78603a18a00",
+          "name": "long_name",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "581294f4-e62f-4c7d-a273-779ce3203f3f",
+          "name": "short_name",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReverseGeocodeResponse",
+      "id": "16b174d4-5587-46cb-af53-494ed3380a4b",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "48623a8a-6164-4c4a-8572-25db7ae52d3f",
+          "name": "results",
+          "field_type": {
+            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+            "params": [
+              {
+                "typespec_id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
+                "params": []
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "Message",
       "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
       "symbol": "",
@@ -129,6 +208,44 @@
         {
           "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
           "name": "sender",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTPBinResp2",
+      "id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "03dab062-205a-430a-91f0-ae56744e1c38",
+          "name": "headers",
+          "field_type": {
+            "typespec_id": "004780b6-843d-423f-9a27-b5c7e8482d02",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Location",
+      "id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da",
+          "name": "lat",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "35814f1a-c51c-4f06-a25d-7405d339edf5",
+          "name": "lng",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
@@ -161,17 +278,6 @@
   ],
   "tests": [
     {
-      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
-      "name": "test 1",
-      "subject": {
-        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
-      },
-      "code": {
-        "expressions": [],
-        "id": "704015a2-c231-4082-8007-babca16f62a1"
-      }
-    },
-    {
       "id": "075a7a19-f98f-469e-b588-7c347186b694",
       "name": "Womper",
       "subject": {
@@ -183,6 +289,17 @@
       }
     },
     {
+      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
+      "name": "test 1",
+      "subject": {
+        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
+      },
+      "code": {
+        "expressions": [],
+        "id": "704015a2-c231-4082-8007-babca16f62a1"
+      }
+    },
+    {
       "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
       "name": "test 2",
       "subject": {
@@ -191,6 +308,17 @@
       "code": {
         "expressions": [],
         "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
+      }
+    },
+    {
+      "id": "b4329d2a-ec64-4a3e-842b-b60330ab9ea7",
+      "name": "moohaw",
+      "subject": {
+        "Function": "0f828d2f-f443-4079-ab5c-550a50381d17"
+      },
+      "code": {
+        "expressions": [],
+        "id": "67f94b3c-3526-4ed4-abc2-65ceb2cc3fa1"
       }
     }
   ],
@@ -226,6 +354,73 @@
       ],
       "return_type": {
         "typespec_id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
+        "params": []
+      }
+    },
+    {
+      "id": "c4d87a48-64ec-4fd8-a2b7-284ccd614275",
+      "url": "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyBI-24P0kBjKo9RE8bEberWIXFwURC4waY",
+      "name": "Reverse geocode",
+      "gen_url_params": {
+        "expressions": [
+          {
+            "ListLiteral": {
+              "id": "a2ee976c-9803-4d95-8b8d-27d5c47f684e",
+              "element_type": {
+                "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                "params": []
+              },
+              "elements": [
+                {
+                  "StructLiteral": {
+                    "id": "50a129a6-d284-47c3-a132-3231451c6a66",
+                    "struct_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                    "fields": [
+                      {
+                        "StructLiteralField": {
+                          "id": "7723fa90-fd64-4886-9709-0cb83efdd8d8",
+                          "struct_field_id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+                          "expr": {
+                            "StringLiteral": {
+                              "value": "address",
+                              "id": "41cc20b4-91d4-4426-b50c-50c14306f1db"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "StructLiteralField": {
+                          "id": "9e02d2b3-4e87-4067-ac5c-3316a960910b",
+                          "struct_field_id": "57607724-a63a-458e-9253-1e3efeb4de63",
+                          "expr": {
+                            "VariableReference": {
+                              "assignment_id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+                              "id": "dd751a28-4f8c-46a4-828f-fdbea2f275bc"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "id": "ed33d09e-472d-4dc7-80ed-807b7b6d537b"
+      },
+      "args": [
+        {
+          "id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "location"
+        }
+      ],
+      "return_type": {
+        "typespec_id": "16b174d4-5587-46cb-af53-494ed3380a4b",
         "params": []
       }
     }
@@ -371,6 +566,127 @@
           }
         ],
         "id": "c80119a4-181c-4544-a9b6-2de350f1582a"
+      }
+    },
+    {
+      "id": "850ea191-50e6-4338-a274-c562b0adda78",
+      "prefix": ".rg",
+      "name": "reverse geocode trigger",
+      "code": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "reverse geocode result",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "c4d87a48-64ec-4fd8-a2b7-284ccd614275",
+                      "id": "c9103642-c4ca-4ce3-ac53-2f8dc359d4db"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "c0db3473-63f2-49c6-b8ed-b20cda83d242",
+                        "argument_definition_id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+                        "expr": {
+                          "StringLiteral": {
+                            "value": "sf",
+                            "id": "c08fa13a-a5a7-4965-974b-73287b93246e"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "04cb00ae-bcc1-4981-9ac3-6c0ffcd557ca"
+                }
+              },
+              "id": "dbba421f-4ba4-4c36-8c0b-ba73b7d74a04"
+            }
+          },
+          {
+            "Match": {
+              "id": "ef7ab229-c4ce-4a68-a72d-561d76914dd6",
+              "match_expression": {
+                "VariableReference": {
+                  "assignment_id": "dbba421f-4ba4-4c36-8c0b-ba73b7d74a04",
+                  "id": "4a97bcab-62ef-4423-9869-7b3af7f1cf88"
+                }
+              },
+              "branch_by_variant_id": {
+                "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                              "id": "b1ed9aa5-90d4-46db-868b-6624a7a8039c"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "874bc07d-c138-4983-b861-bbe182dd89cd",
+                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                "expr": {
+                                  "StringLiteral": {
+                                    "value": "there was some error",
+                                    "id": "afee5ab0-7cd2-4edc-9c5d-5af7c9870975"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "fc6697d5-fd32-4de4-81b9-3dc78fa03621"
+                        }
+                      }
+                    ],
+                    "id": "2a8c1ac9-603c-4665-9d7b-7ebee445a05c"
+                  }
+                },
+                "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "Assignment": {
+                          "name": "results",
+                          "expression": {
+                            "StructFieldGet": {
+                              "id": "6f5b5cf3-9b8f-43aa-9b45-db71c09c1253",
+                              "struct_expr": {
+                                "VariableReference": {
+                                  "assignment_id": "6dd8dfd6-ecc5-593d-9c73-c1694bdbf465",
+                                  "id": "a2d2844a-e3ba-431a-b215-a9ac7f52e24e"
+                                }
+                              },
+                              "struct_field_id": "48623a8a-6164-4c4a-8572-25db7ae52d3f"
+                            }
+                          },
+                          "id": "b90e580d-dd1c-4667-8b7c-3f721f75b900"
+                        }
+                      },
+                      {
+                        "Placeholder": {
+                          "id": "0eade067-d312-41d3-beb7-3e4f121cd523",
+                          "description": "Ok",
+                          "typ": {
+                            "typespec_id": "16b174d4-5587-46cb-af53-494ed3380a4b",
+                            "params": []
+                          }
+                        }
+                      }
+                    ],
+                    "id": "b42f15ff-bf14-445c-911d-ec2d622124e0"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "id": "95c1d6e5-55f1-4ee9-9022-212b28d41369"
       }
     }
   ]

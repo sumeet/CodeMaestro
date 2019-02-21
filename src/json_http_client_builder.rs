@@ -22,7 +22,7 @@ pub struct JSONHTTPClientBuilder {
     pub return_type_candidate: Option<ReturnTypeBuilderResult>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SelectedField {
     pub name: String,
     pub nesting: json2::Nesting,
@@ -148,7 +148,7 @@ fn make_return_type_spec(selected_fields: &[SelectedField]) -> Result<ReturnType
                     current_return_type_spec = current_return_type_spec.insert_key(key, scalar.clone());
                 }
                 json2::Nest::ListElement(_) => {
-                    *current_return_type_spec = ReturnTypeSpec::List(Box::new(scalar.clone()));
+                    current_return_type_spec = current_return_type_spec.into_list(scalar.clone());
                 },
             }
         }
@@ -156,7 +156,7 @@ fn make_return_type_spec(selected_fields: &[SelectedField]) -> Result<ReturnType
     Ok(return_type_spec)
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
 pub enum ReturnTypeSpec {
     Struct(BTreeMap<String, ReturnTypeSpec>),
     List(Box<ReturnTypeSpec>),
@@ -167,8 +167,7 @@ impl ReturnTypeSpec {
     fn insert_key(&mut self, key: &String, rts: ReturnTypeSpec) -> &mut ReturnTypeSpec {
        match self {
            ReturnTypeSpec::Struct(map) => {
-               map.insert(key.clone(), rts);
-               map.get_mut(key).unwrap()
+               map.entry(key.clone()).or_insert(rts)
            },
            ReturnTypeSpec::List(box of) => {
                of.insert_key(key, rts)
@@ -179,6 +178,18 @@ impl ReturnTypeSpec {
                self.insert_key(key, rts)
            }
        }
+    }
+
+    fn into_list(&mut self, rts: ReturnTypeSpec) -> &mut ReturnTypeSpec {
+        match self {
+            ReturnTypeSpec::Struct(_) | ReturnTypeSpec::Scalar { .. } => {
+                *self = ReturnTypeSpec::List(Box::new(rts));
+                self
+            },
+            ReturnTypeSpec::List(_) => {
+                self
+            },
+        }
     }
 }
 
