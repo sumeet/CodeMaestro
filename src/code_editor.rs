@@ -12,6 +12,7 @@ use super::env_genie::EnvGenie;
 use super::insert_code_menu::InsertCodeMenu;
 use super::enums::EnumVariant;
 use crate::builtins::new_result;
+use crate::lang::ListIndex;
 
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
@@ -724,7 +725,9 @@ impl<'a> Navigation<'a> {
             // referred to), or the holes (arguments)
             (CodeNode::FunctionCall(_), _) => false,
             (CodeNode::FunctionReference(_), _) => true,
-            // skip holes. function args and struct literal fields always contain inner elements
+            // you always want to navigate to a list index
+            (CodeNode::ListIndex(_), _) => true,
+            // skip elements with holes. function args and struct literal fields always contain inner elements
             // that can be changed. to change those, we can always invoke `r` (replace), which will
             // let you edit the value of the hole
             (CodeNode::Argument(_), _) | (CodeNode::StructLiteralField(_), _) => false,
@@ -735,6 +738,11 @@ impl<'a> Navigation<'a> {
             (_, Some(CodeNode::Argument(_))) | (_, Some(CodeNode::StructLiteralField(_))) |
                 (_, Some(CodeNode::ListLiteral(_))) | (_, Some(CodeNode::Match(_))) |
                 (_, Some(CodeNode::Conditional(_))) => true,
+            // we should be able to navigate to the index section of a ListIndex
+            (cn,
+             Some(CodeNode::ListIndex(lang::ListIndex { box index_expr, .. }))) if {
+                index_expr.id() == cn.id()
+            } => true,
             // sometimes these scalary things hang out by themselves in blocks
             (CodeNode::Placeholder(_), Some(CodeNode::Block(_))) => true,
             (CodeNode::VariableReference(_), Some(CodeNode::Block(_))) => true,
