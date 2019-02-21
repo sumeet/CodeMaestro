@@ -485,10 +485,10 @@ impl CodeGenie {
             },
             CodeNode::ListIndex(list_index) => {
                 let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie);
-                // this is a list type, let's just assert to double check it
-                assert_eq!(list_typ.typespec_id, lang::LIST_TYPESPEC.id);
-                // lists have one param, the element type
-                new_result(list_typ.params[0].clone())
+                new_result(get_type_from_list(list_typ).unwrap_or_else(|| {
+                    let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie);
+                    panic!(format!("couldn't extract list element from {:?}", list_typ))
+                }))
             }
         }
     }
@@ -1033,4 +1033,14 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> PostIn
 
     // nothing that we can think of to do next, just chill at the insertion point
     PostInsertionAction::SelectNode(code_node.id())
+}
+
+pub fn get_type_from_list(mut typ: lang::Type) -> Option<lang::Type> {
+    if typ.typespec_id != lang::LIST_TYPESPEC.id {
+        return None
+    }
+    if typ.params.len() != 1 {
+        return None
+    }
+    Some(typ.params.remove(0))
 }

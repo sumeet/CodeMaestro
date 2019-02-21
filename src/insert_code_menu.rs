@@ -2,6 +2,7 @@ use super::code_editor::InsertionPoint;
 use super::env_genie::EnvGenie;
 use super::code_editor::CodeGenie;
 use super::code_editor::MatchVariant;
+use super::code_editor::get_type_from_list;
 use super::code_editor::PLACEHOLDER_ICON;
 use super::lang;
 use super::code_generation;
@@ -24,6 +25,7 @@ lazy_static! {
     static ref OPTIONS_GENERATORS : Vec<Box<InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
         Box::new(InsertVariableReferenceOptionGenerator {}),
         Box::new(InsertStructFieldGetOfLocal {}),
+        Box::new(InsertListIndexOfLocal {}),
         Box::new(InsertFunctionOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
         Box::new(InsertMatchOptionGenerator {}),
@@ -570,6 +572,38 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                 }))
             });
         itertools::Itertools::flatten(optionss).collect()
+    }
+}
+
+
+#[derive(Clone)]
+struct InsertListIndexOfLocal {}
+
+impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
+    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
+               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+        find_all_locals_preceding(
+            search_params.insertion_point, code_genie, env_genie)
+            .filter_map(|variable| {
+                let list_elem_typ = get_type_from_list(variable.typ)?;
+                if let Some(search_type) = &search_params.return_type {
+                    if search_type.matches(&list_elem_typ) {
+                        return None
+                    }
+                }
+                if !search_params.search_matches_identifier(&variable.name) {
+                    return None
+                }
+                Some(InsertCodeMenuOption {
+                    // TODO: can we add fonts to support these symbols?
+                    //label: format!("{}⟦…⟧", variable.name),
+                    label: format!("{}[\u{f292}]", variable.name),
+                    new_node: code_generation::new_list_index(code_generation::new_variable_reference(
+                        variable.locals_id)),
+                    is_selected: false
+                })
+            })
+            .collect()
     }
 }
 

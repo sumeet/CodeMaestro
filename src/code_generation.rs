@@ -140,3 +140,12 @@ pub fn new_struct_field_get(struct_expr: lang::CodeNode, struct_field_id: lang::
         struct_field_id,
     })
 }
+
+pub fn new_list_index(list_expr: lang::CodeNode) -> lang::CodeNode {
+    lang::CodeNode::ListIndex(lang::ListIndex {
+        id: lang::new_id(),
+        list_expr: Box::new(list_expr),
+        index_expr: Box::new(new_placeholder("Index".to_string(),
+                                             lang::Type::from_spec(&*lang::NUMBER_TYPESPEC))),
+    })
+}
