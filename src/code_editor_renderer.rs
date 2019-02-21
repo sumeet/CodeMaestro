@@ -272,6 +272,13 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         drawn
     }
 
+    fn render_without_nesting(&self, draw_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
+        let old_nesting_level = self.arg_nesting_level.replace(0);
+        let drawn = draw_fn();
+        self.arg_nesting_level.replace(old_nesting_level);
+        drawn
+    }
+
     fn draw_nested_borders_around(&self, draw_element_fn: &Fn() -> T::DrawResult) -> T::DrawResult {
         let nesting_level = *self.arg_nesting_level.borrow();
         if nesting_level == 0 {
@@ -595,11 +602,14 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_struct_field_get(&self, sfg: &lang::StructFieldGet) -> T::DrawResult {
         let struct_field = self.env_genie.find_struct_field(sfg.struct_field_id).unwrap();
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| self.render_code(&sfg.struct_expr),
-            &|| self.ui_toolkit.draw_text("."),
-            &|| self.ui_toolkit.draw_button(&struct_field.name, BLUE_COLOR, &|| {})
-        ])
+
+        self.draw_nested_borders_around(&|| {
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| self.render_without_nesting(&|| self.render_code(&sfg.struct_expr)),
+                &|| self.ui_toolkit.draw_text("."),
+                &|| self.ui_toolkit.draw_button(&struct_field.name, BLUE_COLOR, &|| {})
+            ])
+        })
     }
 
     fn render_struct_identifier(&self, strukt: &structs::Struct,
