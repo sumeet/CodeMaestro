@@ -362,15 +362,12 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::Conditional(conditional) => {
                     self.render_conditional(&conditional)
                 }
-                CodeNode::Match(mach) => {
-                    self.render_match(&mach)
-                }
+                CodeNode::Match(mach) => self.render_match(&mach),
                 CodeNode::ListLiteral(list_literal) => {
                     self.render_list_literal(&list_literal, code_node)
                 }
-                CodeNode::StructFieldGet(sfg) => {
-                    self.render_struct_field_get(&sfg)
-                }
+                CodeNode::StructFieldGet(sfg) => self.render_struct_field_get(&sfg),
+                CodeNode::ListIndex(list_index) => self.render_list_index(&list_index)
             }
         };
 
@@ -602,14 +599,27 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         )
     }
 
+    fn render_list_index(&self, list_index: &lang::ListIndex) -> T::DrawResult {
+        self.draw_nested_borders_around(&|| {
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| self.render_without_nesting(&|| self.render_code(&list_index.list_expr)),
+                &|| self.render_without_nesting(&|| self.render_nested(&|| self.render_code(&list_index.index_expr))),
+            ])
+        })
+    }
+
     fn render_struct_field_get(&self, sfg: &lang::StructFieldGet) -> T::DrawResult {
         let struct_field = self.env_genie.find_struct_field(sfg.struct_field_id).unwrap();
 
         self.draw_nested_borders_around(&|| {
             self.ui_toolkit.draw_all_on_same_line(&[
                 &|| self.render_without_nesting(&|| self.render_code(&sfg.struct_expr)),
-                &|| self.ui_toolkit.draw_text("."),
-                &|| self.ui_toolkit.draw_button(&struct_field.name, BLUE_COLOR, &|| {})
+                &|| {
+                    self.render_nested(&|| {
+                        self.ui_toolkit.draw_button(&struct_field.name, BLUE_COLOR,
+                                                    &|| {})
+                    })
+                }
             ])
         })
     }

@@ -39,12 +39,12 @@ impl lang::Function for JSONHTTPClient {
                 Ok(json_value) => {
                     match ex(json_value, &returns, &interpreter.env.borrow()) {
                         Ok(value) => builtins::ok_result(value),
-                        Err(e) => builtins::err_result(lang::Value::String(e))
+                        Err(e) => builtins::err_result(e)
                     }
 
                 },
                 Err(err_string) => {
-                    builtins::err_result(lang::Value::String(err_string.to_string()))
+                    builtins::err_result(err_string.to_string())
                 }
             }
         })

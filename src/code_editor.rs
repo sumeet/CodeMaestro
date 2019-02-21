@@ -11,6 +11,7 @@ use super::undo;
 use super::env_genie::EnvGenie;
 use super::insert_code_menu::InsertCodeMenu;
 use super::enums::EnumVariant;
+use crate::builtins::new_result;
 
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
@@ -481,6 +482,13 @@ impl CodeGenie {
             CodeNode::StructFieldGet(sfg) => {
                 let struct_field = env_genie.find_struct_field(sfg.struct_field_id).unwrap();
                 struct_field.field_type.clone()
+            },
+            CodeNode::ListIndex(list_index) => {
+                let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie);
+                // this is a list type, let's just assert to double check it
+                assert_eq!(list_typ.typespec_id, lang::LIST_TYPESPEC.id);
+                // lists have one param, the element type
+                new_result(list_typ.params[0].clone())
             }
         }
     }
@@ -722,7 +730,7 @@ impl<'a> Navigation<'a> {
             (CodeNode::Argument(_), _) | (CodeNode::StructLiteralField(_), _) => false,
             // you always want to move to literals
             (CodeNode::StringLiteral(_), _) | (CodeNode::NullLiteral, _) | (CodeNode::StructLiteral(_), _)
-                | (CodeNode::ListLiteral(_), _) => true,
+                | (CodeNode::ListLiteral(_), _) | (CodeNode::NumberLiteral(_), _) => true,
             // if our parent is one of these, then we're a hole, and therefore navigatable.
             (_, Some(CodeNode::Argument(_))) | (_, Some(CodeNode::StructLiteralField(_))) |
                 (_, Some(CodeNode::ListLiteral(_))) | (_, Some(CodeNode::Match(_))) |
@@ -730,8 +738,6 @@ impl<'a> Navigation<'a> {
             // sometimes these scalary things hang out by themselves in blocks
             (CodeNode::Placeholder(_), Some(CodeNode::Block(_))) => true,
             (CodeNode::VariableReference(_), Some(CodeNode::Block(_))) => true,
-            (CodeNode::StringLiteral(_), Some(CodeNode::Block(_))) => true,
-            (CodeNode::NumberLiteral(_), Some(CodeNode::Block(_))) => true,
             _ => false,
         }
     }

@@ -12,6 +12,13 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 use std::hash::Hash;
+use std::convert::TryInto;
+use crate::builtins::ok_result;
+use crate::builtins::err_result;
+
+macro_rules! await_eval_result {
+    ($e:expr) => { await!(resolve_all_futures(await!($e))) }
+}
 
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
@@ -23,11 +30,7 @@ pub fn run<F: FnOnce(lang::Value) + 'static>(interpreter: &mut Interpreter,
                                              callback: F) {
     let fut = interpreter.evaluate(code_node);
     async_executor.exec(async move {
-        let mut val = await!(fut);
-        while let lang::Value::Future(future) = val {
-            val = await!(future);
-        }
-        callback(val);
+        callback(await_eval_result!(fut));
         let ok : Result<(), ()> = Ok(());
         ok
     })
@@ -87,7 +90,7 @@ impl Interpreter {
                 Box::pin(async move {
                     let mut return_value = lang::Value::Null;
                     for future in futures.into_iter() {
-                        return_value = await!(future)
+                        return_value = await_eval_result!(future)
                     }
                     return_value
                 })
@@ -112,7 +115,7 @@ impl Interpreter {
                     // TODO: use join to await them all at the same time
                     let mut values = HashMap::new();
                     for (id, value_future) in value_futures.into_iter() {
-                        values.insert(id, await!(value_future));
+                        values.insert(id, await_eval_result!(value_future));
                     }
                     lang::Value::Struct {
                         struct_id: struct_literal.struct_id,
@@ -133,10 +136,10 @@ impl Interpreter {
                     None => Box::pin(async { lang::Value::Null }),
                 };
                 Box::pin(async move {
-                    if await!(condition_fut).as_boolean().unwrap() {
-                        await!(true_branch_fut)
+                    if await_eval_result!(condition_fut).as_boolean().unwrap() {
+                        await_eval_result!(true_branch_fut)
                     } else {
-                        await!(else_branch_fut)
+                        await_eval_result!(else_branch_fut)
                     }
                 })
             },
@@ -149,11 +152,10 @@ impl Interpreter {
                 let env = Rc::clone(&self.env);
                 let match_id = mach.id;
                 Box::pin(async move {
-                    // TODO: i think we need a more ergonomic way of doing this
-                    let (variant_id, value) = await!(resolve_all_futures(await!(match_exp_fut))).into_enum().unwrap();
+                    let (variant_id, value) = await_eval_result!(match_exp_fut).into_enum().unwrap();
                     env.borrow_mut().set_local_variable(lang::Match::variable_id(match_id, variant_id),
                                                         value);
-                    await!(branch_by_variant_id.remove(&variant_id).unwrap())
+                    await_eval_result!(branch_by_variant_id.remove(&variant_id).unwrap())
                 })
             },
             lang::CodeNode::ListLiteral(list_literal) => {
@@ -164,7 +166,7 @@ impl Interpreter {
                 Box::pin(async move {
                     // TODO: this can be done in parallel
                     for future in futures.into_iter() {
-                        output_vec.push(await!(future))
+                        output_vec.push(await_eval_result!(future))
                     }
                     lang::Value::List(output_vec)
                 })
@@ -174,8 +176,29 @@ impl Interpreter {
                     sfg.struct_expr.as_ref());
                 let field_id = sfg.struct_field_id;
                 Box::pin(async move {
-                    let strukt = await!(await_eval_result(struct_fut));
+                    let strukt = await_eval_result!(struct_fut);
                     strukt.into_struct().unwrap().1.remove(&field_id).unwrap()
+                })
+            },
+            lang::CodeNode::ListIndex(list_index) => {
+                let list_fut = self.evaluate(list_index.list_expr.as_ref());
+                let index_fut = self.evaluate(list_index.index_expr.as_ref());
+                Box::pin(async move {
+                    let index = await_eval_result!(index_fut).into_i128().unwrap();
+                    if index.is_negative() {
+                        return err_result(format!("can't index into a list with a negative index: {}", index))
+                    }
+                    let index_usize : Option<usize> = index.try_into().ok();
+                    if index_usize.is_none() {
+                        return err_result(format!("{} isn't a valid index", index))
+                    }
+
+                    let index_usize = index_usize.unwrap();
+                    let mut vec = await_eval_result!(list_fut).into_vec().unwrap();
+                    if index_usize > vec.len() - 1 {
+                        return err_result(format!("list of size {} doesn't contain index {}", vec.len(), index))
+                    }
+                    vec.remove(index_usize)
                 })
             }
         }
@@ -186,7 +209,7 @@ impl Interpreter {
         let env = Rc::clone(&self.env);
         let assignment_id = assignment.id;
         async move {
-            let value = await!(value_future);
+            let value = await_eval_result!(value_future);
             env.borrow_mut().set_local_variable(assignment_id, value.clone());
             // the result of an assignment is the value being assigned
             value
@@ -207,19 +230,8 @@ impl Interpreter {
 
             let mut args = HashMap::new();
             for (arg_id, arg_future) in args_futures {
-                let arg_value = await!(arg_future);
-                let arg_value = await!(resolve_all_futures(arg_value));
-                let value_to_insert = match arg_value {
-                    lang::Value::Future(future) => {
-                        //println!("contains futures, awaiting {:?}", future);
-                        await!(future)
-                    },
-                    _ => {
-                        //println!("doesn't contain futures, not waiting {:?}", arg_value);
-                        arg_value
-                    },
-                };
-                args.insert(arg_id, value_to_insert);
+                let arg_value = await_eval_result!(arg_future);
+                args.insert(arg_id, arg_value);
             }
             match func {
                 Some(function) => {
@@ -236,10 +248,6 @@ impl Interpreter {
     pub fn dup(&self) -> Self {
         Self::with_env(Rc::clone(&self.env))
     }
-}
-
-async fn await_eval_result(val_fut: impl Future<Output= lang::Value>) -> lang::Value {
-    await!(resolve_all_futures(await!(val_fut)))
 }
 
 #[derive(Debug)]

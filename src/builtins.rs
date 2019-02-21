@@ -33,10 +33,10 @@ pub fn ok_result(value: lang::Value) -> lang::Value {
     }
 }
 
-pub fn err_result(value: lang::Value) -> lang::Value {
+pub fn err_result(string: String) -> lang::Value {
     lang::Value::Enum {
         variant_id: uuid::Uuid::parse_str("9f22e23e-d9b9-49c2-acf2-43a59598ea86").unwrap(),
-        value: Box::new(value),
+        value: Box::new(lang::Value::String(string)),
     }
 }
 

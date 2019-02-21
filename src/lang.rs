@@ -98,8 +98,7 @@ pub enum CodeNode {
     ListLiteral(ListLiteral),
     StructFieldGet(StructFieldGet),
     NumberLiteral(NumberLiteral),
-// TODO: add this after number literals
-//    ListIndex(ListIndex),
+    ListIndex(ListIndex),
 }
 
 #[derive(Clone, Debug)]
@@ -170,6 +169,20 @@ impl Value {
     pub fn as_vec(&self) -> Option<&Vec<Value>> {
         match self {
             Value::List(v) => Some(v),
+            _ => None
+        }
+    }
+
+    pub fn into_vec(self) -> Option<Vec<Value>> {
+        match self {
+            Value::List(v) => Some(v),
+            _ => None
+        }
+    }
+
+    pub fn into_i128(self) -> Option<i128> {
+        match self {
+            Value::Number(i) => Some(i),
             _ => None
         }
     }
@@ -400,6 +413,7 @@ impl CodeNode {
             },
             CodeNode::Match(mach) => format!("Match: {}", mach.id),
             CodeNode::StructFieldGet(sfg) => format!("Struct field get: {}", sfg.id),
+            CodeNode::ListIndex(list_index) => format!("List index: {}", list_index.id),
         }
     }
 
@@ -432,6 +446,7 @@ impl CodeNode {
             CodeNode::ListLiteral(list_literal) => list_literal.id,
             CodeNode::Match(mach) => mach.id,
             CodeNode::StructFieldGet(sfg) => sfg.id,
+            CodeNode::ListIndex(list_index) => list_index.id,
         }
     }
 
@@ -523,6 +538,10 @@ impl CodeNode {
                 iter::once(mach.match_expression.borrow()).chain(mach.branch_by_variant_id.values())
             ),
             CodeNode::StructFieldGet(sfg) => Box::new(iter::once(sfg.struct_expr.as_ref())),
+            CodeNode::ListIndex(list_index) => {
+                Box::new(iter::once(list_index.list_expr.as_ref())
+                    .chain(iter::once(list_index.index_expr.as_ref())))
+            }
         }
     }
 
@@ -604,6 +623,9 @@ impl CodeNode {
             },
             CodeNode::StructFieldGet(sfg) => {
                 vec![sfg.struct_expr.borrow_mut()]
+            }
+            CodeNode::ListIndex(list_index) => {
+                vec![list_index.list_expr.borrow_mut(), list_index.index_expr.borrow_mut()]
             }
         }
     }
@@ -848,10 +870,9 @@ pub struct NumberLiteral {
     pub value: i128,
 }
 
-// TODO: add this after number literals
-//#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
-//pub struct ListIndex {
-//    pub id: ID,
-//    pub list_expr: Box<CodeNode>,
-//    pub index_expr: Box<CodeNode>,
-//}
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+pub struct ListIndex {
+    pub id: ID,
+    pub list_expr: Box<CodeNode>,
+    pub index_expr: Box<CodeNode>,
+}
