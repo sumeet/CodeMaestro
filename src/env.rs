@@ -67,8 +67,12 @@ impl Interpreter {
                 Box::pin(self.evaluate(argument.expr.borrow()))
             }
             lang::CodeNode::StringLiteral(string_literal) => {
-                let val = string_literal.value.clone();
-                Box::pin( async { lang::Value::String(val) })
+                let val = string_literal.value;
+                Box::pin( async move { lang::Value::String(val) })
+            }
+            lang::CodeNode::NumberLiteral(number_literal) => {
+                let val = number_literal.value;
+                Box::pin( async move { lang::Value::Number(val) })
             }
             lang::CodeNode::Assignment(assignment) => {
                 Box::pin(self.evaluate_assignment(&assignment))

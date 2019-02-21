@@ -97,6 +97,9 @@ pub enum CodeNode {
     Match(Match),
     ListLiteral(ListLiteral),
     StructFieldGet(StructFieldGet),
+    NumberLiteral(NumberLiteral),
+// TODO: add this after number literals
+//    ListIndex(ListIndex),
 }
 
 #[derive(Clone, Debug)]
@@ -357,6 +360,9 @@ impl CodeNode {
             }
             CodeNode::StringLiteral(string_literal) => {
                 format!("String literal: {}", string_literal.value)
+            },
+            CodeNode::NumberLiteral(number_literal) => {
+                format!("Number literal: {}", number_literal.value)
             }
             CodeNode::Assignment(assignment) => {
                 format!("Assignment: {}", assignment.name)
@@ -403,6 +409,7 @@ impl CodeNode {
         match self {
             CodeNode::FunctionCall(function_call) => function_call.id,
             CodeNode::StringLiteral(string_literal) => string_literal.id,
+            CodeNode::NumberLiteral(number_literal) => number_literal.id,
             CodeNode::Assignment(assignment) => assignment.id,
             CodeNode::Block(block) => block.id,
             CodeNode::VariableReference(variable_reference) => {
@@ -465,6 +472,9 @@ impl CodeNode {
                     .chain(function_call.args.iter()))
             }
             CodeNode::StringLiteral(_) => {
+                Box::new(iter::empty())
+            }
+            CodeNode::NumberLiteral(_) => {
                 Box::new(iter::empty())
             }
             CodeNode::Assignment(assignment) => {
@@ -542,6 +552,9 @@ impl CodeNode {
                 children
             }
             CodeNode::StringLiteral(_) => {
+                Vec::new()
+            }
+            CodeNode::NumberLiteral(_) => {
                 Vec::new()
             }
             CodeNode::Assignment(assignment) => {
@@ -827,3 +840,18 @@ pub struct StructFieldGet {
     pub struct_expr: Box<CodeNode>,
     pub struct_field_id: ID,
 }
+
+
+#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+pub struct NumberLiteral {
+    pub id: ID,
+    pub value: i128,
+}
+
+// TODO: add this after number literals
+//#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+//pub struct ListIndex {
+//    pub id: ID,
+//    pub list_expr: Box<CodeNode>,
+//    pub index_expr: Box<CodeNode>,
+//}

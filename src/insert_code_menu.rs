@@ -27,8 +27,8 @@ lazy_static! {
         Box::new(InsertFunctionOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
         Box::new(InsertMatchOptionGenerator {}),
-        Box::new(InsertAssignmentOptionGenerator {}),
         Box::new(InsertLiteralOptionGenerator {}),
+        Box::new(InsertAssignmentOptionGenerator {}),
     ];
 }
 
@@ -167,6 +167,10 @@ impl CodeSearchParams {
         } else {
             None
         }
+    }
+
+    pub fn parse_number_input(&self) -> Option<i128> {
+        self.lowercased_trimmed_search_str().parse().ok()
     }
 }
 
@@ -338,8 +342,12 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
         if let Some(ref return_type) = search_params.return_type {
             if return_type.matches_spec(&lang::STRING_TYPESPEC) {
                 options.push(self.string_literal_option(input_str.clone()));
-            } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
+            } else if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
                 options.push(self.null_literal_option());
+            } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
+                if let Some(number) = search_params.parse_number_input() {
+                    options.push(self.number_literal_option(number));
+                }
             } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
                 options.push(self.list_literal_option(env_genie, &return_type));
             } else if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
@@ -364,6 +372,9 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
             if "null".contains(&input_str) {
                 options.push(self.null_literal_option())
             }
+            if let Some(number) = search_params.parse_number_input() {
+                options.push(self.number_literal_option(number))
+            }
             if !input_str.is_empty() {
                 options.push(self.string_literal_option(input_str));
             }
@@ -381,6 +392,13 @@ impl InsertLiteralOptionGenerator {
         }
     }
 
+    fn number_literal_option(&self, number: i128) -> InsertCodeMenuOption {
+        InsertCodeMenuOption {
+            label: format!("\u{f292}{}", number),
+            is_selected: false,
+            new_node: code_generation::new_number_literal(number)
+        }
+    }
 
     fn null_literal_option(&self) -> InsertCodeMenuOption {
         InsertCodeMenuOption {

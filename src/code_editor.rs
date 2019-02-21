@@ -416,6 +416,9 @@ impl CodeGenie {
             CodeNode::StringLiteral(_) => {
                 lang::Type::from_spec(&*lang::STRING_TYPESPEC)
             }
+            CodeNode::NumberLiteral(_) => {
+                lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+            }
             CodeNode::Assignment(assignment) => {
                 self.guess_type(&*assignment.expression, env_genie)
             }
@@ -724,10 +727,11 @@ impl<'a> Navigation<'a> {
             (_, Some(CodeNode::Argument(_))) | (_, Some(CodeNode::StructLiteralField(_))) |
                 (_, Some(CodeNode::ListLiteral(_))) | (_, Some(CodeNode::Match(_))) |
                 (_, Some(CodeNode::Conditional(_))) => true,
-            // sometimes placeholders chill by themselves in a block
+            // sometimes these scalary things hang out by themselves in blocks
             (CodeNode::Placeholder(_), Some(CodeNode::Block(_))) => true,
-            // sometimes variable references also chill by themselves in  block
             (CodeNode::VariableReference(_), Some(CodeNode::Block(_))) => true,
+            (CodeNode::StringLiteral(_), Some(CodeNode::Block(_))) => true,
+            (CodeNode::NumberLiteral(_), Some(CodeNode::Block(_))) => true,
             _ => false,
         }
     }

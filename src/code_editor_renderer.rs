@@ -308,7 +308,6 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         self.is_selected(code_node_id) && self.code_editor.editing
     }
 
-
     fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
         if self.is_editing(code_node.id()) {
             return self.draw_inline_editor(code_node)
@@ -320,6 +319,9 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 }
                 CodeNode::StringLiteral(string_literal) => {
                     self.render_string_literal(&string_literal)
+                }
+                CodeNode::NumberLiteral(number_literal) => {
+                    self.render_number_literal(&number_literal)
                 }
                 CodeNode::Assignment(assignment) => {
                     self.render_assignment(&assignment)
@@ -679,6 +681,16 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             InsertionPoint::Editing(string_literal.id))
     }
 
+    fn render_number_literal(&self, number_literal: &lang::NumberLiteral) -> T::DrawResult {
+        // TODO: for now lettttttt's not implement the editor for number literals. i think we
+        // don't need it just yet. the insert code menu can insert number literals. perhaps we
+        // can implement an InsertionPoint::Replace(node_id) that will suffice for number literals
+        self.render_inline_editable_button(
+            &format!("\u{f292} {}", number_literal.value),
+            CLEAR_COLOR,
+            InsertionPoint::Editing(number_literal.id))
+    }
+
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
         // this is kind of a mess. render_insert_code_node() does `focus` inside of
         // it. the other parts of the branch need to be wrapped in focus() but not
@@ -709,6 +721,8 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 })
             },
             CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => {
+                // TODO: need to show the argument name or struct literal field, i think we can
+                // copy the render_list_literal approach here
                 self.render_insert_code_node()
             }
             // the list literal renders its own editor inline

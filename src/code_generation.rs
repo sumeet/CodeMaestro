@@ -60,6 +60,13 @@ pub fn new_string_literal(value: String) -> lang::CodeNode {
     })
 }
 
+pub fn new_number_literal(value: i128) -> lang::CodeNode {
+    lang::CodeNode::NumberLiteral(lang::NumberLiteral {
+        value,
+        id: lang::new_id(),
+    })
+}
+
 pub fn new_list_literal(typ: lang::Type) -> lang::CodeNode {
     lang::CodeNode::ListLiteral(lang::ListLiteral {
         id: lang::new_id(),
