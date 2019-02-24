@@ -116,10 +116,19 @@ impl InsertCodeMenu {
                 let exact_type = code_genie.guess_type(node, env_genie);
                 self.new_params(Some(exact_type))
             },
-            InsertionPoint::Assignment(assignment_id) => {
-                // TODO: if the assignment is used later on, then lock the assignment to its current
-                // type, otherwise we're free to change it to anything.
-                self.new_params(None)
+            InsertionPoint::Replace(node_id_to_replace) => {
+                let node = code_genie.find_node(node_id_to_replace).unwrap();
+                let exact_type = code_genie.guess_type(node, env_genie);
+                if let Some(lang::CodeNode::Assignment(assignment)) =
+                    code_genie.find_parent(node.id()) {
+                    // if we're replacing the value of an assignment statement, and that assignment
+                    // isn't being used anywhere, then we could change the type to anything. so don't
+                    // require a type when searching for nodes
+                    if !code_genie.any_variable_referencing_assignment(assignment.id) {
+                        return self.new_params(None)
+                    }
+                }
+                self.new_params(Some(exact_type))
             }
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
                 let list_literal = code_genie.find_node(list_literal_id).unwrap();
@@ -242,6 +251,8 @@ struct Variable {
     name: String,
 }
 
+// this is used to see which assignments appear before a particular InsertionPoint.
+//
 // returns tuple -> (CodeNode position, is_inclusive)
 fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, bool) {
     match insertion_point {
@@ -251,7 +262,7 @@ fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, boo
         InsertionPoint::Argument(id) => (id, false),
         InsertionPoint::StructLiteralField(id) => (id, false),
         InsertionPoint::Editing(id) => (id, false),
-        InsertionPoint::Assignment(id) => (id, false),
+        InsertionPoint::Replace(id) => (id, false),
         InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
             (list_literal_id, false)
         },
@@ -446,10 +457,10 @@ impl InsertLiteralOptionGenerator {
 struct InsertConditionalOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
+    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                _env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
-        if !should_insert_block_expression(search_params.insertion_point) {
+        if !should_insert_block_expression(search_params.insertion_point, code_genie) {
             return options
         }
 
@@ -473,7 +484,7 @@ struct InsertMatchOptionGenerator {}
 impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        if !should_insert_block_expression(search_params.insertion_point) {
+        if !should_insert_block_expression(search_params.insertion_point, code_genie) {
             return vec![];
         }
 
@@ -515,7 +526,7 @@ struct InsertAssignmentOptionGenerator {}
 impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        if !should_insert_block_expression(search_params.insertion_point) {
+        if !should_insert_block_expression(search_params.insertion_point, code_genie) {
             return vec![];
         }
 
@@ -610,11 +621,13 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
 
 // hmmm this is used by code search
 // TODO: move into insert_code_menu.rs
-pub fn should_insert_block_expression(insertion_point: InsertionPoint) -> bool {
+pub fn should_insert_block_expression(insertion_point: InsertionPoint, code_genie: &CodeGenie) -> bool {
     match insertion_point {
-        InsertionPoint::BeginningOfBlock(_) | InsertionPoint::Before(_) | InsertionPoint::After(_) |
-        InsertionPoint::Assignment(_) => true,
-
+        InsertionPoint::BeginningOfBlock(_) | InsertionPoint::Before(_) |
+            InsertionPoint::After(_) => true,
+        InsertionPoint::Replace(node_id_to_replace) => {
+            code_genie.is_block_expression(node_id_to_replace)
+        }
         InsertionPoint::Argument(_) | InsertionPoint::StructLiteralField(_) |
         InsertionPoint::Editing(_) | InsertionPoint::ListLiteralElement {..} => false,
     }

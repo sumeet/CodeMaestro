@@ -366,6 +366,14 @@ impl CodeNode {
         }
     }
 
+    pub fn as_variable_reference(&self) -> Option<&VariableReference> {
+        if let CodeNode::VariableReference(vr) = self {
+            Some(vr)
+        } else {
+            None
+        }
+    }
+
     pub fn description(&self) -> String {
         match self {
             CodeNode::FunctionCall(function_call) => {
@@ -630,21 +638,25 @@ impl CodeNode {
         }
     }
 
+    pub fn replace(&mut self, code_node: CodeNode) {
+        self.replace_with(code_node.id(), code_node);
+    }
+
     // the return value is meaningless, it's just used to thread the code so we don't have to copy it
-    pub fn replace(&mut self, mut code_node: CodeNode) -> Option<CodeNode> {
-        if self.id() == code_node.id() {
-            *self = code_node;
+    pub fn replace_with(&mut self, id: ID, mut replace_with: CodeNode) -> Option<CodeNode> {
+        if self.id() == id {
+            *self = replace_with;
             return None
         }
         for child in self.children_mut() {
-            let ret = child.replace(code_node);
+            let ret = child.replace_with(id, replace_with);
             if let Some(cn) = ret {
-                code_node = cn;
+                replace_with = cn;
             } else {
                 return None
             }
         }
-        return Some(code_node)
+        return Some(replace_with)
     }
 
     pub fn find_node(&self, id: ID) -> Option<&CodeNode> {

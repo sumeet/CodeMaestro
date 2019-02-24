@@ -143,7 +143,8 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
             &|| { self.draw_text(" = ") },
             &|| {
                 match self.insertion_point() {
-                    Some(InsertionPoint::Assignment(id)) if id == assignment.id => {
+                    // TODO: can this be moved into render_code????
+                    Some(InsertionPoint::Replace(id)) if id == assignment.expression.id() => {
                         self.render_insert_code_node()
                     }
                     _ => self.render_code(assignment.expression.as_ref())

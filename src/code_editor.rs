@@ -191,15 +191,16 @@ impl CodeEditor {
     }
 
     fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
-        match self.code_genie.find_parent(self.selected_node_id?)? {
+        let selected_node_id = self.selected_node_id?;
+        match self.code_genie.find_parent(selected_node_id)? {
             lang::CodeNode::Argument(cn) => {
                 self.mark_as_editing(InsertionPoint::Argument(cn.id));
             },
             lang::CodeNode::StructLiteralField(cn) => {
                 self.mark_as_editing(InsertionPoint::StructLiteralField(cn.id));
             },
-            lang::CodeNode::Assignment(assignment) => {
-                self.mark_as_editing(InsertionPoint::Assignment(assignment.id));
+            lang::CodeNode::Assignment(_) => {
+                self.mark_as_editing(InsertionPoint::Replace(selected_node_id));
             }
             _ => (),
         }
@@ -388,7 +389,7 @@ impl CodeGenie {
         self.code.find_node(id)
     }
 
-    fn find_parent(&self, id: lang::ID) -> Option<&lang::CodeNode> {
+    pub fn find_parent(&self, id: lang::ID) -> Option<&lang::CodeNode> {
         self.code.find_parent(id)
     }
 
@@ -399,6 +400,17 @@ impl CodeGenie {
                 id = parent.id();
             }
         })
+    }
+
+    pub fn any_variable_referencing_assignment(&self, assignment_id: lang::ID) -> bool {
+        self.find_all_variables_referencing_assignment(assignment_id).next().is_some()
+    }
+
+    pub fn find_all_variables_referencing_assignment(&self, assignment_id: lang::ID)
+        -> impl Iterator<Item = &lang::VariableReference> {
+        self.root().all_children_dfs_iter()
+            .filter_map(|cn| cn.as_variable_reference())
+            .filter(move |vr| vr.assignment_id == assignment_id)
     }
 
     pub fn guess_type(&self, code_node: &lang::CodeNode,
@@ -538,6 +550,14 @@ impl CodeGenie {
                 prev = node;
             }
         })
+    }
+
+    pub fn is_block_expression(&self, node_id: lang::ID) -> bool {
+        if let Some(CodeNode::Block(_)) = self.find_parent(node_id) {
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -782,8 +802,8 @@ impl MutationMaster {
             InsertionPoint::ListLiteralElement { list_literal_id, pos } => {
                 self.insertion_expression_into_list_literal(node_to_insert, list_literal_id, pos, genie)
             }
-            InsertionPoint::Assignment(assignment_id) => {
-                self.insert_expression_into_assignment(node_to_insert, assignment_id, genie)
+            InsertionPoint::Replace(node_id_to_replace) => {
+                self.replace_node(node_to_insert, node_id_to_replace, genie)
             }
             // TODO: perhaps we should have edits go through this codepath as well!
             InsertionPoint::Editing(_) => panic!("this is currently unused")
@@ -809,12 +829,10 @@ impl MutationMaster {
         root
     }
 
-    fn insert_expression_into_assignment(&self, code_node: lang::CodeNode, assignment_id: lang::ID,
-                                         genie: &CodeGenie) -> lang::CodeNode {
-        let mut assignment = genie.find_node(assignment_id).unwrap().into_assignment().unwrap().clone();
-        assignment.expression = Box::new(code_node);
+    fn replace_node(&self, code_node: lang::CodeNode, node_id_to_replace: lang::ID,
+                    genie: &CodeGenie) -> lang::CodeNode {
         let mut root = genie.root().clone();
-        root.replace(lang::CodeNode::Assignment(assignment));
+        root.replace_with(node_id_to_replace, code_node);
         root
     }
 
@@ -965,8 +983,10 @@ pub enum InsertionPoint {
     Argument(lang::ID),
     StructLiteralField(lang::ID),
     Editing(lang::ID),
-    Assignment(lang::ID),
     ListLiteralElement { list_literal_id: lang::ID, pos: usize },
+    // TODO: it's possible we can generalize and replace the Argument, StructLiteralField and
+    //       ListLiteralElement with Replace
+    Replace(lang::ID),
 }
 
 impl InsertionPoint {
@@ -976,7 +996,7 @@ impl InsertionPoint {
             InsertionPoint::BeginningOfBlock(_) => None,
             InsertionPoint::Before(_) => None,
             InsertionPoint::After(_) => None,
-            InsertionPoint::Assignment(id) => None,
+            InsertionPoint::Replace(id) => None,
             InsertionPoint::Argument(id) => Some(id),
             InsertionPoint::StructLiteralField(id) => Some(id),
             InsertionPoint::Editing(id) => Some(id),
@@ -991,8 +1011,8 @@ enum PostInsertionAction {
     MarkAsEditing(InsertionPoint),
 }
 
-fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> PostInsertionAction {
-    if let CodeNode::FunctionCall(function_call) = code_node {
+fn post_insertion_cursor(inserted_node: &CodeNode, code_genie: &CodeGenie) -> PostInsertionAction {
+    if let CodeNode::FunctionCall(function_call) = inserted_node {
         // if we just inserted a function call, then go to the first arg if there is one
         if function_call.args.len() > 0 {
             let id = function_call.args[0].id();
@@ -1002,7 +1022,7 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> PostIn
         }
     }
 
-    if let CodeNode::StructLiteral(struct_literal) = code_node {
+    if let CodeNode::StructLiteral(struct_literal) = inserted_node {
         // if we just inserted a function call, then go to the first arg if there is one
         if struct_literal.fields.len() > 0 {
             let id = struct_literal.fields[0].id();
@@ -1012,7 +1032,17 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> PostIn
         }
     }
 
-    let parent = code_genie.find_parent(code_node.id());
+    // right now i'm implementing both Assignment and ListIndex insertion, and think i found a
+    // generic way of autoselecting the child placeholder in each case.
+    for child in inserted_node.all_children_dfs_iter() {
+        if let Some(placeholder) = child.into_placeholder() {
+            return PostInsertionAction::MarkAsEditing(InsertionPoint::Replace(placeholder.id))
+        }
+    }
+
+    // if we just inserted a function argument or struct literal field, then select the next one if
+    // it's a placeholder
+    let parent = code_genie.find_parent(inserted_node.id());
     if let Some(CodeNode::Argument(argument)) = parent {
         // if we just finished inserting into a function call argument, and the next argument is
         // a placeholder, then let's insert into that arg!!!!
@@ -1038,7 +1068,7 @@ fn post_insertion_cursor(code_node: &CodeNode, code_genie: &CodeGenie) -> PostIn
     }
 
     // nothing that we can think of to do next, just chill at the insertion point
-    PostInsertionAction::SelectNode(code_node.id())
+    PostInsertionAction::SelectNode(inserted_node.id())
 }
 
 pub fn get_type_from_list(mut typ: lang::Type) -> Option<lang::Type> {
