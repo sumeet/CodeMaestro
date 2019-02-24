@@ -366,9 +366,7 @@ impl CodeGenie {
                 block.expressions.iter()
                     // position in the block is 0 indexed, so this will take every node up TO it
                     .take(position_in_block)
-                    .map(|code| code.into_assignment())
-                    .filter(|opt| opt.is_some())
-                    .map(|opt| opt.unwrap())
+                    .filter_map(|code| code.into_assignment())
                     .collect()
             },
             _ => vec![]
