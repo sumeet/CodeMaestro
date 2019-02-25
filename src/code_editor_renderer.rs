@@ -140,16 +140,8 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                     InsertionPoint::Editing(assignment.id)
                 )
             },
-            &|| { self.draw_text(" = ") },
-            &|| {
-                match self.insertion_point() {
-                    // TODO: can this be moved into render_code????
-                    Some(InsertionPoint::Replace(id)) if id == assignment.expression.id() => {
-                        self.render_insert_code_node()
-                    }
-                    _ => self.render_code(assignment.expression.as_ref())
-                }
-            }
+            &|| self.draw_text(" \u{f52c} "),
+            &|| self.render_code(assignment.expression.as_ref()),
         ])
     }
 
@@ -191,7 +183,7 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                         }
                     })
             }),
-            self.render_insertion_options(&menu)
+            self.render_without_nesting(&|| self.render_insertion_options(&menu)),
         ])
     }
 
@@ -371,6 +363,12 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::ListIndex(list_index) => self.render_list_index(&list_index)
             }
         };
+
+        if let Some(InsertionPoint::Replace(id)) = self.insertion_point() {
+            if id == code_node.id() {
+                return self.render_insert_code_node()
+            }
+        }
 
         if self.is_selected(code_node.id()) {
             self.draw_selected(&draw)
@@ -614,11 +612,10 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
 
         self.draw_nested_borders_around(&|| {
             self.ui_toolkit.draw_all_on_same_line(&[
-                &|| self.render_without_nesting(&|| self.render_code(&sfg.struct_expr)),
+                &|| self.render_code(&sfg.struct_expr),
                 &|| {
                     self.render_nested(&|| {
-                        self.ui_toolkit.draw_button(&struct_field.name, BLUE_COLOR,
-                                                    &|| {})
+                        self.draw_button(&struct_field.name, BLUE_COLOR, &|| {})
                     })
                 }
             ])
@@ -696,10 +693,9 @@ impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
         // TODO: for now lettttttt's not implement the editor for number literals. i think we
         // don't need it just yet. the insert code menu can insert number literals. perhaps we
         // can implement an InsertionPoint::Replace(node_id) that will suffice for number literals
-        self.render_inline_editable_button(
-            &format!("\u{f292} {}", number_literal.value),
-            CLEAR_COLOR,
-            InsertionPoint::Editing(number_literal.id))
+        self.render_inline_editable_button(&number_literal.value.to_string(),
+                                           CLEAR_COLOR,
+                                           InsertionPoint::Editing(number_literal.id))
     }
 
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {

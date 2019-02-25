@@ -7,6 +7,8 @@ use url;
 use http::Request;
 use super::http_client;
 use maplit::hashmap;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 // this gets loaded through codesample.json... TODO: make a builtins.json file
 lazy_static! {
@@ -188,8 +190,6 @@ pub fn new_result(ok_type: lang::Type) -> lang::Type {
     lang::Type { typespec_id: *RESULT_ENUM_ID, params: vec![ok_type] }
 }
 
-use std::cell::RefCell;
-use std::rc::Rc;
 #[derive(Clone)]
 pub struct ChatReply {
     output_buffer: Rc<RefCell<Vec<String>>>,
@@ -228,5 +228,39 @@ impl lang::Function for ChatReply {
 
     fn returns(&self) -> lang::Type {
         lang::Type::from_spec(&*lang::NULL_TYPESPEC)
+    }
+}
+
+#[derive(Clone)]
+pub struct JoinString {}
+
+impl lang::Function for JoinString {
+    fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        let joined = args.get(&self.takes_args()[0].id).unwrap()
+            .as_vec().unwrap().iter()
+            .map(|val| val.as_str().unwrap())
+            .join("");
+        lang::Value::String(joined)
+    }
+
+    fn name(&self) -> &str {
+        "Join"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("024247f6-3202-4acc-8d9a-b80a427cda3c").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![
+            lang::ArgumentDefinition::new_with_id(
+                uuid::Uuid::parse_str("78cf269a-2a29-4325-9a18-8d84132485ed").unwrap(),
+                lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)]),
+                "Strings".to_string()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::STRING_TYPESPEC)
     }
 }

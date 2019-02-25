@@ -26,7 +26,7 @@ pub mod builtins;
 pub mod lang;
 mod structs;
 mod enums;
-pub mod env;
+#[macro_use] pub mod env;
 mod env_genie;
 mod code_loading;
 mod editor;
@@ -165,6 +165,7 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
     env.add_function(builtins::Print{});
     env.add_function(builtins::Capitalize{});
     env.add_function(builtins::HTTPGet{});
+    env.add_function(builtins::JoinString{});
     env.add_function(builtins::ChatReply::new(Rc::new(RefCell::new(vec![]))));
 
     for script in the_world.scripts {

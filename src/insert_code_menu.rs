@@ -23,14 +23,14 @@ lazy_static! {
     // the order is significant here. it defines which order the options appear in (no weighting
     // system yet)
     static ref OPTIONS_GENERATORS : Vec<Box<InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
+        Box::new(InsertListIndexOfLocal {}),
         Box::new(InsertVariableReferenceOptionGenerator {}),
         Box::new(InsertStructFieldGetOfLocal {}),
-        Box::new(InsertListIndexOfLocal {}),
         Box::new(InsertFunctionOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
         Box::new(InsertMatchOptionGenerator {}),
-        Box::new(InsertLiteralOptionGenerator {}),
         Box::new(InsertAssignmentOptionGenerator {}),
+        Box::new(InsertLiteralOptionGenerator {}),
     ];
 }
 
@@ -119,8 +119,8 @@ impl InsertCodeMenu {
             InsertionPoint::Replace(node_id_to_replace) => {
                 let node = code_genie.find_node(node_id_to_replace).unwrap();
                 let exact_type = code_genie.guess_type(node, env_genie);
-                if let Some(lang::CodeNode::Assignment(assignment)) =
-                    code_genie.find_parent(node.id()) {
+                let parent = code_genie.find_parent(node.id());
+                if let Some(lang::CodeNode::Assignment(assignment)) = parent {
                     // if we're replacing the value of an assignment statement, and that assignment
                     // isn't being used anywhere, then we could change the type to anything. so don't
                     // require a type when searching for nodes
@@ -355,9 +355,9 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
         if let Some(ref return_type) = search_params.return_type {
             if return_type.matches_spec(&lang::STRING_TYPESPEC) {
                 options.push(self.string_literal_option(input_str.clone()));
-            } else if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
-                options.push(self.null_literal_option());
             } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
+                options.push(self.null_literal_option());
+            } else if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
                 if let Some(number) = search_params.parse_number_input() {
                     options.push(self.number_literal_option(number));
                 }
@@ -407,7 +407,7 @@ impl InsertLiteralOptionGenerator {
 
     fn number_literal_option(&self, number: i128) -> InsertCodeMenuOption {
         InsertCodeMenuOption {
-            label: format!("\u{f292}{}", number),
+            label: number.to_string(),
             is_selected: false,
             new_node: code_generation::new_number_literal(number)
         }
@@ -598,7 +598,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
             .filter_map(|variable| {
                 let list_elem_typ = get_type_from_list(variable.typ)?;
                 if let Some(search_type) = &search_params.return_type {
-                    if search_type.matches(&list_elem_typ) {
+                    if !search_type.matches(&list_elem_typ) {
                         return None
                     }
                 }

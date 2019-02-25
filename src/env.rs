@@ -16,8 +16,11 @@ use std::convert::TryInto;
 use crate::builtins::ok_result;
 use crate::builtins::err_result;
 
+#[macro_export]
 macro_rules! await_eval_result {
-    ($e:expr) => { await!(resolve_all_futures(await!($e))) }
+    ($e:expr) => {
+        await!($crate::external_func::resolve_all_futures(await!($e)))
+    }
 }
 
 pub struct Interpreter {
@@ -198,7 +201,7 @@ impl Interpreter {
                     if index_usize > vec.len() - 1 {
                         return err_result(format!("list of size {} doesn't contain index {}", vec.len(), index))
                     }
-                    vec.remove(index_usize)
+                    ok_result(vec.remove(index_usize))
                 })
             }
         }

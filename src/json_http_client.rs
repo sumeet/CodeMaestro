@@ -1,6 +1,6 @@
 use super::builtins;
 use super::lang;
-use super::env;
+#[macro_use] use super::env;
 use super::function;
 use super::builtins::new_result;
 use super::external_func;
@@ -93,17 +93,8 @@ impl JSONHTTPClient {
         let gen_url_params = self.gen_url_params.clone();
         let base_url = self.url.clone();
         async move {
-            let url_params_value = await!(interpreter.evaluate(&lang::CodeNode::Block(gen_url_params)));
-            let form_params = url_params_value.as_vec().unwrap()
-                .iter()
-                .map(|val| val.as_struct().unwrap())
-                .map(|(_id, struct_values)| {
-                    (
-                        struct_values.get(&uuid::Uuid::parse_str("886a86df-1211-47c5-83c0-f9a410a6fdc8").unwrap()).unwrap().as_str().unwrap(),
-                        struct_values.get(&uuid::Uuid::parse_str("57607724-a63a-458e-9253-1e3efeb4de63").unwrap()).unwrap().as_str().unwrap(),
-                    )
-                })
-                .collect_vec();
+            let url_params_value = await_eval_result!(interpreter.evaluate(&lang::CodeNode::Block(gen_url_params)));
+            let form_params = extract_form_params(&url_params_value);
             let mut url = url::Url::parse(&base_url).unwrap();
             {
                 let mut pairs = url.query_pairs_mut();

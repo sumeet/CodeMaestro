@@ -199,7 +199,7 @@ impl CodeEditor {
             lang::CodeNode::StructLiteralField(cn) => {
                 self.mark_as_editing(InsertionPoint::StructLiteralField(cn.id));
             },
-            lang::CodeNode::Assignment(_) => {
+            lang::CodeNode::Assignment(_) | lang::CodeNode::ListIndex(_) => {
                 self.mark_as_editing(InsertionPoint::Replace(selected_node_id));
             }
             _ => (),
