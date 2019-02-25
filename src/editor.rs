@@ -1,4 +1,3 @@
-use serde_json;
 use std::cell::RefCell;
 //use debug_cell::RefCell;
 use std::rc::Rc;
@@ -26,7 +25,6 @@ use super::env_genie;
 use super::code_editor_renderer::CodeEditorRenderer;
 use super::async_executor;
 use super::scripts;
-use super::json;
 use super::json2;
 use super::tests;
 use super::json_http_client::JSONHTTPClient;
@@ -291,7 +289,7 @@ impl CommandBuffer {
     }
 
     pub fn change_chat_trigger(&mut self, chat_trigger_id: lang::ID, change: impl Fn(&mut ChatTrigger) + 'static) {
-        self.add_integrating_command(move |controller, interpreter, _| {
+        self.add_integrating_command(move |_controller, interpreter, _| {
             let mut env = interpreter.env.borrow_mut();
             let env_genie = env_genie::EnvGenie::new(&env);
             let mut chat_trigger = env_genie.get_chat_trigger(chat_trigger_id).unwrap().clone();
@@ -756,7 +754,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     ),
                     self.ui_toolkit.draw_button("Run test", GREY_COLOR, move || {
                         let cmd_buffer5 = Rc::clone(&cmd_buffer5);
-                        cmd_buffer4.borrow_mut().add_integrating_command(move |cont, interp, async_executor| {
+                        cmd_buffer4.borrow_mut().add_integrating_command(move |cont, _interp, async_executor| {
                             let builder = cont.get_json_http_client_builder(client_id).unwrap();
                             builder.run_test(async_executor, move |newbuilder| {
                                 cmd_buffer5.borrow_mut().add_controller_command(move |cont| {

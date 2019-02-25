@@ -12,7 +12,6 @@ use super::env_genie::EnvGenie;
 use super::insert_code_menu::InsertCodeMenu;
 use super::enums::EnumVariant;
 use crate::builtins::new_result;
-use crate::lang::ListIndex;
 
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
@@ -996,7 +995,7 @@ impl InsertionPoint {
             InsertionPoint::BeginningOfBlock(_) => None,
             InsertionPoint::Before(_) => None,
             InsertionPoint::After(_) => None,
-            InsertionPoint::Replace(id) => None,
+            InsertionPoint::Replace(_) => None,
             InsertionPoint::Argument(id) => Some(id),
             InsertionPoint::StructLiteralField(id) => Some(id),
             InsertionPoint::Editing(id) => Some(id),

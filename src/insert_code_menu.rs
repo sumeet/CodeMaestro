@@ -1,13 +1,11 @@
 use super::code_editor::InsertionPoint;
 use super::env_genie::EnvGenie;
 use super::code_editor::CodeGenie;
-use super::code_editor::MatchVariant;
 use super::code_editor::get_type_from_list;
 use super::code_editor::PLACEHOLDER_ICON;
 use super::lang;
 use super::code_generation;
 use super::structs;
-use super::builtins;
 
 use downcast_rs::impl_downcast;
 use objekt::{clone_trait_object};
@@ -15,9 +13,6 @@ use lazy_static::lazy_static;
 use itertools::Itertools;
 
 use std::collections::HashMap;
-use crate::enums::EnumVariant;
-use std::iter;
-use gen_iter::GenIter;
 
 lazy_static! {
     // the order is significant here. it defines which order the options appear in (no weighting
@@ -513,8 +508,7 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
                     is_selected: false,
                     new_node: code_generation::new_match(eneom,
                                                          &guessed_type,
-                                                         code_generation::new_variable_reference(assignment.id),
-                                                         &search_params.return_type)
+                                                         code_generation::new_variable_reference(assignment.id))
                 })
             }).collect()
     }
@@ -525,7 +519,7 @@ struct InsertAssignmentOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+               _env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
         if !should_insert_block_expression(search_params.insertion_point, code_genie) {
             return vec![];
         }

@@ -9,7 +9,6 @@ use super::code_generation;
 use super::json_http_client::JSONHTTPClient;
 use super::builtins;
 
-use std::iter;
 use lazy_static::lazy_static;
 
 lazy_static! {
@@ -122,8 +121,8 @@ impl<'a> ProblemFinder<'a> {
         if type_that_should_be_returned.as_ref().map(|t| t.id()) != actual_type_returned.as_ref().map(|t| t.id()) {
             // TODO: keep this debug crap in here for now. i want to see it in the console. later,
             // we'll surface this to users and ask them to accept the changes (or undo)
-            let t1_symbol = self.env_genie.get_name_for_type(actual_type_returned.as_ref().unwrap()).unwrap();
-            let t2_symbol = self.env_genie.get_name_for_type(type_that_should_be_returned.as_ref().unwrap()).unwrap();
+//            let t1_symbol = self.env_genie.get_name_for_type(actual_type_returned.as_ref().unwrap()).unwrap();
+//            let t2_symbol = self.env_genie.get_name_for_type(type_that_should_be_returned.as_ref().unwrap()).unwrap();
             //println!("block has type {} but func returns type {}", t1_symbol, t2_symbol);
             Box::new(std::iter::once(Problem::InvalidReturnType { function_id: func.id() }))
         } else {

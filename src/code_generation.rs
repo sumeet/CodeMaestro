@@ -2,7 +2,6 @@ use super::enums::Enum;
 use super::lang;
 use super::structs;
 use std::collections::BTreeMap;
-use crate::lang::CodeNode::Assignment;
 
 pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::CodeNode {
     let fields = strukt.fields.iter()
@@ -100,17 +99,12 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
     })
 }
 
-pub fn new_match(eneom: &Enum, enum_type: &lang::Type, match_expr: lang::CodeNode,
-                 for_type: &Option<lang::Type>) -> lang::CodeNode {
-    let branch_type = for_type.clone().unwrap_or_else(
-        || lang::Type::from_spec(&*lang::NULL_TYPESPEC));
-
+pub fn new_match(eneom: &Enum, enum_type: &lang::Type, match_expr: lang::CodeNode) -> lang::CodeNode {
     let branch_by_variant_id : BTreeMap<_, _> = eneom.variant_types(&enum_type.params).into_iter()
         .map(|(variant, typ)| {
             let mut block = lang::Block::new();
             block.expressions.push(
-                new_placeholder(variant.name.clone(),
-                                typ.clone()));
+                new_placeholder(variant.name.clone(), typ.clone()));
             (variant.id, lang::CodeNode::Block(block))
         }).collect();
 

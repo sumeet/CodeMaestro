@@ -1,7 +1,6 @@
 use super::lang;
 use super::structs;
 use super::async_executor;
-use super::external_func::resolve_all_futures;
 
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -11,7 +10,6 @@ use std ::pin::Pin;
 use std::rc::Rc;
 
 use itertools::Itertools;
-use std::hash::Hash;
 use std::convert::TryInto;
 use crate::builtins::ok_result;
 use crate::builtins::err_result;

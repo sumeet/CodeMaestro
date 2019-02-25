@@ -14,7 +14,6 @@ use super::lang::CodeNode;
 use super::env_genie::EnvGenie;
 use super::code_function;
 use super::scripts;
-use super::tests;
 
 // TODO: move to colors.rs
 pub type Color = [f32; 4];

@@ -1,9 +1,8 @@
 use super::builtins;
 use super::lang;
-#[macro_use] use super::env;
+use super::env;
 use super::function;
 use super::builtins::new_result;
-use super::external_func;
 use super::http_request;
 use super::result::Result;
 use super::http_client;
