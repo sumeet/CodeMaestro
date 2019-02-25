@@ -3,8 +3,7 @@ use super::editor;
 use super::editor::{Key as AppKey,Keypress};
 use super::async_executor::AsyncExecutor;
 use stdweb::{js,_js_impl};
-//use stdweb::{console,__internal_console_unsafe};
-use yew::{html,html_impl};
+use yew::{html};
 use yew::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -55,7 +54,8 @@ impl Component for Model {
     }
 }
 
-const WINDOW_BG_COLOR: [f32; 4] = [0.090, 0.090, 0.090, 0.75];
+// keep this in sync with the WindowBg color defined in imgui_support.rs
+const WINDOW_BG_COLOR: [f32; 4] = [0.375, 0.375, 0.375, 1.0];
 const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 
 struct YewToolkit {

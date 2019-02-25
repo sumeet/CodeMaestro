@@ -196,7 +196,7 @@ impl Interpreter {
 
                     let index_usize = index_usize.unwrap();
                     let mut vec = await_eval_result!(list_fut).into_vec().unwrap();
-                    if index_usize > vec.len() - 1 {
+                    if vec.len() == 0 || index_usize > vec.len() - 1 {
                         return err_result(format!("list of size {} doesn't contain index {}", vec.len(), index))
                     }
                     ok_result(vec.remove(index_usize))

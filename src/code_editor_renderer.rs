@@ -12,8 +12,6 @@ use super::lang;
 use super::structs;
 use super::lang::CodeNode;
 use super::env_genie::EnvGenie;
-use super::code_function;
-use super::scripts;
 
 // TODO: move to colors.rs
 pub type Color = [f32; 4];
@@ -829,34 +827,7 @@ impl PerEditorCommandBuffer {
 
             let editor = cont.get_editor_mut(editor_id).unwrap();
             let code = editor.get_code().clone();
-            match editor.location {
-                code_editor::CodeLocation::Function(func_id) => {
-                    let func = env.find_function(func_id).cloned().unwrap();
-                    let mut code_function = func.downcast::<code_function::CodeFunction>().unwrap();
-                    code_function.set_code(code.into_block().unwrap().clone());
-                    env.add_function(*code_function);
-                },
-                code_editor::CodeLocation::Script(_script_id) => {
-                    let script = scripts::Script { code: code.into_block().unwrap().clone() };
-                    cont.load_script(script)
-                },
-                code_editor::CodeLocation::Test(test_id) => {
-                    let mut test = cont.get_test(test_id).unwrap().clone();
-                    test.set_code(code.into_block().unwrap().clone());
-                },
-                code_editor::CodeLocation::JSONHTTPClientURLParams(client_id) => {
-                    let env_genie = EnvGenie::new(&env);
-                    let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
-                    client.gen_url_params = code.into_block().unwrap().clone();
-                    env.add_function(client);
-                }
-                code_editor::CodeLocation::ChatTrigger(chat_trigger_id) => {
-                    let env_genie = EnvGenie::new(&env);
-                    let mut chat_trigger = env_genie.get_chat_trigger(chat_trigger_id).unwrap().clone();
-                    chat_trigger.code = code.into_block().unwrap().clone();
-                    env.add_function(chat_trigger);
-                }
-            }
+            code_editor::update_code_in_env(editor.location, code, cont, &mut env)
         });
     }
 }

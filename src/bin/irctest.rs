@@ -12,9 +12,7 @@ use cs::builtins::new_message;
 use cs::resolve_all_futures;
 use cs::EnvGenie;
 use cs::env;
-use cs::lang;
 use cs::lang::Function;
-use std::marker::Unpin;
 use tokio::prelude::*;
 use irc::client::prelude::*;
 use irc::client::PackedIrcClient;
@@ -31,7 +29,6 @@ impl ChatThingy {
         let reply_buffer = Rc::new(RefCell::new(vec![]));
         let interp = cs::App::new().interpreter;
         let reply_function = ChatReply::new(Rc::clone(&reply_buffer));
-        let reply_function_id = reply_function.id();
         interp.env.borrow_mut().add_function(reply_function);
         Self { interp, reply_buffer }
     }

@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use gen_iter::GenIter;
 
+use super::code_function;
+use super::scripts;
 use super::editor;
 use super::lang::CodeNode;
 use super::lang;
@@ -12,6 +14,8 @@ use super::env_genie::EnvGenie;
 use super::insert_code_menu::InsertCodeMenu;
 use super::enums::EnumVariant;
 use crate::builtins::new_result;
+use crate::env::ExecutionEnvironment;
+use crate::editor::Controller;
 
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
@@ -25,12 +29,13 @@ pub struct CodeEditor {
     pub location: CodeLocation,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum CodeLocation {
     Function(lang::ID),
     Script(lang::ID),
     Test(lang::ID),
     JSONHTTPClientURLParams(lang::ID),
+    JSONHTTPClientURL(lang::ID),
     ChatTrigger(lang::ID),
 }
 
@@ -929,7 +934,7 @@ impl MutationMaster {
                     .map(|code_node| code_node.id());
                 if new_cursor_position.is_none() {
                     new_cursor_position = new_list_literal.elements
-                        .get(deleted_element_position_in_list - 1)
+                        .get(deleted_element_position_in_list.checked_sub(1).unwrap_or(0))
                         .map(|code_node| code_node.id());
                 }
                 if new_cursor_position.is_none() {
@@ -1078,4 +1083,42 @@ pub fn get_type_from_list(mut typ: lang::Type) -> Option<lang::Type> {
         return None
     }
     Some(typ.params.remove(0))
+}
+
+pub fn update_code_in_env(location: CodeLocation, code: lang::CodeNode, cont: &mut Controller,
+                          env: &mut ExecutionEnvironment) {
+    match location {
+        CodeLocation::Function(func_id) => {
+            let func = env.find_function(func_id).cloned().unwrap();
+            let mut code_function = func.downcast::<code_function::CodeFunction>().unwrap();
+            code_function.set_code(code.into_block().unwrap().clone());
+            env.add_function(*code_function);
+        },
+        CodeLocation::Script(_script_id) => {
+            let script = scripts::Script { code: code.into_block().unwrap().clone() };
+            cont.load_script(script)
+        },
+        CodeLocation::Test(test_id) => {
+            let mut test = cont.get_test(test_id).unwrap().clone();
+            test.set_code(code.into_block().unwrap().clone());
+        },
+        CodeLocation::JSONHTTPClientURLParams(client_id) => {
+            let env_genie = EnvGenie::new(&env);
+            let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
+            client.gen_url_params = code.into_block().unwrap().clone();
+            env.add_function(client);
+        },
+        CodeLocation::JSONHTTPClientURL(client_id) => {
+            let env_genie = EnvGenie::new(&env);
+            let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
+            client.gen_url = code.into_block().unwrap().clone();
+            env.add_function(client);
+        },
+        CodeLocation::ChatTrigger(chat_trigger_id) => {
+            let env_genie = EnvGenie::new(&env);
+            let mut chat_trigger = env_genie.get_chat_trigger(chat_trigger_id).unwrap().clone();
+            chat_trigger.code = code.into_block().unwrap().clone();
+            env.add_function(chat_trigger);
+        },
+    }
 }

@@ -182,6 +182,11 @@ impl<'a> Controller {
         self.json_client_builder_by_func_id.get(&id)
     }
 
+    pub fn remove_json_http_client_builder(&mut self, id: lang::ID) {
+        self.json_client_builder_by_func_id.remove(&id).unwrap();
+    }
+
+
     // test section stuff
     fn selected_test_id(&self, subject: tests::TestSubject) -> Option<ID> {
         self.selected_test_id_by_subject.get(&subject).cloned()
@@ -314,12 +319,23 @@ impl CommandBuffer {
             let generate_url_params_code = lang::CodeNode::Block(json_http_client.gen_url_params.clone());
             controller.load_code(generate_url_params_code,
                                  code_editor::CodeLocation::JSONHTTPClientURLParams(json_http_client.id()));
+            let gen_url_code = lang::CodeNode::Block(json_http_client.gen_url.clone());
+            controller.load_code(gen_url_code,
+                                 code_editor::CodeLocation::JSONHTTPClientURL(json_http_client.id()));
             env.add_function(json_http_client);
         })
     }
 
     pub fn remove_function(&mut self, id: lang::ID) {
-        self.add_environment_command(move |env| env.delete_function(id))
+        self.add_integrating_command(move |controller, interpreter, _| {
+            let mut env = interpreter.env.borrow_mut();
+
+            let func = env.find_function(id).unwrap();
+            if let Some(json_http_client) = func.downcast_ref::<JSONHTTPClient>() {
+                controller.remove_json_http_client_builder(json_http_client.id())
+            }
+            env.delete_function(id)
+        });
     }
 
     pub fn load_function(&mut self, func: impl lang::Function + 'static) {
@@ -507,7 +523,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let cmd_buffer = self.command_buffer.clone();
         self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
             let mut cmd_buffer = cmd_buffer.borrow_mut();
-            cmd_buffer.run(&code_node, |val| println!("{:?}", val));
+            cmd_buffer.run(&code_node, |val| {
+                //println!("{:?}", val)
+            });
         })
     }
 
@@ -682,7 +700,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         },
                         &|| {},
                     ),
-                    self.render_code(chat_trigger.code.id, 0.7),
+                    self.render_code(chat_trigger.code.id, 0.9),
                 ])
             },
             None::<fn(Keypress)>,
@@ -700,11 +718,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {
                 let client = self.env_genie.get_json_http_client(builder.json_http_client_id).unwrap();
                 let client1 = client.clone();
-                let client2 = client.clone();
                 let client_id = client.id();
                 let builder1 = builder.clone();
                 let cmd_buffer1 = Rc::clone(&self.command_buffer);
-                let cmd_buffer2 = Rc::clone(&self.command_buffer);
                 let cmd_buffer3 = Rc::clone(&self.command_buffer);
                 let cmd_buffer4 = Rc::clone(&self.command_buffer);
                 let cmd_buffer5 = Rc::clone(&self.command_buffer);
@@ -722,16 +738,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         },
                         || {},
                     ),
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Base URL",
-                        &client.url,
-                        move |newvalue| {
-                            let mut client = client2.clone();
-                            client.url = newvalue.to_string();
-                            cmd_buffer2.borrow_mut().load_function(client);
-                        },
-                        || {},
-                    ),
+                    self.ui_toolkit.draw_text("Base URL:"),
+                    self.render_code(client.gen_url.id, 0.15),
                     self.ui_toolkit.draw_text("URL params:"),
                     self.render_code(client.gen_url_params.id, 0.3),
                     self.render_arguments_selector(client),

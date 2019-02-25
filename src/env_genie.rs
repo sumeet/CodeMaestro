@@ -70,6 +70,14 @@ impl<'a> EnvGenie<'a> {
         self.env.find_function(id)
     }
 
+
+    pub fn get_code_func(&self, id: lang::ID) -> Option<&code_function::CodeFunction> {
+        self.env.find_function(id)
+            .and_then(|f| {
+                f.downcast_ref::<code_function::CodeFunction>()
+            })
+    }
+
     pub fn get_json_http_client(&self, id: lang::ID) -> Option<&JSONHTTPClient> {
         self.env.find_function(id)
             .and_then(|f| f.downcast_ref::<JSONHTTPClient>())
@@ -169,6 +177,8 @@ fn get_args_for_code_block(code_block_id: lang::ID, function: &lang::Function) -
         }
     } else if let Some(json_http_client) = function.downcast_ref::<JSONHTTPClient>() {
         if json_http_client.gen_url_params.id == code_block_id {
+            return json_http_client.takes_args().into_iter()
+        } else if json_http_client.gen_url.id == code_block_id {
             return json_http_client.takes_args().into_iter()
         }
     }

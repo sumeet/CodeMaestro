@@ -18,7 +18,9 @@ use serde_json;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JSONHTTPClient {
     id: lang::ID,
+    // TODO: get rid of URL
     pub url: String,
+    pub gen_url: lang::Block,
     // for body params, we can use a JSON enum strings, ints, bools, etc.
     pub name: String,
     // hardcoded to GET for now
@@ -79,6 +81,7 @@ impl JSONHTTPClient {
             id: lang::new_id(),
             url: "https://httpbin.org/get".to_string(),
             name: "JSON HTTP Get Client".to_string(),
+            gen_url: lang::Block::new(),
             gen_url_params: lang::Block::new(),
             args: vec![],
             return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
@@ -90,8 +93,11 @@ impl JSONHTTPClient {
             interpreter.set_local_variable(id, value)
         }
         let gen_url_params = self.gen_url_params.clone();
-        let base_url = self.url.clone();
+        let gen_url = self.gen_url.clone();
         async move {
+            let base_url_value = await_eval_result!(interpreter.evaluate(&lang::CodeNode::Block(gen_url)));
+            let base_url = base_url_value.as_str().unwrap();
+
             let url_params_value = await_eval_result!(interpreter.evaluate(&lang::CodeNode::Block(gen_url_params)));
             let form_params = extract_form_params(&url_params_value);
             let mut url = url::Url::parse(&base_url).unwrap();

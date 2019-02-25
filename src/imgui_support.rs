@@ -1,4 +1,4 @@
-use imgui::{FontGlyphRange, ImFontConfig, ImGui, Ui};
+use imgui::{FontGlyphRange, ImFontConfig, ImGui, Ui, ImGuiCol};
 use std::time::Instant;
 use glium::glutin::ElementState::Pressed;
 use glium::glutin::WindowEvent::*;
@@ -32,6 +32,12 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     let icon_y_offset = (-2.0 * hidpi_factor) as f32;
 
     unsafe { imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle()); }
+    let mut style = imgui.style_mut();
+    // the default BG color is transparent black, which is super annoying. make it a little
+    // lighter (0.3 -> 0.35), so it contrasts with the black used for signifying nesting.
+    //
+    // keep this in sync with the WINDOW_BG_COLOR defined in yew_toolkit.rs
+    style.colors[ImGuiCol::WindowBg as usize] = (0.375, 0.375, 0.375, 1.0).into();
 
     imgui.fonts().add_font_with_config(
         include_bytes!("../fonts/calibri.ttf"),
