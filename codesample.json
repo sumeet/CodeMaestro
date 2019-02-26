@@ -61,214 +61,6 @@
   "jsfuncs": [],
   "structs": [
     {
-      "name": "DarkSkyResponse",
-      "id": "778c4ac1-3b76-40ec-9c36-1fe323c6ead8",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "e06361e4-7d75-4310-9f7a-1705b963c7b3",
-          "name": "currently",
-          "field_type": {
-            "typespec_id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "Location",
-      "id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da",
-          "name": "lat",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "35814f1a-c51c-4f06-a25d-7405d339edf5",
-          "name": "lng",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "Message",
-      "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
-          "name": "message",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
-          "name": "sender",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTPBinHeaders",
-      "id": "004780b6-843d-423f-9a27-b5c7e8482d02",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c",
-          "name": "User-Agent",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTPBinResp2",
-      "id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "03dab062-205a-430a-91f0-ae56744e1c38",
-          "name": "headers",
-          "field_type": {
-            "typespec_id": "004780b6-843d-423f-9a27-b5c7e8482d02",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTP Response",
-      "id": "31d96c85-5966-4866-a90a-e6db3707b140",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "34268b4f-e617-4e94-adbe-f5f0c9357865",
-          "name": "body",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "5e6cd734-fe98-47d2-9182-601a5a62e4d2",
-          "name": "status code",
-          "field_type": {
-            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "Geometry",
-      "id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "34b6ea41-b900-466a-89da-7f12786964e5",
-          "name": "location",
-          "field_type": {
-            "typespec_id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTP Form param",
-      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-          "name": "key",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
-          "name": "value",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "ReverseGeocoderResult",
-      "id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "2d974f25-bdcd-4a70-978f-af5275eb6556",
-          "name": "address_components",
-          "field_type": {
-            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
-            "params": [
-              {
-                "typespec_id": "047390c9-217b-4023-b35a-f66e93393f0e",
-                "params": []
-              }
-            ]
-          }
-        },
-        {
-          "id": "e722a8c6-9e2a-4c5a-918e-9c5f90df0b98",
-          "name": "formatted_address",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "69c50dac-4464-4ad3-a33b-c55795e95e62",
-          "name": "geometry",
-          "field_type": {
-            "typespec_id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "ReverseGeocodeResponse",
-      "id": "16b174d4-5587-46cb-af53-494ed3380a4b",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "48623a8a-6164-4c4a-8572-25db7ae52d3f",
-          "name": "results",
-          "field_type": {
-            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
-            "params": [
-              {
-                "typespec_id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
-                "params": []
-              }
-            ]
-          }
-        }
-      ]
-    },
-    {
       "name": "CurrentWeather",
       "id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
       "symbol": "",
@@ -324,6 +116,105 @@
       ]
     },
     {
+      "name": "HTTP Response",
+      "id": "31d96c85-5966-4866-a90a-e6db3707b140",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "34268b4f-e617-4e94-adbe-f5f0c9357865",
+          "name": "body",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "5e6cd734-fe98-47d2-9182-601a5a62e4d2",
+          "name": "status code",
+          "field_type": {
+            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Message",
+      "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
+          "name": "message",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
+          "name": "sender",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Geometry",
+      "id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "34b6ea41-b900-466a-89da-7f12786964e5",
+          "name": "location",
+          "field_type": {
+            "typespec_id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTPBinResp2",
+      "id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "03dab062-205a-430a-91f0-ae56744e1c38",
+          "name": "headers",
+          "field_type": {
+            "typespec_id": "004780b6-843d-423f-9a27-b5c7e8482d02",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
       "name": "AddressComponents",
       "id": "047390c9-217b-4023-b35a-f66e93393f0e",
       "symbol": "",
@@ -339,6 +230,115 @@
         {
           "id": "581294f4-e62f-4c7d-a273-779ce3203f3f",
           "name": "short_name",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReverseGeocodeResponse",
+      "id": "16b174d4-5587-46cb-af53-494ed3380a4b",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "48623a8a-6164-4c4a-8572-25db7ae52d3f",
+          "name": "results",
+          "field_type": {
+            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+            "params": [
+              {
+                "typespec_id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
+                "params": []
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "DarkSkyResponse",
+      "id": "778c4ac1-3b76-40ec-9c36-1fe323c6ead8",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "e06361e4-7d75-4310-9f7a-1705b963c7b3",
+          "name": "currently",
+          "field_type": {
+            "typespec_id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Location",
+      "id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da",
+          "name": "lat",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "35814f1a-c51c-4f06-a25d-7405d339edf5",
+          "name": "lng",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "ReverseGeocoderResult",
+      "id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "2d974f25-bdcd-4a70-978f-af5275eb6556",
+          "name": "address_components",
+          "field_type": {
+            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+            "params": [
+              {
+                "typespec_id": "047390c9-217b-4023-b35a-f66e93393f0e",
+                "params": []
+              }
+            ]
+          }
+        },
+        {
+          "id": "e722a8c6-9e2a-4c5a-918e-9c5f90df0b98",
+          "name": "formatted_address",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "69c50dac-4464-4ad3-a33b-c55795e95e62",
+          "name": "geometry",
+          "field_type": {
+            "typespec_id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTPBinHeaders",
+      "id": "004780b6-843d-423f-9a27-b5c7e8482d02",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c",
+          "name": "User-Agent",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
@@ -382,6 +382,17 @@
       }
     },
     {
+      "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
+      "name": "test 2",
+      "subject": {
+        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
+      },
+      "code": {
+        "expressions": [],
+        "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
+      }
+    },
+    {
       "id": "b4329d2a-ec64-4a3e-842b-b60330ab9ea7",
       "name": "moohaw",
       "subject": {
@@ -402,20 +413,87 @@
         "expressions": [],
         "id": "d6057d0e-04df-4abb-b759-105f8e3dc15a"
       }
-    },
-    {
-      "id": "5dec5b58-6798-43df-9783-0dcabd9238ed",
-      "name": "test 2",
-      "subject": {
-        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
-      },
-      "code": {
-        "expressions": [],
-        "id": "d26d5bd5-0bf0-42fb-aeb9-3eefc7dbad38"
-      }
     }
   ],
   "json_http_clients": [
+    {
+      "id": "c4d87a48-64ec-4fd8-a2b7-284ccd614275",
+      "url": "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyBI-24P0kBjKo9RE8bEberWIXFwURC4waY",
+      "gen_url": {
+        "expressions": [
+          {
+            "StringLiteral": {
+              "value": "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyBI-24P0kBjKo9RE8bEberWIXFwURC4waY",
+              "id": "96156903-c301-41bd-b459-cd60b4ad33c9"
+            }
+          }
+        ],
+        "id": "5fd4fee6-2329-4eaa-81b0-793ae17cbf67"
+      },
+      "name": "Reverse geocode",
+      "gen_url_params": {
+        "expressions": [
+          {
+            "ListLiteral": {
+              "id": "a2ee976c-9803-4d95-8b8d-27d5c47f684e",
+              "element_type": {
+                "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                "params": []
+              },
+              "elements": [
+                {
+                  "StructLiteral": {
+                    "id": "50a129a6-d284-47c3-a132-3231451c6a66",
+                    "struct_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                    "fields": [
+                      {
+                        "StructLiteralField": {
+                          "id": "7723fa90-fd64-4886-9709-0cb83efdd8d8",
+                          "struct_field_id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+                          "expr": {
+                            "StringLiteral": {
+                              "value": "address",
+                              "id": "41cc20b4-91d4-4426-b50c-50c14306f1db"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "StructLiteralField": {
+                          "id": "9e02d2b3-4e87-4067-ac5c-3316a960910b",
+                          "struct_field_id": "57607724-a63a-458e-9253-1e3efeb4de63",
+                          "expr": {
+                            "VariableReference": {
+                              "assignment_id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+                              "id": "dd751a28-4f8c-46a4-828f-fdbea2f275bc"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "id": "ed33d09e-472d-4dc7-80ed-807b7b6d537b"
+      },
+      "args": [
+        {
+          "id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "location"
+        }
+      ],
+      "return_type": {
+        "typespec_id": "16b174d4-5587-46cb-af53-494ed3380a4b",
+        "params": []
+      }
+    },
     {
       "id": "c47660bb-358b-4c5c-8354-99bc9fb506ab",
       "url": "https://httpbin.org/get",
@@ -514,84 +592,6 @@
       ],
       "return_type": {
         "typespec_id": "778c4ac1-3b76-40ec-9c36-1fe323c6ead8",
-        "params": []
-      }
-    },
-    {
-      "id": "c4d87a48-64ec-4fd8-a2b7-284ccd614275",
-      "url": "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyBI-24P0kBjKo9RE8bEberWIXFwURC4waY",
-      "gen_url": {
-        "expressions": [
-          {
-            "StringLiteral": {
-              "value": "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyBI-24P0kBjKo9RE8bEberWIXFwURC4waY",
-              "id": "96156903-c301-41bd-b459-cd60b4ad33c9"
-            }
-          }
-        ],
-        "id": "5fd4fee6-2329-4eaa-81b0-793ae17cbf67"
-      },
-      "name": "Reverse geocode",
-      "gen_url_params": {
-        "expressions": [
-          {
-            "ListLiteral": {
-              "id": "a2ee976c-9803-4d95-8b8d-27d5c47f684e",
-              "element_type": {
-                "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
-                "params": []
-              },
-              "elements": [
-                {
-                  "StructLiteral": {
-                    "id": "50a129a6-d284-47c3-a132-3231451c6a66",
-                    "struct_id": "b6566a28-8257-46a9-aa29-39d9add25173",
-                    "fields": [
-                      {
-                        "StructLiteralField": {
-                          "id": "7723fa90-fd64-4886-9709-0cb83efdd8d8",
-                          "struct_field_id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-                          "expr": {
-                            "StringLiteral": {
-                              "value": "address",
-                              "id": "41cc20b4-91d4-4426-b50c-50c14306f1db"
-                            }
-                          }
-                        }
-                      },
-                      {
-                        "StructLiteralField": {
-                          "id": "9e02d2b3-4e87-4067-ac5c-3316a960910b",
-                          "struct_field_id": "57607724-a63a-458e-9253-1e3efeb4de63",
-                          "expr": {
-                            "VariableReference": {
-                              "assignment_id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
-                              "id": "dd751a28-4f8c-46a4-828f-fdbea2f275bc"
-                            }
-                          }
-                        }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        ],
-        "id": "ed33d09e-472d-4dc7-80ed-807b7b6d537b"
-      },
-      "args": [
-        {
-          "id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
-          "arg_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          },
-          "short_name": "location"
-        }
-      ],
-      "return_type": {
-        "typespec_id": "16b174d4-5587-46cb-af53-494ed3380a4b",
         "params": []
       }
     },
@@ -1017,9 +1017,15 @@
                                                                       },
                                                                       "elements": [
                                                                         {
+                                                                          "VariableReference": {
+                                                                            "assignment_id": "5b5525b9-ab30-4a81-9022-a5d8ba89b30b",
+                                                                            "id": "9a9f81bf-a11f-4638-b390-e1b0501450c9"
+                                                                          }
+                                                                        },
+                                                                        {
                                                                           "StringLiteral": {
-                                                                            "value": "Weather for San Francisco, CA: ",
-                                                                            "id": "57a7043a-b33f-4a1b-b2a1-ce1a46932ce0"
+                                                                            "value": ": ",
+                                                                            "id": "97528ef8-4178-49c8-b5f0-7b0840349180"
                                                                           }
                                                                         },
                                                                         {
@@ -1054,7 +1060,7 @@
                                                                         },
                                                                         {
                                                                           "StringLiteral": {
-                                                                            "value": "f (feels like ",
+                                                                            "value": "°f (feels like ",
                                                                             "id": "d23f5992-f374-4555-aa21-147048694ae9"
                                                                           }
                                                                         },
@@ -1072,7 +1078,7 @@
                                                                         },
                                                                         {
                                                                           "StringLiteral": {
-                                                                            "value": ")",
+                                                                            "value": "°F)",
                                                                             "id": "87f6232d-139a-413c-8535-ea78f8c2801b"
                                                                           }
                                                                         }

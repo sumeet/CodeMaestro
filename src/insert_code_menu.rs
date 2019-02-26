@@ -346,7 +346,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
     fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
                env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
-        let input_str = search_params.lowercased_trimmed_search_str();
+        let input_str = &search_params.input_str;
         if let Some(ref return_type) = search_params.return_type {
             if return_type.matches_spec(&lang::STRING_TYPESPEC) {
                 options.push(self.string_literal_option(input_str.clone()));
@@ -366,7 +366,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
             // required for a placeholder node to have a type, meaning we need to know what the
             // type of a placeholder is to create it. under current conditions that's ok, but i
             // think we can make this less restrictive in the future if we need to
-            options.push(self.placeholder_option(input_str, return_type));
+            options.push(self.placeholder_option(input_str.clone(), return_type));
         } else {
             if let Some(list_search_query) = search_params.search_prefix("list") {
                 let matching_list_type_options = env_genie
@@ -377,14 +377,14 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     });
                 options.extend(matching_list_type_options)
             }
-            if "null".contains(&input_str) {
+            if search_params.search_matches_identifier("null") {
                 options.push(self.null_literal_option())
             }
             if let Some(number) = search_params.parse_number_input() {
                 options.push(self.number_literal_option(number))
             }
             if !input_str.is_empty() {
-                options.push(self.string_literal_option(input_str));
+                options.push(self.string_literal_option(input_str.clone()));
             }
         }
         options
