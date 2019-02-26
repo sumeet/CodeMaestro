@@ -700,6 +700,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         },
                         &|| {},
                     ),
+                    self.ui_toolkit.draw_text("Local variable: Message"),
                     self.render_code(chat_trigger.code.id, 0.9),
                 ])
             },

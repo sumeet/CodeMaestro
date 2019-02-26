@@ -18,12 +18,13 @@ lazy_static! {
     pub static ref MESSAGE_STRUCT_ID : uuid::Uuid = uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap();
 }
 
-pub fn new_message(sender: String, message: String) -> lang::Value {
+pub fn new_message(sender: String, argument_text: String, full_text: String) -> lang::Value {
     lang::Value::Struct {
         struct_id: *MESSAGE_STRUCT_ID,
         values: hashmap!{
             uuid::Uuid::parse_str("e01e6346-5c8f-4b1b-9723-cde0abf77ec0").unwrap() => lang::Value::String(sender),
-            uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(message),
+            uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(argument_text),
+            uuid::Uuid::parse_str("9a8d9059-a729-4660-b440-8ee7c411e70a").unwrap() => lang::Value::String(full_text),
         }
     }
 }

@@ -4,15 +4,12 @@ extern crate cs;
 
 use cs::asynk::{backward, forward, OldFuture};
 use itertools::Itertools;
-use maplit::hashmap;
 use std::cell::RefCell;
 use std::rc::Rc;
 use cs::builtins::ChatReply;
-use cs::builtins::new_message;
 use cs::resolve_all_futures;
 use cs::EnvGenie;
 use cs::env;
-use cs::lang::Function;
 use tokio::prelude::*;
 use irc::client::prelude::*;
 use irc::client::PackedIrcClient;
@@ -40,18 +37,13 @@ impl ChatThingy {
             env_genie.list_chat_triggers().cloned().collect_vec()
         };
 
-        let mut triggered_values = vec![];
-        let message = new_message(sender, text.clone());
+        let triggered_values = triggers.iter()
+            .filter_map(|ct| {
+                ct.try_to_trigger(self.interp.dup(), sender.clone(),
+                                  text.clone())
+            })
+            .collect_vec();
 
-        for chat_trigger in triggers {
-            // TODO: this starts_with stuff is hax but i just wanna test it!!!
-            if text.starts_with(&chat_trigger.prefix) {
-                let message_arg_id = chat_trigger.takes_args()[0].id;
-                triggered_values.push(chat_trigger.call(self.interp.dup(), hashmap! {
-                    message_arg_id => message.clone(),
-                }));
-            }
-        }
         async move {
             for value in triggered_values {
                 println!("there's a triggered value d00d");

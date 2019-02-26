@@ -181,6 +181,10 @@ fn get_args_for_code_block(code_block_id: lang::ID, function: &lang::Function) -
         } else if json_http_client.gen_url.id == code_block_id {
             return json_http_client.takes_args().into_iter()
         }
+    } else if let Some(chat_trigger) = function.downcast_ref::<ChatTrigger>() {
+        if chat_trigger.code.id == code_block_id {
+            return chat_trigger.takes_args().into_iter()
+        }
     }
     vec![].into_iter()
 }
