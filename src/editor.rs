@@ -523,7 +523,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let cmd_buffer = self.command_buffer.clone();
         self.ui_toolkit.draw_button("Run", GREY_COLOR, move ||{
             let mut cmd_buffer = cmd_buffer.borrow_mut();
-            cmd_buffer.run(&code_node, |val| {
+            cmd_buffer.run(&code_node, |_val| {
                 //println!("{:?}", val)
             });
         })
