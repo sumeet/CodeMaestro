@@ -15,6 +15,7 @@ use irc::client::prelude::*;
 use irc::client::PackedIrcClient;
 use irc_proto::{Command};
 use tokio::runtime::current_thread::Runtime;
+use futures::future::join_all;
 
 struct ChatThingy {
     interp: env::Interpreter,
@@ -54,12 +55,46 @@ impl ChatThingy {
     }
 }
 
-fn main() {
-    // i think this doesn't need to be rc refcell, i think we can just move it into the EventHandler
-    // for slack... BUT whatever for now i'm gonna share it with irc
-    let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
 
-    let config = Config {
+async fn new_irc_conn(mut config: Config, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+    config.version = Some("cs: program me!".to_string());
+    let irc_client_future = IrcClient::new_future(config).unwrap();
+    let PackedIrcClient(client,
+                        irc_future) = await!(forward(irc_client_future)).unwrap();
+    client.identify().unwrap();
+    let irc_future = backward(async move {
+        await!(forward(irc_future)).map_err(|e| println!("irc error: {:?}", e)).ok();
+        Ok::<(), ()>(())
+    });
+    await!(forward(backward(irc_interaction_future(client, chat_thingy)).join(irc_future))).ok();
+    Ok::<(), ()>(())
+}
+
+async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+    let mut stream = client.stream();
+    while let Some(message) = await!(stream.next()) {
+        if message.is_err() {
+            println!("there was an error: {:?}", message)
+        } else {
+            let message = message.unwrap();
+            println!("{:?}", message);
+            if let Command::PRIVMSG(sender, text) = &message.command {
+                if let Some(response_target) = message.response_target() {
+                    await!(chat_thingy.borrow_mut().message_received(sender.clone(), text.clone()));
+                    for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
+                        client.send_privmsg(response_target, &reply).map_err(|err| {
+                            println!("error sending msg: {:?}", err)
+                        }).ok();
+                    }
+                }
+            }
+        }
+    }
+    Ok::<(), ()>(())
+}
+
+fn darwin_config() -> Config {
+   Config {
         nickname: Some("cs".to_owned()),
         server: Some("irc.darwin.network".to_owned()),
         channels: Some(vec!["#darwin".to_owned()]),
@@ -67,54 +102,36 @@ fn main() {
         password: Some("smellyoulater".to_string()),
         port: Some(6697),
         ..Config::default()
-    };
-
-    let mut runtime = Runtime::new().unwrap();
-    let irc_client_future = IrcClient::new_future(config).unwrap();
-    let PackedIrcClient(client, irc_future) = runtime.block_on(irc_client_future).unwrap();
-
-    client.identify().unwrap();
-    let slaq = slack(Rc::clone(&chat_thingy));
-
-    let slack_future = backward(async move {
-        await!(forward(slaq)).unwrap();
-        Ok::<(), ()>(())
-    });
-
-    let thingy2 = Rc::clone(&chat_thingy);
-    let irc_interaction_future = backward(async move {
-        let mut stream = client.stream();
-        while let Some(message) = await!(stream.next()) {
-            if message.is_err() {
-                println!("there was an error: {:?}", message)
-            } else {
-                let message = message.unwrap();
-                println!("{:?}", message);
-                if let Command::PRIVMSG(sender, text) = &message.command {
-                    if let Some(response_target) = message.response_target() {
-                        await!(thingy2.borrow_mut().message_received(sender.clone(), text.clone()));
-                        for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
-                            client.send_privmsg(response_target, &reply).map_err(|_err| {
-                                ()
-                            })?;
-                        }
-                    }
-                }
-            }
-        }
-        Ok::<(), ()>(())
-    });
-
-    let irc_future = backward(async move {
-        await!(forward(irc_future)).unwrap();
-        Ok::<(), ()>(())
-    });
-
-    runtime.block_on(slack_future.join(irc_future).join(irc_interaction_future)).unwrap();
-
+    }
 }
 
-fn slack(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl OldFuture<Error = impl std::fmt::Debug> {
+fn esper_config() -> Config {
+    Config {
+        nickname: Some("cs".to_owned()),
+        server: Some("irc.esper.net".to_owned()),
+        channels: Some(vec!["#devnullzone".to_owned()]),
+        port: Some(6667),
+        ..Config::default()
+    }
+}
+
+fn main() {
+    let getrekt_slack_token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
+
+    let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
+
+    let futures : Vec<Box<dyn OldFuture<Item = (), Error = ()>>> = vec![
+        Box::new(backward(new_irc_conn(darwin_config(), Rc::clone(&chat_thingy)))),
+        Box::new(backward(new_irc_conn(esper_config(), Rc::clone(&chat_thingy)))),
+        Box::new(backward(slack(getrekt_slack_token, Rc::clone(&chat_thingy)))),
+    ];
+
+    let joined = join_all(futures);
+    Runtime::new().unwrap().block_on(joined).unwrap();
+}
+
+
+async fn slack(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     use slack::{Event, Message};
     use slack::api::MessageStandard;
     use slack::future::client::{Client, EventHandler};
@@ -175,7 +192,8 @@ fn slack(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl OldFuture<Error = impl st
         }
     }
 
-    let token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
-    Client::login_and_run(token, MyHandler { chat_thingy })
+    await!(forward(Client::login_and_run(token, MyHandler { chat_thingy })))
+        .map_err(|e| println!("slack error: {:?}", e)).ok();
+    Ok::<(), ()>(())
 }
 
