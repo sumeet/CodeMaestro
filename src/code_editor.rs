@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::iter;
 
 use itertools::Itertools;
 use gen_iter::GenIter;
@@ -353,10 +354,12 @@ impl CodeGenie {
     // update: yeah... for conditionals, we'll have to make another recursive call and keep searching
     // up parent blocks. i think we can do this! just have to find assignments that come before the
     // conditional itself
-    pub fn find_assignments_that_come_before_code(&self, node_id: lang::ID, is_inclusive: bool) -> Vec<&lang::Assignment> {
+    pub fn find_assignments_that_come_before_code<'a>(&'a self, node_id: lang::ID,
+                                                      is_inclusive: bool)
+        -> Box<Iterator<Item = &lang::Assignment> + 'a> {
         let block_expression_id = self.find_expression_inside_block_that_contains(node_id);
         if block_expression_id.is_none() {
-            return vec![]
+            return Box::new(iter::empty())
         }
         let block_expression_id = block_expression_id.unwrap();
         match self.find_parent(block_expression_id) {
@@ -365,16 +368,21 @@ impl CodeGenie {
                 // but then when we looked inside the block it didn't contain that expression. this
                 // really shouldn't happen
                 let mut position_in_block = block.find_position(block_expression_id).unwrap();
+                // the is_inclusive flag is used when doing a search for an `InsertionPoint::After`,
+                // when we actually want to include the node in the search. this doesn't have any
+                // meaning for when we recurse up the tree.
                 if is_inclusive {
                     position_in_block += 1;
                 }
-                block.expressions.iter()
+
+                Box::new(block.expressions.iter()
                     // position in the block is 0 indexed, so this will take every node up TO it
                     .take(position_in_block)
                     .filter_map(|code| code.into_assignment())
-                    .collect()
+                    .chain(self.find_assignments_that_come_before_code(block.id, false)))
             },
-            _ => vec![]
+            _ => panic!("this shouldn't have happened, find_expression_inside_block_that_contains \
+                         returned a node whose parent isn't a block")
         }
     }
 
