@@ -207,7 +207,8 @@ pub trait UiToolkit {
     type DrawResult;
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
-    fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult;
+    // if there's no `onclose` specified, then the window isn't closable and won't show a close button
+    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>, onclose: Option<G>) -> Self::DrawResult;
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, height_percentage: f32, handle_keypress: Option<F>) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
@@ -515,7 +516,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     &|| self.render_code(script.id(), 1.),
                     &|| self.render_run_button(script.code()))
             },
-            None::<fn(Keypress)>)
+            None::<fn(Keypress)>,
+            None::<fn()>)
     }
 
     fn render_run_button(&self, code_node: CodeNode) -> T::DrawResult {
@@ -551,7 +553,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 self.render_general_function_menu(code_func),
             ])
         },
-        None::<fn(Keypress)>)
+        None::<fn(Keypress)>,
+        None::<fn()>)
     }
 
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
@@ -606,7 +609,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 self.render_general_function_menu(pyfunc),
             ])
         },
-        None::<fn(Keypress)>)
+        None::<fn(Keypress)>,
+        None::<fn()>)
     }
 
     fn render_edit_jsfuncs(&self) -> T::DrawResult {
@@ -649,7 +653,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 self.render_general_function_menu(jsfunc),
             ])
         },
-        None::<fn(Keypress)>)
+        None::<fn(Keypress)>,
+        None::<fn()>)
     }
 
     fn render_edit_structs(&self) -> T::DrawResult {
@@ -704,6 +709,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
+            None::<fn()>,
         )
     }
 
@@ -778,7 +784,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-        )
+            None::<fn()>)
     }
 
     fn render_json_return_type_selector(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
@@ -944,6 +950,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
+            None::<fn()>,
         )
     }
 
@@ -1053,6 +1060,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
+            None::<fn()>,
         )
     }
 
@@ -1400,7 +1408,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_window("Console", &|| {
             self.ui_toolkit.draw_text_box(console)
         },
-        None::<fn(Keypress)>)
+        None::<fn(Keypress)>,
+        None::<fn()>)
     }
 
     fn render_code(&self, code_id: lang::ID, height_percentage: f32) -> T::DrawResult {

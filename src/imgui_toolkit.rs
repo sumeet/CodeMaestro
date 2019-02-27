@@ -193,28 +193,43 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         last_rhs();
     }
 
-    fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, f: &Fn(),
-                                              handle_keypress: Option<F>) {
+    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, f: &Fn(),
+                                                                 handle_keypress: Option<F>,
+                                                                 onclose: Option<G>) {
         let prev_window_size = self.state.borrow().prev_window_size;
         let prev_window_pos = self.state.borrow().prev_window_pos;
 
-        self.ui.window(&self.imlabel(window_name))
+        let mut should_stay_open = true;
+
+        let window_name = self.imlabel(window_name);
+        let mut window_builder = self.ui.window(&window_name)
             .size(INITIAL_WINDOW_SIZE, ImGuiCond::FirstUseEver)
             .scrollable(true)
-            .position((prev_window_pos.0, prev_window_size.1 + prev_window_pos.1), ImGuiCond::FirstUseEver)
-            .build(&|| {
-                f();
-                self.state.borrow_mut().prev_window_size = self.ui.get_window_size();
-                self.state.borrow_mut().prev_window_pos = self.ui.get_window_pos();
+            .position((prev_window_pos.0, prev_window_size.1 + prev_window_pos.1), ImGuiCond::FirstUseEver);
 
-                if let Some(keypress) = self.keypress {
-                    if self.ui.is_window_focused() {
-                        if let Some(ref handle_keypress) = handle_keypress {
-                            handle_keypress(keypress)
-                        }
+        if onclose.is_some() {
+            window_builder = window_builder.opened(&mut should_stay_open);
+        }
+
+        window_builder.build(&|| {
+            f();
+            self.state.borrow_mut().prev_window_size = self.ui.get_window_size();
+            self.state.borrow_mut().prev_window_pos = self.ui.get_window_pos();
+
+            if let Some(keypress) = self.keypress {
+                if self.ui.is_window_focused() {
+                    if let Some(ref handle_keypress) = handle_keypress {
+                        handle_keypress(keypress)
                     }
                 }
-            });
+            }
+        });
+
+        if let Some(onclose) = onclose {
+            if !should_stay_open {
+                onclose()
+            }
+        }
     }
 
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn(), height_percentage: f32, handle_keypress: Option<F>) {

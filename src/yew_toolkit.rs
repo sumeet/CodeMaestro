@@ -123,8 +123,8 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_window<F: Fn(Keypress) + 'static>(&self, window_name: &str, f: &Fn() -> Self::DrawResult,
-                                              handle_keypress: Option<F>) -> Self::DrawResult {
+    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, f: &Fn() -> Self::DrawResult,
+                                                                 handle_keypress: Option<F>, onclose: Option<G>) -> Self::DrawResult {
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
         if let Some(handle_keypress) = handle_keypress {
