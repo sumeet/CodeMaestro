@@ -39,13 +39,16 @@ impl ChatTrigger {
     // ".wz" => ""
     // ".wz sf" => "sf"
     fn strip_prefix<'a>(&'a self, text: &'a str) -> String {
-        let re = regex::Regex::new(&format!(r"^(?i){} ?",
-                                            regex::escape(&self.prefix))).unwrap();
-        re.replace_all(text, "").into()
+        self.prefix_re().replace_all(text, "").trim().into()
+    }
+
+    fn prefix_re(&self) -> regex::Regex {
+        let regex_str = format!(r"^(?i){}(?:\b+|$)",regex::escape(&self.prefix));
+        regex::Regex::new(&regex_str).unwrap()
     }
 
     pub fn try_to_trigger(&self, interpreter: env::Interpreter, sender: String, message_text: String) -> Option<lang::Value> {
-        if !message_text.to_lowercase().starts_with(&self.prefix.to_lowercase()) {
+        if !self.prefix_re().is_match(&message_text) {
             return None
         }
         let argument_text = self.strip_prefix(&message_text);

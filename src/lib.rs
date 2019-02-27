@@ -7,7 +7,6 @@
 #![feature(refcell_replace_swap)]
 #![feature(box_patterns)]
 #![feature(await_macro, async_await, futures_api)]
-#![feature(try_from)]
 #![feature(slice_patterns)]
 #![feature(drain_filter)]
 #![feature(generators)]

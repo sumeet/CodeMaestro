@@ -16,6 +16,7 @@ use irc::client::PackedIrcClient;
 use irc_proto::{Command};
 use tokio::runtime::current_thread::Runtime;
 use futures::future::join_all;
+use noob;
 
 struct ChatThingy {
     interp: env::Interpreter,
@@ -107,7 +108,7 @@ fn darwin_config() -> Config {
 
 fn esper_config() -> Config {
     Config {
-        nickname: Some("cs".to_owned()),
+        nickname: Some("ceeess".to_owned()),
         server: Some("irc.esper.net".to_owned()),
         channels: Some(vec!["#devnullzone".to_owned()]),
         port: Some(6667),
@@ -117,6 +118,8 @@ fn esper_config() -> Config {
 
 fn main() {
     let getrekt_slack_token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
+    let sandh_slack_token = "xoxb-562464349142-560290195488-MfjUZW4VTBYrDTO5wBzltnC6";
+    let discord_bot_token = "NTQ5OTAyOTcwMzg5NzkwNzIx.D1auqw.QN0-mQBA4KmLZImlaRVwJHRsImQ";
 
     let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
 
@@ -124,12 +127,35 @@ fn main() {
         Box::new(backward(new_irc_conn(darwin_config(), Rc::clone(&chat_thingy)))),
         Box::new(backward(new_irc_conn(esper_config(), Rc::clone(&chat_thingy)))),
         Box::new(backward(slack(getrekt_slack_token, Rc::clone(&chat_thingy)))),
+        Box::new(backward(slack(sandh_slack_token, Rc::clone(&chat_thingy)))),
+        Box::new(backward(discord(discord_bot_token, Rc::clone(&chat_thingy)))),
     ];
 
     let joined = join_all(futures);
     Runtime::new().unwrap().block_on(joined).unwrap();
 }
 
+
+async fn discord(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+    let (client, mut stream) = await!(forward(noob::Client::connect(token))).unwrap_or_else(|e| {
+        panic!("error connecting to discord: {:?}", e)
+    });
+    while let Some(event) = await!(stream.next()) {
+        match event {
+            Ok(noob::Event::MessageCreate(msg)) => {
+                await!(chat_thingy.borrow_mut().message_received(msg.author.username, msg.content));
+
+                for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
+                    await!(forward(client.send_message(&noob::MessageBuilder::new(&reply), &msg.channel_id)))
+                        .map_err(|e| println!("error sending discord message: {:?}", e)).ok();
+                }
+            }
+            Err(e) => println!("there was a discord error: {:?}", e),
+            _ => (),
+        }
+    }
+    Ok::<(), ()>(())
+}
 
 async fn slack(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     use slack::{Event, Message};
@@ -169,9 +195,9 @@ async fn slack(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Res
                             await!(chat_thingy.borrow_mut().message_received(sender, text));
 
                             for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
-                                msg_sender.send_message(&channel, &reply).map_err(|_err| {
-                                    ()
-                                })?;
+                                msg_sender.send_message(&channel, &reply).map_err(|err| {
+                                    println!("error sending slack message: {:?}", err)
+                                }).ok();
                             }
                             Ok(())
                         }))
