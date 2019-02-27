@@ -422,7 +422,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_main_menu_bar(),
             self.render_scripts(),
             self.render_console_window(),
-            self.render_error_window(),
             self.render_edit_code_funcs(),
             self.render_edit_pyfuncs(),
             self.render_edit_jsfuncs(),
@@ -1400,15 +1399,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let console = self.env_genie.read_console();
         self.ui_toolkit.draw_window("Console", &|| {
             self.ui_toolkit.draw_text_box(console)
-        },
-        None::<fn(Keypress)>)
-    }
-
-    fn render_error_window(&self) -> T::DrawResult {
-//        let error_console = self.controller.read_error_console();
-        let error_console = "UNDER CONSTRUCTION";
-        self.ui_toolkit.draw_window("Errors", &|| {
-            self.ui_toolkit.draw_text_box(error_console)
         },
         None::<fn(Keypress)>)
     }
