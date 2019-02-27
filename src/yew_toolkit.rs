@@ -160,7 +160,9 @@ impl UiToolkit for YewToolkit {
                     }, >
 
                     <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
-                    { f() }
+                    <div class="window-content",>
+                        { f() }
+                    </div>
                 </div>
             }
         } else {
@@ -169,7 +171,9 @@ impl UiToolkit for YewToolkit {
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0, >
                     <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
-                    { f() }
+                    <div class="window-content",>
+                        { f() }
+                    </div>
                 </div>
             }
         }
