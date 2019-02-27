@@ -43,6 +43,18 @@
   font-family: 'Maestro';
 }
 
+.window {
+    overflow: auto;
+    margin: 0.1em;
+    width: 25%;
+}
+
+.window-title {
+    padding: 0.25em;
+    padding-left: 0.4em;
+    margin-top: 0px;
+}
+
 .overlay-wrapper {
   position: relative;
 }

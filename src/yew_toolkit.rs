@@ -131,7 +131,7 @@ impl UiToolkit for YewToolkit {
             let handle_keypress_1 = Rc::new(handle_keypress);
             let handle_keypress_2 = Rc::clone(&handle_keypress_1);
             html! {
-                <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+                <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     onkeypress=|e| {
@@ -159,16 +159,16 @@ impl UiToolkit for YewToolkit {
                         }
                     }, >
 
-                    <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
+                    <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
                     { f() }
                 </div>
             }
         } else {
             html! {
-                <div style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+                <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0, >
-                    <h4 style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
+                    <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
                     { f() }
                 </div>
             }
