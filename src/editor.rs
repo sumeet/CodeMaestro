@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::iter;
 use std::boxed::FnBox;
 
+use super::builtins;
 use super::chat_trigger::ChatTrigger;
 use super::env;
 use super::lang;
@@ -29,6 +30,7 @@ use super::json2;
 use super::tests;
 use super::json_http_client::JSONHTTPClient;
 use super::json_http_client_builder::JSONHTTPClientBuilder;
+use std::collections::HashSet;
 
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
@@ -94,10 +96,15 @@ pub struct Controller {
     code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
     test_result_by_func_id: HashMap<ID, TestResult>,
     json_client_builder_by_func_id: HashMap<ID, JSONHTTPClientBuilder>,
+    // a record of the builtins kept here so we know which things are builtins
+    // and which things aren't. we don't want to let people modify builtins
+    builtins: builtins::Builtins,
+
+    pub open_windows: HashSet<lang::ID>,
 }
 
 impl<'a> Controller {
-    pub fn new() -> Controller {
+    pub fn new(builtins: builtins::Builtins) -> Controller {
         Controller {
             test_result_by_func_id: HashMap::new(),
             code_editor_by_id: HashMap::new(),
@@ -105,6 +112,8 @@ impl<'a> Controller {
             test_by_id: HashMap::new(),
             selected_test_id_by_subject: HashMap::new(),
             json_client_builder_by_func_id: HashMap::new(),
+            builtins,
+            open_windows: HashSet::new(),
         }
     }
 
@@ -129,17 +138,16 @@ impl<'a> Controller {
     }
 
     fn save(&self, env: &env::ExecutionEnvironment) {
-        let env_genie = env_genie::EnvGenie::new(env);
         let theworld = code_loading::TheWorld {
             scripts: self.script_by_id.values().cloned().collect(),
-            codefuncs: env_genie.list_code_funcs().cloned().collect(),
-            pyfuncs: env_genie.list_pyfuncs().cloned().collect(),
-            jsfuncs: env_genie.list_jsfuncs().cloned().collect(),
-            structs: env_genie.list_structs().cloned().collect(),
-            enums: env_genie.list_enums().cloned().collect(),
             tests: self.test_by_id.values().cloned().collect(),
-            json_http_clients: env_genie.list_json_http_clients().cloned().collect(),
-            chat_triggers: env_genie.list_chat_triggers().cloned().collect(),
+            // save all non-builtin functions and typespecs
+            functions: env.functions.values()
+                .filter(|f| !self.builtins.is_builtin(f.id()))
+                .cloned().collect(),
+            typespecs: env.typespecs.values()
+                .filter(|ts| !self.builtins.is_builtin(ts.id()))
+                .cloned().collect(),
         };
         code_loading::save("codesample.json", &theworld).unwrap();
     }
@@ -418,6 +426,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
     }
 
+    pub fn list_open_functions(&self) -> impl Iterator<Item = &lang::Function> {
+        self.env_genie.all_functions()
+            .filter(move |func| self.controller.open_windows.contains(&func.id()))
+            .map(|b| b.as_ref())
+    }
+
+    pub fn list_open_typespecs(&self) -> impl Iterator<Item = &lang::TypeSpec> {
+        self.env_genie.typespecs()
+            .filter(move |ts| self.controller.open_windows.contains(&ts.id()))
+            .map(|b| b.as_ref())
+    }
+
+
     pub fn render_app(&self) -> T::DrawResult {
         self.ui_toolkit.draw_all(vec![
             self.render_main_menu_bar(),
@@ -497,13 +518,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_code_funcs(&self) -> T::DrawResult {
-        let code_funcs = self.env_genie.list_code_funcs();
+        let code_funcs = self.list_open_functions()
+            .filter_map(|func| func.downcast_ref::<code_function::CodeFunction>());
         self.ui_toolkit.draw_all(code_funcs.map(|f| self.render_edit_code_func(f)).collect())
     }
 
     fn render_scripts(&self) -> T::DrawResult {
+        let open_scripts = self.controller.script_by_id.values()
+            .filter(|script| self.controller.open_windows.contains(&script.id()));
         self.ui_toolkit.draw_all(
-            self.controller.script_by_id.values().map(|script| {
+            open_scripts.map(|script| {
                 self.render_script(script)
             }).collect()
         )
@@ -558,7 +582,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
-        let pyfuncs = self.env_genie.list_pyfuncs();
+        let pyfuncs = self.list_open_functions()
+            .filter_map(|func| func.downcast_ref::<pystuff::PyFunc>());
         self.ui_toolkit.draw_all(pyfuncs.map(|f| self.render_edit_pyfunc(f)).collect())
     }
 
@@ -614,7 +639,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_jsfuncs(&self) -> T::DrawResult {
-        let jsfuncs = self.env_genie.list_jsfuncs();
+        let jsfuncs = self.list_open_functions()
+            .filter_map(|func| func.downcast_ref::<jsstuff::JSFunc>());
         self.ui_toolkit.draw_all(jsfuncs.map(|f| self.render_edit_jsfunc(f)).collect())
     }
 
@@ -658,18 +684,21 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_structs(&self) -> T::DrawResult {
-        let structs = self.env_genie.list_structs();
+        let structs = self.list_open_typespecs()
+            .filter_map(|ts| ts.downcast_ref::<structs::Struct>());
         self.ui_toolkit.draw_all(structs.map(|s| self.render_edit_struct(s)).collect())
     }
 
     fn render_edit_enums(&self) -> T::DrawResult {
-        let enums = self.env_genie.list_enums();
+        let enums = self.list_open_typespecs()
+            .filter_map(|ts| ts.downcast_ref::<enums::Enum>());
         self.ui_toolkit.draw_all(enums.map(|e| self.render_edit_enum(e)).collect())
     }
 
 
     fn render_chat_triggers(&self) -> T::DrawResult {
-        let triggers = self.env_genie.list_chat_triggers();
+        let triggers = self.list_open_functions()
+            .filter_map(|func| func.downcast_ref::<ChatTrigger>());
         self.ui_toolkit.draw_all(triggers.map(|trigger| self.render_chat_trigger(trigger)).collect())
     }
 

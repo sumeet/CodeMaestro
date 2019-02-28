@@ -120,29 +120,6 @@ use imgui_toolkit::draw_app;
 #[cfg(feature = "javascript")]
 use yew_toolkit::draw_app;
 
-#[cfg(feature = "default")]
-fn load_externalfuncs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) {
-    for pyfunc in world.pyfuncs.iter() {
-        env.add_function(pyfunc.clone());
-    }
-}
-
-#[cfg(feature = "javascript")]
-fn load_externalfuncs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) {
-    for jsfunc in world.jsfuncs.iter() {
-        env.add_function(jsfunc.clone());
-    }
-}
-
-fn load_structs(env: &mut ExecutionEnvironment, world: &code_loading::TheWorld) {
-    for strukt in world.structs.iter() {
-        env.add_typespec(strukt.clone());
-    }
-    for eneom in world.enums.iter() {
-        env.add_typespec(eneom.clone());
-    }
-}
-
 pub fn main() {
     async_executor::with_executor_context(|async_executor| {
         let app = App::new_rc();
@@ -151,18 +128,17 @@ pub fn main() {
 }
 
 // TODO: this is a mess
-fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::CommandBuffer) -> Controller {
-    let mut controller = Controller::new();
+fn init_controller(interpreter: &env::Interpreter) -> Controller {
+    let builtins = builtins::Builtins::load().unwrap();
+
+    let mut controller = Controller::new(builtins.clone());
     let codestring = include_str!("../codesample.json");
     let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
 
     let env = interpreter.env();
     let mut env = env.borrow_mut();
 
-    load_builtins(&mut env).unwrap();
-
-    load_externalfuncs(&mut env, &the_world);
-    load_structs(&mut env, &the_world);
+    load_builtins(builtins, &mut env);
 
     for script in the_world.scripts {
         controller.load_script(script)
@@ -170,17 +146,11 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
     for test in the_world.tests {
         controller.load_test(test);
     }
-    for code_func in the_world.codefuncs {
-        env.add_function(code_func.clone());
-        cmd_buffer.load_code_func(code_func)
+    for function in the_world.functions {
+        env.add_function_box(function);
     }
-    for json_http_client in the_world.json_http_clients {
-        env.add_function(json_http_client.clone());
-        cmd_buffer.load_json_http_client(json_http_client)
-    }
-    for chat_trigger in the_world.chat_triggers {
-        env.add_function(chat_trigger.clone());
-        cmd_buffer.load_chat_trigger(chat_trigger)
+    for typespec in the_world.typespecs {
+        env.add_typespec_box(typespec);
     }
 
     //_save_builtins(&env).unwrap();
@@ -188,15 +158,13 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
     controller
 }
 
-fn load_builtins(env: &mut ExecutionEnvironment) -> Result<(), Box<std::error::Error>> {
-    let mut builtins = builtins::Builtins::load()?;
-    for (_, func) in builtins.funcs.drain() {
-        env.add_function_box(func);
+fn load_builtins(builtins: builtins::Builtins, env: &mut ExecutionEnvironment) {
+    for func in builtins.funcs.values() {
+        env.add_function_box(func.clone());
     }
-    for (_, ts) in builtins.typespecs.drain() {
-        env.add_typespec_box(ts)
+    for ts in builtins.typespecs.values() {
+        env.add_typespec_box(ts.clone())
     }
-    Ok(())
 }
 
 // this is only ever used when changing builtins
@@ -241,8 +209,8 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         let interpreter = env::Interpreter::new();
-        let mut command_buffer = editor::CommandBuffer::new();
-        let controller = init_controller(&interpreter, &mut command_buffer);
+        let command_buffer = editor::CommandBuffer::new();
+        let controller = init_controller(&interpreter);
         let command_buffer =
             Rc::new(RefCell::new(command_buffer));
         Self {

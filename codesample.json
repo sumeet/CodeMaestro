@@ -61,6 +61,122 @@
   "jsfuncs": [],
   "structs": [
     {
+      "name": "CurrentWeather",
+      "id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "768a3669-c839-42ee-9612-d5ef3d715d60",
+          "name": "apparentTemperature",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "d2728cb0-4ede-45df-a09c-d991d18ffeea",
+          "name": "cloudCover",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "43389b5d-3b27-4fca-85b4-70f09249c644",
+          "name": "dewPoint",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "95ac8491-11ef-4984-a617-5764957de6cc",
+          "name": "humidity",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "d67802fd-bfd2-4df6-abae-b7f62ce7995f",
+          "name": "summary",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "357fe902-d534-46eb-b166-6c892a887584",
+          "name": "temperature",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Geometry",
+      "id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "34b6ea41-b900-466a-89da-7f12786964e5",
+          "name": "location",
+          "field_type": {
+            "typespec_id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Location",
+      "id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da",
+          "name": "lat",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "35814f1a-c51c-4f06-a25d-7405d339edf5",
+          "name": "lng",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
       "name": "AddressComponents",
       "id": "047390c9-217b-4023-b35a-f66e93393f0e",
       "symbol": "",
@@ -84,15 +200,61 @@
       ]
     },
     {
-      "name": "DarkSkyResponse",
-      "id": "778c4ac1-3b76-40ec-9c36-1fe323c6ead8",
+      "name": "HTTPBinHeaders",
+      "id": "004780b6-843d-423f-9a27-b5c7e8482d02",
       "symbol": "",
       "fields": [
         {
-          "id": "e06361e4-7d75-4310-9f7a-1705b963c7b3",
-          "name": "currently",
+          "id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c",
+          "name": "User-Agent",
           "field_type": {
-            "typespec_id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "HTTPBinResp2",
+      "id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "03dab062-205a-430a-91f0-ae56744e1c38",
+          "name": "headers",
+          "field_type": {
+            "typespec_id": "004780b6-843d-423f-9a27-b5c7e8482d02",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat Message",
+      "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
+          "name": "argument text",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
+          "name": "sender",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "9a8d9059-a729-4660-b440-8ee7c411e70a",
+          "name": "full text (including trigger)",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
           }
         }
@@ -155,76 +317,6 @@
       ]
     },
     {
-      "name": "CurrentWeather",
-      "id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "768a3669-c839-42ee-9612-d5ef3d715d60",
-          "name": "apparentTemperature",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "d2728cb0-4ede-45df-a09c-d991d18ffeea",
-          "name": "cloudCover",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "43389b5d-3b27-4fca-85b4-70f09249c644",
-          "name": "dewPoint",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "95ac8491-11ef-4984-a617-5764957de6cc",
-          "name": "humidity",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "d67802fd-bfd2-4df6-abae-b7f62ce7995f",
-          "name": "summary",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "357fe902-d534-46eb-b166-6c892a887584",
-          "name": "temperature",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTPBinResp2",
-      "id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "03dab062-205a-430a-91f0-ae56744e1c38",
-          "name": "headers",
-          "field_type": {
-            "typespec_id": "004780b6-843d-423f-9a27-b5c7e8482d02",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
       "name": "HTTP Response",
       "id": "31d96c85-5966-4866-a90a-e6db3707b140",
       "symbol": "",
@@ -248,72 +340,44 @@
       ]
     },
     {
-      "name": "Geometry",
-      "id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
+      "name": "DarkSkyResponse",
+      "id": "778c4ac1-3b76-40ec-9c36-1fe323c6ead8",
       "symbol": "",
       "fields": [
         {
-          "id": "34b6ea41-b900-466a-89da-7f12786964e5",
-          "name": "location",
+          "id": "e06361e4-7d75-4310-9f7a-1705b963c7b3",
+          "name": "currently",
           "field_type": {
-            "typespec_id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "Location",
-      "id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da",
-          "name": "lat",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "35814f1a-c51c-4f06-a25d-7405d339edf5",
-          "name": "lng",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
-      "name": "HTTPBinHeaders",
-      "id": "004780b6-843d-423f-9a27-b5c7e8482d02",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c",
-          "name": "User-Agent",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "typespec_id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
             "params": []
           }
         }
       ]
     }
   ],
-  "enums": [],
-  "tests": [
+  "enums": [
     {
-      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
-      "name": "test 1",
-      "subject": {
-        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
-      },
-      "code": {
-        "expressions": [],
-        "id": "704015a2-c231-4082-8007-babca16f62a1"
-      }
-    },
+      "name": "Result",
+      "id": "ffd15538-175e-4f60-8acd-c24222ddd664",
+      "symbol": "",
+      "variants": [
+        {
+          "name": "Ok",
+          "id": "f70c799a-1d63-4293-889d-55c07a7456a0",
+          "variant_type": null
+        },
+        {
+          "name": "Error",
+          "id": "9f22e23e-d9b9-49c2-acf2-43a59598ea86",
+          "variant_type": {
+            "typespec_id": "a6ad92ed-1b21-44fe-9ad0-e08326acd6f6",
+            "params": []
+          }
+        }
+      ]
+    }
+  ],
+  "tests": [
     {
       "id": "b4329d2a-ec64-4a3e-842b-b60330ab9ea7",
       "name": "moohaw",
@@ -323,6 +387,17 @@
       "code": {
         "expressions": [],
         "id": "67f94b3c-3526-4ed4-abc2-65ceb2cc3fa1"
+      }
+    },
+    {
+      "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",
+      "name": "test 1",
+      "subject": {
+        "Function": "e367ac96-fd58-45c5-a462-3439d0eaefc7"
+      },
+      "code": {
+        "expressions": [],
+        "id": "704015a2-c231-4082-8007-babca16f62a1"
       }
     },
     {
@@ -616,148 +691,6 @@
     }
   ],
   "chat_triggers": [
-    {
-      "id": "684a2a6c-8390-4233-8a43-d8e9306e5e37",
-      "prefix": ".hello",
-      "name": "Hello world",
-      "code": {
-        "expressions": [
-          {
-            "Assignment": {
-              "name": "httpbin resp",
-              "expression": {
-                "FunctionCall": {
-                  "function_reference": {
-                    "FunctionReference": {
-                      "function_id": "db74ce0b-e606-4703-aa80-bf3f62c2c905",
-                      "id": "4f2a6005-7b0b-4910-a288-5dd1c088875e"
-                    }
-                  },
-                  "args": [
-                    {
-                      "Argument": {
-                        "id": "564b3397-52d3-43ab-82b4-c3231581bf94",
-                        "argument_definition_id": "443c19c0-aa25-40e9-86ee-42e5aa632339",
-                        "expr": {
-                          "StringLiteral": {
-                            "value": "this isn't used",
-                            "id": "e3129061-f880-411f-ba5e-e50dd7155082"
-                          }
-                        }
-                      }
-                    }
-                  ],
-                  "id": "d218be55-8c55-408b-a441-72669450fff4"
-                }
-              },
-              "id": "5622fc05-d4a1-4e19-afd0-a415b1d54a63"
-            }
-          },
-          {
-            "Match": {
-              "id": "0702d2e6-fa56-4fc7-96c2-9c5f6f58fba2",
-              "match_expression": {
-                "VariableReference": {
-                  "assignment_id": "5622fc05-d4a1-4e19-afd0-a415b1d54a63",
-                  "id": "e2a02deb-b782-42e4-9e21-5d6006eec7d6"
-                }
-              },
-              "branch_by_variant_id": {
-                "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
-                  "Block": {
-                    "expressions": [
-                      {
-                        "FunctionCall": {
-                          "function_reference": {
-                            "FunctionReference": {
-                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
-                              "id": "5bb8c4c1-3088-4633-ba89-2cf72532f564"
-                            }
-                          },
-                          "args": [
-                            {
-                              "Argument": {
-                                "id": "db468033-7ed5-4d5e-8953-3b44fa2ec3c2",
-                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
-                                "expr": {
-                                  "StringLiteral": {
-                                    "value": "there was some kind of error",
-                                    "id": "004d3f43-a0e3-4c70-a267-9a3c18bd1145"
-                                  }
-                                }
-                              }
-                            }
-                          ],
-                          "id": "1ce13537-50c8-4fa4-91b9-5a634db71297"
-                        }
-                      }
-                    ],
-                    "id": "2dd62a5f-5223-449f-80ca-89c2008f0649"
-                  }
-                },
-                "f70c799a-1d63-4293-889d-55c07a7456a0": {
-                  "Block": {
-                    "expressions": [
-                      {
-                        "Assignment": {
-                          "name": "resp",
-                          "expression": {
-                            "StructFieldGet": {
-                              "id": "c8242edd-dec9-4184-b0ed-9cbf08e1602a",
-                              "struct_expr": {
-                                "VariableReference": {
-                                  "assignment_id": "22157a18-dbe5-5a3e-b311-173f6c83c897",
-                                  "id": "a158d42f-c082-453f-ab83-694abc8c578f"
-                                }
-                              },
-                              "struct_field_id": "03dab062-205a-430a-91f0-ae56744e1c38"
-                            }
-                          },
-                          "id": "0088fd73-3023-4b38-bcbb-265030904b22"
-                        }
-                      },
-                      {
-                        "FunctionCall": {
-                          "function_reference": {
-                            "FunctionReference": {
-                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
-                              "id": "4b9b74d9-fbc4-42f4-b274-b0bfec5181fd"
-                            }
-                          },
-                          "args": [
-                            {
-                              "Argument": {
-                                "id": "fb92db84-c75f-44d5-b8c7-27e7863eedeb",
-                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
-                                "expr": {
-                                  "StructFieldGet": {
-                                    "id": "919dabcb-eb2a-4099-a372-cd56d8c7211d",
-                                    "struct_expr": {
-                                      "VariableReference": {
-                                        "assignment_id": "0088fd73-3023-4b38-bcbb-265030904b22",
-                                        "id": "2c37d0ca-a584-48c3-a451-7cf5e050710a"
-                                      }
-                                    },
-                                    "struct_field_id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c"
-                                  }
-                                }
-                              }
-                            }
-                          ],
-                          "id": "f5f4cb8b-8763-42c2-a0ea-2a82a2e3c61d"
-                        }
-                      }
-                    ],
-                    "id": "eb0f4f68-de3a-4ab9-8047-4006a0fbb18f"
-                  }
-                }
-              }
-            }
-          }
-        ],
-        "id": "c80119a4-181c-4544-a9b6-2de350f1582a"
-      }
-    },
     {
       "id": "4526cde2-fc36-43a5-ad09-d2ade6359422",
       "prefix": ".wz",
@@ -1263,6 +1196,148 @@
       }
     },
     {
+      "id": "684a2a6c-8390-4233-8a43-d8e9306e5e37",
+      "prefix": ".hello",
+      "name": "Hello world",
+      "code": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "httpbin resp",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "db74ce0b-e606-4703-aa80-bf3f62c2c905",
+                      "id": "4f2a6005-7b0b-4910-a288-5dd1c088875e"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "564b3397-52d3-43ab-82b4-c3231581bf94",
+                        "argument_definition_id": "443c19c0-aa25-40e9-86ee-42e5aa632339",
+                        "expr": {
+                          "StringLiteral": {
+                            "value": "this isn't used",
+                            "id": "e3129061-f880-411f-ba5e-e50dd7155082"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "d218be55-8c55-408b-a441-72669450fff4"
+                }
+              },
+              "id": "5622fc05-d4a1-4e19-afd0-a415b1d54a63"
+            }
+          },
+          {
+            "Match": {
+              "id": "0702d2e6-fa56-4fc7-96c2-9c5f6f58fba2",
+              "match_expression": {
+                "VariableReference": {
+                  "assignment_id": "5622fc05-d4a1-4e19-afd0-a415b1d54a63",
+                  "id": "e2a02deb-b782-42e4-9e21-5d6006eec7d6"
+                }
+              },
+              "branch_by_variant_id": {
+                "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                              "id": "5bb8c4c1-3088-4633-ba89-2cf72532f564"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "db468033-7ed5-4d5e-8953-3b44fa2ec3c2",
+                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                "expr": {
+                                  "StringLiteral": {
+                                    "value": "there was some kind of error",
+                                    "id": "004d3f43-a0e3-4c70-a267-9a3c18bd1145"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "1ce13537-50c8-4fa4-91b9-5a634db71297"
+                        }
+                      }
+                    ],
+                    "id": "2dd62a5f-5223-449f-80ca-89c2008f0649"
+                  }
+                },
+                "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "Assignment": {
+                          "name": "resp",
+                          "expression": {
+                            "StructFieldGet": {
+                              "id": "c8242edd-dec9-4184-b0ed-9cbf08e1602a",
+                              "struct_expr": {
+                                "VariableReference": {
+                                  "assignment_id": "22157a18-dbe5-5a3e-b311-173f6c83c897",
+                                  "id": "a158d42f-c082-453f-ab83-694abc8c578f"
+                                }
+                              },
+                              "struct_field_id": "03dab062-205a-430a-91f0-ae56744e1c38"
+                            }
+                          },
+                          "id": "0088fd73-3023-4b38-bcbb-265030904b22"
+                        }
+                      },
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                              "id": "4b9b74d9-fbc4-42f4-b274-b0bfec5181fd"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "fb92db84-c75f-44d5-b8c7-27e7863eedeb",
+                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                "expr": {
+                                  "StructFieldGet": {
+                                    "id": "919dabcb-eb2a-4099-a372-cd56d8c7211d",
+                                    "struct_expr": {
+                                      "VariableReference": {
+                                        "assignment_id": "0088fd73-3023-4b38-bcbb-265030904b22",
+                                        "id": "2c37d0ca-a584-48c3-a451-7cf5e050710a"
+                                      }
+                                    },
+                                    "struct_field_id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "f5f4cb8b-8763-42c2-a0ea-2a82a2e3c61d"
+                        }
+                      }
+                    ],
+                    "id": "eb0f4f68-de3a-4ab9-8047-4006a0fbb18f"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "id": "c80119a4-181c-4544-a9b6-2de350f1582a"
+      }
+    },
+    {
       "id": "850ea191-50e6-4338-a274-c562b0adda78",
       "prefix": ".wzc",
       "name": "weather celcius",
@@ -1765,6 +1840,1692 @@
         ],
         "id": "95c1d6e5-55f1-4ee9-9022-212b28d41369"
       }
+    }
+  ],
+  "functions": [
+    {
+      "type": "JSONHTTPClient",
+      "id": "c4d87a48-64ec-4fd8-a2b7-284ccd614275",
+      "url": "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyBI-24P0kBjKo9RE8bEberWIXFwURC4waY",
+      "gen_url": {
+        "expressions": [
+          {
+            "StringLiteral": {
+              "value": "https://maps.googleapis.com/maps/api/geocode/json?key=AIzaSyBI-24P0kBjKo9RE8bEberWIXFwURC4waY",
+              "id": "96156903-c301-41bd-b459-cd60b4ad33c9"
+            }
+          }
+        ],
+        "id": "5fd4fee6-2329-4eaa-81b0-793ae17cbf67"
+      },
+      "name": "Reverse geocode",
+      "gen_url_params": {
+        "expressions": [
+          {
+            "ListLiteral": {
+              "id": "a2ee976c-9803-4d95-8b8d-27d5c47f684e",
+              "element_type": {
+                "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                "params": []
+              },
+              "elements": [
+                {
+                  "StructLiteral": {
+                    "id": "50a129a6-d284-47c3-a132-3231451c6a66",
+                    "struct_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                    "fields": [
+                      {
+                        "StructLiteralField": {
+                          "id": "7723fa90-fd64-4886-9709-0cb83efdd8d8",
+                          "struct_field_id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+                          "expr": {
+                            "StringLiteral": {
+                              "value": "address",
+                              "id": "41cc20b4-91d4-4426-b50c-50c14306f1db"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "StructLiteralField": {
+                          "id": "9e02d2b3-4e87-4067-ac5c-3316a960910b",
+                          "struct_field_id": "57607724-a63a-458e-9253-1e3efeb4de63",
+                          "expr": {
+                            "VariableReference": {
+                              "assignment_id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+                              "id": "dd751a28-4f8c-46a4-828f-fdbea2f275bc"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "id": "ed33d09e-472d-4dc7-80ed-807b7b6d537b"
+      },
+      "args": [
+        {
+          "id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "location"
+        }
+      ],
+      "return_type": {
+        "typespec_id": "16b174d4-5587-46cb-af53-494ed3380a4b",
+        "params": []
+      }
+    },
+    {
+      "type": "ChatTrigger",
+      "id": "4526cde2-fc36-43a5-ad09-d2ade6359422",
+      "prefix": ".wz",
+      "name": "weather (us units)",
+      "code": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "reverse_geocode_result",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "c4d87a48-64ec-4fd8-a2b7-284ccd614275",
+                      "id": "bee3929c-1184-487d-9bc5-9b824bb266f5"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "0d21dee3-77e2-48d1-99f7-97e62ca768e2",
+                        "argument_definition_id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+                        "expr": {
+                          "StructFieldGet": {
+                            "id": "2d4c3ca2-822c-403d-8e74-d8608ce95fa6",
+                            "struct_expr": {
+                              "VariableReference": {
+                                "assignment_id": "159dc4f3-3f37-44da-b979-d4a41a9273cf",
+                                "id": "7009fd7f-adbb-4cdc-9378-41107384fbc4"
+                              }
+                            },
+                            "struct_field_id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "b93cddb5-63a2-4f7e-bfa9-91256184b036"
+                }
+              },
+              "id": "2b678da5-3d8c-46a5-93e6-5cae6cec733e"
+            }
+          },
+          {
+            "Match": {
+              "id": "76bd8f83-ce9b-44c7-a667-601833b6306a",
+              "match_expression": {
+                "VariableReference": {
+                  "assignment_id": "2b678da5-3d8c-46a5-93e6-5cae6cec733e",
+                  "id": "11b0b1f5-ef73-4a74-99d9-065df2a718fd"
+                }
+              },
+              "branch_by_variant_id": {
+                "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                              "id": "8d631d69-d6d3-4d07-8abf-ab4b85046075"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "e2792735-7cc9-4c7b-b5e4-32d5cd0a029a",
+                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                "expr": {
+                                  "StringLiteral": {
+                                    "value": "there was some error",
+                                    "id": "9e184575-116d-4ad4-94f7-7c24c14ee8c0"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "a98ec055-be63-45d5-85a1-405a6d1ae113"
+                        }
+                      }
+                    ],
+                    "id": "346b6e9a-0fcf-4792-b910-77f18e6e5527"
+                  }
+                },
+                "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "Assignment": {
+                          "name": "results",
+                          "expression": {
+                            "StructFieldGet": {
+                              "id": "7b010d23-d0e2-4adb-835f-391a270d9b4d",
+                              "struct_expr": {
+                                "VariableReference": {
+                                  "assignment_id": "10718be0-c209-5b17-9d8d-0504ce85ba5b",
+                                  "id": "c9dc4da4-b61c-49ec-ba02-36b29aa1d33a"
+                                }
+                              },
+                              "struct_field_id": "48623a8a-6164-4c4a-8572-25db7ae52d3f"
+                            }
+                          },
+                          "id": "e4e63eaa-945a-4549-811f-b3e9b6fb51d3"
+                        }
+                      },
+                      {
+                        "Assignment": {
+                          "name": "result",
+                          "expression": {
+                            "ListIndex": {
+                              "id": "5b9d84ca-e189-4fd1-9956-37ba8883dec7",
+                              "list_expr": {
+                                "VariableReference": {
+                                  "assignment_id": "e4e63eaa-945a-4549-811f-b3e9b6fb51d3",
+                                  "id": "2c59c65b-61a8-4084-990a-0b211a76bc92"
+                                }
+                              },
+                              "index_expr": {
+                                "NumberLiteral": {
+                                  "id": "361ca00c-ef98-4dcf-864d-b902e2ffb4c9",
+                                  "value": 0
+                                }
+                              }
+                            }
+                          },
+                          "id": "4a5b9aba-8e5b-4283-921d-2b6ab7d361c5"
+                        }
+                      },
+                      {
+                        "Match": {
+                          "id": "d001557c-ac37-497c-8413-d83bcb29117d",
+                          "match_expression": {
+                            "VariableReference": {
+                              "assignment_id": "4a5b9aba-8e5b-4283-921d-2b6ab7d361c5",
+                              "id": "e7ba4fa3-6731-454b-8692-ce162bddabd3"
+                            }
+                          },
+                          "branch_by_variant_id": {
+                            "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                              "Block": {
+                                "expressions": [
+                                  {
+                                    "FunctionCall": {
+                                      "function_reference": {
+                                        "FunctionReference": {
+                                          "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                                          "id": "90534deb-2bb3-44ee-8919-e0f66f88d907"
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "Argument": {
+                                            "id": "6674c078-2174-400e-b983-9f49a370bf30",
+                                            "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                            "expr": {
+                                              "StringLiteral": {
+                                                "value": "couldn't find that location",
+                                                "id": "1a696e27-7355-4a3b-ae4c-c77fea7d9b6e"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "id": "0ae32736-2733-4238-94d3-e283a0103968"
+                                    }
+                                  }
+                                ],
+                                "id": "2fa6ac7d-e1b2-4cbd-a519-fd8345c9c312"
+                              }
+                            },
+                            "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                              "Block": {
+                                "expressions": [
+                                  {
+                                    "Assignment": {
+                                      "name": "location_string",
+                                      "expression": {
+                                        "StructFieldGet": {
+                                          "id": "1e1dd733-fca8-4286-b90b-6f7a14e73c32",
+                                          "struct_expr": {
+                                            "VariableReference": {
+                                              "assignment_id": "a4490988-a2ae-5cc3-a88a-92cf9d8ef722",
+                                              "id": "6368ed50-9bcf-4b48-8376-9d96fbf883e1"
+                                            }
+                                          },
+                                          "struct_field_id": "e722a8c6-9e2a-4c5a-918e-9c5f90df0b98"
+                                        }
+                                      },
+                                      "id": "9e199b2c-932a-4789-a97a-b9bb7e9a8229"
+                                    }
+                                  },
+                                  {
+                                    "Assignment": {
+                                      "name": "geometry",
+                                      "expression": {
+                                        "StructFieldGet": {
+                                          "id": "0fa8f3c4-7524-4fca-b006-90b0c8f52951",
+                                          "struct_expr": {
+                                            "VariableReference": {
+                                              "assignment_id": "a4490988-a2ae-5cc3-a88a-92cf9d8ef722",
+                                              "id": "5c1c80f8-1b94-4043-a115-5f7ce844016c"
+                                            }
+                                          },
+                                          "struct_field_id": "69c50dac-4464-4ad3-a33b-c55795e95e62"
+                                        }
+                                      },
+                                      "id": "072fdc6e-f8c7-42fc-bbe6-5c1809912ea2"
+                                    }
+                                  },
+                                  {
+                                    "Assignment": {
+                                      "name": "location",
+                                      "expression": {
+                                        "StructFieldGet": {
+                                          "id": "757067f0-9279-4806-afd7-d3d4e789c57d",
+                                          "struct_expr": {
+                                            "VariableReference": {
+                                              "assignment_id": "072fdc6e-f8c7-42fc-bbe6-5c1809912ea2",
+                                              "id": "9d23bd47-5013-42b5-a2d2-057cf22da037"
+                                            }
+                                          },
+                                          "struct_field_id": "34b6ea41-b900-466a-89da-7f12786964e5"
+                                        }
+                                      },
+                                      "id": "6b674239-9116-4013-91a4-9469c3c35644"
+                                    }
+                                  },
+                                  {
+                                    "Assignment": {
+                                      "name": "weather",
+                                      "expression": {
+                                        "FunctionCall": {
+                                          "function_reference": {
+                                            "FunctionReference": {
+                                              "function_id": "c47660bb-358b-4c5c-8354-99bc9fb506ab",
+                                              "id": "e1bc4095-5d13-434f-9444-b4145172ca1e"
+                                            }
+                                          },
+                                          "args": [
+                                            {
+                                              "Argument": {
+                                                "id": "3b7aedd5-0214-491e-bbd3-d9afb354c6c0",
+                                                "argument_definition_id": "2311c8c9-cdc1-45b1-905e-2718e628b3c3",
+                                                "expr": {
+                                                  "StructFieldGet": {
+                                                    "id": "6d52cf28-111f-42b8-a0d5-d9ef99752c12",
+                                                    "struct_expr": {
+                                                      "VariableReference": {
+                                                        "assignment_id": "6b674239-9116-4013-91a4-9469c3c35644",
+                                                        "id": "2272280b-3b80-4f13-a238-67cbec864a45"
+                                                      }
+                                                    },
+                                                    "struct_field_id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "Argument": {
+                                                "id": "ef70eaf7-7903-475b-86d4-46aa485d0ee4",
+                                                "argument_definition_id": "c8520dc0-a163-4a87-847d-9f2c221ff714",
+                                                "expr": {
+                                                  "StructFieldGet": {
+                                                    "id": "62eb16dc-f6fd-454f-9da2-a6bb58feb2b3",
+                                                    "struct_expr": {
+                                                      "VariableReference": {
+                                                        "assignment_id": "6b674239-9116-4013-91a4-9469c3c35644",
+                                                        "id": "64624054-4020-4c48-88fd-e3b07452a493"
+                                                      }
+                                                    },
+                                                    "struct_field_id": "35814f1a-c51c-4f06-a25d-7405d339edf5"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "Argument": {
+                                                "id": "a97821cc-6102-42d9-9a92-7c7b030c2a40",
+                                                "argument_definition_id": "0b6cde3c-c496-46d4-b93d-55fae6771cdd",
+                                                "expr": {
+                                                  "StringLiteral": {
+                                                    "value": "us",
+                                                    "id": "f3dc668f-fe01-49fb-8508-054023942253"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          ],
+                                          "id": "840cfbff-b88a-4bb7-8c4b-c31275278421"
+                                        }
+                                      },
+                                      "id": "1b61fd2e-897e-482e-abb9-2ab19326aa30"
+                                    }
+                                  },
+                                  {
+                                    "Match": {
+                                      "id": "35b65f65-06e0-4a00-ba43-f35f9d576666",
+                                      "match_expression": {
+                                        "VariableReference": {
+                                          "assignment_id": "1b61fd2e-897e-482e-abb9-2ab19326aa30",
+                                          "id": "f613538a-e960-462d-a0d6-fb0e64bdc972"
+                                        }
+                                      },
+                                      "branch_by_variant_id": {
+                                        "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                                          "Block": {
+                                            "expressions": [
+                                              {
+                                                "FunctionCall": {
+                                                  "function_reference": {
+                                                    "FunctionReference": {
+                                                      "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                                                      "id": "8f87e976-fa0d-4ead-925e-59d3c083c313"
+                                                    }
+                                                  },
+                                                  "args": [
+                                                    {
+                                                      "Argument": {
+                                                        "id": "2278e2d4-c922-45db-ab4d-3cd7e16038f9",
+                                                        "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                                        "expr": {
+                                                          "StringLiteral": {
+                                                            "value": "there was a problem getting weather",
+                                                            "id": "5b7ec543-9b00-4098-82f2-627b43228f2c"
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  ],
+                                                  "id": "e6c910d4-ec84-46ec-9b9f-bb46b00a71c1"
+                                                }
+                                              }
+                                            ],
+                                            "id": "f99d6d48-e011-422b-9311-01ae3129ef64"
+                                          }
+                                        },
+                                        "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                                          "Block": {
+                                            "expressions": [
+                                              {
+                                                "Assignment": {
+                                                  "name": "current",
+                                                  "expression": {
+                                                    "StructFieldGet": {
+                                                      "id": "24f3cc83-29d6-4e63-88ba-1618894fe33c",
+                                                      "struct_expr": {
+                                                        "VariableReference": {
+                                                          "assignment_id": "bdcabde6-901e-5d0d-a539-4e8f6b3e8ccc",
+                                                          "id": "23d352a7-49ff-42cf-b6c1-e856fdf60b62"
+                                                        }
+                                                      },
+                                                      "struct_field_id": "e06361e4-7d75-4310-9f7a-1705b963c7b3"
+                                                    }
+                                                  },
+                                                  "id": "1012bcd7-8370-4b20-a5ca-9a4732644e9b"
+                                                }
+                                              },
+                                              {
+                                                "FunctionCall": {
+                                                  "function_reference": {
+                                                    "FunctionReference": {
+                                                      "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                                                      "id": "a033c36b-bc78-49e5-9b47-654d94ba7bdf"
+                                                    }
+                                                  },
+                                                  "args": [
+                                                    {
+                                                      "Argument": {
+                                                        "id": "eb2fbdbe-39a2-4f2d-9e8b-675d55eba248",
+                                                        "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                                        "expr": {
+                                                          "FunctionCall": {
+                                                            "function_reference": {
+                                                              "FunctionReference": {
+                                                                "function_id": "024247f6-3202-4acc-8d9a-b80a427cda3c",
+                                                                "id": "c6cb8675-3bf8-4533-8517-14e3882fc290"
+                                                              }
+                                                            },
+                                                            "args": [
+                                                              {
+                                                                "Argument": {
+                                                                  "id": "b2dd70dd-88be-4437-b71c-d23f63487e6e",
+                                                                  "argument_definition_id": "78cf269a-2a29-4325-9a18-8d84132485ed",
+                                                                  "expr": {
+                                                                    "ListLiteral": {
+                                                                      "id": "c287566e-49ec-4deb-abf3-b2c1dd165263",
+                                                                      "element_type": {
+                                                                        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                                                                        "params": []
+                                                                      },
+                                                                      "elements": [
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": "Weather for ",
+                                                                            "id": "64f23d8a-5442-459c-83ce-0ec70ce0fb9c"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "VariableReference": {
+                                                                            "assignment_id": "9e199b2c-932a-4789-a97a-b9bb7e9a8229",
+                                                                            "id": "c714d9bb-a260-43fb-925c-ec572dd89d6d"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": ": ",
+                                                                            "id": "15e2cbeb-25a4-458f-893f-f70b6a568aae"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StructFieldGet": {
+                                                                            "id": "59fd5e6b-620e-481f-86d1-dceaaab8cb40",
+                                                                            "struct_expr": {
+                                                                              "VariableReference": {
+                                                                                "assignment_id": "1012bcd7-8370-4b20-a5ca-9a4732644e9b",
+                                                                                "id": "77cc4c1c-0490-404e-a797-88fc57012c06"
+                                                                              }
+                                                                            },
+                                                                            "struct_field_id": "d67802fd-bfd2-4df6-abae-b7f62ce7995f"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": ", ",
+                                                                            "id": "0db92a8a-0294-4a63-b744-4f96a433489e"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StructFieldGet": {
+                                                                            "id": "21575ff2-ac9f-4e0d-ba18-41956bc74aeb",
+                                                                            "struct_expr": {
+                                                                              "VariableReference": {
+                                                                                "assignment_id": "1012bcd7-8370-4b20-a5ca-9a4732644e9b",
+                                                                                "id": "f41212c7-975f-4453-adf3-9e4a7560d42a"
+                                                                              }
+                                                                            },
+                                                                            "struct_field_id": "357fe902-d534-46eb-b166-6c892a887584"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": "°F (feels like ",
+                                                                            "id": "7292384a-fd2f-4b85-a35f-51237174f5fb"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StructFieldGet": {
+                                                                            "id": "5cf649b6-ac8b-4654-9aa5-71424a74b1aa",
+                                                                            "struct_expr": {
+                                                                              "VariableReference": {
+                                                                                "assignment_id": "1012bcd7-8370-4b20-a5ca-9a4732644e9b",
+                                                                                "id": "eea7af30-4aee-4907-b7c1-ee5e6a938df2"
+                                                                              }
+                                                                            },
+                                                                            "struct_field_id": "768a3669-c839-42ee-9612-d5ef3d715d60"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": "°F)",
+                                                                            "id": "98472c3c-3565-4293-8625-bb7fa50f521b"
+                                                                          }
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            ],
+                                                            "id": "3ffe7cf9-0d97-444b-8429-5a7f99881939"
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  ],
+                                                  "id": "78f948fe-59a9-4e0f-add8-15065dbd279c"
+                                                }
+                                              }
+                                            ],
+                                            "id": "c6310063-4f9f-4e64-b91d-6b16b73c1d34"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                ],
+                                "id": "2b1cd71c-579f-4d5e-ba2e-adb2e816d9b1"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "id": "3fd6d1d7-3186-4835-a479-5af611522a08"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "id": "f83bf363-1706-4cbc-a6b4-65492d995453"
+      }
+    },
+    {
+      "type": "JSONHTTPClient",
+      "id": "c47660bb-358b-4c5c-8354-99bc9fb506ab",
+      "url": "https://httpbin.org/get",
+      "gen_url": {
+        "expressions": [
+          {
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "024247f6-3202-4acc-8d9a-b80a427cda3c",
+                  "id": "3e96bf63-d4bc-4f60-ae2d-67cb94720119"
+                }
+              },
+              "args": [
+                {
+                  "Argument": {
+                    "id": "19d8ceaa-e44b-4db5-9697-292ba0f30432",
+                    "argument_definition_id": "78cf269a-2a29-4325-9a18-8d84132485ed",
+                    "expr": {
+                      "ListLiteral": {
+                        "id": "4f5150a3-ae6e-4851-a4ce-8e3c1100f296",
+                        "element_type": {
+                          "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                          "params": []
+                        },
+                        "elements": [
+                          {
+                            "StringLiteral": {
+                              "value": "https://api.darksky.net/forecast/6c8b978813186f754574e379133303a6/",
+                              "id": "631d99cf-4a22-43d8-af1c-0cb47d626597"
+                            }
+                          },
+                          {
+                            "VariableReference": {
+                              "assignment_id": "2311c8c9-cdc1-45b1-905e-2718e628b3c3",
+                              "id": "7a2893a8-544a-4d70-aa03-66c9eef15549"
+                            }
+                          },
+                          {
+                            "StringLiteral": {
+                              "value": ",",
+                              "id": "fad05373-e689-40ef-a00f-e19d32bf3a29"
+                            }
+                          },
+                          {
+                            "VariableReference": {
+                              "assignment_id": "c8520dc0-a163-4a87-847d-9f2c221ff714",
+                              "id": "5f99bc0d-84df-4e26-be62-e04b7874c08e"
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "af680bf9-583e-409b-a500-ae725de92b6f"
+            }
+          }
+        ],
+        "id": "46d8b402-8d99-4ba5-9484-1bb8aed9c835"
+      },
+      "name": "Weather forecast",
+      "gen_url_params": {
+        "expressions": [
+          {
+            "ListLiteral": {
+              "id": "0bdf3d64-3616-4265-ad1d-687049a4a205",
+              "element_type": {
+                "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                "params": []
+              },
+              "elements": [
+                {
+                  "StructLiteral": {
+                    "id": "37b38906-e8d8-46be-a3d2-246a0f745c84",
+                    "struct_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                    "fields": [
+                      {
+                        "StructLiteralField": {
+                          "id": "087d66af-7d42-4e79-b7be-506c43990dc1",
+                          "struct_field_id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+                          "expr": {
+                            "StringLiteral": {
+                              "value": "units",
+                              "id": "2a2b082e-afd3-4962-8363-05d106977b92"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "StructLiteralField": {
+                          "id": "ee33b856-c7f8-4088-bcdc-6626f736065f",
+                          "struct_field_id": "57607724-a63a-458e-9253-1e3efeb4de63",
+                          "expr": {
+                            "VariableReference": {
+                              "assignment_id": "0b6cde3c-c496-46d4-b93d-55fae6771cdd",
+                              "id": "346cae3d-6984-4c30-8e39-af4fdf573ad5"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "id": "4d2b27d7-fddb-4117-a3db-f571cf469c09"
+      },
+      "args": [
+        {
+          "id": "2311c8c9-cdc1-45b1-905e-2718e628b3c3",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "lat"
+        },
+        {
+          "id": "c8520dc0-a163-4a87-847d-9f2c221ff714",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "long"
+        },
+        {
+          "id": "0b6cde3c-c496-46d4-b93d-55fae6771cdd",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "units"
+        }
+      ],
+      "return_type": {
+        "typespec_id": "778c4ac1-3b76-40ec-9c36-1fe323c6ead8",
+        "params": []
+      }
+    },
+    {
+      "type": "ChatTrigger",
+      "id": "684a2a6c-8390-4233-8a43-d8e9306e5e37",
+      "prefix": ".hello",
+      "name": "Hello world",
+      "code": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "httpbin resp",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "db74ce0b-e606-4703-aa80-bf3f62c2c905",
+                      "id": "4f2a6005-7b0b-4910-a288-5dd1c088875e"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "564b3397-52d3-43ab-82b4-c3231581bf94",
+                        "argument_definition_id": "443c19c0-aa25-40e9-86ee-42e5aa632339",
+                        "expr": {
+                          "StringLiteral": {
+                            "value": "this isn't used",
+                            "id": "e3129061-f880-411f-ba5e-e50dd7155082"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "d218be55-8c55-408b-a441-72669450fff4"
+                }
+              },
+              "id": "5622fc05-d4a1-4e19-afd0-a415b1d54a63"
+            }
+          },
+          {
+            "Match": {
+              "id": "0702d2e6-fa56-4fc7-96c2-9c5f6f58fba2",
+              "match_expression": {
+                "VariableReference": {
+                  "assignment_id": "5622fc05-d4a1-4e19-afd0-a415b1d54a63",
+                  "id": "e2a02deb-b782-42e4-9e21-5d6006eec7d6"
+                }
+              },
+              "branch_by_variant_id": {
+                "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                              "id": "5bb8c4c1-3088-4633-ba89-2cf72532f564"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "db468033-7ed5-4d5e-8953-3b44fa2ec3c2",
+                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                "expr": {
+                                  "StringLiteral": {
+                                    "value": "there was some kind of error",
+                                    "id": "004d3f43-a0e3-4c70-a267-9a3c18bd1145"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "1ce13537-50c8-4fa4-91b9-5a634db71297"
+                        }
+                      }
+                    ],
+                    "id": "2dd62a5f-5223-449f-80ca-89c2008f0649"
+                  }
+                },
+                "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "Assignment": {
+                          "name": "resp",
+                          "expression": {
+                            "StructFieldGet": {
+                              "id": "c8242edd-dec9-4184-b0ed-9cbf08e1602a",
+                              "struct_expr": {
+                                "VariableReference": {
+                                  "assignment_id": "22157a18-dbe5-5a3e-b311-173f6c83c897",
+                                  "id": "a158d42f-c082-453f-ab83-694abc8c578f"
+                                }
+                              },
+                              "struct_field_id": "03dab062-205a-430a-91f0-ae56744e1c38"
+                            }
+                          },
+                          "id": "0088fd73-3023-4b38-bcbb-265030904b22"
+                        }
+                      },
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                              "id": "4b9b74d9-fbc4-42f4-b274-b0bfec5181fd"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "fb92db84-c75f-44d5-b8c7-27e7863eedeb",
+                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                "expr": {
+                                  "StructFieldGet": {
+                                    "id": "919dabcb-eb2a-4099-a372-cd56d8c7211d",
+                                    "struct_expr": {
+                                      "VariableReference": {
+                                        "assignment_id": "0088fd73-3023-4b38-bcbb-265030904b22",
+                                        "id": "2c37d0ca-a584-48c3-a451-7cf5e050710a"
+                                      }
+                                    },
+                                    "struct_field_id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "f5f4cb8b-8763-42c2-a0ea-2a82a2e3c61d"
+                        }
+                      }
+                    ],
+                    "id": "eb0f4f68-de3a-4ab9-8047-4006a0fbb18f"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "id": "c80119a4-181c-4544-a9b6-2de350f1582a"
+      }
+    },
+    {
+      "type": "JSONHTTPClient",
+      "id": "db74ce0b-e606-4703-aa80-bf3f62c2c905",
+      "url": "https://httpbin.org/get",
+      "gen_url": {
+        "expressions": [
+          {
+            "StringLiteral": {
+              "value": "https://httpbin.org/get",
+              "id": "bdcf690c-eaf8-4603-b8ff-75d511fc824a"
+            }
+          }
+        ],
+        "id": "bcf13be2-31bf-469f-9f81-7b31b71b2726"
+      },
+      "name": "HTTPBin Get",
+      "gen_url_params": {
+        "expressions": [
+          {
+            "ListLiteral": {
+              "id": "5d19cba5-e4e4-402c-9326-a84081b5c567",
+              "element_type": {
+                "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                "params": []
+              },
+              "elements": []
+            }
+          }
+        ],
+        "id": "ffb68e6a-91ad-4b4c-ab0f-8648e0cc32ae"
+      },
+      "args": [
+        {
+          "id": "443c19c0-aa25-40e9-86ee-42e5aa632339",
+          "arg_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          },
+          "short_name": "location"
+        }
+      ],
+      "return_type": {
+        "typespec_id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
+        "params": []
+      }
+    },
+    {
+      "type": "ChatTrigger",
+      "id": "850ea191-50e6-4338-a274-c562b0adda78",
+      "prefix": ".wzc",
+      "name": "weather celcius",
+      "code": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "reverse geocode result",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "c4d87a48-64ec-4fd8-a2b7-284ccd614275",
+                      "id": "c9103642-c4ca-4ce3-ac53-2f8dc359d4db"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "c0db3473-63f2-49c6-b8ed-b20cda83d242",
+                        "argument_definition_id": "c51c3b15-2bd1-430f-b56f-7a54b642c4ee",
+                        "expr": {
+                          "StructFieldGet": {
+                            "id": "0606d910-8fbf-440d-9568-60837f7d5d33",
+                            "struct_expr": {
+                              "VariableReference": {
+                                "assignment_id": "159dc4f3-3f37-44da-b979-d4a41a9273cf",
+                                "id": "7a5e3cf5-dc76-4b38-a53c-9503329fbc1c"
+                              }
+                            },
+                            "struct_field_id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "04cb00ae-bcc1-4981-9ac3-6c0ffcd557ca"
+                }
+              },
+              "id": "dbba421f-4ba4-4c36-8c0b-ba73b7d74a04"
+            }
+          },
+          {
+            "Match": {
+              "id": "ef7ab229-c4ce-4a68-a72d-561d76914dd6",
+              "match_expression": {
+                "VariableReference": {
+                  "assignment_id": "dbba421f-4ba4-4c36-8c0b-ba73b7d74a04",
+                  "id": "4a97bcab-62ef-4423-9869-7b3af7f1cf88"
+                }
+              },
+              "branch_by_variant_id": {
+                "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "FunctionCall": {
+                          "function_reference": {
+                            "FunctionReference": {
+                              "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                              "id": "b1ed9aa5-90d4-46db-868b-6624a7a8039c"
+                            }
+                          },
+                          "args": [
+                            {
+                              "Argument": {
+                                "id": "874bc07d-c138-4983-b861-bbe182dd89cd",
+                                "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                "expr": {
+                                  "StringLiteral": {
+                                    "value": "there was some error",
+                                    "id": "afee5ab0-7cd2-4edc-9c5d-5af7c9870975"
+                                  }
+                                }
+                              }
+                            }
+                          ],
+                          "id": "fc6697d5-fd32-4de4-81b9-3dc78fa03621"
+                        }
+                      }
+                    ],
+                    "id": "2a8c1ac9-603c-4665-9d7b-7ebee445a05c"
+                  }
+                },
+                "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                  "Block": {
+                    "expressions": [
+                      {
+                        "Assignment": {
+                          "name": "results",
+                          "expression": {
+                            "StructFieldGet": {
+                              "id": "6f5b5cf3-9b8f-43aa-9b45-db71c09c1253",
+                              "struct_expr": {
+                                "VariableReference": {
+                                  "assignment_id": "6dd8dfd6-ecc5-593d-9c73-c1694bdbf465",
+                                  "id": "a2d2844a-e3ba-431a-b215-a9ac7f52e24e"
+                                }
+                              },
+                              "struct_field_id": "48623a8a-6164-4c4a-8572-25db7ae52d3f"
+                            }
+                          },
+                          "id": "b90e580d-dd1c-4667-8b7c-3f721f75b900"
+                        }
+                      },
+                      {
+                        "Assignment": {
+                          "name": "result",
+                          "expression": {
+                            "ListIndex": {
+                              "id": "0a155ea1-8cf6-4d97-a71c-d16e0ca74fc1",
+                              "list_expr": {
+                                "VariableReference": {
+                                  "assignment_id": "b90e580d-dd1c-4667-8b7c-3f721f75b900",
+                                  "id": "581de811-c80c-42a5-b147-ae84647f99a4"
+                                }
+                              },
+                              "index_expr": {
+                                "NumberLiteral": {
+                                  "id": "c7e04307-7ae1-48fa-a61d-f453efa8a367",
+                                  "value": 0
+                                }
+                              }
+                            }
+                          },
+                          "id": "116197a3-592f-401c-9b89-96f434d5eb5b"
+                        }
+                      },
+                      {
+                        "Match": {
+                          "id": "cd49eace-be58-405f-bddd-196c9dbada46",
+                          "match_expression": {
+                            "VariableReference": {
+                              "assignment_id": "116197a3-592f-401c-9b89-96f434d5eb5b",
+                              "id": "432ef116-bf39-4f41-8653-90c9e4eee8fe"
+                            }
+                          },
+                          "branch_by_variant_id": {
+                            "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                              "Block": {
+                                "expressions": [
+                                  {
+                                    "FunctionCall": {
+                                      "function_reference": {
+                                        "FunctionReference": {
+                                          "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                                          "id": "99e55130-21d1-4675-b83f-a7dbaadb6896"
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "Argument": {
+                                            "id": "e5e6dbfb-9657-446d-a020-6496d0a68c09",
+                                            "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                            "expr": {
+                                              "StringLiteral": {
+                                                "value": "couldn't find that location",
+                                                "id": "4672de30-eb5b-481d-b07b-ebf482f9ac31"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "id": "3246b2bc-ac93-4ea9-b54c-bd45b927486d"
+                                    }
+                                  }
+                                ],
+                                "id": "6b62a0c0-3d0f-4104-8dd9-44fd79d43ae1"
+                              }
+                            },
+                            "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                              "Block": {
+                                "expressions": [
+                                  {
+                                    "Assignment": {
+                                      "name": "location_string",
+                                      "expression": {
+                                        "StructFieldGet": {
+                                          "id": "f62dfcd2-eafa-4363-b742-2cbdafd68aff",
+                                          "struct_expr": {
+                                            "VariableReference": {
+                                              "assignment_id": "1ce8f470-57fb-5fbe-8ab8-c0acf9053993",
+                                              "id": "261d5c1f-8f51-41b7-b89e-6f6c473dc483"
+                                            }
+                                          },
+                                          "struct_field_id": "e722a8c6-9e2a-4c5a-918e-9c5f90df0b98"
+                                        }
+                                      },
+                                      "id": "5b5525b9-ab30-4a81-9022-a5d8ba89b30b"
+                                    }
+                                  },
+                                  {
+                                    "Assignment": {
+                                      "name": "geometry",
+                                      "expression": {
+                                        "StructFieldGet": {
+                                          "id": "60b63d6c-7eb2-4872-9a0a-4ad93ace330b",
+                                          "struct_expr": {
+                                            "VariableReference": {
+                                              "assignment_id": "1ce8f470-57fb-5fbe-8ab8-c0acf9053993",
+                                              "id": "9a9cc6da-90e5-43fc-aa7f-9d53a6ec0970"
+                                            }
+                                          },
+                                          "struct_field_id": "69c50dac-4464-4ad3-a33b-c55795e95e62"
+                                        }
+                                      },
+                                      "id": "e9ce67ae-c285-4dfa-ba70-c206a057e978"
+                                    }
+                                  },
+                                  {
+                                    "Assignment": {
+                                      "name": "location",
+                                      "expression": {
+                                        "StructFieldGet": {
+                                          "id": "90539f42-97b4-4c73-9ac2-07c9b1628e32",
+                                          "struct_expr": {
+                                            "VariableReference": {
+                                              "assignment_id": "e9ce67ae-c285-4dfa-ba70-c206a057e978",
+                                              "id": "493ea676-56be-4054-b7a4-a1778037ecd6"
+                                            }
+                                          },
+                                          "struct_field_id": "34b6ea41-b900-466a-89da-7f12786964e5"
+                                        }
+                                      },
+                                      "id": "7837e8f8-79a7-4965-bbbd-e19d2f2c9f8f"
+                                    }
+                                  },
+                                  {
+                                    "Assignment": {
+                                      "name": "weather",
+                                      "expression": {
+                                        "FunctionCall": {
+                                          "function_reference": {
+                                            "FunctionReference": {
+                                              "function_id": "c47660bb-358b-4c5c-8354-99bc9fb506ab",
+                                              "id": "e3df5cce-9b13-46c3-a43d-340e9055c5db"
+                                            }
+                                          },
+                                          "args": [
+                                            {
+                                              "Argument": {
+                                                "id": "e1bd6d34-ddfd-4693-addb-6300e0e5e001",
+                                                "argument_definition_id": "2311c8c9-cdc1-45b1-905e-2718e628b3c3",
+                                                "expr": {
+                                                  "StructFieldGet": {
+                                                    "id": "4e8f76a1-2f77-46bf-a3f5-cd6395331419",
+                                                    "struct_expr": {
+                                                      "VariableReference": {
+                                                        "assignment_id": "7837e8f8-79a7-4965-bbbd-e19d2f2c9f8f",
+                                                        "id": "445faa3b-e914-44f7-906a-fe85ef5ba6c7"
+                                                      }
+                                                    },
+                                                    "struct_field_id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "Argument": {
+                                                "id": "e32c59b0-3939-40df-b7bb-ed5d8a491f94",
+                                                "argument_definition_id": "c8520dc0-a163-4a87-847d-9f2c221ff714",
+                                                "expr": {
+                                                  "StructFieldGet": {
+                                                    "id": "04acaa4a-ce2f-4cc5-a7bf-9ba10a9b8133",
+                                                    "struct_expr": {
+                                                      "VariableReference": {
+                                                        "assignment_id": "7837e8f8-79a7-4965-bbbd-e19d2f2c9f8f",
+                                                        "id": "b0b9d29a-9bf0-4bb2-adc5-29fec9b7dd76"
+                                                      }
+                                                    },
+                                                    "struct_field_id": "35814f1a-c51c-4f06-a25d-7405d339edf5"
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            {
+                                              "Argument": {
+                                                "id": "36243c2c-b36a-4209-b9bf-5001c5211e37",
+                                                "argument_definition_id": "0b6cde3c-c496-46d4-b93d-55fae6771cdd",
+                                                "expr": {
+                                                  "StringLiteral": {
+                                                    "value": "si",
+                                                    "id": "cb9ff712-21ba-41ff-b845-7cd465133ace"
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          ],
+                                          "id": "017337c6-cf22-452c-b986-704f92426d99"
+                                        }
+                                      },
+                                      "id": "b8a63427-eba0-4b82-891d-79dbd3b5fe49"
+                                    }
+                                  },
+                                  {
+                                    "Match": {
+                                      "id": "2fd398c1-cbd6-4831-b830-1275dd8d954e",
+                                      "match_expression": {
+                                        "VariableReference": {
+                                          "assignment_id": "b8a63427-eba0-4b82-891d-79dbd3b5fe49",
+                                          "id": "8b524537-d56e-4cfb-88d2-d20fafca7aa4"
+                                        }
+                                      },
+                                      "branch_by_variant_id": {
+                                        "9f22e23e-d9b9-49c2-acf2-43a59598ea86": {
+                                          "Block": {
+                                            "expressions": [
+                                              {
+                                                "FunctionCall": {
+                                                  "function_reference": {
+                                                    "FunctionReference": {
+                                                      "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                                                      "id": "b9ef92e8-e274-486d-999e-46a76a836c9d"
+                                                    }
+                                                  },
+                                                  "args": [
+                                                    {
+                                                      "Argument": {
+                                                        "id": "5229601e-10ee-4080-8233-b45c2d1c7907",
+                                                        "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                                        "expr": {
+                                                          "StringLiteral": {
+                                                            "value": "there was a problem getting weather",
+                                                            "id": "571a7210-8742-423f-9cac-a00e16b1cd7a"
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  ],
+                                                  "id": "b762e1e8-019e-4612-9422-bdbd66172ac9"
+                                                }
+                                              }
+                                            ],
+                                            "id": "aae48395-fb55-484e-baee-56edc21e56ea"
+                                          }
+                                        },
+                                        "f70c799a-1d63-4293-889d-55c07a7456a0": {
+                                          "Block": {
+                                            "expressions": [
+                                              {
+                                                "Assignment": {
+                                                  "name": "current",
+                                                  "expression": {
+                                                    "StructFieldGet": {
+                                                      "id": "a6415f73-ec5c-4dba-ac81-912410a7d6b6",
+                                                      "struct_expr": {
+                                                        "VariableReference": {
+                                                          "assignment_id": "392fa1fc-6c1f-55fc-a012-f5f0d46da8b7",
+                                                          "id": "cee73a97-4835-4b81-a8c9-a4b97d4a6437"
+                                                        }
+                                                      },
+                                                      "struct_field_id": "e06361e4-7d75-4310-9f7a-1705b963c7b3"
+                                                    }
+                                                  },
+                                                  "id": "04bcf7a2-889c-46ca-8a30-2ef3dd9355e6"
+                                                }
+                                              },
+                                              {
+                                                "FunctionCall": {
+                                                  "function_reference": {
+                                                    "FunctionReference": {
+                                                      "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                                                      "id": "85b104d6-2875-4b87-85e9-4c42907ec97a"
+                                                    }
+                                                  },
+                                                  "args": [
+                                                    {
+                                                      "Argument": {
+                                                        "id": "73fd1ca1-b696-4abc-9390-0304954e868c",
+                                                        "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                                                        "expr": {
+                                                          "FunctionCall": {
+                                                            "function_reference": {
+                                                              "FunctionReference": {
+                                                                "function_id": "024247f6-3202-4acc-8d9a-b80a427cda3c",
+                                                                "id": "c32f33a9-efe1-4e96-98a0-1d84d893e89f"
+                                                              }
+                                                            },
+                                                            "args": [
+                                                              {
+                                                                "Argument": {
+                                                                  "id": "9593e8bc-4271-4d47-a1e9-86f7a7bbb207",
+                                                                  "argument_definition_id": "78cf269a-2a29-4325-9a18-8d84132485ed",
+                                                                  "expr": {
+                                                                    "ListLiteral": {
+                                                                      "id": "95ef4820-3339-4640-8eb9-c366615d0b12",
+                                                                      "element_type": {
+                                                                        "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                                                                        "params": []
+                                                                      },
+                                                                      "elements": [
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": "Weather for ",
+                                                                            "id": "3005ce9c-61d9-4b40-89c6-df1bdf8391ca"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "VariableReference": {
+                                                                            "assignment_id": "5b5525b9-ab30-4a81-9022-a5d8ba89b30b",
+                                                                            "id": "11effc04-183d-411d-a0bd-298662eac6aa"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": ": ",
+                                                                            "id": "97528ef8-4178-49c8-b5f0-7b0840349180"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StructFieldGet": {
+                                                                            "id": "119e197b-5a14-4371-b45b-21a1acee9b68",
+                                                                            "struct_expr": {
+                                                                              "VariableReference": {
+                                                                                "assignment_id": "04bcf7a2-889c-46ca-8a30-2ef3dd9355e6",
+                                                                                "id": "10e2c5d9-b635-45f1-8514-0b9dd0616826"
+                                                                              }
+                                                                            },
+                                                                            "struct_field_id": "d67802fd-bfd2-4df6-abae-b7f62ce7995f"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": ", ",
+                                                                            "id": "e23fc22a-b535-4e49-a7ad-5a9b1bc57100"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StructFieldGet": {
+                                                                            "id": "c8b28fdf-9a45-453f-90ce-2ae1c0772bb0",
+                                                                            "struct_expr": {
+                                                                              "VariableReference": {
+                                                                                "assignment_id": "04bcf7a2-889c-46ca-8a30-2ef3dd9355e6",
+                                                                                "id": "0b02f933-80f5-4273-82e1-88383c7c62d4"
+                                                                              }
+                                                                            },
+                                                                            "struct_field_id": "357fe902-d534-46eb-b166-6c892a887584"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": "°C (feels like ",
+                                                                            "id": "d23f5992-f374-4555-aa21-147048694ae9"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StructFieldGet": {
+                                                                            "id": "3dc246c3-800c-43bf-bee7-e75987ca972c",
+                                                                            "struct_expr": {
+                                                                              "VariableReference": {
+                                                                                "assignment_id": "04bcf7a2-889c-46ca-8a30-2ef3dd9355e6",
+                                                                                "id": "685e5b4f-ff53-4a35-a3f5-c1eb15bf895b"
+                                                                              }
+                                                                            },
+                                                                            "struct_field_id": "768a3669-c839-42ee-9612-d5ef3d715d60"
+                                                                          }
+                                                                        },
+                                                                        {
+                                                                          "StringLiteral": {
+                                                                            "value": "°C)",
+                                                                            "id": "87f6232d-139a-413c-8535-ea78f8c2801b"
+                                                                          }
+                                                                        }
+                                                                      ]
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            ],
+                                                            "id": "a8e96552-5ca8-4cd9-870a-6cebe4108aff"
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  ],
+                                                  "id": "57c7da77-68d8-4674-b81f-dcc0aba1ab1c"
+                                                }
+                                              }
+                                            ],
+                                            "id": "317f5fd6-a6fa-47b3-91d8-e46f13da4511"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                ],
+                                "id": "96e77483-941e-4b16-afec-79f512d0946e"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ],
+                    "id": "b42f15ff-bf14-445c-911d-ec2d622124e0"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "id": "95c1d6e5-55f1-4ee9-9022-212b28d41369"
+      }
+    }
+  ],
+  "typespecs": [
+    {
+      "type": "Struct",
+      "name": "CurrentWeather",
+      "id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "768a3669-c839-42ee-9612-d5ef3d715d60",
+          "name": "apparentTemperature",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "d2728cb0-4ede-45df-a09c-d991d18ffeea",
+          "name": "cloudCover",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "43389b5d-3b27-4fca-85b4-70f09249c644",
+          "name": "dewPoint",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "95ac8491-11ef-4984-a617-5764957de6cc",
+          "name": "humidity",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "d67802fd-bfd2-4df6-abae-b7f62ce7995f",
+          "name": "summary",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "357fe902-d534-46eb-b166-6c892a887584",
+          "name": "temperature",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "Struct",
+      "name": "Geometry",
+      "id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "34b6ea41-b900-466a-89da-7f12786964e5",
+          "name": "location",
+          "field_type": {
+            "typespec_id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "Struct",
+      "name": "Location",
+      "id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da",
+          "name": "lat",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "35814f1a-c51c-4f06-a25d-7405d339edf5",
+          "name": "lng",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "Struct",
+      "name": "AddressComponents",
+      "id": "047390c9-217b-4023-b35a-f66e93393f0e",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "e70b8eb6-0359-46cb-abea-a78603a18a00",
+          "name": "long_name",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "581294f4-e62f-4c7d-a273-779ce3203f3f",
+          "name": "short_name",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "BuiltInTypeSpec",
+      "readable_name": "Error",
+      "id": "a6ad92ed-1b21-44fe-9ad0-e08326acd6f6",
+      "symbol": "",
+      "num_params": 0
+    },
+    {
+      "type": "Struct",
+      "name": "HTTPBinHeaders",
+      "id": "004780b6-843d-423f-9a27-b5c7e8482d02",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c",
+          "name": "User-Agent",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "Struct",
+      "name": "HTTPBinResp2",
+      "id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "03dab062-205a-430a-91f0-ae56744e1c38",
+          "name": "headers",
+          "field_type": {
+            "typespec_id": "004780b6-843d-423f-9a27-b5c7e8482d02",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "BuiltInTypeSpec",
+      "readable_name": "String",
+      "id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+      "symbol": "",
+      "num_params": 0
+    },
+    {
+      "type": "BuiltInTypeSpec",
+      "readable_name": "List",
+      "id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+      "symbol": "",
+      "num_params": 1
+    },
+    {
+      "type": "Struct",
+      "name": "ReverseGeocodeResponse",
+      "id": "16b174d4-5587-46cb-af53-494ed3380a4b",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "48623a8a-6164-4c4a-8572-25db7ae52d3f",
+          "name": "results",
+          "field_type": {
+            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+            "params": [
+              {
+                "typespec_id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
+                "params": []
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "Struct",
+      "name": "ReverseGeocoderResult",
+      "id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "2d974f25-bdcd-4a70-978f-af5275eb6556",
+          "name": "address_components",
+          "field_type": {
+            "typespec_id": "4c726a5e-d9c2-481b-bbe8-ca5319176aad",
+            "params": [
+              {
+                "typespec_id": "047390c9-217b-4023-b35a-f66e93393f0e",
+                "params": []
+              }
+            ]
+          }
+        },
+        {
+          "id": "e722a8c6-9e2a-4c5a-918e-9c5f90df0b98",
+          "name": "formatted_address",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "69c50dac-4464-4ad3-a33b-c55795e95e62",
+          "name": "geometry",
+          "field_type": {
+            "typespec_id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "BuiltInTypeSpec",
+      "readable_name": "Number",
+      "id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+      "symbol": "",
+      "num_params": 0
+    },
+    {
+      "type": "Struct",
+      "name": "DarkSkyResponse",
+      "id": "778c4ac1-3b76-40ec-9c36-1fe323c6ead8",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "e06361e4-7d75-4310-9f7a-1705b963c7b3",
+          "name": "currently",
+          "field_type": {
+            "typespec_id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
+            "params": []
+          }
+        }
+      ]
+    },
+    {
+      "type": "BuiltInTypeSpec",
+      "readable_name": "Null",
+      "id": "daa07233-b887-4512-b06e-d6a53d415213",
+      "symbol": "",
+      "num_params": 0
     }
   ]
 }

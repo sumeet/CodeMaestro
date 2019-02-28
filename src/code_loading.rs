@@ -1,14 +1,8 @@
 use std::fs::File;
 
-use super::pystuff;
-use super::jsstuff;
-use super::structs;
-use super::enums;
-use super::code_function;
+use super::lang;
 use super::scripts;
 use super::tests;
-use super::json_http_client::JSONHTTPClient;
-use super::chat_trigger::ChatTrigger;
 
 use failure::{Error};
 use serde_json;
@@ -19,14 +13,9 @@ use serde_derive::{Serialize,Deserialize};
 #[derive(Serialize, Deserialize)]
 pub struct TheWorld {
     pub scripts: Vec<scripts::Script>,
-    pub codefuncs: Vec<code_function::CodeFunction>,
-    pub pyfuncs: Vec<pystuff::PyFunc>,
-    pub jsfuncs: Vec<jsstuff::JSFunc>,
-    pub structs: Vec<structs::Struct>,
-    pub enums: Vec<enums::Enum>,
     pub tests: Vec<tests::Test>,
-    pub json_http_clients: Vec<JSONHTTPClient>,
-    pub chat_triggers: Vec<ChatTrigger>,
+    pub functions: Vec<Box<lang::Function>>,
+    pub typespecs: Vec<Box<lang::TypeSpec>>,
 }
 
 // pub fn load(filename: &str) -> Result<CodeNode,Error> {

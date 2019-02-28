@@ -23,7 +23,7 @@ lazy_static! {
     pub static ref MESSAGE_STRUCT_ID : uuid::Uuid = uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap();
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Builtins {
     pub funcs: HashMap<lang::ID, Box<lang::Function>>,
     pub typespecs: HashMap<lang::ID, Box<lang::TypeSpec>>,
@@ -41,7 +41,7 @@ impl Builtins {
     }
 
     pub fn is_builtin(&self, id: lang::ID) -> bool {
-        self.funcs.contains_key(&id)
+        self.funcs.contains_key(&id) || self.typespecs.contains_key(&id)
     }
 }
 
