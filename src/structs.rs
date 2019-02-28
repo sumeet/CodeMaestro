@@ -44,6 +44,7 @@ impl StructField {
     }
 }
 
+#[typetag::serde]
 impl lang::TypeSpec for Struct {
     fn readable_name(&self) -> &str {
         &self.name

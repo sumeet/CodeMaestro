@@ -30,6 +30,7 @@ pub struct JSONHTTPClient {
     pub return_type: lang::Type,
 }
 
+#[typetag::serde]
 impl lang::Function for JSONHTTPClient {
     fn call(&self, interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let request = self.http_request(interpreter.dup(), args);

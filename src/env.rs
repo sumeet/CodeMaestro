@@ -284,6 +284,10 @@ impl ExecutionEnvironment {
         self.functions.insert(function.id(), Box::new(function));
     }
 
+    pub fn add_function_box(&mut self, function: Box<lang::Function>) {
+        self.functions.insert(function.id(), function);
+    }
+
     pub fn find_function(&self, id: lang::ID) -> Option<&Box<lang::Function>> {
         self.functions.get(&id)
     }
@@ -298,6 +302,10 @@ impl ExecutionEnvironment {
 
     pub fn add_typespec<T: lang::TypeSpec + 'static>(&mut self, typespec: T) {
         self.typespecs.insert(typespec.id(), Box::new(typespec));
+    }
+
+    pub fn add_typespec_box(&mut self, typespec: Box<lang::TypeSpec>) {
+        self.typespecs.insert(typespec.id(), typespec);
     }
 
     pub fn list_typespecs(&self) -> impl Iterator<Item = &Box<lang::TypeSpec>> {

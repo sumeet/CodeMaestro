@@ -15,6 +15,7 @@ pub struct JSFunc {
     pub id: lang::ID,
 }
 
+#[typetag::serde]
 impl lang::Function for JSFunc {
     fn call(&self, _interpreter: env::Interpreter, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         lang::Value::Null

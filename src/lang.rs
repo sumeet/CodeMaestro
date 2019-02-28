@@ -62,6 +62,7 @@ lazy_static! {
     };
 }
 
+#[typetag::serde(tag = "type")]
 pub trait Function: objekt::Clone + downcast_rs::Downcast {
     fn call(&self, interpreter: env::Interpreter, args: HashMap<ID,Value>) -> Value;
     fn name(&self) -> &str;
@@ -78,6 +79,7 @@ impl fmt::Debug for Function {
 
 clone_trait_object!(Function);
 impl_downcast!(Function);
+
 
 #[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
 pub enum CodeNode {
@@ -224,6 +226,7 @@ pub struct BuiltInTypeSpec {
     pub num_params: usize,
 }
 
+#[typetag::serde(tag = "type")]
 pub trait TypeSpec : objekt::Clone + downcast_rs::Downcast {
     fn readable_name(&self) -> &str;
     fn id(&self) -> ID;
@@ -243,6 +246,7 @@ impl fmt::Debug for TypeSpec {
     }
 }
 
+#[typetag::serde]
 impl TypeSpec for BuiltInTypeSpec {
     fn readable_name(&self) -> &str {
         &self.readable_name

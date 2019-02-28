@@ -61,29 +61,6 @@
   "jsfuncs": [],
   "structs": [
     {
-      "name": "HTTP Form param",
-      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
-          "name": "key",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
-          "name": "value",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        }
-      ]
-    },
-    {
       "name": "AddressComponents",
       "id": "047390c9-217b-4023-b35a-f66e93393f0e",
       "symbol": "",
@@ -137,37 +114,6 @@
                 "params": []
               }
             ]
-          }
-        }
-      ]
-    },
-    {
-      "name": "Message",
-      "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
-      "symbol": "",
-      "fields": [
-        {
-          "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
-          "name": "argument text",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
-          "name": "sender",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
-          }
-        },
-        {
-          "id": "9a8d9059-a729-4660-b440-8ee7c411e70a",
-          "name": "full text (including trigger)",
-          "field_type": {
-            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-            "params": []
           }
         }
       ]
@@ -355,28 +301,7 @@
       ]
     }
   ],
-  "enums": [
-    {
-      "name": "Result",
-      "id": "ffd15538-175e-4f60-8acd-c24222ddd664",
-      "symbol": "",
-      "variants": [
-        {
-          "name": "Ok",
-          "id": "f70c799a-1d63-4293-889d-55c07a7456a0",
-          "variant_type": null
-        },
-        {
-          "name": "Error",
-          "id": "9f22e23e-d9b9-49c2-acf2-43a59598ea86",
-          "variant_type": {
-            "typespec_id": "a6ad92ed-1b21-44fe-9ad0-e08326acd6f6",
-            "params": []
-          }
-        }
-      ]
-    }
-  ],
+  "enums": [],
   "tests": [
     {
       "id": "3139d1ba-9bb1-4b3d-af82-e74f72cd0d70",

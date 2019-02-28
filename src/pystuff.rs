@@ -211,6 +211,7 @@ fn mix_args_with_locals<'a>(py: Python, args: &'a PyDict, from: PyObject) -> &'a
     mixed
 }
 
+#[typetag::serde]
 impl lang::Function for PyFunc {
     fn call(&self, interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let env = interpreter.env.borrow();

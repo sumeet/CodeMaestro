@@ -59,6 +59,7 @@ impl ChatTrigger {
 
 // the only reason this is a function is so other functions can call chat triggers.... idk if we really
 // need that functionality but it's how things ended up and i'm too lazy to change it rn
+#[typetag::serde]
 impl lang::Function for ChatTrigger {
     fn call(&self, mut interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         // XXX: shouldn't the caller do this???? duped with CodeFunction

@@ -26,6 +26,7 @@ pub struct JSFunc {
     pub args: Vec<lang::ArgumentDefinition>
 }
 
+#[typetag::serde]
 impl JSFunc {
     pub fn new() -> Self {
         Self {

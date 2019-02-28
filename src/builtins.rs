@@ -9,6 +9,11 @@ use super::http_client;
 use maplit::hashmap;
 use std::cell::RefCell;
 use std::rc::Rc;
+use serde_derive::{Serialize,Deserialize};
+use serde::{Deserialize as DeserializeTrait,Deserializer,Serializer,Serialize as SerializeTrait};
+use serde::ser::SerializeStruct;
+use serde_json;
+use std::fs::File;
 
 // this gets loaded through codesample.json... TODO: make a builtins.json file
 lazy_static! {
@@ -16,6 +21,28 @@ lazy_static! {
     pub static ref RESULT_ENUM_ID : uuid::Uuid = uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap();
     pub static ref HTTP_FORM_PARAM_STRUCT_ID : uuid::Uuid = uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap();
     pub static ref MESSAGE_STRUCT_ID : uuid::Uuid = uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap();
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Builtins {
+    pub funcs: HashMap<lang::ID, Box<lang::Function>>,
+    pub typespecs: HashMap<lang::ID, Box<lang::TypeSpec>>,
+}
+
+impl Builtins {
+    pub fn load() -> Result<Self, Box<std::error::Error>> {
+        let f = File::open("builtins.json")?;
+        Ok(serde_json::from_reader(f)?)
+    }
+
+    pub fn save(&self) -> Result<(),Box<std::error::Error>> {
+        let f = File::create("builtins.json")?;
+        Ok(serde_json::to_writer_pretty(f, self)?)
+    }
+
+    pub fn is_builtin(&self, id: lang::ID) -> bool {
+        self.funcs.contains_key(&id)
+    }
 }
 
 pub fn new_message(sender: String, argument_text: String, full_text: String) -> lang::Value {
@@ -43,9 +70,10 @@ pub fn err_result(string: String) -> lang::Value {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Print {}
 
+#[typetag::serde]
 impl lang::Function for Print {
     fn call(&self, interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         match args.get(&self.takes_args()[0].id) {
@@ -80,9 +108,10 @@ impl lang::Function for Print {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Capitalize {}
 
+#[typetag::serde]
 impl lang::Function for Capitalize {
     fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         match args.get(&self.takes_args()[0].id) {
@@ -118,9 +147,10 @@ impl lang::Function for Capitalize {
 
 
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct HTTPGet {}
 
+#[typetag::serde]
 impl lang::Function for HTTPGet {
     fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let url = self.get_url(args);
@@ -196,12 +226,32 @@ pub struct ChatReply {
     output_buffer: Rc<RefCell<Vec<String>>>,
 }
 
+impl<'de> DeserializeTrait<'de> for ChatReply {
+    fn deserialize<D>(_deserializer: D) -> Result<ChatReply, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        Ok(ChatReply::new(Rc::new(RefCell::new(vec![]))))
+    }
+}
+
+impl SerializeTrait for ChatReply {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let state = serializer.serialize_struct("ChatReply", 0)?;
+        state.end()
+    }
+}
+
 impl ChatReply {
     pub fn new(output_buffer: Rc<RefCell<Vec<String>>>) -> Self {
         Self { output_buffer }
     }
 }
 
+#[typetag::serde]
 impl lang::Function for ChatReply {
     fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let text_to_send = args.get(&self.takes_args()[0].id).unwrap()
@@ -232,9 +282,10 @@ impl lang::Function for ChatReply {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct JoinString {}
 
+#[typetag::serde]
 impl lang::Function for JoinString {
     fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let joined = args.get(&self.takes_args()[0].id).unwrap()

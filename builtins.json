@@ -1,0 +1,122 @@
+{
+  "funcs": {
+    "36052afd-cf12-4146-bbc7-f9df04148b73": {
+      "type": "ChatReply"
+    },
+    "86ae2a51-5538-436f-b48e-3aa6c873b189": {
+      "type": "Capitalize"
+    },
+    "7a5952b5-f814-40a7-b555-e01ac6eb2d69": {
+      "type": "HTTPGet"
+    },
+    "024247f6-3202-4acc-8d9a-b80a427cda3c": {
+      "type": "JoinString"
+    },
+    "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d": {
+      "type": "Print"
+    }
+  },
+  "typespecs": {
+    "b6566a28-8257-46a9-aa29-39d9add25173": {
+      "type": "Struct",
+      "name": "HTTP Form param",
+      "id": "b6566a28-8257-46a9-aa29-39d9add25173",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "886a86df-1211-47c5-83c0-f9a410a6fdc8",
+          "name": "key",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "57607724-a63a-458e-9253-1e3efeb4de63",
+          "name": "value",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    "ffd15538-175e-4f60-8acd-c24222ddd664": {
+      "type": "Enum",
+      "name": "Result",
+      "id": "ffd15538-175e-4f60-8acd-c24222ddd664",
+      "symbol": "",
+      "variants": [
+        {
+          "name": "Ok",
+          "id": "f70c799a-1d63-4293-889d-55c07a7456a0",
+          "variant_type": null
+        },
+        {
+          "name": "Error",
+          "id": "9f22e23e-d9b9-49c2-acf2-43a59598ea86",
+          "variant_type": {
+            "typespec_id": "a6ad92ed-1b21-44fe-9ad0-e08326acd6f6",
+            "params": []
+          }
+        }
+      ]
+    },
+    "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83": {
+      "type": "Struct",
+      "name": "Chat Message",
+      "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
+          "name": "argument text",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "e01e6346-5c8f-4b1b-9723-cde0abf77ec0",
+          "name": "sender",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "9a8d9059-a729-4660-b440-8ee7c411e70a",
+          "name": "full text (including trigger)",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        }
+      ]
+    },
+    "31d96c85-5966-4866-a90a-e6db3707b140": {
+      "type": "Struct",
+      "name": "HTTP Response",
+      "id": "31d96c85-5966-4866-a90a-e6db3707b140",
+      "symbol": "",
+      "fields": [
+        {
+          "id": "34268b4f-e617-4e94-adbe-f5f0c9357865",
+          "name": "body",
+          "field_type": {
+            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+            "params": []
+          }
+        },
+        {
+          "id": "5e6cd734-fe98-47d2-9182-601a5a62e4d2",
+          "name": "status code",
+          "field_type": {
+            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+            "params": []
+          }
+        }
+      ]
+    }
+  }
+}

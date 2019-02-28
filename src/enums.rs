@@ -34,6 +34,7 @@ impl Enum {
     }
 }
 
+#[typetag::serde]
 impl lang::TypeSpec for Enum {
     fn readable_name(&self) -> &str {
         &self.name

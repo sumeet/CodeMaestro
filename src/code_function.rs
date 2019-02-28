@@ -52,6 +52,7 @@ impl function::SettableArgs for CodeFunction {
     }
 }
 
+#[typetag::serde]
 impl lang::Function for CodeFunction {
     fn call(&self, mut interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         // XXX: shouldn't the caller do this???? duped with ChatTrigger

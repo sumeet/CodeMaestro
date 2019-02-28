@@ -158,13 +158,11 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
 
     let env = interpreter.env();
     let mut env = env.borrow_mut();
+
+    load_builtins(&mut env).unwrap();
+
     load_externalfuncs(&mut env, &the_world);
     load_structs(&mut env, &the_world);
-    env.add_function(builtins::Print{});
-    env.add_function(builtins::Capitalize{});
-    env.add_function(builtins::HTTPGet{});
-    env.add_function(builtins::JoinString{});
-    env.add_function(builtins::ChatReply::new(Rc::new(RefCell::new(vec![]))));
 
     for script in the_world.scripts {
         controller.load_script(script)
@@ -185,7 +183,53 @@ fn init_controller(interpreter: &env::Interpreter, cmd_buffer: &mut editor::Comm
         cmd_buffer.load_chat_trigger(chat_trigger)
     }
 
+    //_save_builtins(&env).unwrap();
+
     controller
+}
+
+fn load_builtins(env: &mut ExecutionEnvironment) -> Result<(), Box<std::error::Error>> {
+    let mut builtins = builtins::Builtins::load()?;
+    for (_, func) in builtins.funcs.drain() {
+        env.add_function_box(func);
+    }
+    for (_, ts) in builtins.typespecs.drain() {
+        env.add_typespec_box(ts)
+    }
+    Ok(())
+}
+
+// this is only ever used when changing builtins
+fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Error>> {
+    #[allow(unused_imports)] use lang::Function;
+    #[allow(unused_imports)] use std::collections::HashMap;
+
+    let mut functions : Vec<Box<lang::Function>> = vec![];
+    functions.push(Box::new(builtins::Print{}));
+    functions.push(Box::new(builtins::Capitalize{}));
+    functions.push(Box::new(builtins::HTTPGet{}));
+    functions.push(Box::new(builtins::JoinString{}));
+    functions.push(Box::new(builtins::ChatReply::new(Rc::new(RefCell::new(vec![])))));
+
+    let struct_ids = &[
+        // HTTP Form param
+        uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap(),
+        // Chat Message
+        uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap(),
+        // HTTP Response
+        uuid::Uuid::parse_str("31d96c85-5966-4866-a90a-e6db3707b140").unwrap(),
+    ];
+    let enum_ids = &[
+        // Result
+        uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap(),
+    ];
+
+    builtins::Builtins {
+        funcs: functions.into_iter().map(|f| (f.id(), f)).collect(),
+        typespecs: struct_ids.iter().chain(enum_ids.iter())
+            .map(|ts_id| (*ts_id, env.find_typespec(*ts_id).unwrap().clone()))
+            .collect(),
+    }.save()
 }
 
 pub struct App {
