@@ -100,6 +100,8 @@ pub struct Controller {
     // and which things aren't. we don't want to let people modify builtins
     builtins: builtins::Builtins,
 
+    // TODO: i think this should be an opener object
+    pub show_opener: bool,
     pub open_windows: HashSet<lang::ID>,
 }
 
@@ -113,6 +115,7 @@ impl<'a> Controller {
             selected_test_id_by_subject: HashMap::new(),
             json_client_builder_by_func_id: HashMap::new(),
             builtins,
+            show_opener: true,
             open_windows: HashSet::new(),
         }
     }
@@ -216,6 +219,7 @@ pub trait UiToolkit {
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
     // if there's no `onclose` specified, then the window isn't closable and won't show a close button
+    fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult;
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>, onclose: Option<G>) -> Self::DrawResult;
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, height_percentage: f32, handle_keypress: Option<F>) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
@@ -451,7 +455,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.render_edit_enums(),
             self.render_json_http_client_builders(),
             self.render_chat_triggers(),
-            self.render_status_bar()
+            self.render_status_bar(),
+            self.render_opener(),
         ])
     }
 
@@ -515,6 +520,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 }
             )
         })
+    }
+
+    fn render_opener(&self) -> T::DrawResult {
+        if self.controller.show_opener {
+            self.ui_toolkit.draw_centered_popup(&||{
+                self.ui_toolkit.draw_text("hi")
+            }, None::<fn(Keypress)>)
+        } else {
+            self.ui_toolkit.draw_all(vec![])
+        }
     }
 
     fn render_edit_code_funcs(&self) -> T::DrawResult {

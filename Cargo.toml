@@ -38,10 +38,10 @@ gen-iter = {git = "https://github.com/sumeet/gen-iter"}
 pyo3 = { version = "0.5.2", optional = true }
 glium = { version = "0.23", default-features = true, optional = true }
 glutin = { version = "0.19", optional = true }
-imgui = { git = "https://github.com/Gekkio/imgui-rs", branch = "master", optional = true }
-imgui-sys = { git = "https://github.com/Gekkio/imgui-rs", branch = "master", optional = true }
-imgui-glium-renderer = { git = "https://github.com/Gekkio/imgui-rs", branch = "master", optional = true }
-imgui-winit-support = { git = "https://github.com/Gekkio/imgui-rs", branch = "master", optional = true }
+imgui = { git = "https://github.com/sumeet/imgui-rs", branch = "master", optional = true }
+imgui-sys = { git = "https://github.com/sumeet/imgui-rs", branch = "master", optional = true }
+imgui-glium-renderer = { git = "https://github.com/sumeet/imgui-rs", branch = "master", optional = true }
+imgui-winit-support = { git = "https://github.com/sumeet/imgui-rs", branch = "master", optional = true }
 tokio = {version = "0.1.13", features = ["async-await-preview"], optional = true }
 tokio-reactor = {version = "0.1.7", optional = true }
 tokio-current-thread = {version = "0.1.4", optional = true }

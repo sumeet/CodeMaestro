@@ -193,6 +193,29 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         last_rhs();
     }
 
+    fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn(),
+                                                      handle_keypress: Option<F>) -> Self::DrawResult {
+        let (display_size_x, display_size_y) = self.ui.imgui().display_size();
+        self.ui.window(&self.imlabel("draw_centered_popup"))
+            .size(INITIAL_WINDOW_SIZE, ImGuiCond::Always)
+            .position((display_size_x * 0.5, display_size_y * 0.5), ImGuiCond::Always)
+            .position_pivot((0.5, 0.5))
+            .resizable(false)
+            .scrollable(true)
+            .title_bar(false)
+            .build(&|| {
+                unsafe { imgui_sys::igSetWindowFocus() };
+                draw_fn();
+                if let Some(keypress) = self.keypress {
+                    if self.ui.is_window_focused() {
+                        if let Some(ref handle_keypress) = handle_keypress {
+                            handle_keypress(keypress)
+                        }
+                    }
+                }
+            });
+    }
+
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, f: &Fn(),
                                                                  handle_keypress: Option<F>,
                                                                  onclose: Option<G>) {
