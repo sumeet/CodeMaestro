@@ -103,6 +103,11 @@ impl CodeEditor {
                 }
             },
             (false, Key::O) => {
+                // TODO: this is a mess. we should pattern match on ctrl and shift
+                // as well
+                if keypress.ctrl {
+                    return;
+                }
                 if keypress.shift {
                     self.set_insertion_point_on_previous_line_in_block()
                 } else {

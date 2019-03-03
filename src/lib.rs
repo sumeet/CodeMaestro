@@ -29,6 +29,7 @@ mod enums;
 mod env_genie;
 mod code_loading;
 mod editor;
+mod opener;
 mod insert_code_menu;
 mod code_editor;
 mod code_editor_renderer;

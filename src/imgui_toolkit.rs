@@ -85,6 +85,12 @@ impl<'a> ImguiToolkit<'a> {
 impl<'a> UiToolkit for ImguiToolkit<'a> {
     type DrawResult = ();
 
+    fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
+        if let Some(keypress) = self.keypress {
+            handle_keypress(keypress)
+        }
+    }
+
     // TODO: these should be draw funcs that we execute in here
     fn draw_all(&self, _draw_results: Vec<()>) {
     }
@@ -204,7 +210,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .scrollable(true)
             .title_bar(false)
             .build(&|| {
-                unsafe { imgui_sys::igSetWindowFocus() };
+                //unsafe { imgui_sys::igSetWindowFocus() };
                 draw_fn();
                 if let Some(keypress) = self.keypress {
                     if self.ui.is_window_focused() {

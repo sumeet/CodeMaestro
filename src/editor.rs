@@ -31,6 +31,9 @@ use super::tests;
 use super::json_http_client::JSONHTTPClient;
 use super::json_http_client_builder::JSONHTTPClientBuilder;
 use std::collections::HashSet;
+use crate::opener::Opener;
+use crate::opener::MenuItem;
+use crate::opener::OptionsLister;
 
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
@@ -100,8 +103,7 @@ pub struct Controller {
     // and which things aren't. we don't want to let people modify builtins
     builtins: builtins::Builtins,
 
-    // TODO: i think this should be an opener object
-    pub show_opener: bool,
+    pub opener: Option<Opener>,
     pub open_windows: HashSet<lang::ID>,
 }
 
@@ -115,9 +117,27 @@ impl<'a> Controller {
             selected_test_id_by_subject: HashMap::new(),
             json_client_builder_by_func_id: HashMap::new(),
             builtins,
-            show_opener: true,
+            opener: None,
             open_windows: HashSet::new(),
         }
+    }
+
+    pub fn handle_global_keypress(&mut self, keypress: Keypress) {
+        match keypress {
+            Keypress { key: Key::O, ctrl: true, shift: false } => {
+                self.open_opener()
+            }
+            _ => ()
+        }
+    }
+
+    pub fn open_opener(&mut self) {
+        self.opener = Some(Opener::new());
+    }
+
+    pub fn set_opener_input(&mut self, input_str: String) {
+        self.opener.as_mut()
+            .map(move |mut opener| opener.input_str = input_str);
     }
 
     pub fn list_tests(&self, subject: tests::TestSubject) -> impl Iterator<Item = &tests::Test> {
@@ -217,6 +237,7 @@ impl<'a> Controller {
 pub trait UiToolkit {
     type DrawResult;
 
+    fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static);
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
     // if there's no `onclose` specified, then the window isn't closable and won't show a close button
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult;
@@ -271,7 +292,7 @@ pub trait UiToolkit {
 // controller. for now this is just easier to move us forward
 pub struct CommandBuffer {
     // this is kind of messy, but i just need this to get saving to work
-    integrating_commands: Vec<Box<FnBox(&mut Controller, &mut env::Interpreter, &mut async_executor::AsyncExecutor)>>,
+    integrating_commands: Vec<Box<FnBox(&mut Controller, &mut env::Interpreter, &mut async_executor::AsyncExecutor, &mut Self)>>,
     controller_commands: Vec<Box<FnBox(&mut Controller)>>,
     interpreter_commands: Vec<Box<FnBox(&mut env::Interpreter)>>,
 }
@@ -291,13 +312,13 @@ impl CommandBuffer {
     }
 
     pub fn save(&mut self) {
-        self.add_integrating_command(move |controller, interpreter, _| {
+        self.add_integrating_command(move |controller, interpreter, _, _| {
             controller.save(&mut interpreter.env().borrow_mut())
         })
     }
 
     pub fn load_code_func(&mut self, code_func: code_function::CodeFunction) {
-        self.add_integrating_command(move |controller, interpreter, _| {
+        self.add_integrating_command(move |controller, interpreter, _, _| {
             let mut env = interpreter.env.borrow_mut();
             let code = code_func.code();
             let func_id = code_func.id();
@@ -307,7 +328,7 @@ impl CommandBuffer {
     }
 
     pub fn change_chat_trigger(&mut self, chat_trigger_id: lang::ID, change: impl Fn(&mut ChatTrigger) + 'static) {
-        self.add_integrating_command(move |_controller, interpreter, _| {
+        self.add_integrating_command(move |_controller, interpreter, _, _| {
             let mut env = interpreter.env.borrow_mut();
             let env_genie = env_genie::EnvGenie::new(&env);
             let mut chat_trigger = env_genie.get_chat_trigger(chat_trigger_id).unwrap().clone();
@@ -317,7 +338,7 @@ impl CommandBuffer {
     }
 
     pub fn load_chat_trigger(&mut self, chat_trigger: ChatTrigger) {
-        self.add_integrating_command(move |controller, interpreter, _| {
+        self.add_integrating_command(move |controller, interpreter, _, _| {
             let mut env = interpreter.env.borrow_mut();
             controller.load_code(lang::CodeNode::Block(chat_trigger.code.clone()),
                                  code_editor::CodeLocation::ChatTrigger(chat_trigger.id()));
@@ -326,7 +347,7 @@ impl CommandBuffer {
     }
 
     pub fn load_json_http_client(&mut self, json_http_client: JSONHTTPClient) {
-        self.add_integrating_command(move |controller, interpreter, _| {
+        self.add_integrating_command(move |controller, interpreter, _, _| {
             let mut env = interpreter.env.borrow_mut();
             controller.load_json_http_client_builder(JSONHTTPClientBuilder::new(json_http_client.id()));
             let generate_url_params_code = lang::CodeNode::Block(json_http_client.gen_url_params.clone());
@@ -340,7 +361,7 @@ impl CommandBuffer {
     }
 
     pub fn remove_function(&mut self, id: lang::ID) {
-        self.add_integrating_command(move |controller, interpreter, _| {
+        self.add_integrating_command(move |controller, interpreter, _, _| {
             let mut env = interpreter.env.borrow_mut();
 
             let func = env.find_function(id).unwrap();
@@ -363,15 +384,15 @@ impl CommandBuffer {
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
         let code = code.clone();
         self.add_integrating_command(
-            move |_controller, interpreter, async_executor| {
+            move |_controller, interpreter, async_executor, _| {
                 env::run(interpreter, async_executor, &code, callback);
             }
         )
     }
 
     pub fn add_integrating_command<F: FnOnce(&mut Controller, &mut env::Interpreter,
-                                             &mut async_executor::AsyncExecutor) + 'static>(&mut self,
-                                                                                            f: F) {
+                                             &mut async_executor::AsyncExecutor,
+                                             &mut Self) + 'static>(&mut self, f: F) {
         self.integrating_commands.push(Box::new(f));
     }
 
@@ -404,8 +425,8 @@ impl CommandBuffer {
     pub fn flush_integrating(&mut self, controller: &mut Controller,
                              interpreter: &mut env::Interpreter,
                              async_executor: &mut async_executor::AsyncExecutor) {
-        for command in self.integrating_commands.drain(..) {
-            command.call_box((controller, interpreter, async_executor))
+        while let Some(command) = self.integrating_commands.pop() {
+            command.call_box((controller, interpreter, async_executor, self))
         }
     }
 }
@@ -444,6 +465,12 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
 
     pub fn render_app(&self) -> T::DrawResult {
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        self.ui_toolkit.handle_global_keypress(move |keypress| {
+            cmd_buffer.borrow_mut().add_controller_command(move |controller| {
+                controller.handle_global_keypress(keypress)
+            })
+        });
         self.ui_toolkit.draw_all(vec![
             self.render_main_menu_bar(),
             self.render_scripts(),
@@ -523,9 +550,47 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_opener(&self) -> T::DrawResult {
-        if self.controller.show_opener {
-            self.ui_toolkit.draw_centered_popup(&||{
-                self.ui_toolkit.draw_text("hi")
+        if let Some(opener) = &self.controller.opener {
+            self.ui_toolkit.draw_centered_popup(&|| {
+
+                let mut to_draw = vec![
+                    self.ui_toolkit.focused(&|| {
+                        let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                        let cmd_buffer2 = Rc::clone(&self.command_buffer);
+
+                        self.ui_toolkit.draw_text_input(&opener.input_str, move |newvalue: &str| {
+                            let newvalue = newvalue.to_string();
+                            cmd_buffer1.borrow_mut().add_controller_command(move |controller| {
+                                controller.set_opener_input(newvalue.to_string())
+                            })
+                        }, move || {
+                            cmd_buffer2.borrow_mut().add_integrating_command(move |controller, interp, _, cmd_buffer| {
+                                if let Some(opener) = &controller.opener {
+                                    let env = interp.env.borrow();
+                                    let env_genie = env_genie::EnvGenie::new(&env);
+                                    let lister = opener.list_options(controller, &env_genie);
+                                    lister.selected_option().map(move |menu_item| {
+                                        if let MenuItem::Selectable { when_selected, .. } = menu_item {
+                                            when_selected(cmd_buffer)
+                                        }
+                                    });
+                                }
+                            })
+                        })
+                    })
+                ];
+
+                let options_lister = opener.list_options(self.controller, self.env_genie);
+                to_draw.extend(options_lister.list().map(|menu_item| {
+                    match menu_item {
+                        MenuItem::Heading(heading) => self.ui_toolkit.draw_text(heading),
+                        MenuItem::Selectable { label, when_selected } => {
+                            self.ui_toolkit.draw_text(label)
+                        },
+                    }
+                }));
+
+                self.ui_toolkit.draw_all(to_draw)
             }, None::<fn(Keypress)>)
         } else {
             self.ui_toolkit.draw_all(vec![])
@@ -812,7 +877,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     ),
                     self.ui_toolkit.draw_button("Run test", GREY_COLOR, move || {
                         let cmd_buffer5 = Rc::clone(&cmd_buffer5);
-                        cmd_buffer4.borrow_mut().add_integrating_command(move |cont, _interp, async_executor| {
+                        cmd_buffer4.borrow_mut().add_integrating_command(move |cont, _interp, async_executor, _| {
                             let builder = cont.get_json_http_client_builder(client_id).unwrap();
                             builder.run_test(async_executor, move |newbuilder| {
                                 cmd_buffer5.borrow_mut().add_controller_command(move |cont| {
@@ -846,7 +911,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.ui_toolkit.draw_all(vec![
                 self.ui_toolkit.draw_text(&format!("Return type: {}", type_description)),
                 self.ui_toolkit.draw_button("Apply return type", GREY_COLOR, move || {
-                    cmd_buffer.borrow_mut().add_integrating_command(move |cont, interp, _| {
+                    cmd_buffer.borrow_mut().add_integrating_command(move |cont, interp, _, _| {
                         let mut env = interp.env.borrow_mut();
                         let mut json_http_client = {
                             let env_genie = env_genie::EnvGenie::new(&env);
@@ -935,7 +1000,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     "", selected_field.is_some(),
                     move |newvalue| {
                         let nesting = nesting.clone();
-                        cmd_buffer.borrow_mut().add_integrating_command(move |cont, interp, _executor| {
+                        cmd_buffer.borrow_mut().add_integrating_command(move |cont, interp, _executor, _| {
                             let env = interp.env.borrow();
                             let env_genie = env_genie::EnvGenie::new(&env);
                             let mut builder = cont.get_json_http_client_builder(client_id).unwrap().clone();
