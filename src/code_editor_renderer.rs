@@ -4,6 +4,7 @@ use std::collections::HashMap;
 
 use itertools::Itertools;
 
+use super::ui_toolkit::UiToolkit;
 use super::code_editor;
 use super::insert_code_menu::{InsertCodeMenu,InsertCodeMenuOption};
 use super::code_editor::InsertionPoint;
@@ -37,7 +38,7 @@ pub struct CodeEditorRenderer<'a, T> {
 
 // ok stupid but all the methods on this take &self instead of &mut self because the ImGui closures
 // all take Fn instead of FnMut
-impl<'a, T: editor::UiToolkit> CodeEditorRenderer<'a, T> {
+impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     pub fn new(ui_toolkit: &'a T, code_editor: &'a code_editor::CodeEditor,
                command_buffer: Rc<RefCell<editor::CommandBuffer>>, env_genie: &'a EnvGenie) -> Self {
         let command_buffer = PerEditorCommandBuffer::new(

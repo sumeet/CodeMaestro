@@ -20,6 +20,7 @@ mod imgui_toolkit;
 #[cfg(feature = "javascript")]
 mod yew_toolkit;
 
+mod ui_toolkit;
 pub mod asynk;
 pub mod builtins;
 pub mod lang;
@@ -111,7 +112,8 @@ pub use env_genie::EnvGenie;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use self::editor::{Controller,UiToolkit};
+use self::editor::{Controller};
+use self::ui_toolkit::UiToolkit;
 use self::env::{ExecutionEnvironment};
 //use debug_cell::RefCell;
 

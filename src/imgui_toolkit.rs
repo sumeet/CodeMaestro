@@ -1,5 +1,5 @@
 use super::{App};
-use super::editor::{UiToolkit};
+use super::ui_toolkit::{UiToolkit};
 use super::editor::{Keypress};
 use super::imgui_support;
 use super::async_executor;

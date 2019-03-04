@@ -26,7 +26,6 @@ pub struct JSFunc {
     pub args: Vec<lang::ArgumentDefinition>
 }
 
-#[typetag::serde]
 impl JSFunc {
     pub fn new() -> Self {
         Self {
@@ -159,6 +158,7 @@ fn eval(js_code: &str, locals: HashMap<String, ValueWithEnv>) -> Result<stdweb::
     Ok(value)
 }
 
+#[typetag::serde]
 impl lang::Function for JSFunc {
     fn call(&self, interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let env = interpreter.env.borrow();
