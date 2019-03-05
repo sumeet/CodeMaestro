@@ -2,7 +2,8 @@ use super::{App as CSApp, UiToolkit};
 use super::editor;
 use super::editor::{Key as AppKey,Keypress};
 use super::async_executor::AsyncExecutor;
-use stdweb::{js,_js_impl,console,__internal_console_unsafe};
+use stdweb::{js,_js_impl};
+use stdweb::web::{document,IElement,IEventTarget};
 use yew::{html};
 use yew::prelude::*;
 use std::cell::RefCell;
@@ -62,18 +63,22 @@ const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 struct YewToolkit {
     last_drawn_element_id: RefCell<u32>,
     focused_element_id: RefCell<u32>,
-    pub global_keypress_handler: Rc<RefCell<Option<Box<Fn(Keypress) + 'static>>>>,
+    pub global_keypress_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
 }
 
 impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
-        self.global_keypress_handler.replace(Some(Box::new(handle_keypress)));
+        self.global_keypress_handler.replace(Box::new(handle_keypress));
     }
 
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult {
-        html! { <div></div> }
+        html! {
+            <div>
+                {"CENTERED POPUP!!!!!"}
+            </div>
+        }
     }
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult {
@@ -552,7 +557,7 @@ impl YewToolkit {
         YewToolkit {
             last_drawn_element_id: RefCell::new(0),
             focused_element_id: RefCell::new(0),
-            global_keypress_handler: Rc::new(RefCell::new(None)),
+            global_keypress_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
         }
     }
 
@@ -584,14 +589,31 @@ impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         if let Some(ref app) = self.app {
             let mut tk = YewToolkit::new();
+            let global_handle_keypress =
+                Rc::clone(&tk.global_keypress_handler);
             let drawn = app.borrow_mut().draw(&mut tk);
-            js! {
-                document.body.setAttribute("data-focused-id", @{tk.get_focused_element_id()});
-            }
+            document().body().unwrap()
+                .set_attribute("data-focused-id",
+                              &tk.get_focused_element_id().to_string())
+                .unwrap();
+            let async_executor = self.async_executor.clone();
+            document().add_event_listener(move |e: KeyDownEvent| {
+                // TODO: we know we have to capture C-o here because it can open the fuzzy finder
+                // globally. unfortunately, for now, we have to manually bind all global hotkeys
+                // like this
+                if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
+                    if let Some(keypress) = map_keypress_event(&e) {
+                        global_handle_keypress.borrow()(keypress);
+                        // TODO: HACKY WAY OF REDRAWING FROM INSIDE HERE
+                        async_executor.clone().map(|async_executor| {
+                            async_executor.onupdate.map(|onupdate| onupdate())
+                        });
+                    }
+                    e.prevent_default();
+                }
+            });
 
-            html! {
-                {{ drawn }}
-            }
+            drawn
         } else {
             html! { <p> {"No app"} </p> }
         }

@@ -7,8 +7,9 @@ pub fn with_executor_context<F: FnOnce(AsyncExecutor)>(run: F) {
     run(AsyncExecutor::new())
 }
 
+#[derive(Clone)]
 pub struct AsyncExecutor {
-    onupdate: Option<Rc<Fn()>>,
+    pub onupdate: Option<Rc<Fn()>>,
 }
 
 impl AsyncExecutor {
