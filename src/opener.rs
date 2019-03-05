@@ -33,6 +33,9 @@ impl Opener {
 
     // XXX: copy and paste from insert_code_menu.rs
     fn selected_index(&self, num_total_options: usize) -> usize {
+        if num_total_options == 0 {
+            return 0
+        }
         (self.selected_index % num_total_options as isize) as usize
     }
 
