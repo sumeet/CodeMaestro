@@ -203,13 +203,10 @@ impl CodeEditor {
     fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
         let selected_node_id = self.selected_node_id?;
         match self.code_genie.find_parent(selected_node_id)? {
-            lang::CodeNode::Argument(cn) => {
-                self.mark_as_editing(InsertionPoint::Argument(cn.id));
-            },
             lang::CodeNode::StructLiteralField(cn) => {
                 self.mark_as_editing(InsertionPoint::StructLiteralField(cn.id));
             },
-            lang::CodeNode::Assignment(_) | lang::CodeNode::ListIndex(_) => {
+            lang::CodeNode::Argument(_) | lang::CodeNode::Assignment(_) | lang::CodeNode::ListIndex(_) => {
                 self.mark_as_editing(InsertionPoint::Replace(selected_node_id));
             }
             _ => (),
@@ -810,9 +807,6 @@ impl MutationMaster {
                     node_to_insert, insertion_point, parent.clone(), genie)
 
             },
-            InsertionPoint::Argument(argument_id) => {
-                self.insert_expression_into_argument(node_to_insert, argument_id, genie)
-            },
             InsertionPoint::StructLiteralField(struct_literal_field_id) => {
                 self.insert_expression_into_struct_literal_field(node_to_insert, struct_literal_field_id, genie)
             },
@@ -834,15 +828,6 @@ impl MutationMaster {
         list_literal.elements.insert(pos, node_to_insert);
         let mut root = genie.root().clone();
         root.replace(lang::CodeNode::ListLiteral(list_literal));
-        root
-    }
-
-    fn insert_expression_into_argument(&self, code_node: lang::CodeNode, argument_id: lang::ID,
-                                       genie: &CodeGenie) -> lang::CodeNode {
-        let mut argument = genie.find_node(argument_id).unwrap().into_argument().clone();
-        argument.expr = Box::new(code_node);
-        let mut root = genie.root().clone();
-        root.replace(lang::CodeNode::Argument(argument));
         root
     }
 
@@ -997,7 +982,6 @@ pub enum InsertionPoint {
     BeginningOfBlock(lang::ID),
     Before(lang::ID),
     After(lang::ID),
-    Argument(lang::ID),
     StructLiteralField(lang::ID),
     Editing(lang::ID),
     ListLiteralElement { list_literal_id: lang::ID, pos: usize },
@@ -1014,7 +998,6 @@ impl InsertionPoint {
             InsertionPoint::Before(_) => None,
             InsertionPoint::After(_) => None,
             InsertionPoint::Replace(_) => None,
-            InsertionPoint::Argument(id) => Some(id),
             InsertionPoint::StructLiteralField(id) => Some(id),
             InsertionPoint::Editing(id) => Some(id),
             // not sure if this is right....
@@ -1032,8 +1015,8 @@ fn post_insertion_cursor(inserted_node: &CodeNode, code_genie: &CodeGenie) -> Po
     if let CodeNode::FunctionCall(function_call) = inserted_node {
         // if we just inserted a function call, then go to the first arg if there is one
         if function_call.args.len() > 0 {
-            let id = function_call.args[0].id();
-            return PostInsertionAction::MarkAsEditing(InsertionPoint::Argument(id))
+            let arg_expr_id = function_call.args[0].into_argument().expr.id();
+            return PostInsertionAction::MarkAsEditing(InsertionPoint::Replace(arg_expr_id))
         } else {
             return PostInsertionAction::SelectNode(function_call.id)
         }
@@ -1067,8 +1050,8 @@ fn post_insertion_cursor(inserted_node: &CodeNode, code_genie: &CodeGenie) -> Po
             let just_inserted_argument_position = function_call.args.iter()
                 .position(|arg| arg.id() == argument.id).unwrap();
             let maybe_next_arg = function_call.args.get(just_inserted_argument_position + 1);
-            if let Some(CodeNode::Argument(lang::Argument{ expr: box CodeNode::Placeholder(_), id, .. })) = maybe_next_arg {
-                return PostInsertionAction::MarkAsEditing(InsertionPoint::Argument(*id))
+            if let Some(CodeNode::Argument(lang::Argument{ expr: box CodeNode::Placeholder(placeholder), .. })) = maybe_next_arg {
+                return PostInsertionAction::MarkAsEditing(InsertionPoint::Replace(placeholder.id))
             }
         }
     } else if let Some(CodeNode::StructLiteralField(struct_literal_field)) = parent {

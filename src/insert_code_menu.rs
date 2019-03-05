@@ -107,7 +107,7 @@ impl InsertCodeMenu {
             InsertionPoint::Before(_) | InsertionPoint::After(_) | InsertionPoint::BeginningOfBlock(_) => {
                 self.new_params(None)
             },
-            InsertionPoint::Argument(field_id) | InsertionPoint::StructLiteralField(field_id) => {
+            InsertionPoint::StructLiteralField(field_id) => {
                 let node = code_genie.find_node(field_id).unwrap();
                 let exact_type = code_genie.guess_type(node, env_genie);
                 self.new_params(Some(exact_type))
@@ -255,7 +255,6 @@ fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, boo
         InsertionPoint::BeginningOfBlock(id) => (id, false),
         InsertionPoint::Before(id) => (id, false),
         InsertionPoint::After(id) => (id, true),
-        InsertionPoint::Argument(id) => (id, false),
         InsertionPoint::StructLiteralField(id) => (id, false),
         InsertionPoint::Editing(id) => (id, false),
         InsertionPoint::Replace(id) => (id, false),
@@ -623,7 +622,7 @@ pub fn should_insert_block_expression(insertion_point: InsertionPoint, code_geni
         InsertionPoint::Replace(node_id_to_replace) => {
             code_genie.is_block_expression(node_id_to_replace)
         }
-        InsertionPoint::Argument(_) | InsertionPoint::StructLiteralField(_) |
+        InsertionPoint::StructLiteralField(_) |
         InsertionPoint::Editing(_) | InsertionPoint::ListLiteralElement {..} => false,
     }
 }

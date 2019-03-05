@@ -485,7 +485,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             self.ui_toolkit.draw_all_on_same_line(&[
                 &|| {
                     self.render_inline_editable_button(&arg_display, BLACK_COLOR,
-                                                       InsertionPoint::Argument(argument.id))
+                                                       InsertionPoint::Replace(argument.expr.id()))
                 },
                 &|| {
                     self.render_code(argument.expr.as_ref())
