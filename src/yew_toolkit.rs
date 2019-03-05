@@ -63,14 +63,14 @@ const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 struct YewToolkit {
     last_drawn_element_id: RefCell<u32>,
     focused_element_id: RefCell<u32>,
-    pub global_keypress_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
+    pub global_keydown_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
 }
 
 impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
-        self.global_keypress_handler.replace(Box::new(handle_keypress));
+        self.global_keydown_handler.replace(Box::new(handle_keypress));
     }
 
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult {
@@ -80,6 +80,7 @@ impl UiToolkit for YewToolkit {
             }
         });
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
+        let global_keydown_handler = self.global_keydown_handler();
         html! {
             <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", self.rgba(WINDOW_BG_COLOR)) },
                  id={ self.incr_last_drawn_element_id().to_string() },
@@ -92,6 +93,7 @@ impl UiToolkit for YewToolkit {
                      Msg::Redraw
                  },
                  onkeydown=|e| {
+                     global_keydown_handler(&e);
                      // lol for these special keys we have to listen on keydown, but the
                      // rest we can do keypress :/
                      if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
@@ -180,6 +182,7 @@ impl UiToolkit for YewToolkit {
             }
         });
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
+        let global_keydown_handler = self.global_keydown_handler();
         html! {
            <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
                 id={ self.incr_last_drawn_element_id().to_string() },
@@ -192,6 +195,7 @@ impl UiToolkit for YewToolkit {
                     Msg::Redraw
                 },
                 onkeydown=|e| {
+                    global_keydown_handler(&e);
                     // lol for these special keys we have to listen on keydown, but the
                     // rest we can do keypress :/
                     if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
@@ -212,7 +216,7 @@ impl UiToolkit for YewToolkit {
                 <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>
                     { if let Some(onclose) = onclose {
                         html! {
-                            <div style="float: right;", onclick=|_| { onclose(); Msg::Redraw }, >
+                            <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
                                 { "X" }
                             </div>
                         }
@@ -235,6 +239,7 @@ impl UiToolkit for YewToolkit {
         if let Some(handle_keypress) = handle_keypress {
             let handle_keypress_1 = Rc::new(handle_keypress);
             let handle_keypress_2 = Rc::clone(&handle_keypress_1);
+            let global_keydown_handler = self.global_keydown_handler();
             html! {
                 <div style={ format!("min-height: {}%; overflow: auto;", height_percentage * 100.) },
                     id={ self.incr_last_drawn_element_id().to_string() },
@@ -247,6 +252,7 @@ impl UiToolkit for YewToolkit {
                         Msg::Redraw
                     },
                     onkeydown=|e| {
+                        global_keydown_handler(&e);
                         // lol for these special keys we have to listen on keydown, but the
                         // rest we can do keypress :/
                         if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
@@ -638,7 +644,7 @@ impl YewToolkit {
         YewToolkit {
             last_drawn_element_id: RefCell::new(0),
             focused_element_id: RefCell::new(0),
-            global_keypress_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
+            global_keydown_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
         }
     }
 
@@ -663,6 +669,19 @@ impl YewToolkit {
     fn get_focused_element_id(&self) -> u32 {
         *self.focused_element_id.borrow()
     }
+
+    fn global_keydown_handler(&self) -> impl Fn(&KeyDownEvent) + 'static {
+        let global_keydown_handler =
+            Rc::clone(&self.global_keydown_handler);
+        move |e| {
+            if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
+                if let Some(keypress) = map_keypress_event(e) {
+                    global_keydown_handler.borrow()(keypress);
+                    e.prevent_default();
+                }
+            }
+        }
+    }
 }
 
 
@@ -670,8 +689,7 @@ impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         if let Some(ref app) = self.app {
             let mut tk = YewToolkit::new();
-            let global_handle_keypress =
-                Rc::clone(&tk.global_keypress_handler);
+            let global_keydown_handler = tk.global_keydown_handler();
             let drawn = app.borrow_mut().draw(&mut tk);
             document().body().unwrap()
                 .set_attribute("data-focused-id",
@@ -681,16 +699,15 @@ impl Renderable<Model> for Model {
             document().add_event_listener(move |e: KeyDownEvent| {
                 // TODO: we know we have to capture C-o here because it can open the fuzzy finder
                 // globally. unfortunately, for now, we have to manually bind all global hotkeys
-                // like this
+                // like this.
+                // REFACTOR NEEDED BADLY, UGLY: hacks, we just redraw here because it's hard to from inside of
+                // global_keydown_handler(), i'm pretty sure we could do it if we wanted
                 if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
-                    if let Some(keypress) = map_keypress_event(&e) {
-                        global_handle_keypress.borrow()(keypress);
-                        // TODO: HACKY WAY OF REDRAWING FROM INSIDE HERE
-                        async_executor.clone().map(|async_executor| {
-                            async_executor.onupdate.map(|onupdate| onupdate())
-                        });
-                    }
-                    e.prevent_default();
+                    global_keydown_handler(&e);
+                    // TODO: HACKY WAY OF REDRAWING FROM INSIDE HERE
+                    async_executor.clone().map(|async_executor| {
+                        async_executor.onupdate.map(|onupdate| onupdate())
+                    });
                 }
             });
 
