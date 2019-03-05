@@ -112,7 +112,7 @@ impl<'a> OptionsLister<'a> {
 
 }
 
-fn filter_matches<'a>(input_str: &'a str, items: impl Iterator<Item = MenuItem<'a>>) -> impl Iterator<Item = MenuItem<'a>> {
+fn filter_matches<'a>(input_str: &'a str, items: impl Iterator<Item = MenuItem>) -> impl Iterator<Item = MenuItem> {
     // TODO: add fuzzy finding
     let input = input_str.trim().to_lowercase();
     items.filter(move |item| {
@@ -123,13 +123,13 @@ fn filter_matches<'a>(input_str: &'a str, items: impl Iterator<Item = MenuItem<'
     })
 }
 
-pub enum MenuItem<'a> {
+pub enum MenuItem {
     Heading(&'static str),
-    Selectable { label: &'a str, when_selected: Box<Fn(&mut CommandBuffer)>, is_selected: bool }
+    Selectable { label: String, when_selected: Box<Fn(&mut CommandBuffer)>, is_selected: bool }
 }
 
-impl<'a> MenuItem<'a> {
-    fn selectable(label: &'a str, when_selected: impl Fn(&mut CommandBuffer) + 'static) -> Self {
+impl MenuItem {
+    fn selectable(label: String, when_selected: impl Fn(&mut CommandBuffer) + 'static) -> Self {
         MenuItem::Selectable {
             label,
             when_selected: Box::new(when_selected),
@@ -140,7 +140,7 @@ impl<'a> MenuItem<'a> {
 
 trait MenuCategory {
     fn label(&self) -> &'static str;
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a>;
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a>;
 }
 
 struct ChatTriggers;
@@ -150,7 +150,7 @@ impl MenuCategory for ChatTriggers {
         "Chat triggers"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_chat_triggers()
             .filter_map(move |ct| {
                 if options_lister.controller.is_builtin(ct.id) {
@@ -160,7 +160,7 @@ impl MenuCategory for ChatTriggers {
                 // ID instead of the whole trigger
                 let ct2 = ct.clone();
                 Some(MenuItem::selectable(
-                    &ct.name,
+                    ct.name.clone(),
                     move |command_buffer| {
                         let ct2 = ct2.clone();
                         command_buffer.load_chat_trigger(ct2)
@@ -177,7 +177,7 @@ impl MenuCategory for Functions {
         "Functions"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_code_funcs()
             .filter_map(move |cf| {
                 if options_lister.controller.is_builtin(cf.id()) {
@@ -187,7 +187,7 @@ impl MenuCategory for Functions {
                 // ID instead of the whole trigger
                 let cf2 = cf.clone();
                 Some(MenuItem::selectable(
-                    &cf.name,
+                    cf.name.clone(),
                     move |command_buffer| {
                         let cf2 = cf2.clone();
                         command_buffer.load_code_func(cf2)
@@ -204,7 +204,7 @@ impl MenuCategory for JSONHTTPClients {
         "JSON HTTP Clients"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_json_http_clients()
             .filter_map(move |cf| {
                 if options_lister.controller.is_builtin(cf.id()) {
@@ -214,7 +214,7 @@ impl MenuCategory for JSONHTTPClients {
                 // ID instead of the whole trigger
                 let cf2 = cf.clone();
                 Some(MenuItem::selectable(
-                    &cf.name,
+                    cf.name.clone(),
                     move |command_buffer| {
                         let cf2 = cf2.clone();
                         command_buffer.load_json_http_client(cf2)
@@ -231,7 +231,7 @@ impl MenuCategory for Enums {
         "Enums"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_enums()
             .filter_map(move |eneom| {
                 if options_lister.controller.is_builtin(eneom.id()) {
@@ -241,7 +241,7 @@ impl MenuCategory for Enums {
                 // ID instead of the whole trigger
                 let eneom2 = eneom.clone();
                 Some(MenuItem::selectable(
-                    &eneom.name,
+                    eneom.name.clone(),
                     move |command_buffer| {
                         let eneom2 = eneom2.clone();
                         command_buffer.load_typespec(eneom2)
@@ -258,7 +258,7 @@ impl MenuCategory for Structs {
         "Structs"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_structs()
             .filter_map(move |strukt| {
                 if options_lister.controller.is_builtin(strukt.id()) {
@@ -268,7 +268,7 @@ impl MenuCategory for Structs {
                 // ID instead of the whole trigger
                 let strukt2 = strukt.clone();
                 Some(MenuItem::selectable(
-                    &strukt.name,
+                    strukt.name.clone(),
                     move |command_buffer| {
                         let strukt = strukt2.clone();
                         command_buffer.load_typespec(strukt)

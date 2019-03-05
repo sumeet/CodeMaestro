@@ -519,14 +519,15 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             let menu_items = options_lister.list().collect_vec();
 
             let mut selectable_items = vec![];
-            for menu_item in &menu_items {
+            for menu_item in menu_items {
                 selectable_items.push(match menu_item {
                     MenuItem::Heading(heading) => SelectableItem::GroupHeader(heading),
-                    MenuItem::Selectable { label, is_selected, .. } => {
+                    MenuItem::Selectable { ref label, is_selected, .. } => {
+                        let label = label.clone();
                         SelectableItem::Selectable {
                             item: menu_item,
                             label,
-                            is_selected: *is_selected,
+                            is_selected,
                         }
                     }
                 });
@@ -561,7 +562,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             })
                         })
                     }),
-                    self.ui_toolkit.draw_selectables2(&selectable_items, move |menu_item| {
+                    self.ui_toolkit.draw_selectables2(selectable_items, move |menu_item| {
                         if let MenuItem::Selectable { when_selected, .. } = menu_item {
                             cmd_buffer3.borrow_mut().add_controller_command(|controller| {
                                 controller.close_opener();
@@ -1512,7 +1513,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     // TODO: gotta redo this... it needs to know what's focused and stuff :/
     fn render_status_bar(&self) -> T::DrawResult {
         self.ui_toolkit.draw_statusbar(&|| {
-            self.ui_toolkit.draw_text("status bar UNDER CONSTRUCTION")
+            self.ui_toolkit.draw_text("")
 //            if let Some(node) = self.controller.get_selected_node() {
 //                self.ui_toolkit.draw_text(
 //                    &format!("SELECTED: {}", node.description())

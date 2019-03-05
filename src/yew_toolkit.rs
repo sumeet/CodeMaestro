@@ -74,9 +74,41 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult {
+        let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
+            if let Some(handle_keypress) = &handle_keypress {
+                handle_keypress(keypress)
+            }
+        });
+        let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         html! {
-            <div>
-                {"CENTERED POPUP!!!!!"}
+            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", self.rgba(WINDOW_BG_COLOR)) },
+                 id={ self.incr_last_drawn_element_id().to_string() },
+                 tabindex=0,
+                 onkeypress=|e| {
+                     if let Some(keypress) = map_keypress_event(&e) {
+                         handle_keypress_1(keypress);
+                     }
+                     e.prevent_default();
+                     Msg::Redraw
+                 },
+                 onkeydown=|e| {
+                     // lol for these special keys we have to listen on keydown, but the
+                     // rest we can do keypress :/
+                     if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
+                         // LOL this is for ctrl+r
+                         ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
+                         //console!(log, e.key());
+                         if let Some(keypress) = map_keypress_event(&e) {
+                             //console!(log, format!("{:?}", keypress));
+                             handle_keypress_2(keypress);
+                         }
+                         e.prevent_default();
+                         Msg::Redraw
+                     } else {
+                         Msg::DontRedraw
+                     }
+                 }, >
+                {{ draw_fn() }}
             </div>
         }
     }
@@ -146,7 +178,7 @@ impl UiToolkit for YewToolkit {
             let handle_keypress_1 = Rc::new(handle_keypress);
             let handle_keypress_2 = Rc::clone(&handle_keypress_1);
             html! {
-                <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+               <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     onkeypress=|e| {
@@ -307,6 +339,8 @@ impl UiToolkit for YewToolkit {
         let ondone2 = Rc::clone(&ondone);
         html! {
             <input type="text",
+               style="display: block;",
+               autocomplete="off",
                id={ self.incr_last_drawn_element_id().to_string() },
                value=existing_value,
                oninput=|e| {onchange(&e.value) ; Msg::Redraw},
@@ -449,8 +483,53 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: &[SelectableItem<T>], onselect: F) -> Self::DrawResult {
-        html! { <div></div> }
+    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: Vec<SelectableItem<T>>, onselect: F) -> Self::DrawResult {
+        let items = Rc::new(items);
+        let items_rc = Rc::clone(&items);
+        html! {
+            <select style="overflow: hidden;", size={items_rc.len().to_string()}, onchange=|event| {
+                match event {
+                        ChangeData::Select(elem) => {
+                            if let Some(selected_index) = elem.selected_index() {
+                                match &items_rc[selected_index as usize] {
+                                    SelectableItem::Selectable { item, .. } => onselect(item),
+                                    SelectableItem::GroupHeader(_) => panic!("expected a selectable here"),
+                                }
+                            }
+                            Msg::Redraw
+                        }
+                        _ => {
+                            unreachable!();
+                        }
+                    }
+            },>
+                { for items.iter().map(|item| match item {
+                    SelectableItem::Selectable { label, is_selected, .. } => {
+                        if *is_selected {
+                            html! {
+                                <option selected=true, >
+                                    { label }
+                                </option>
+                            }
+                        } else {
+                            html! {
+                                <option>
+                                    { label }
+                                </option>
+                            }
+                        }
+                    },
+                    SelectableItem::GroupHeader(label) => {
+                        html! {
+                            <option disabled=true, >
+                                { label }
+                            </option>
+                        }
+                    }
+
+                }) }
+            </select>
+        }
     }
 
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {

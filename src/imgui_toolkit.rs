@@ -444,7 +444,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: &[SelectableItem<T>], onselect: F) -> Self::DrawResult {
+    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: Vec<SelectableItem<T>>, onselect: F) -> Self::DrawResult {
         for selectable in items {
             match selectable {
                 SelectableItem::GroupHeader(label) => {
@@ -454,11 +454,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     ])
                 },
                 SelectableItem::Selectable { item, label, is_selected } => {
-                    if self.ui.selectable(&self.imlabel(label),
-                                          *is_selected,
+                    if self.ui.selectable(&self.imlabel(&label),
+                                          is_selected,
                                           ImGuiSelectableFlags::empty(),
                                           (0., 0.)) {
-                        onselect(item)
+                        onselect(&item)
                     }
                 }
             }
