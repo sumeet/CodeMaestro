@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use super::lang;
 use super::env;
+use super::code_loading;
 use lazy_static::lazy_static;
 use itertools::Itertools;
 use url;
@@ -32,7 +33,7 @@ pub struct Builtins {
 impl Builtins {
     pub fn load() -> Result<Self, Box<std::error::Error>> {
         let str = include_str!("../builtins.json");
-        Ok(serde_json::from_str(str)?)
+        Ok(Self::deserialize(str)?)
     }
 
     pub fn save(&self) -> Result<(),Box<std::error::Error>> {
@@ -43,7 +44,30 @@ impl Builtins {
     pub fn is_builtin(&self, id: lang::ID) -> bool {
         self.funcs.contains_key(&id) || self.typespecs.contains_key(&id)
     }
+
+    fn deserialize(str: &str) -> Result<Self, Box<std::error::Error>> {
+        let deserialize : BuiltinsDeserialize = serde_json::from_str(str)?;
+        let funcs = deserialize.funcs.into_iter()
+            .map(|(_, func_json)| {
+                let func = code_loading::deserialize_fn(func_json)?;
+                Ok((func.id(), func))
+            }).collect::<Result<HashMap<_, _>, Box<std::error::Error>>>();
+        let typespecs = deserialize.typespecs.into_iter()
+            .map(|(_, typespec_json)| {
+                let typespec = code_loading::deserialize_typespec(typespec_json)?;
+                Ok((typespec.id(), typespec))
+            }).collect::<Result<HashMap<_, _>, Box<std::error::Error>>>();
+        Ok(Self { funcs: funcs?, typespecs: typespecs? })
+    }
 }
+
+// XXX: ugh we need this to deserialize builtins because typetag doesn't work in wasm :(((
+#[derive(Deserialize)]
+struct BuiltinsDeserialize {
+    pub funcs: HashMap<lang::ID, serde_json::Value>,
+    pub typespecs: HashMap<lang::ID, serde_json::Value>,
+}
+
 
 pub fn new_message(sender: String, argument_text: String, full_text: String) -> lang::Value {
     lang::Value::Struct {
