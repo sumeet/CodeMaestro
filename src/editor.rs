@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::iter;
 use std::boxed::FnBox;
 
-use super::ui_toolkit::UiToolkit;
+use super::ui_toolkit::{UiToolkit,SelectableItem};
 use super::builtins;
 use super::chat_trigger::ChatTrigger;
 use super::env;
@@ -34,7 +34,6 @@ use super::json_http_client_builder::JSONHTTPClientBuilder;
 use std::collections::HashSet;
 use crate::opener::Opener;
 use crate::opener::MenuItem;
-use crate::opener::OptionsLister;
 
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
@@ -132,13 +131,33 @@ impl<'a> Controller {
         }
     }
 
+    pub fn is_builtin(&self, id: lang::ID) -> bool {
+        self.builtins.is_builtin(id)
+    }
+
+    pub fn open_window(&mut self, id: lang::ID) {
+        self.open_windows.insert(id);
+    }
+
+    pub fn close_window(&mut self, id: lang::ID) {
+        self.open_windows.remove(&id);
+    }
+
     pub fn open_opener(&mut self) {
         self.opener = Some(Opener::new());
     }
 
+    pub fn close_opener(&mut self) {
+        self.opener = None;
+    }
+
     pub fn set_opener_input(&mut self, input_str: String) {
         self.opener.as_mut()
-            .map(move |mut opener| opener.input_str = input_str);
+            .map(move |opener| opener.set_input_str(input_str));
+    }
+
+    pub fn opener_select_next(&mut self) {
+        self.opener.as_mut().map(move |opener| opener.select_next());
     }
 
     pub fn list_tests(&self, subject: tests::TestSubject) -> impl Iterator<Item = &tests::Test> {
@@ -291,6 +310,7 @@ impl CommandBuffer {
             let mut env = interpreter.env.borrow_mut();
             controller.load_code(lang::CodeNode::Block(chat_trigger.code.clone()),
                                  code_editor::CodeLocation::ChatTrigger(chat_trigger.id()));
+            controller.open_window(chat_trigger.id());
             env.add_function(chat_trigger);
         })
     }
@@ -499,10 +519,33 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_opener(&self) -> T::DrawResult {
-        if let Some(opener) = &self.controller.opener {
-            self.ui_toolkit.draw_centered_popup(&|| {
+        if self.controller.opener.is_none() {
+            return self.ui_toolkit.draw_all(vec![])
+        }
 
-                let mut to_draw = vec![
+        let cmd_buffer4 = Rc::clone(&self.command_buffer);
+
+        let opener = self.controller.opener.as_ref().unwrap();
+        self.ui_toolkit.draw_centered_popup(&|| {
+            let options_lister = opener.list_options(self.controller, self.env_genie);
+            let menu_items = options_lister.list().collect_vec();
+
+            let mut selectable_items = vec![];
+            for menu_item in &menu_items {
+                selectable_items.push(match menu_item {
+                    MenuItem::Heading(heading) => SelectableItem::GroupHeader(heading),
+                    MenuItem::Selectable { label, is_selected, .. } => {
+                        SelectableItem::Selectable {
+                            item: menu_item,
+                            label,
+                            is_selected: *is_selected,
+                        }
+                    }
+                });
+            }
+
+            let cmd_buffer3 = Rc::clone(&self.command_buffer);
+            self.ui_toolkit.draw_all(vec![
                     self.ui_toolkit.focused(&|| {
                         let cmd_buffer1 = Rc::clone(&self.command_buffer);
                         let cmd_buffer2 = Rc::clone(&self.command_buffer);
@@ -520,30 +563,35 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                     let lister = opener.list_options(controller, &env_genie);
                                     lister.selected_option().map(move |menu_item| {
                                         if let MenuItem::Selectable { when_selected, .. } = menu_item {
+                                            cmd_buffer.add_controller_command(|controller| {
+                                                controller.close_opener();
+                                            });
                                             when_selected(cmd_buffer)
                                         }
                                     });
                                 }
                             })
                         })
+                    }),
+                    self.ui_toolkit.draw_selectables2(&selectable_items, move |menu_item| {
+                        if let MenuItem::Selectable { when_selected, .. } = menu_item {
+                            cmd_buffer3.borrow_mut().add_controller_command(|controller| {
+                                controller.close_opener();
+                            });
+                            when_selected(&mut cmd_buffer3.borrow_mut())
+                        }
                     })
-                ];
-
-                let options_lister = opener.list_options(self.controller, self.env_genie);
-                to_draw.extend(options_lister.list().map(|menu_item| {
-                    match menu_item {
-                        MenuItem::Heading(heading) => self.ui_toolkit.draw_text(heading),
-                        MenuItem::Selectable { label, when_selected } => {
-                            self.ui_toolkit.draw_text(label)
-                        },
-                    }
-                }));
-
-                self.ui_toolkit.draw_all(to_draw)
-            }, None::<fn(Keypress)>)
-        } else {
-            self.ui_toolkit.draw_all(vec![])
-        }
+                ])
+        }, Some(move |keypress| {
+            cmd_buffer4.borrow_mut().add_controller_command(move |controller| {
+                match keypress {
+                    Keypress { key: Key::Tab, ctrl: false, shift: false } => {
+                        controller.opener_select_next()
+                    },
+                    _ => (),
+                }
+            })
+        }))
     }
 
     fn render_edit_code_funcs(&self) -> T::DrawResult {
@@ -733,6 +781,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_chat_trigger(&self, chat_trigger: &ChatTrigger) -> T::DrawResult {
         let chat_trigger_id = chat_trigger.id;
+        let cmd_buffer3 = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_window(
             &format!("Edit chat trigger: {}", chat_trigger.id()),
             &|| {
@@ -767,7 +816,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            None::<fn()>,
+            Some(move || {
+                cmd_buffer3.borrow_mut().add_controller_command(move |controller| {
+                    controller.close_window(chat_trigger_id);
+                })
+            }),
         )
     }
 
@@ -1463,6 +1516,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_console_window(&self) -> T::DrawResult {
         let console = self.env_genie.read_console();
+        if console.is_empty() {
+            return self.ui_toolkit.draw_all(vec![])
+        }
         self.ui_toolkit.draw_window("Console", &|| {
             self.ui_toolkit.draw_text_box(console)
         },

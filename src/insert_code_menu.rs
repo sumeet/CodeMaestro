@@ -65,6 +65,7 @@ impl InsertCodeMenu {
 
     // HACK: this modulo stuff is an insane hack but it lets me not have to pass a code genie into
     // select_next
+    // XXX: copy and paste to opener.rs
     fn selected_index(&self, num_options: usize) -> usize {
         (self.selected_option_index % num_options as isize) as usize
     }

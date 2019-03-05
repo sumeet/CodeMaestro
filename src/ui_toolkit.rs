@@ -31,6 +31,7 @@ pub trait UiToolkit {
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
               H: Fn(&T) -> &str;
+    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: &[SelectableItem<T>], onselect: F) -> Self::DrawResult;
     fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool, onchange: F) -> Self::DrawResult;
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;

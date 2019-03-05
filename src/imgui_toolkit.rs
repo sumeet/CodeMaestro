@@ -1,5 +1,5 @@
 use super::{App};
-use super::ui_toolkit::{UiToolkit};
+use super::ui_toolkit::{UiToolkit,SelectableItem};
 use super::editor::{Keypress};
 use super::imgui_support;
 use super::async_executor;
@@ -444,6 +444,26 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
+    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: &[SelectableItem<T>], onselect: F) -> Self::DrawResult {
+        for selectable in items {
+            match selectable {
+                SelectableItem::GroupHeader(label) => {
+                    self.draw_all_on_same_line(&[
+                        &|| self.draw_text("-" ),
+                        &|| self.draw_text(label),
+                    ])
+                },
+                SelectableItem::Selectable { item, label, is_selected } => {
+                    if self.ui.selectable(&self.imlabel(label),
+                                          *is_selected,
+                                          ImGuiSelectableFlags::empty(),
+                                          (0., 0.)) {
+                        onselect(item)
+                    }
+                }
+            }
+        }
+    }
 
     fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool, onchange: F) {
         let mut val = value;
