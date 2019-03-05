@@ -6,11 +6,15 @@ use lazy_static::lazy_static;
 use matches::matches;
 use itertools::Itertools;
 use super::lang::Function;
+use super::lang::TypeSpec;
 
 lazy_static! {
     static ref CATEGORIES : Vec<Box<MenuCategory + Send + Sync>> = vec![
         Box::new(ChatTriggers {}),
+        Box::new(JSONHTTPClients {}),
         Box::new(Functions {}),
+        Box::new(Enums {}),
+        Box::new(Structs {}),
     ];
 }
 
@@ -173,6 +177,87 @@ impl MenuCategory for Functions {
                     move |command_buffer| {
                         let cf2 = cf2.clone();
                         command_buffer.load_code_func(cf2)
+                    }
+                ))
+            }))
+    }
+}
+
+struct JSONHTTPClients;
+
+impl MenuCategory for JSONHTTPClients {
+    fn label(&self) -> &'static str {
+        "JSON HTTP Clients"
+    }
+
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+        Box::new(options_lister.env_genie.list_json_http_clients()
+            .filter_map(move |cf| {
+                if options_lister.controller.is_builtin(cf.id()) {
+                    return None
+                }
+                // TODO: we could avoid this clone by having load_chat_trigger take the
+                // ID instead of the whole trigger
+                let cf2 = cf.clone();
+                Some(MenuItem::selectable(
+                    &cf.name,
+                    move |command_buffer| {
+                        let cf2 = cf2.clone();
+                        command_buffer.load_json_http_client(cf2)
+                    }
+                ))
+            }))
+    }
+}
+
+struct Enums;
+
+impl MenuCategory for Enums {
+    fn label(&self) -> &'static str {
+        "Enums"
+    }
+
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+        Box::new(options_lister.env_genie.list_enums()
+            .filter_map(move |eneom| {
+                if options_lister.controller.is_builtin(eneom.id()) {
+                    return None
+                }
+                // TODO: we could avoid this clone by having load_chat_trigger take the
+                // ID instead of the whole trigger
+                let eneom2 = eneom.clone();
+                Some(MenuItem::selectable(
+                    &eneom.name,
+                    move |command_buffer| {
+                        let eneom2 = eneom2.clone();
+                        command_buffer.load_typespec(eneom2)
+                    }
+                ))
+            }))
+    }
+}
+
+struct Structs;
+
+impl MenuCategory for Structs {
+    fn label(&self) -> &'static str {
+        "Structs"
+    }
+
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+        Box::new(options_lister.env_genie.list_structs()
+            .filter_map(move |strukt| {
+                if options_lister.controller.is_builtin(strukt.id()) {
+                    return None
+                }
+                // TODO: we could avoid this clone by having load_chat_trigger take the
+                // ID instead of the whole trigger
+                let strukt2 = strukt.clone();
+                Some(MenuItem::selectable(
+                    &strukt.name,
+                    move |command_buffer| {
+                        let strukt = strukt2.clone();
+                        command_buffer.load_typespec(strukt)
                     }
                 ))
             }))

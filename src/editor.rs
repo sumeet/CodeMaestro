@@ -9,6 +9,7 @@ use super::ui_toolkit::{UiToolkit,SelectableItem};
 use super::builtins;
 use super::chat_trigger::ChatTrigger;
 use super::env;
+use super::lang::TypeSpec;
 use super::lang;
 use super::code_loading;
 use super::code_generation;
@@ -348,6 +349,8 @@ impl CommandBuffer {
     }
 
     pub fn load_typespec(&mut self, ts: impl lang::TypeSpec + 'static) {
+        let ts_id = ts.id();
+        self.add_controller_command(move |controller| controller.open_window(ts_id));
         self.add_environment_command(move |env| env.add_typespec(ts))
     }
 
@@ -464,11 +467,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 "File",
                 &|| {
                     let cmdb1 = Rc::clone(&self.command_buffer);
-                    let cmdb2 = Rc::clone(&self.command_buffer);
                     let cmdb3 = Rc::clone(&self.command_buffer);
                     let cmdb4 = Rc::clone(&self.command_buffer);
                     let cmdb5 = Rc::clone(&self.command_buffer);
-                    let cmdb6 = Rc::clone(&self.command_buffer);
                     let cmdb7 = Rc::clone(&self.command_buffer);
                     let cmdb8 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_all(vec![
@@ -481,35 +482,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         self.ui_toolkit.draw_menu_item("Add new JSON HTTP client", move || {
                             cmdb7.borrow_mut().load_json_http_client(JSONHTTPClient::new());
                         }),
-                        self.ui_toolkit.draw_menu_item("Add new script", move || {
-                            cmdb6.borrow_mut().add_controller_command(|controller| {
-                                controller.load_script(scripts::Script::new());
-                            });
-                        }),
+                        // disable scripts for now while we sprint to chat bot functionality
+//                        self.ui_toolkit.draw_menu_item("Add new script", move || {
+//                            cmdb6.borrow_mut().add_controller_command(|controller| {
+//                                controller.load_script(scripts::Script::new());
+//                            });
+//                        }),
                         self.ui_toolkit.draw_menu_item("Add new function", move || {
                             cmdb5.borrow_mut().load_code_func(code_function::CodeFunction::new());
                         }),
-                        #[cfg(feature = "default")]
-                        self.ui_toolkit.draw_menu_item("Add Python function", move || {
-                            cmdb2.borrow_mut().add_environment_command(|env| {
-                                env.add_function(pystuff::PyFunc::new());
-                            });
-                        }),
-                        #[cfg(feature = "javascript")]
-                        self.ui_toolkit.draw_menu_item("Add JavaScript function", move || {
-                            cmdb2.borrow_mut().add_environment_command(|env| {
-                                env.add_function(jsstuff::JSFunc::new());
-                            });
-                        }),
                         self.ui_toolkit.draw_menu_item("Add Struct", move || {
-                            cmdb3.borrow_mut().add_environment_command(|env| {
-                                env.add_typespec(structs::Struct::new());
-                            })
+                            cmdb3.borrow_mut().load_typespec(structs::Struct::new());
                         }),
                         self.ui_toolkit.draw_menu_item("Add Enum", move || {
-                            cmdb4.borrow_mut().add_environment_command(|env| {
-                                env.add_typespec(enums::Enum::new());
-                            })
+                            cmdb4.borrow_mut().load_typespec(enums::Enum::new());
                         }),
                         self.ui_toolkit.draw_menu_item("Exit", || {
                             std::process::exit(0);
@@ -637,6 +623,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_code_func(&self, code_func: &code_function::CodeFunction) -> T::DrawResult {
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        let code_func_id = code_func.id();
         self.ui_toolkit.draw_window(&format!("Edit function: {}", code_func.id()), &|| {
             let cont1 = Rc::clone(&self.command_buffer);
             let code_func1 = code_func.clone();
@@ -660,7 +648,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             ])
         },
         None::<fn(Keypress)>,
-        None::<fn()>)
+        Some(move || {
+            cmd_buffer.borrow_mut().add_controller_command(move |controller| {
+                controller.close_window(code_func_id);
+            })
+        }))
     }
 
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
@@ -1032,6 +1024,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
+        let strukt_id = strukt.id();
+        let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_window(
             &format!("Edit Struct: {}", strukt.id),
             &|| {
@@ -1066,7 +1060,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            None::<fn()>,
+            Some(move || {
+                cmd_buffer.borrow_mut().add_controller_command(move |controller| {
+                    controller.close_window(strukt_id);
+                })
+            }),
         )
     }
 
@@ -1142,6 +1140,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_enum(&self, eneom: &enums::Enum) -> T::DrawResult {
+        let eneom_id = eneom.id;
+        let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_window(
             &format!("Edit Enum: {}", eneom.id),
             &|| {
@@ -1176,7 +1176,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            None::<fn()>,
+            Some(move || {
+                cmd_buffer.borrow_mut().add_controller_command(move |controller| {
+                    controller.close_window(eneom_id);
+                })
+            }),
         )
     }
 

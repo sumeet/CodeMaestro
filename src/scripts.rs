@@ -9,7 +9,8 @@ pub struct Script {
 }
 
 impl Script {
-    pub fn new() -> Self {
+    // TODO: disable scripts for now while sprinting to chat bot release
+    pub fn _new() -> Self {
         let mut block = lang::Block::new();
         let null_type = lang::Type::from_spec(&*lang::NULL_TYPESPEC);
         block.expressions.push(
