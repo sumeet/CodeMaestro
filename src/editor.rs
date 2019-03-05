@@ -167,6 +167,9 @@ impl<'a> Controller {
 
     pub fn list_json_http_client_builders(&self) -> impl Iterator<Item = &JSONHTTPClientBuilder> {
         self.json_client_builder_by_func_id.values()
+            .filter(move |builder| {
+                self.open_windows.contains(&builder.json_http_client_id)
+            })
     }
 
     pub fn get_test(&self, test_id: lang::ID) -> Option<&tests::Test> {
@@ -227,6 +230,7 @@ impl<'a> Controller {
     }
 
     pub fn load_json_http_client_builder(&mut self, builder: JSONHTTPClientBuilder) {
+        self.open_windows.insert(builder.json_http_client_id);
         self.json_client_builder_by_func_id.insert(builder.json_http_client_id, builder);
     }
 
@@ -828,6 +832,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_json_http_client_builder(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
+        let cmdbuffer = Rc::clone(&self.command_buffer);
+        let json_http_client_id = builder.json_http_client_id;
         self.ui_toolkit.draw_window(
             &format!("Edit JSON HTTP Client: {}", builder.json_http_client_id),
             &|| {
@@ -893,7 +899,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            None::<fn()>)
+            Some(move || {
+                cmdbuffer.borrow_mut().add_controller_command(move |controller| {
+                    controller.close_window(json_http_client_id);
+                })
+            }))
     }
 
     fn render_json_return_type_selector(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {

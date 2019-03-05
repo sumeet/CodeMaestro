@@ -174,55 +174,57 @@ impl UiToolkit for YewToolkit {
                                                                  handle_keypress: Option<F>, onclose: Option<G>) -> Self::DrawResult {
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
-        if let Some(handle_keypress) = handle_keypress {
-            let handle_keypress_1 = Rc::new(handle_keypress);
-            let handle_keypress_2 = Rc::clone(&handle_keypress_1);
-            html! {
-               <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
-                    id={ self.incr_last_drawn_element_id().to_string() },
-                    tabindex=0,
-                    onkeypress=|e| {
+        let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
+            if let Some(handle_keypress) = &handle_keypress {
+                handle_keypress(keypress)
+            }
+        });
+        let handle_keypress_2 = Rc::clone(&handle_keypress_1);
+        html! {
+           <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+                id={ self.incr_last_drawn_element_id().to_string() },
+                tabindex=0,
+                onkeypress=|e| {
+                    if let Some(keypress) = map_keypress_event(&e) {
+                        handle_keypress_1(keypress);
+                    }
+                    e.prevent_default();
+                    Msg::Redraw
+                },
+                onkeydown=|e| {
+                    // lol for these special keys we have to listen on keydown, but the
+                    // rest we can do keypress :/
+                    if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
+                        // LOL this is for ctrl+r
+                        ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
+                        //console!(log, e.key());
                         if let Some(keypress) = map_keypress_event(&e) {
-                            handle_keypress_1(keypress);
+                            //console!(log, format!("{:?}", keypress));
+                            handle_keypress_2(keypress);
                         }
                         e.prevent_default();
                         Msg::Redraw
-                    },
-                    onkeydown=|e| {
-                        // lol for these special keys we have to listen on keydown, but the
-                        // rest we can do keypress :/
-                        if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
-                            // LOL this is for ctrl+r
-                            ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
-                            //console!(log, e.key());
-                            if let Some(keypress) = map_keypress_event(&e) {
-                                //console!(log, format!("{:?}", keypress));
-                                handle_keypress_2(keypress);
-                            }
-                            e.prevent_default();
-                            Msg::Redraw
-                        } else {
-                            Msg::DontRedraw
-                        }
-                    }, >
+                    } else {
+                        Msg::DontRedraw
+                    }
+                }, >
 
-                    <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
-                    <div class="window-content",>
-                        { f() }
-                    </div>
+                <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>
+                    { if let Some(onclose) = onclose {
+                        html! {
+                            <div style="float: right;", onclick=|_| { onclose(); Msg::Redraw }, >
+                                { "X" }
+                            </div>
+                        }
+                    } else {
+                        html! { <div></div> }
+                    } }
+                    { window_name }
+                </h4>
+                <div class="window-content",>
+                    { f() }
                 </div>
-            }
-        } else {
-            html! {
-                <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
-                    id={ self.incr_last_drawn_element_id().to_string() },
-                    tabindex=0, >
-                    <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>{ window_name }</h4>
-                    <div class="window-content",>
-                        { f() }
-                    </div>
-                </div>
-            }
+            </div>
         }
     }
 
