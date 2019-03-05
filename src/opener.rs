@@ -96,7 +96,7 @@ impl<'a> OptionsLister<'a> {
     fn vec(&self) -> Vec<MenuItem> {
         Iterator::flatten(
             CATEGORIES.iter().filter_map(move |category| {
-            let items = category.items(self)
+            let items = filter_matches(&self.opener.input_str, category.items(self))
                 .collect_vec();
             if items.is_empty() {
                 return None
@@ -107,6 +107,17 @@ impl<'a> OptionsLister<'a> {
         ).collect()
     }
 
+}
+
+fn filter_matches<'a>(input_str: &'a str, items: impl Iterator<Item = MenuItem<'a>>) -> impl Iterator<Item = MenuItem<'a>> {
+    // TODO: add fuzzy finding
+    let input = input_str.trim().to_lowercase();
+    items.filter(move |item| {
+        match item {
+            MenuItem::Selectable { label, .. } => label.to_lowercase().contains(&input),
+            MenuItem::Heading(_) => panic!("this method shouldn't ever see a Heading"),
+        }
+    })
 }
 
 pub enum MenuItem<'a> {

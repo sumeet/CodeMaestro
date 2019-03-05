@@ -31,8 +31,8 @@ pub struct Builtins {
 
 impl Builtins {
     pub fn load() -> Result<Self, Box<std::error::Error>> {
-        let f = File::open("builtins.json")?;
-        Ok(serde_json::from_reader(f)?)
+        let str = include_str!("../builtins.json");
+        Ok(serde_json::from_str(str)?)
     }
 
     pub fn save(&self) -> Result<(),Box<std::error::Error>> {

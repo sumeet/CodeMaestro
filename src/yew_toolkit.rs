@@ -2,7 +2,7 @@ use super::{App as CSApp, UiToolkit};
 use super::editor;
 use super::editor::{Key as AppKey,Keypress};
 use super::async_executor::AsyncExecutor;
-use stdweb::{js,_js_impl};
+use stdweb::{js,_js_impl,console,__internal_console_unsafe};
 use yew::{html};
 use yew::prelude::*;
 use std::cell::RefCell;
@@ -10,6 +10,7 @@ use std::rc::Rc;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::traits::IEvent;
 use itertools::Itertools;
+use crate::ui_toolkit::SelectableItem;
 
 pub struct Model {
     app: Option<Rc<RefCell<CSApp>>>,
@@ -61,10 +62,19 @@ const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 struct YewToolkit {
     last_drawn_element_id: RefCell<u32>,
     focused_element_id: RefCell<u32>,
+    pub global_keypress_handler: Rc<RefCell<Option<Box<Fn(Keypress) + 'static>>>>,
 }
 
 impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
+
+    fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
+        self.global_keypress_handler.replace(Some(Box::new(handle_keypress)));
+    }
+
+    fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult {
+        html! { <div></div> }
+    }
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult {
         html! {
@@ -434,6 +444,10 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: &[SelectableItem<T>], onselect: F) -> Self::DrawResult {
+        html! { <div></div> }
+    }
+
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
@@ -538,6 +552,7 @@ impl YewToolkit {
         YewToolkit {
             last_drawn_element_id: RefCell::new(0),
             focused_element_id: RefCell::new(0),
+            global_keypress_handler: Rc::new(RefCell::new(None)),
         }
     }
 
@@ -573,7 +588,10 @@ impl Renderable<Model> for Model {
             js! {
                 document.body.setAttribute("data-focused-id", @{tk.get_focused_element_id()});
             }
-            drawn
+
+            html! {
+                {{ drawn }}
+            }
         } else {
             html! { <p> {"No app"} </p> }
         }

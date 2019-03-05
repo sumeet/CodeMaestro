@@ -123,7 +123,25 @@ use imgui_toolkit::draw_app;
 #[cfg(feature = "javascript")]
 use yew_toolkit::draw_app;
 
+use cfg_if::cfg_if;
+
+
+cfg_if! {
+    if #[cfg(feature = "javascript")] {
+        fn init_debug() {
+            use stdweb::{js,_js_impl,console,__internal_console_unsafe};
+            ::std::panic::set_hook(Box::new(|info| {
+                console!(error, format!("!!! RUST PANIC !!! {:?}", info));
+            }));
+        }
+    } else {
+        fn init_debug() {}
+    }
+}
+
 pub fn main() {
+    init_debug();
+
     async_executor::with_executor_context(|async_executor| {
         let app = App::new_rc();
         draw_app(app, async_executor);
