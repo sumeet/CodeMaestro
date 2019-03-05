@@ -291,6 +291,7 @@ impl CommandBuffer {
             let code = code_func.code();
             let func_id = code_func.id();
             env.add_function(code_func);
+            controller.open_window(func_id);
             controller.load_code(code, code_editor::CodeLocation::Function(func_id));
         })
     }
@@ -310,6 +311,7 @@ impl CommandBuffer {
             let mut env = interpreter.env.borrow_mut();
             controller.load_code(lang::CodeNode::Block(chat_trigger.code.clone()),
                                  code_editor::CodeLocation::ChatTrigger(chat_trigger.id()));
+            // TODO: move some of this impl into opener to cut down on code dupe???
             controller.open_window(chat_trigger.id());
             env.add_function(chat_trigger);
         })
@@ -587,6 +589,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 match keypress {
                     Keypress { key: Key::Tab, ctrl: false, shift: false } => {
                         controller.opener_select_next()
+                    },
+                    Keypress { key: Key::Escape, .. } => {
+                        controller.close_opener()
                     },
                     _ => (),
                 }

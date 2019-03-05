@@ -5,10 +5,12 @@ use crate::EnvGenie;
 use lazy_static::lazy_static;
 use matches::matches;
 use itertools::Itertools;
+use super::lang::Function;
 
 lazy_static! {
     static ref CATEGORIES : Vec<Box<MenuCategory + Send + Sync>> = vec![
         Box::new(ChatTriggers {}),
+        Box::new(Functions {}),
     ];
 }
 
@@ -88,10 +90,17 @@ impl<'a> OptionsLister<'a> {
 
     // TODO: hax to make it work
     fn vec(&self) -> Vec<MenuItem> {
-        CATEGORIES.iter().flat_map(move |category| {
-            iter::once(MenuItem::Heading("Chat triggers"))
-                .chain(category.items(self))
-        }).collect()
+        Iterator::flatten(
+            CATEGORIES.iter().filter_map(move |category| {
+            let items = category.items(self)
+                .collect_vec();
+            if items.is_empty() {
+                return None
+            }
+            Some(iter::once(MenuItem::Heading(category.label()))
+                .chain(items.into_iter()))
+            })
+        ).collect()
     }
 
 }
@@ -112,14 +121,14 @@ impl<'a> MenuItem<'a> {
 }
 
 trait MenuCategory {
-    fn category(&self) -> &'static str;
+    fn label(&self) -> &'static str;
     fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a>;
 }
 
 struct ChatTriggers;
 
 impl MenuCategory for ChatTriggers {
-    fn category(&self) -> &'static str {
+    fn label(&self) -> &'static str {
         "Chat triggers"
     }
 
@@ -137,6 +146,33 @@ impl MenuCategory for ChatTriggers {
                     move |command_buffer| {
                         let ct2 = ct2.clone();
                         command_buffer.load_chat_trigger(ct2)
+                    }
+                ))
+            }))
+    }
+}
+
+struct Functions;
+
+impl MenuCategory for Functions {
+    fn label(&self) -> &'static str {
+        "Functions"
+    }
+
+    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem<'a>> + 'a> {
+        Box::new(options_lister.env_genie.list_code_funcs()
+            .filter_map(move |cf| {
+                if options_lister.controller.is_builtin(cf.id()) {
+                    return None
+                }
+                // TODO: we could avoid this clone by having load_chat_trigger take the
+                // ID instead of the whole trigger
+                let cf2 = cf.clone();
+                Some(MenuItem::selectable(
+                    &cf.name,
+                    move |command_buffer| {
+                        let cf2 = cf2.clone();
+                        command_buffer.load_code_func(cf2)
                     }
                 ))
             }))
