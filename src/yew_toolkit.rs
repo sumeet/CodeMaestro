@@ -3,6 +3,7 @@ use super::editor;
 use super::editor::{Key as AppKey,Keypress};
 use super::async_executor::AsyncExecutor;
 use stdweb::{js,_js_impl};
+use stdweb::{console,__internal_console_unsafe};
 use stdweb::web::{document,IElement,IEventTarget};
 use yew::{html};
 use yew::prelude::*;
@@ -15,11 +16,13 @@ use crate::ui_toolkit::SelectableItem;
 
 pub struct Model {
     app: Option<Rc<RefCell<CSApp>>>,
+    // TODO: NUKE THAT ASYNC EXECUTOR (i think)
     async_executor: Option<AsyncExecutor>,
+    renderer_state: Option<Rc<RefCell<RendererState>>>,
 }
 
 pub enum Msg {
-    Init(Rc<RefCell<CSApp>>, AsyncExecutor),
+    Init(Rc<RefCell<CSApp>>, AsyncExecutor, Rc<RefCell<RendererState>>),
     Redraw,
     DontRedraw,
 }
@@ -32,17 +35,19 @@ impl Component for Model {
         Model {
             app: None,
             async_executor: None,
+            renderer_state: None,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Init(app, mut async_executor) => {
+            Msg::Init(app, mut async_executor, renderer_state) => {
                 // flush commands initially before rendering for the first time
                 app.borrow_mut().flush_commands(&mut async_executor);
 
                 self.async_executor = Some(async_executor);
                 self.app = Some(app);
+                self.renderer_state = Some(renderer_state);
                 true
             }
             Msg::Redraw => {
@@ -70,7 +75,7 @@ impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
-        self.global_keydown_handler.replace(Box::new(handle_keypress));
+        self.global_keydown_handler.replace(handle_keypress);
     }
 
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult {
@@ -241,7 +246,9 @@ impl UiToolkit for YewToolkit {
             let handle_keypress_2 = Rc::clone(&handle_keypress_1);
             let global_keydown_handler = self.global_keydown_handler();
             html! {
-                <div style={ format!("min-height: {}%; overflow: auto;", height_percentage * 100.) },
+            // HAX TODO: can't get this element to be a percentage of the total size, so just hardcode it for now
+//                <div style={ format!("height: {}%; overflow: auto;", height_percentage * 100.) },
+                  <div style="height: 300px;",
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     onkeypress=|e| {
@@ -641,7 +648,7 @@ impl UiToolkit for YewToolkit {
 }
 
 impl YewToolkit {
-    fn new() -> Self {
+    fn new(renderer_state: Rc<RefCell<RendererState>>) -> Self {
         YewToolkit {
             last_drawn_element_id: RefCell::new(0),
             focused_element_id: RefCell::new(0),
@@ -672,45 +679,57 @@ impl YewToolkit {
     }
 
     fn global_keydown_handler(&self) -> impl Fn(&KeyDownEvent) + 'static {
-        let global_keydown_handler =
-            Rc::clone(&self.global_keydown_handler);
+        let renderer_state = Rc::clone(&self.renderer_state);
         move |e| {
-            if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
-                if let Some(keypress) = map_keypress_event(e) {
-                    global_keydown_handler.borrow()(keypress);
-                    e.prevent_default();
-                }
-            }
+            console!(log, "before 689");
+            renderer_state.borrow_mut().handle_global_key(e);
+            console!(log, "after 689");
         }
     }
 }
 
+pub struct RendererState {
+    global_keydown_handler: Box<Fn(Keypress) + 'static>,
+    yew_app: html::Scope<Model>,
+}
+
+impl RendererState {
+    pub fn new(yew_app: html::Scope<Model>) -> Self {
+        Self {
+            global_keydown_handler: Box::new(|_| {}),
+            yew_app,
+        }
+    }
+
+    pub fn send_msg(&mut self, msg: Msg) {
+        self.yew_app.send_message(msg)
+    }
+
+    pub fn handle_global_key(&mut self, e: &KeyDownEvent) {
+        if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
+            if let Some(keypress) = map_keypress_event(e) {
+                (self.global_keydown_handler)(keypress);
+                e.prevent_default();
+                self.send_msg(Msg::Redraw)
+            }
+        }
+    }
+
+    pub fn set_global_keydown_handler(&mut self, handle_keypress: impl Fn(Keypress) + 'static) {
+        self.global_keydown_handler = Box::new(handle_keypress)
+    }
+}
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-        if let Some(ref app) = self.app {
-            let mut tk = YewToolkit::new();
-            let global_keydown_handler = tk.global_keydown_handler();
+        if let (Some(app), Some(renderer_state)) = (&self.app, &self.renderer_state) {
+            let mut tk = YewToolkit::new(Rc::clone(renderer_state));
             let drawn = app.borrow_mut().draw(&mut tk);
+            // the app drawing changes the global keyhandler, which we'll set here.
             document().body().unwrap()
                 .set_attribute("data-focused-id",
                               &tk.get_focused_element_id().to_string())
                 .unwrap();
-            let async_executor = self.async_executor.clone();
-            document().add_event_listener(move |e: KeyDownEvent| {
-                // TODO: we know we have to capture C-o here because it can open the fuzzy finder
-                // globally. unfortunately, for now, we have to manually bind all global hotkeys
-                // like this.
-                // REFACTOR NEEDED BADLY, UGLY: hacks, we just redraw here because it's hard to from inside of
-                // global_keydown_handler(), i'm pretty sure we could do it if we wanted
-                if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
-                    global_keydown_handler(&e);
-                    // TODO: HACKY WAY OF REDRAWING FROM INSIDE HERE
-                    async_executor.clone().map(|async_executor| {
-                        async_executor.onupdate.map(|onupdate| onupdate())
-                    });
-                }
-            });
 
             drawn
         } else {
@@ -792,15 +811,40 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     }
 
     let yew_app = App::<Model>::new().mount_to_body();
-    let yew_app_rc = Rc::new(RefCell::new(yew_app));
-    setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&yew_app_rc));
-    yew_app_rc.borrow_mut().send_message(Msg::Init(Rc::clone(&app), async_executor));
+    let renderer_state = Rc::new(RefCell::new(RendererState::new(yew_app)));
+    setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&renderer_state));
+    add_global_keydown_event_listener(Rc::clone(&renderer_state));
+    console!(log, "before renderer_state borrow mut send msg");
+    renderer_state.borrow_mut().send_msg(Msg::Init(Rc::clone(&app), async_executor, Rc::clone(&renderer_state)));
+    console!(log, "after renderer_state borrow mut send msg");
     yew::run_loop();
 }
 
 fn setup_ui_update_on_io_event_completion(async_executor: &mut AsyncExecutor,
-                                          yew_app_rc: Rc<RefCell<html::Scope<Model>>>) {
+                                          renderer_state: Rc<RefCell<RendererState>>) {
     async_executor.setonupdate(Rc::new(move || {
-        yew_app_rc.borrow_mut().send_message(Msg::Redraw);
+        console!(log, "before 831");
+        renderer_state.borrow_mut().send_msg(Msg::Redraw);
+        console!(log, "after 831");
     }));
 }
+
+fn add_global_keydown_event_listener(renderer_state: Rc<RefCell<RendererState>>) {
+    document().add_event_listener(move |e: KeyDownEvent| {
+        // TODO: we know we have to capture C-o here because it can open the fuzzy finder
+        // globally. unfortunately, for now, we have to manually bind all global hotkeys
+        // like this.
+        // REFACTOR NEEDED BADLY, UGLY: hacks, we just redraw here because it's hard to from inside of
+        // global_keydown_handler(), i'm pretty sure we could do it if we wanted
+        if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
+            console!(log, "before 837");
+            renderer_state.borrow_mut().handle_global_key(&e);
+            console!(log, "after 837");
+        }
+    });
+}
+
+
+
+
+
