@@ -286,7 +286,8 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
-        // JANK, make it better
+        // TODO: this only renders the bottom bar directly under the content. the bottom bar needs
+        // to be fixed at the bottom
         html! {
             <div id={ self.incr_last_drawn_element_id().to_string() }, >
                 { draw_content_fn() }

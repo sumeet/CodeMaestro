@@ -50,7 +50,7 @@ tokio-executor = {version = "*", optional = true}
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14", optional = true }
 stdweb = {git = "https://github.com/koute/stdweb", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"], optional = true }
-reqwest = {version = "0.9.6", optional = true, features=["hyper-011"] }
+reqwest = {git = "https://github.com/sumeet/reqwest", branch = "master", optional = true }
 yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
 slack = { git = "https://github.com/sumeet/slack-rs", features = ["future"], branch = "master", optional = true }
 noob = {version = "1.1.0", optional = true}
@@ -64,3 +64,4 @@ futures-core-preview = { git = "https://github.com/rust-lang-nursery/futures-rs"
 #futures-sink-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat"] }
 stdweb = {git = "https://github.com/koute/stdweb", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"]}
+reqwest = {git = "https://github.com/sumeet/reqwest", branch = "master"}
