@@ -75,6 +75,34 @@ struct YewToolkit {
 impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
 
+    fn draw_x_scrollable_list<'a>(&'a self, items: impl ExactSizeIterator<Item = (&'a Fn() -> Self::DrawResult, bool)>, lines_height: usize) -> Self::DrawResult {
+        let items = items.map(|(draw_fn, is_selected)| {
+            let drawn = draw_fn();
+            let last_drawn_id = *self.last_drawn_element_id.borrow();
+            if is_selected {
+                self.renderer_state.borrow().add_run_after_render(move || {
+                    js! {
+                        var el = document.getElementById(@{last_drawn_id});
+                        if (el) {
+                            el.scrollIntoView({inline: "center"});
+                        }
+                    }
+                });
+            }
+            drawn
+        }).collect_vec();
+        html! {
+            //   TODO: margin-bottom is HAXXX
+            <div style={format!("display: flex; height: {}em; max-height: {}em; overflow: hidden; margin-bottom: 0.2em;", lines_height, lines_height)}, >
+                { for items.into_iter().map(|drawn| html! {
+                    <div style="white-space: nowrap;", >
+                        { drawn }
+                    </div>
+                })}
+            </div>
+        }
+    }
+
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult {
         let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
             if let Some(handle_keypress) = &handle_keypress {
@@ -690,14 +718,26 @@ impl YewToolkit {
 pub struct RendererState {
     pub global_key_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
     pub yew_app: Rc<RefCell<html::Scope<Model>>>,
+    pub funcs_to_run_after_render: Rc<RefCell<Vec<Box<Fn()>>>>,
 }
 
 impl RendererState {
-    pub fn new(yew_app: html::Scope<Model>) -> Self {
+    pub fn new(yew_app: html::Scope<Model>, funcs_to_run_after_render: Rc<RefCell<Vec<Box<Fn()>>>>) -> Self {
         Self {
             global_key_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
             yew_app: Rc::new(RefCell::new(yew_app)),
+            funcs_to_run_after_render,
         }
+    }
+
+    pub fn run_all_after_render(&self) {
+        for func in self.funcs_to_run_after_render.borrow_mut().drain(..) {
+            func()
+        }
+    }
+
+    pub fn add_run_after_render(&self, fun: impl Fn() + 'static) {
+        self.funcs_to_run_after_render.borrow_mut().push(Box::new(fun))
     }
 
     pub fn send_msg(&self, msg: Msg) {
@@ -727,7 +767,6 @@ impl Renderable<Model> for Model {
         if let (Some(app), Some(renderer_state)) = (&self.app, &self.renderer_state) {
             let mut tk = YewToolkit::new(Rc::clone(renderer_state));
             let drawn = app.borrow_mut().draw(&mut tk);
-            // the app drawing changes the global keyhandler, which we'll set here.
             document().body().unwrap()
                 .set_attribute("data-focused-id",
                               &tk.get_focused_element_id().to_string())
@@ -778,6 +817,9 @@ fn was_shift_key_pressed(key: &str) -> bool {
 pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     yew::initialize();
 
+    let hoohaw : Rc<RefCell<Vec<Box<Fn()>>>> = Rc::new(RefCell::new(vec![]));
+
+    // dirty hacks to focus something
     js! {
         var CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = null;
 
@@ -813,7 +855,21 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     }
 
     let yew_app = App::<Model>::new().mount_to_body();
-    let renderer_state = Rc::new(RefCell::new(RendererState::new(yew_app)));
+    let renderer_state = Rc::new(RefCell::new(RendererState::new(yew_app, hoohaw)));
+
+    let run_after_render = {
+        let renderer_state = Rc::clone(&renderer_state);
+        move || renderer_state.borrow().run_all_after_render()
+    };
+    js! {
+        var observer = new MutationObserver(function() {
+            @{run_after_render}();
+        });
+        var config = {childList: true, subtree: true};
+        observer.observe(window.document.documentElement, config);
+
+    }
+
     setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&renderer_state));
     add_global_keydown_event_listener(Rc::clone(&renderer_state));
     renderer_state.borrow().send_msg(Msg::Init(Rc::clone(&app), async_executor.clone(), Rc::clone(&renderer_state)));
