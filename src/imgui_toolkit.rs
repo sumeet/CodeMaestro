@@ -326,9 +326,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         //let set_to = focused_element_x - *first_element_screen_x.borrow();
                         let set_to = {
                             if focused_element_x < 0.0 {
-                                (unsafe { imgui_sys::igGetScrollX() }) - 10.
+                                (unsafe { imgui_sys::igGetScrollX() }) - 5.
                             } else {
-                                (unsafe { imgui_sys::igGetScrollX() }) + 10.
+                                (unsafe { imgui_sys::igGetScrollX() }) + 5.
                             }
                         };
                         println!("set to: {}", set_to);
