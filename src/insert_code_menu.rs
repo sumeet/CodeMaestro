@@ -52,6 +52,11 @@ impl InsertCodeMenu {
         self.selected_option_index += 1;
     }
 
+    pub fn select_prev(&mut self) {
+        // this could possibly overflow, but i wouldn't count on it... HAXXXXX
+        self.selected_option_index -= 1;
+    }
+
     pub fn input_str(&self) -> &str {
         &self.input_str
     }
@@ -67,7 +72,17 @@ impl InsertCodeMenu {
     // select_next
     // XXX: copy and paste to opener.rs
     fn selected_index(&self, num_options: usize) -> usize {
-        (self.selected_option_index % num_options as isize) as usize
+        if num_options == 0 {
+            return 0
+        }
+        let selected = self.selected_option_index % num_options as isize;
+        if selected == 0 {
+            0
+        } else if selected > 0 {
+            selected as usize
+        } else {
+            (num_options as isize + selected) as usize
+        }
     }
 
     pub fn selected_option_code(&self, code_genie: &CodeGenie, env_genie: &EnvGenie) -> Option<lang::CodeNode> {

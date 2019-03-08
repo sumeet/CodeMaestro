@@ -121,7 +121,11 @@ impl CodeEditor {
                 self.select_current_line();
             },
             (_, Key::Tab) => {
-                self.insert_code_menu.as_mut().map(|menu| menu.select_next());
+                if keypress.shift {
+                    self.insert_code_menu.as_mut().map(|menu| menu.select_prev());
+                } else {
+                    self.insert_code_menu.as_mut().map(|menu| menu.select_next());
+                }
             }
             _ => {},
         }

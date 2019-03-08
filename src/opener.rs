@@ -36,7 +36,14 @@ impl Opener {
         if num_total_options == 0 {
             return 0
         }
-        (self.selected_index % num_total_options as isize) as usize
+        let selected = self.selected_index % num_total_options as isize;
+        if selected == 0 {
+            0
+        } else if selected > 0 {
+            selected as usize
+        } else {
+            (num_total_options as isize + selected) as usize
+        }
     }
 
     pub fn set_input_str(&mut self, input_str: String) {
