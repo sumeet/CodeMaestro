@@ -3,7 +3,7 @@ use super::editor;
 use super::editor::{Key as AppKey,Keypress};
 use super::async_executor::AsyncExecutor;
 use stdweb::{js,_js_impl};
-use stdweb::{console,__internal_console_unsafe};
+//use stdweb::{console,__internal_console_unsafe};
 use stdweb::web::{document,IElement,IEventTarget};
 use yew::{html};
 use yew::prelude::*;
@@ -68,15 +68,12 @@ const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 struct YewToolkit {
     last_drawn_element_id: RefCell<u32>,
     focused_element_id: RefCell<u32>,
-    pub global_keydown_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
+    //pub global_keydown_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
+    renderer_state: Rc<RefCell<RendererState>>,
 }
 
 impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
-
-    fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
-        self.global_keydown_handler.replace(handle_keypress);
-    }
 
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult {
         let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
@@ -645,6 +642,10 @@ impl UiToolkit for YewToolkit {
             </div>
         }
     }
+
+    fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
+        self.renderer_state.borrow().set_global_keydown_handler(handle_keypress);
+    }
 }
 
 impl YewToolkit {
@@ -652,7 +653,7 @@ impl YewToolkit {
         YewToolkit {
             last_drawn_element_id: RefCell::new(0),
             focused_element_id: RefCell::new(0),
-            global_keydown_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
+            renderer_state,
         }
     }
 
@@ -681,42 +682,43 @@ impl YewToolkit {
     fn global_keydown_handler(&self) -> impl Fn(&KeyDownEvent) + 'static {
         let renderer_state = Rc::clone(&self.renderer_state);
         move |e| {
-            console!(log, "before 689");
-            renderer_state.borrow_mut().handle_global_key(e);
-            console!(log, "after 689");
+            renderer_state.borrow().handle_global_key(e);
         }
     }
 }
 
 pub struct RendererState {
-    global_keydown_handler: Box<Fn(Keypress) + 'static>,
-    yew_app: html::Scope<Model>,
+    pub global_key_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
+    pub yew_app: Rc<RefCell<html::Scope<Model>>>,
 }
 
 impl RendererState {
     pub fn new(yew_app: html::Scope<Model>) -> Self {
         Self {
-            global_keydown_handler: Box::new(|_| {}),
-            yew_app,
+            global_key_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
+            yew_app: Rc::new(RefCell::new(yew_app)),
         }
     }
 
-    pub fn send_msg(&mut self, msg: Msg) {
-        self.yew_app.send_message(msg)
+    pub fn send_msg(&self, msg: Msg) {
+        self.yew_app.borrow_mut().send_message(msg);
     }
 
-    pub fn handle_global_key(&mut self, e: &KeyDownEvent) {
+    pub fn handle_global_key(&self, e: &KeyDownEvent) {
+        // TODO: we know we have to capture C-o here because it can open the fuzzy finder
+        // globally. unfortunately, for now, we have to manually bind all global hotkeys
+        // like this.
         if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
             if let Some(keypress) = map_keypress_event(e) {
-                (self.global_keydown_handler)(keypress);
+                (self.global_key_handler.borrow())(keypress);
                 e.prevent_default();
                 self.send_msg(Msg::Redraw)
             }
         }
     }
 
-    pub fn set_global_keydown_handler(&mut self, handle_keypress: impl Fn(Keypress) + 'static) {
-        self.global_keydown_handler = Box::new(handle_keypress)
+    pub fn set_global_keydown_handler(&self, handle_keypress: impl Fn(Keypress) + 'static) {
+        self.global_key_handler.replace(Box::new(handle_keypress));
     }
 }
 
@@ -814,33 +816,20 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     let renderer_state = Rc::new(RefCell::new(RendererState::new(yew_app)));
     setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&renderer_state));
     add_global_keydown_event_listener(Rc::clone(&renderer_state));
-    console!(log, "before renderer_state borrow mut send msg");
-    renderer_state.borrow_mut().send_msg(Msg::Init(Rc::clone(&app), async_executor, Rc::clone(&renderer_state)));
-    console!(log, "after renderer_state borrow mut send msg");
+    renderer_state.borrow().send_msg(Msg::Init(Rc::clone(&app), async_executor.clone(), Rc::clone(&renderer_state)));
     yew::run_loop();
 }
 
 fn setup_ui_update_on_io_event_completion(async_executor: &mut AsyncExecutor,
                                           renderer_state: Rc<RefCell<RendererState>>) {
     async_executor.setonupdate(Rc::new(move || {
-        console!(log, "before 831");
         renderer_state.borrow_mut().send_msg(Msg::Redraw);
-        console!(log, "after 831");
     }));
 }
 
 fn add_global_keydown_event_listener(renderer_state: Rc<RefCell<RendererState>>) {
     document().add_event_listener(move |e: KeyDownEvent| {
-        // TODO: we know we have to capture C-o here because it can open the fuzzy finder
-        // globally. unfortunately, for now, we have to manually bind all global hotkeys
-        // like this.
-        // REFACTOR NEEDED BADLY, UGLY: hacks, we just redraw here because it's hard to from inside of
-        // global_keydown_handler(), i'm pretty sure we could do it if we wanted
-        if (e.key() == "o" || e.key() == "O") && e.ctrl_key() {
-            console!(log, "before 837");
-            renderer_state.borrow_mut().handle_global_key(&e);
-            console!(log, "after 837");
-        }
+        renderer_state.borrow().handle_global_key(&e);
     });
 }
 
