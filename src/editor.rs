@@ -161,6 +161,11 @@ impl<'a> Controller {
         self.opener.as_mut().map(move |opener| opener.select_next());
     }
 
+
+    pub fn opener_select_prev(&mut self) {
+        self.opener.as_mut().map(move |opener| opener.select_prev());
+    }
+
     pub fn list_tests(&self, subject: tests::TestSubject) -> impl Iterator<Item = &tests::Test> {
         self.test_by_id.values().filter(move |t| t.subject == subject)
     }
@@ -580,6 +585,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 match keypress {
                     Keypress { key: Key::Tab, ctrl: false, shift: false } => {
                         controller.opener_select_next()
+                    },
+                    Keypress { key: Key::Tab, ctrl: false, shift: true } => {
+                        controller.opener_select_prev()
                     },
                     Keypress { key: Key::Escape, .. } => {
                         controller.close_opener()

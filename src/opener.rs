@@ -55,6 +55,10 @@ impl Opener {
         self.selected_index += 1;
     }
 
+    pub fn select_prev(&mut self) {
+        self.selected_index -= 1;
+    }
+
     // controller used to see builtins
     pub fn list_options<'a>(&'a self, controller: &'a Controller,
                             env_genie: &'a EnvGenie<'a>) -> OptionsLister<'a> {
