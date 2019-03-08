@@ -187,18 +187,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
         let options = menu.list_options(&self.code_editor.code_genie, self.env_genie);
-        let render_insertion_options : Vec<Box<Fn() -> T::DrawResult>> = options.iter()
+        let render_insertion_options : Vec<(Box<Fn() -> T::DrawResult>, bool)> = options.iter()
             .map(|option| {
                 let c : Box<Fn() -> T::DrawResult> = Box::new(move || {
                     self.render_insertion_option(option, menu.insertion_point)
                 });
-                c
+                (c, option.is_selected)
             })
             .collect();
-        self.ui_toolkit.draw_all_on_same_line(
-            &render_insertion_options.iter()
-                .map(|c| c.as_ref()).collect_vec()
-        )
+        let render_insertion_options = render_insertion_options
+            .iter()
+            .map(|(box_fn, is_selected)| (box_fn.as_ref(), *is_selected));
+        self.ui_toolkit.draw_x_scrollable_list(render_insertion_options, 1)
     }
 
     fn render_list_literal(&self, list_literal: &lang::ListLiteral,

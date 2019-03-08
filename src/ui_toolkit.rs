@@ -10,6 +10,7 @@ pub trait UiToolkit {
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult;
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>, onclose: Option<G>) -> Self::DrawResult;
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, height_percentage: f32, handle_keypress: Option<F>) -> Self::DrawResult;
+    fn draw_x_scrollable_list<'a>(&'a self, items: impl ExactSizeIterator<Item = (&'a Fn() -> Self::DrawResult, bool)>, lines_height: usize) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_separator(&self) -> Self::DrawResult;
