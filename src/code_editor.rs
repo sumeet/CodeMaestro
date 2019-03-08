@@ -68,65 +68,58 @@ impl CodeEditor {
             return
         }
         // don't perform any commands when in edit mode
-        match (self.editing, keypress.key) {
-            (false, Key::K) | (false, Key::UpArrow) => {
-                self.try_select_up_one_node()
-            },
-            (false, Key::J) | (false, Key::DownArrow) => {
+        match (self.editing, &keypress.key, &keypress.shift, &keypress.ctrl) {
+            (false, Key::J, false, false) | (false, Key::DownArrow, _, false) => {
                 self.try_select_down_one_node()
             },
-            (false, Key::B) | (false, Key::LeftArrow) | (false, Key::H) => {
+            (false, Key::K, false, false) | (false, Key::UpArrow, _, false) => {
+                self.try_select_up_one_node()
+            },
+            (false, Key::B, false, false) | (false, Key::LeftArrow, _, false) | (false, Key::H, false, false) => {
                 self.try_select_back_one_node()
             },
-            (false, Key::W) | (false, Key::RightArrow) | (false, Key::L) => {
+            (false, Key::W, false, false) | (false, Key::RightArrow, _, false) | (false, Key::L, false, false) => {
                 self.try_select_forward_one_node()
             },
-            (false, Key::C) => {
+            (false, Key::C, false, false) => {
                 if let Some(id) = self.selected_node_id {
                     self.mark_as_editing(InsertionPoint::Editing(id));
                 }
             },
-            (false, Key::D) => {
+            (false, Key::D, false, false) => {
                 self.delete_selected_code();
             },
-            (false, Key::A) => {
+            (false, Key::A, false, false) => {
                 self.try_append_in_selected_node();
             },
-            (false, Key::R) => {
-                if keypress.ctrl && keypress.shift {
-                    // TODO: this doesn't work right now
-                    //self.run(&self.get_code().clone());
-                } else if keypress.ctrl {
-                    self.redo()
-                } else {
-                    self.try_enter_replace_edit_for_selected_node();
-                }
+            (false, Key::R, false, false) => {
+                self.try_enter_replace_edit_for_selected_node();
             },
-            (false, Key::O) => {
-                // TODO: this is a mess. we should pattern match on ctrl and shift
-                // as well
-                if keypress.ctrl {
-                    return;
-                }
-                if keypress.shift {
-                    self.set_insertion_point_on_previous_line_in_block()
-                } else {
-                    self.set_insertion_point_on_next_line_in_block()
-                }
+            (false, Key::R, true, true) => {
+                // TODO: this doesn't work right now
+                //self.run(&self.get_code().clone());
             },
-            (false, Key::U) => {
+            (false, Key::R, false, true) => {
+                self.redo();
+            },
+            (false, Key::O, true, false) => {
+                self.set_insertion_point_on_previous_line_in_block()
+            },
+            (false, Key::O, false, false) => {
+                self.set_insertion_point_on_next_line_in_block()
+            },
+            (false, Key::U, false, false) => {
                 self.undo()
             },
-            (false, Key::V) if keypress.shift => {
+            (false, Key::V, true, false) => {
                 self.select_current_line();
             },
-            (_, Key::Tab) => {
-                if keypress.shift {
-                    self.insert_code_menu.as_mut().map(|menu| menu.select_prev());
-                } else {
-                    self.insert_code_menu.as_mut().map(|menu| menu.select_next());
-                }
-            }
+            (_, Key::Tab, false, false) => {
+                self.insert_code_menu.as_mut().map(|menu| menu.select_next());
+            },
+            (_, Key::Tab, true, false) => {
+                self.insert_code_menu.as_mut().map(|menu| menu.select_prev());
+            },
             _ => {},
         }
     }
