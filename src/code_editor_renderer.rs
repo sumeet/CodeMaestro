@@ -414,11 +414,31 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             let typ = self.code_editor.code_genie.guess_type(
                 self.code_editor.code_genie.find_node(variable_reference.id).unwrap(),
                 self.env_genie);
-            let sym = self.env_genie.get_symbol_for_type(&typ);
-            self.draw_button(&format!("{} {}", sym, name), PURPLE_COLOR, &|| {})
+                self.render_name_with_type_definition(&name, PURPLE_COLOR, &typ)
+
         } else {
             self.draw_button("Variable reference not found", RED_COLOR, &|| {})
         }
+    }
+
+    fn darken(&self, mut color: Color) -> Color {
+        color[0] *= 0.5;
+        color[1] *= 0.5;
+        color[2] *= 0.5;
+        color
+    }
+
+    // this is used for rendering variable references and struct field gets. it displays the type of the
+    // attribute next to the name of it, so the user can see type information along
+    fn render_name_with_type_definition(&self, name: &str, color: Color, typ: &lang::Type) -> T::DrawResult {
+            let sym = self.env_genie.get_symbol_for_type(typ);
+            self.draw_nested_borders_around(&|| {
+                self.ui_toolkit.draw_all_on_same_line(&[
+//                    &|| self.ui_toolkit.draw_small_button(&sym, PURPLE_COLOR, &|| {}),
+//                    &|| self.ui_toolkit.draw_button(&name, PURPLE_COLOR, &|| {}),
+                    &|| self.ui_toolkit.draw_button(&format!("{} {}", sym, name), color, &|| {}),
+                ])
+            })
     }
 
     fn lookup_variable_name(&self, variable_reference: &lang::VariableReference) -> Option<String> {
@@ -617,7 +637,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 &|| self.render_code(&sfg.struct_expr),
                 &|| {
                     self.render_nested(&|| {
-                        self.draw_button(&struct_field.name, BLUE_COLOR, &|| {})
+                        self.render_name_with_type_definition(&struct_field.name, BLUE_COLOR, &struct_field.field_type)
                     })
                 }
             ])
