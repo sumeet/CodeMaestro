@@ -39,6 +39,9 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     // keep this in sync with the WINDOW_BG_COLOR defined in yew_toolkit.rs
     style.colors[ImGuiCol::WindowBg as usize] = (0.375, 0.375, 0.375, 1.0).into();
 
+    println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);
+    println!("bordershadow: {:?}", style.colors[ImGuiCol::BorderShadow as usize]);
+
     imgui.fonts().add_font_with_config(
         include_bytes!("../fonts/calibri.ttf"),
         ImFontConfig::new()
@@ -61,7 +64,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     );
 
     imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/DroidSansJapanese.ttf"),
+        include_bytes!("../fonts/Osaka-UI-03.ttf"),
         ImFontConfig::new()
             .oversample_h(1)
             .pixel_snap_h(true)

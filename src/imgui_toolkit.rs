@@ -22,9 +22,7 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
             let mut app = app.borrow_mut();
             app.flush_commands(&mut async_executor);
             async_executor.turn();
-            //
-            let io = unsafe { &*sys::igGetIO() };
-            let mut toolkit = ImguiToolkit::new(ui, keypress, io.font_global_scale);
+            let mut toolkit = ImguiToolkit::new(ui, keypress);
             app.draw(&mut toolkit);
             true
         },
@@ -55,19 +53,17 @@ impl State {
 }
 
 pub struct ImguiToolkit<'a> {
-    fontscale: RefCell<f32>,
     ui: &'a Ui<'a>,
     keypress: Option<Keypress>,
     state: RefCell<State>,
 }
 
 impl<'a> ImguiToolkit<'a> {
-    pub fn new(ui: &'a Ui, keypress: Option<Keypress>, fontscale: f32) -> ImguiToolkit<'a> {
+    pub fn new(ui: &'a Ui, keypress: Option<Keypress>) -> ImguiToolkit<'a> {
         ImguiToolkit {
             ui,
             keypress,
             state: RefCell::new(State::new()),
-            fontscale: RefCell::new(fontscale),
         }
     }
 

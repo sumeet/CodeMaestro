@@ -28,7 +28,8 @@ impl<'a> EnvGenie<'a> {
         let joined_params = t.params.iter()
             .map(|p| self.get_symbol_for_type(p))
             .join(", ");
-        format!("{}\u{f053}{}\u{f054}", typespec.symbol(), joined_params)
+        //format!("{}「{}」", typespec.symbol(), joined_params)
+        format!("{}｢{}｣", typespec.symbol(), joined_params)
     }
     
     pub fn get_name_for_type(&self, t: &lang::Type) -> Option<String> {
