@@ -468,7 +468,12 @@ impl CodeGenie {
                 } else {
                     // couldn't find assignment with that variable name, looking for function args
                     env_genie.get_type_for_arg(vr.assignment_id)
-                        .expect(&format!("couldn't find arg for assignment {}", vr.assignment_id))
+                        .unwrap_or_else(|| {
+                            self.find_enum_variant_preceding_by_assignment_id(vr.id, vr.assignment_id, env_genie)
+                                .unwrap()
+                                .typ
+                        })
+//                        .expect(&format!("couldn't find arg for assignment {}", vr.assignment_id))
                 }
             }
             CodeNode::FunctionReference(_) => {
@@ -570,6 +575,13 @@ impl CodeGenie {
                 prev = node;
             }
         })
+    }
+
+    pub fn find_enum_variant_preceding_by_assignment_id<'a>(&'a self, behind_id: lang::ID,
+                                                            assignment_id: lang::ID,
+                                                            env_genie: &'a EnvGenie) -> Option<MatchVariant> {
+        self.find_enum_variants_preceding_iter(behind_id, env_genie)
+            .find(|match_variant| match_variant.assignment_id() == assignment_id)
     }
 
     pub fn is_block_expression(&self, node_id: lang::ID) -> bool {

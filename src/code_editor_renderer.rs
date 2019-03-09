@@ -411,7 +411,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_variable_reference(&self, variable_reference: &lang::VariableReference) -> T::DrawResult {
         if let Some(name) = self.lookup_variable_name(variable_reference) {
-            self.draw_button(&name, PURPLE_COLOR, &|| {})
+            let typ = self.code_editor.code_genie.guess_type(
+                self.code_editor.code_genie.find_node(variable_reference.id).unwrap(),
+                self.env_genie);
+            let sym = self.env_genie.get_symbol_for_type(&typ);
+            self.draw_button(&format!("{} {}", sym, name), PURPLE_COLOR, &|| {})
         } else {
             self.draw_button("Variable reference not found", RED_COLOR, &|| {})
         }
@@ -428,9 +432,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             return Some(arg.short_name)
         }
         // variables can also refer to enum variants
-        self.code_editor.code_genie.find_enum_variants_preceding(variable_reference.id,
-                                                                 self.env_genie).into_iter()
-            .find(|match_variant| match_variant.assignment_id() == variable_reference.assignment_id)
+        self.code_editor.code_genie.find_enum_variant_preceding_by_assignment_id(variable_reference.id,
+                                                                 variable_reference.assignment_id, self.env_genie)
             .map(|match_variant| match_variant.enum_variant.name)
     }
 
