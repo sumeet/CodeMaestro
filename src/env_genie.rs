@@ -30,7 +30,7 @@ impl<'a> EnvGenie<'a> {
             .join(", ");
         format!("{}\u{f053}{}\u{f054}", typespec.symbol(), joined_params)
     }
-
+    
     pub fn get_name_for_type(&self, t: &lang::Type) -> Option<String> {
         let typespec = self.find_typespec(t.typespec_id)?;
         if typespec.num_params() == 0 {

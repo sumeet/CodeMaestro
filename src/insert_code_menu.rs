@@ -18,6 +18,7 @@ lazy_static! {
     // the order is significant here. it defines which order the options appear in (no weighting
     // system yet)
     static ref OPTIONS_GENERATORS : Vec<Box<InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
+        Box::new(InsertFunctionWrappingOptionGenerator {}),
         Box::new(InsertListIndexOfLocal {}),
         Box::new(InsertVariableReferenceOptionGenerator {}),
         Box::new(InsertStructFieldGetOfLocal {}),
@@ -140,7 +141,28 @@ impl InsertCodeMenu {
                     }
                 }
                 self.new_params(Some(exact_type))
-            }
+            },
+            InsertionPoint::Wrap(node_id_to_wrap) => {
+                let node = code_genie.find_node(node_id_to_wrap).unwrap();
+                let wrapped_node_type = code_genie.guess_type(node, env_genie);
+                let exact_type = code_genie.guess_type(node, env_genie);
+                let parent = code_genie.find_parent(node.id());
+                if let Some(lang::CodeNode::Assignment(assignment)) = &parent {
+                    // if we're replacing the value of an assignment statement, and that assignment
+                    // isn't being used anywhere, then we could change the type to anything. so don't
+                    // require a type when searching for nodes
+                    if !code_genie.any_variable_referencing_assignment(assignment.id) {
+                        return self.new_params(None).wraps_type(wrapped_node_type);
+                    }
+                }
+                // block expressions (TODO??: except unless they're the last method) can safely be
+                // replaced by any type because it's impossible for them to be referenced by anything
+                if code_genie.is_block_expression(node_id_to_wrap) {
+                    return self.new_params(None).wraps_type(wrapped_node_type);
+                }
+                self.new_params(Some(exact_type)).wraps_type(wrapped_node_type)
+
+            },
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
                 let list_literal = code_genie.find_node(list_literal_id).unwrap();
                 match list_literal {
@@ -149,7 +171,7 @@ impl InsertCodeMenu {
                     }
                     _ => panic!("should always be a list literal... ugh"),
                 }
-            }
+            },
             InsertionPoint::Editing(_) => panic!("shouldn't have gotten here"),
         }
     }
@@ -159,7 +181,8 @@ impl InsertCodeMenu {
         CodeSearchParams {
             input_str: self.input_str.clone(),
             insertion_point: self.insertion_point,
-            return_type
+            return_type,
+            wraps_type: None,
         }
     }
 }
@@ -168,11 +191,17 @@ impl InsertCodeMenu {
 // TODO: pretty sure these could all be references....
 struct CodeSearchParams {
     return_type: Option<lang::Type>,
+    wraps_type: Option<lang::Type>,
     input_str: String,
     insertion_point: InsertionPoint,
 }
 
 impl CodeSearchParams {
+    pub fn wraps_type(mut self, typ: lang::Type) -> Self {
+        self.wraps_type = Some(typ);
+        self
+    }
+
     pub fn lowercased_trimmed_search_str(&self) -> String {
         self.input_str.trim().to_lowercase()
     }
@@ -217,6 +246,50 @@ pub struct InsertCodeMenuOption {
     pub is_selected: bool,
 }
 
+// TODO: it's a mostly copy + paste of InsertFunctionOptionGenerator, can clean it up
+#[derive(Clone)]
+struct InsertFunctionWrappingOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
+    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
+               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+        // tuple of function and arg id to fill
+        let functions : &mut Iterator<Item = (lang::ID, &Box<lang::Function>)>;
+        let mut a;
+
+        if let Some(wraps_type) = &search_params.wraps_type {
+            a = env_genie.all_functions()
+                .filter(|f| search_params.search_matches_identifier(&f.name()))
+                .filter_map(move |f| {
+                    let takes_args = f.takes_args();
+                    let first_matching_arg = takes_args.iter()
+                        .find(|arg| arg.arg_type.matches(wraps_type))?;
+                    Some((first_matching_arg.id, f))
+                });
+            functions = &mut a;
+        } else {
+            return vec![];
+        }
+
+        let wrapped_node = match &search_params.insertion_point {
+            InsertionPoint::Wrap(wrapped_node_id) => {
+                code_genie.find_node(*wrapped_node_id).expect("couldn't find wrapped node id")
+            }
+            _ => panic!("we should've only gotten here and had a wrapped insertion point"),
+        };
+
+        functions.map(|(arg_def_id, func)| {
+            InsertCodeMenuOption {
+                label: func.name().to_string(),
+                new_node: code_generation::new_function_call_with_wrapped_arg(func.as_ref(),
+                                                                              arg_def_id,
+                                                                              wrapped_node.clone()),
+                is_selected: false,
+            }
+        }).collect()
+    }
+}
+
 #[derive(Clone)]
 struct InsertFunctionOptionGenerator {}
 
@@ -236,10 +309,9 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
             functions = &mut a;
         }
 
-        let return_type = &search_params.return_type;
-        if return_type.is_some() {
+        if let Some(return_type) = &search_params.return_type {
             b = functions
-                .filter(|f| f.returns().matches(return_type.as_ref().unwrap()));
+                .filter(move |f| f.returns().matches(return_type));
             functions = &mut b;
         }
 
@@ -269,13 +341,13 @@ fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, boo
     match insertion_point {
         InsertionPoint::BeginningOfBlock(id) => (id, false),
         InsertionPoint::Before(id) => (id, false),
+        // after needs to be inclusive, because lang::ID itself could be an assignment expression
         InsertionPoint::After(id) => (id, true),
         InsertionPoint::StructLiteralField(id) => (id, false),
         InsertionPoint::Editing(id) => (id, false),
         InsertionPoint::Replace(id) => (id, false),
-        InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
-            (list_literal_id, false)
-        },
+        InsertionPoint::ListLiteralElement { list_literal_id, .. } => (list_literal_id, false),
+        InsertionPoint::Wrap(id) => (id, false),
     }
 }
 
@@ -634,8 +706,8 @@ pub fn should_insert_block_expression(insertion_point: InsertionPoint, code_geni
     match insertion_point {
         InsertionPoint::BeginningOfBlock(_) | InsertionPoint::Before(_) |
             InsertionPoint::After(_) => true,
-        InsertionPoint::Replace(node_id_to_replace) => {
-            code_genie.is_block_expression(node_id_to_replace)
+        InsertionPoint::Replace(node_id) | InsertionPoint::Wrap(node_id) => {
+            code_genie.is_block_expression(node_id)
         }
         InsertionPoint::StructLiteralField(_) |
         InsertionPoint::Editing(_) | InsertionPoint::ListLiteralElement {..} => false,

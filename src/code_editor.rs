@@ -92,6 +92,9 @@ impl CodeEditor {
             (false, Key::A, false, false) => {
                 self.try_append_in_selected_node();
             },
+            (false, Key::W, true, false) => {
+                self.try_enter_wrap_for_selected_node();
+            },
             (false, Key::R, false, false) => {
                 self.try_enter_replace_edit_for_selected_node();
             },
@@ -195,6 +198,12 @@ impl CodeEditor {
         if let Some(node_id) = navigation.navigate_forward_from(self.selected_node_id) {
             self.set_selected_node_id(Some(node_id))
         }
+    }
+
+
+    fn try_enter_wrap_for_selected_node(&mut self) -> Option<()> {
+        self.mark_as_editing(InsertionPoint::Wrap(self.selected_node_id?));
+        Some(())
     }
 
     fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
@@ -756,6 +765,8 @@ impl<'a> Navigation<'a> {
             (CodeNode::FunctionReference(_), _) => true,
             // you always want to navigate to a list index
             (CodeNode::ListIndex(_), _) => true,
+            // or a struct field get
+            (CodeNode::StructFieldGet(_), _) => true,
             // skip elements with holes. function args and struct literal fields always contain inner elements
             // that can be changed. to change those, we can always invoke `r` (replace), which will
             // let you edit the value of the hole
@@ -773,6 +784,9 @@ impl<'a> Navigation<'a> {
                 index_expr.id() == cn.id()
             } => true,
             // sometimes these scalary things hang out by themselves in blocks
+            // TODO: do i really have to except all of these individually? maybe there's a more
+            // general solution? maybe using code genie i can say: if node's parent is block and
+            // node has no navigatable children, then it's navigatable.
             (CodeNode::Placeholder(_), Some(CodeNode::Block(_))) => true,
             (CodeNode::VariableReference(_), Some(CodeNode::Block(_))) => true,
             _ => false,
@@ -810,8 +824,10 @@ impl MutationMaster {
             InsertionPoint::ListLiteralElement { list_literal_id, pos } => {
                 self.insertion_expression_into_list_literal(node_to_insert, list_literal_id, pos, genie)
             }
-            InsertionPoint::Replace(node_id_to_replace) => {
-                self.replace_node(node_to_insert, node_id_to_replace, genie)
+            InsertionPoint::Replace(node_id_to_replace) | InsertionPoint::Wrap(node_id_to_replace) => {
+                let node_to_replace = genie.find_node(node_id_to_replace).unwrap();
+                dbg!(node_to_replace);
+                self.replace_node(dbg!(node_to_insert), node_id_to_replace, genie)
             }
             // TODO: perhaps we should have edits go through this codepath as well!
             InsertionPoint::Editing(_) => panic!("this is currently unused")
@@ -985,6 +1001,7 @@ pub enum InsertionPoint {
     // TODO: it's possible we can generalize and replace the Argument, StructLiteralField and
     //       ListLiteralElement with Replace
     Replace(lang::ID),
+    Wrap(lang::ID),
 }
 
 impl InsertionPoint {
@@ -995,6 +1012,7 @@ impl InsertionPoint {
             InsertionPoint::Before(_) => None,
             InsertionPoint::After(_) => None,
             InsertionPoint::Replace(_) => None,
+            InsertionPoint::Wrap(_) => None,
             InsertionPoint::StructLiteralField(id) => Some(id),
             InsertionPoint::Editing(id) => Some(id),
             // not sure if this is right....
@@ -1011,12 +1029,16 @@ enum PostInsertionAction {
 fn post_insertion_cursor(inserted_node: &CodeNode, code_genie: &CodeGenie) -> PostInsertionAction {
     if let CodeNode::FunctionCall(function_call) = inserted_node {
         // if we just inserted a function call, then go to the first arg if there is one
-        if function_call.args.len() > 0 {
-            let arg_expr_id = function_call.args[0].into_argument().expr.id();
-            return PostInsertionAction::MarkAsEditing(InsertionPoint::Replace(arg_expr_id))
-        } else {
-            return PostInsertionAction::SelectNode(function_call.id)
+        for arg in function_call.args() {
+            //let arg_expr_id = function_call.args[0].into_argument().expr.id();
+            match &arg.expr {
+                box lang::CodeNode::Placeholder(placeholder) => {
+                    return PostInsertionAction::MarkAsEditing(InsertionPoint::Replace(placeholder.id))
+                },
+                _ => (),
+            }
         }
+        return PostInsertionAction::SelectNode(function_call.id)
     }
 
     if let CodeNode::StructLiteral(struct_literal) = inserted_node {

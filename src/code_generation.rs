@@ -45,6 +45,34 @@ pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::C
     })
 }
 
+pub fn new_function_call_with_wrapped_arg(func: &lang::Function, arg_def_id: lang::ID,
+                                          wrapped_node: lang::CodeNode) -> lang::CodeNode {
+    let args = func.takes_args().into_iter()
+        .map(move |arg_def| {
+            let expr = if arg_def_id == arg_def.id {
+                wrapped_node.clone()
+            } else {
+                new_placeholder(arg_def.short_name, arg_def.arg_type)
+            };
+
+            lang::CodeNode::Argument(lang::Argument {
+                id: lang::new_id(),
+                argument_definition_id: arg_def.id,
+                expr: Box::new(expr),
+            })
+        })
+        .collect();
+    lang::CodeNode::FunctionCall(lang::FunctionCall {
+        id: lang::new_id(),
+        function_reference: Box::new(
+            lang::CodeNode::FunctionReference(lang::FunctionReference {
+                id: lang::new_id(),
+                function_id: func.id()})),
+        args,
+    })
+
+}
+
 pub fn new_variable_reference(assignment_id: lang::ID) -> lang::CodeNode {
     lang::CodeNode::VariableReference(lang::VariableReference {
         assignment_id,

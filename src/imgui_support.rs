@@ -60,6 +60,17 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
         &FontGlyphRange::korean(),
     );
 
+    imgui.fonts().add_font_with_config(
+        include_bytes!("../fonts/DroidSansJapanese.ttf"),
+        ImFontConfig::new()
+            .oversample_h(1)
+            .pixel_snap_h(true)
+            .size_pixels(font_size)
+            .merge_mode(true)
+            .rasterizer_multiply(1.75),
+        &FontGlyphRange::japanese(),
+    );
+
     let range = FontGlyphRange::from_slice(&[
         0xf004, 0xf5c8, // the range for font awesome regular 400
         0,

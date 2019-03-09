@@ -201,6 +201,35 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.draw_x_scrollable_list(render_insertion_options, 1)
     }
 
+    fn render_type_symbol(&self, typ: &lang::Type, color: Color) -> T::DrawResult {
+//        let ts_symbol = self.env_genie.find_typespec(typ.typespec_id).unwrap().symbol();
+////        let draw_fns = &[
+//////            &|| self.ui_toolkit.with_font_size(-2, &|| {
+//////                    self.ui_toolkit.draw_all_on_same_line(
+//////                        &typ.params.iter()
+//////                            .map(|param_typ| &|| self.render_type_symbol(param_typ, color))
+//////                            .collect_vec()
+//////                    )
+//////            })
+////        ];
+//        self.ui_toolkit.draw_all_on_same_line(&[
+//            &|| self.draw_button(ts_symbol, color, &|| {}),
+//            &|| self.ui_toolkit.with_font_size(-2, &|| {
+//                    let p = &typ.params.iter()
+//                            .map(|param_typ| {
+//                                let b : Box<Fn() -> T::DrawResult> = Box::new(move || self.render_type_symbol(param_typ, color));
+//                                b
+//                            }).collect_vec();
+//                    let p = p
+//                            .iter()
+//                            .map(|b| b.as_ref())
+//                            .collect::<Vec<&Fn() -> T::DrawResult>>();
+//                    self.ui_toolkit.draw_all_on_same_line(&p)
+//            })
+//        ])
+        unimplemented!()
+    }
+
     fn render_list_literal(&self, list_literal: &lang::ListLiteral,
                            code_node: &lang::CodeNode) -> T::DrawResult {
         let t = self.code_editor.code_genie.guess_type(code_node, self.env_genie);
@@ -362,10 +391,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             }
         };
 
-        if let Some(InsertionPoint::Replace(id)) = self.insertion_point() {
-            if id == code_node.id() {
-                return self.render_insert_code_node()
-            }
+        match self.insertion_point() {
+            Some(InsertionPoint::Replace(id)) | Some(InsertionPoint::Wrap(id)) if {
+                id == code_node.id()
+            } => return self.render_insert_code_node(),
+            _ => {}
         }
 
         if self.is_selected(code_node.id()) {
