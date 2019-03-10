@@ -1530,7 +1530,7 @@
       "type": "Struct",
       "name": "CurrentWeather",
       "id": "d10f1570-3540-48b0-bcd8-e3d99a3d291e",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "768a3669-c839-42ee-9612-d5ef3d715d60",
@@ -1586,7 +1586,7 @@
       "type": "Struct",
       "name": "Geometry",
       "id": "ae3cf9fb-f65e-4e2f-a5dc-dfef9b321763",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "34b6ea41-b900-466a-89da-7f12786964e5",
@@ -1602,7 +1602,7 @@
       "type": "Struct",
       "name": "Location",
       "id": "3809e4fa-9ee9-41ca-8719-3cacce66b839",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "4702c9cf-0df2-4cfe-b700-30ec0e86e0da",
@@ -1626,7 +1626,7 @@
       "type": "Struct",
       "name": "AddressComponents",
       "id": "047390c9-217b-4023-b35a-f66e93393f0e",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "e70b8eb6-0359-46cb-abea-a78603a18a00",
@@ -1657,7 +1657,7 @@
       "type": "Struct",
       "name": "HTTPBinHeaders",
       "id": "004780b6-843d-423f-9a27-b5c7e8482d02",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "148a0802-b06b-43ad-bcbe-1b00c8e44b8c",
@@ -1673,7 +1673,7 @@
       "type": "Struct",
       "name": "HTTPBinResp2",
       "id": "52697cd1-86f0-4d94-9a15-442ad26d947b",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "03dab062-205a-430a-91f0-ae56744e1c38",
@@ -1703,7 +1703,7 @@
       "type": "Struct",
       "name": "ReverseGeocodeResponse",
       "id": "16b174d4-5587-46cb-af53-494ed3380a4b",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "48623a8a-6164-4c4a-8572-25db7ae52d3f",
@@ -1724,7 +1724,7 @@
       "type": "Struct",
       "name": "ReverseGeocoderResult",
       "id": "2f0dfba8-9aaf-4ad2-8891-316c08dd0a83",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "2d974f25-bdcd-4a70-978f-af5275eb6556",
@@ -1768,7 +1768,7 @@
       "type": "Struct",
       "name": "DarkSkyResponse",
       "id": "778c4ac1-3b76-40ec-9c36-1fe323c6ead8",
-      "symbol": "",
+      "symbol": "",
       "fields": [
         {
           "id": "e06361e4-7d75-4310-9f7a-1705b963c7b3",

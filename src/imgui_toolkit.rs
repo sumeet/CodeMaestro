@@ -374,7 +374,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build();
     }
 
-    fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+    fn draw_top_border_inside(&self, mut color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+        //color[3] = 0.5;
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };

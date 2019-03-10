@@ -125,6 +125,21 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     );
 
 
+    let range = FontGlyphRange::from_slice(&[
+        0xf100, 0xf100, // the range for custom fonts, small because it's only the ones we use
+        0,
+    ]);
+    imgui.fonts().add_font_with_config(
+        include_bytes!("../fonts/fontcustom.ttf"),
+        ImFontConfig::new()
+            .glyph_offset((0.0, icon_y_offset))
+            .oversample_h(1)
+            .pixel_snap_h(true)
+            .size_pixels(icon_font_size)
+            .merge_mode(true)
+            .rasterizer_multiply(1.75),
+        &range,
+    );
 
     imgui.set_font_global_scale((1.0 / hidpi_factor) as f32);
 
