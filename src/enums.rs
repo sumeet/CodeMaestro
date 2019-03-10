@@ -16,7 +16,7 @@ impl Enum {
         Self {
             name: "New Enum".to_string(),
             id: lang::new_id(),
-            symbol: "\u{f535}".to_string(),
+            symbol: "\u{f542}".to_string(),
             variants: vec![],
         }
     }
