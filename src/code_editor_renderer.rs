@@ -422,9 +422,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn darken(&self, mut color: Color) -> Color {
-        color[0] *= 0.5;
-        color[1] *= 0.5;
-        color[2] *= 0.5;
+        color[0] *= 0.75;
+        color[1] *= 0.75;
+        color[2] *= 0.75;
         color
     }
 
@@ -432,12 +432,21 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     // attribute next to the name of it, so the user can see type information along
     fn render_name_with_type_definition(&self, name: &str, color: Color, typ: &lang::Type) -> T::DrawResult {
             let sym = self.env_genie.get_symbol_for_type(typ);
+
+            let darker_color = self.darken(color);
             self.draw_nested_borders_around(&|| {
-                self.ui_toolkit.draw_all_on_same_line(&[
-//                    &|| self.ui_toolkit.draw_small_button(&sym, PURPLE_COLOR, &|| {}),
-//                    &|| self.ui_toolkit.draw_button(&name, PURPLE_COLOR, &|| {}),
-                    &|| self.ui_toolkit.draw_button(&format!("{} {}", sym, name), color, &|| {}),
-                ])
+                self.ui_toolkit.draw_top_border_inside(darker_color, 2, &|| {
+                    self.ui_toolkit.draw_right_border_inside(darker_color, 1, &|| {
+                        self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
+                            self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
+                                self.ui_toolkit.draw_all_on_same_line(&[
+                                    &|| self.ui_toolkit.draw_button(&sym, darker_color, &||{}),
+                                    &|| self.ui_toolkit.draw_button(name, color, &|| {}),
+                                ])
+                            })
+                        })
+                    })
+                })
             })
     }
 
