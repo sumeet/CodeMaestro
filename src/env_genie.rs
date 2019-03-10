@@ -28,7 +28,6 @@ impl<'a> EnvGenie<'a> {
         let joined_params = t.params.iter()
             .map(|p| self.get_symbol_for_type(p))
             .join(", ");
-        //format!("{}「{}」", typespec.symbol(), joined_params)
         format!("{}｢{}｣", typespec.symbol(), joined_params)
     }
     
