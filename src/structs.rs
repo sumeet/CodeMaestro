@@ -18,7 +18,7 @@ impl Struct {
             name: "New Struct".to_string(),
             id: lang::new_id(),
             // lol
-            symbol: "\u{f466}".to_string(),
+            symbol: "\u{f103}".to_string(),
             fields: vec![],
         }
     }

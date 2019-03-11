@@ -435,7 +435,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
             let darker_color = self.darken(color);
             self.draw_nested_borders_around(&|| {
-                self.ui_toolkit.draw_top_border_inside(darker_color, 3, &|| {
+                self.ui_toolkit.draw_top_border_inside(darker_color, 2, &|| {
                     self.ui_toolkit.draw_right_border_inside(darker_color, 1, &|| {
                         self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
                             self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {

@@ -42,6 +42,10 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);
     println!("bordershadow: {:?}", style.colors[ImGuiCol::BorderShadow as usize]);
 
+
+    // merge mode off for the first entry, should be on for the rest of them
+    // TODO: also i think you have to add the fonts in such a way that the more specific ranges are
+    // listed first... idk, i'm testing it out
     imgui.fonts().add_font_with_config(
         include_bytes!("../fonts/calibri.ttf"),
         ImFontConfig::new()
@@ -51,6 +55,23 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
             .rasterizer_multiply(1.75),
         &FontGlyphRange::default(),
     );
+
+    let range = FontGlyphRange::from_slice(&[
+        0xf100, 0xf104, // the range for custom fonts, small because it's only the ones we use
+        0,
+    ]);
+    imgui.fonts().add_font_with_config(
+        include_bytes!("../fonts/fontcustom.ttf"),
+        ImFontConfig::new()
+            .glyph_offset((0.0, icon_y_offset))
+            .oversample_h(1)
+            .pixel_snap_h(true)
+            .size_pixels(icon_font_size)
+            .merge_mode(true)
+            .rasterizer_multiply(1.75),
+        &range,
+    );
+
 
     imgui.fonts().add_font_with_config(
         include_bytes!("../fonts/NanumGothic.ttf"),
@@ -114,23 +135,6 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     ]);
     imgui.fonts().add_font_with_config(
         include_bytes!("../fonts/fa-brands-400.ttf"),
-        ImFontConfig::new()
-            .glyph_offset((0.0, icon_y_offset))
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(icon_font_size)
-            .merge_mode(true)
-            .rasterizer_multiply(1.75),
-        &range,
-    );
-
-
-    let range = FontGlyphRange::from_slice(&[
-        0xf100, 0xf100, // the range for custom fonts, small because it's only the ones we use
-        0,
-    ]);
-    imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/fontcustom.ttf"),
         ImFontConfig::new()
             .glyph_offset((0.0, icon_y_offset))
             .oversample_h(1)
