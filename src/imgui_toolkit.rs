@@ -14,7 +14,7 @@ pub const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 50.0);
-const INITIAL_WINDOW_SIZE: (f32, f32) = (300.0, 200.0);
+const INITIAL_WINDOW_SIZE: (f32, f32) = (400.0, 500.0);
 
 pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::AsyncExecutor) {
     imgui_support::run("cs".to_string(), CLEAR_COLOR,
@@ -283,8 +283,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn(), height_percentage: f32, handle_keypress: Option<F>) {
         let height = height_percentage * unsafe { imgui_sys::igGetWindowHeight() };
-        self.ui.child_frame(&self.imlabel(""), (0., height))
+        self.ui.child_frame(&self.imlabel(""), (0., 0.))
             .show_borders(true)
+            .scrollbar_horizontal(true)
             .build(&|| {
                 draw_fn();
 
