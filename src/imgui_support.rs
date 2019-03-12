@@ -41,6 +41,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
 
     println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);
     println!("bordershadow: {:?}", style.colors[ImGuiCol::BorderShadow as usize]);
+    println!("childbg: {:?}", style.colors[ImGuiCol::WindowBg as usize]);
 
 
     // merge mode off for the first entry, should be on for the rest of them

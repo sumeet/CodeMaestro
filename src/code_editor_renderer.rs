@@ -404,14 +404,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // UPDATE: so i tried that, but figured i still needed to have this code here. i guess maybe
         // there's gonna be no avoiding doing double validation in some situations, and that's ok
         // i think
-        let mut color = RED_COLOR;
-        let mut function_name = format!("Error: function ID {} not found", function_id);
-
-        if let Some(function) = self.env_genie.find_function(function_id) {
-            color = GREY_COLOR;
-            function_name = function.name().to_string();
+        let func = self.env_genie.find_function(function_id) ;
+        if func.is_none() {
+            let error_msg = format!("Error: function ID {} not found", function_id);
+            return self.draw_button(&error_msg, RED_COLOR, &||{})
         }
-        self.draw_button(&function_name, color, &|| {})
+        let func = func.unwrap();
+        // TODO: rework this for when we have generics. the function arguments will need to take
+        // the actual parameters as parameters
+        self.render_hoohaw(&func.name(), GREY_COLOR, &func.returns())
     }
 
     fn render_variable_reference(&self, variable_reference: &lang::VariableReference) -> T::DrawResult {
@@ -431,6 +432,32 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         color[1] *= 0.75;
         color[2] *= 0.75;
         color
+    }
+
+
+    fn render_hoohaw(&self, name: &str, color: Color, typ: &lang::Type) -> T::DrawResult {
+        let sym = self.env_genie.get_symbol_for_type(typ);
+
+        let darker_color = self.darken(self.darken(self.darken(color)));
+        self.draw_nested_borders_around(&|| {
+            self.ui_toolkit.draw_top_border_inside(darker_color, 2, &|| {
+                self.ui_toolkit.draw_right_border_inside(darker_color, 1, &|| {
+                    self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
+                        self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
+                            if typ.matches_spec(&lang::NULL_TYPESPEC) {
+                                self.ui_toolkit.draw_button(name, color, &|| {})
+                            } else {
+                                self.ui_toolkit.draw_all_on_same_line(&[
+                                    &|| self.ui_toolkit.draw_button(name, color, &|| {}),
+                                    &|| self.ui_toolkit.draw_text("  "),
+                                    &|| self.ui_toolkit.draw_button(&sym, darker_color, &||{}),
+                                ])
+                            }
+                        })
+                    })
+                })
+            })
+        })
     }
 
     // this is used for rendering variable references and struct field gets. it displays the type of the

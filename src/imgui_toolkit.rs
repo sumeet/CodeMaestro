@@ -6,7 +6,10 @@ use super::async_executor;
 use itertools::Itertools;
 
 use imgui::*;
+use lazy_static::lazy_static;
 use std::rc::Rc;
+use std::sync::Arc;
+use std::sync::Mutex;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
 
@@ -15,6 +18,32 @@ const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 50.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (400.0, 500.0);
+
+lazy_static! {
+    static ref TK_CACHE : Arc<Mutex<TkCache>> = Arc::new(Mutex::new(TkCache::new()));
+}
+
+struct TkCache {
+    focused_child_regions: HashMap<String,bool>,
+}
+
+impl TkCache {
+    fn new() -> Self {
+        Self {
+            focused_child_regions: HashMap::new()
+        }
+    }
+
+    pub fn is_focused(child_window_id: &str) -> bool {
+        *TK_CACHE.lock().unwrap().focused_child_regions.get(child_window_id)
+            .unwrap_or(&false)
+    }
+
+    pub fn set_is_focused(child_window_id: &str, is_focused: bool) {
+        TK_CACHE.lock().unwrap().focused_child_regions.insert(child_window_id.to_string(),
+                                                              is_focused);
+    }
+}
 
 pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::AsyncExecutor) {
     imgui_support::run("cs".to_string(), CLEAR_COLOR,
@@ -283,20 +312,36 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn(), height_percentage: f32, handle_keypress: Option<F>) {
         let height = height_percentage * unsafe { imgui_sys::igGetWindowHeight() };
-        self.ui.child_frame(&self.imlabel(""), (0., 0.))
-            .show_borders(true)
-            .scrollbar_horizontal(true)
-            .build(&|| {
-                draw_fn();
 
-                if let Some(keypress) = self.keypress {
-                    if self.ui.is_child_window_focused() {
-                        if let Some(ref handle_keypress) = handle_keypress {
-                            handle_keypress(keypress)
+        // TODO: this is hardcoded and can't be shared with wasm or any other system
+        let default_bg = (0.5, 0.5, 0.5, 0.5);
+        let f = 1.5;
+        let brighter_bg = (default_bg.0 * f, default_bg.1 * f, default_bg.2 * f, default_bg.3);
+
+        let child_frame_id = self.imlabel("");
+        let color = if TkCache::is_focused(child_frame_id.as_ref()) {
+            brighter_bg
+        } else {
+            default_bg
+        };
+
+        self.ui.with_color_var(ImGuiCol::Border, color, &|| {
+            self.ui.child_frame(&child_frame_id, (0., 0.))
+                .show_borders(true)
+                .scrollbar_horizontal(true)
+                .build(&|| {
+                    draw_fn();
+                    if let Some(keypress) = self.keypress {
+                        if self.ui.is_child_window_focused() {
+                            if let Some(ref handle_keypress) = handle_keypress {
+                                handle_keypress(keypress)
+                            }
                         }
                     }
-                }
-            });
+
+                    TkCache::set_is_focused(child_frame_id.as_ref(), self.ui.is_child_window_focused())
+                });
+        });
     }
 
     fn draw_x_scrollable_list<'b>(&'b self, items: impl ExactSizeIterator<Item = (&'b Fn(), bool)>, lines_height: usize) {
@@ -375,8 +420,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build();
     }
 
-    fn draw_top_border_inside(&self, mut color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
-        //color[3] = 0.5;
+    fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
