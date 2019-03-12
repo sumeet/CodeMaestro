@@ -130,13 +130,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_assignment(&self, assignment: &lang::Assignment) -> T::DrawResult {
+        let type_of_assignment = self.code_editor.code_genie
+            .guess_type(assignment.expression.as_ref(), self.env_genie);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                self.render_inline_editable_button(
-                    &assignment.name,
-                    PURPLE_COLOR,
-                    InsertionPoint::Editing(assignment.id)
-                )
+                self.render_name_with_type_definition(&assignment.name, PURPLE_COLOR, &type_of_assignment)
+                // TODO: this still needs to be an inline editable button, or at least needs to let
+                // us click to change the variable name somehow
+//                self.render_inline_editable_button(
+//                    &assignment.name,
+//                    PURPLE_COLOR,
+//                    InsertionPoint::Editing(assignment.id)
+//                )
             },
             &|| self.draw_text(" \u{f52c} "),
             &|| self.render_code(assignment.expression.as_ref()),
