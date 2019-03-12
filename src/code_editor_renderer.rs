@@ -143,7 +143,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 //                    InsertionPoint::Editing(assignment.id)
 //                )
             },
-            &|| self.draw_text(" \u{f52c} "),
+            &|| self.draw_text("   \u{f52c}   "),
             &|| self.render_code(assignment.expression.as_ref()),
         ])
     }
