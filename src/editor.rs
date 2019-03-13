@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::iter;
 use std::boxed::FnBox;
 
+use super::window_positions::{WindowPositions};
 use super::ui_toolkit::{UiToolkit,SelectableItem};
 use super::builtins;
 use super::chat_trigger::ChatTrigger;
@@ -35,6 +36,7 @@ use super::json_http_client_builder::JSONHTTPClientBuilder;
 use std::collections::HashSet;
 use crate::opener::Opener;
 use crate::opener::MenuItem;
+use crate::window_positions::Window;
 
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
@@ -105,7 +107,7 @@ pub struct Controller {
     builtins: builtins::Builtins,
 
     pub opener: Option<Opener>,
-    pub open_windows: HashSet<lang::ID>,
+    pub window_positions: WindowPositions,
 }
 
 impl<'a> Controller {
@@ -119,7 +121,7 @@ impl<'a> Controller {
             json_client_builder_by_func_id: HashMap::new(),
             builtins,
             opener: None,
-            open_windows: HashSet::new(),
+            window_positions: WindowPositions::new((3000, 4000)),
         }
     }
 
@@ -137,11 +139,11 @@ impl<'a> Controller {
     }
 
     pub fn open_window(&mut self, id: lang::ID) {
-        self.open_windows.insert(id);
+        self.window_positions.add_window(id);
     }
 
     pub fn close_window(&mut self, id: lang::ID) {
-        self.open_windows.remove(&id);
+        self.window_positions.close_window(id)
     }
 
     pub fn open_opener(&mut self) {
@@ -170,10 +172,10 @@ impl<'a> Controller {
         self.test_by_id.values().filter(move |t| t.subject == subject)
     }
 
-    pub fn list_json_http_client_builders(&self) -> impl Iterator<Item = &JSONHTTPClientBuilder> {
-        self.json_client_builder_by_func_id.values()
-            .filter(move |builder| {
-                self.open_windows.contains(&builder.json_http_client_id)
+    pub fn list_json_http_client_builders(&self) -> impl Iterator<Item = (&JSONHTTPClientBuilder, Window)> {
+        self.window_positions.get_open_windows(self.json_client_builder_by_func_id.keys())
+            .map(move |window| {
+                (self.json_client_builder_by_func_id.get(&window.id).unwrap(), window)
             })
     }
 
@@ -235,7 +237,7 @@ impl<'a> Controller {
     }
 
     pub fn load_json_http_client_builder(&mut self, builder: JSONHTTPClientBuilder) {
-        self.open_windows.insert(builder.json_http_client_id);
+        self.open_window(builder.json_http_client_id);
         self.json_client_builder_by_func_id.insert(builder.json_http_client_id, builder);
     }
 
@@ -434,16 +436,21 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
     }
 
-    pub fn list_open_functions(&self) -> impl Iterator<Item = &lang::Function> {
+    pub fn list_open_functions(&self) -> impl Iterator<Item = (&lang::Function, Window)> {
         self.env_genie.all_functions()
-            .filter(move |func| self.controller.open_windows.contains(&func.id()))
-            .map(|b| b.as_ref())
+            .filter_map(move |func| {
+                let wp = self.controller.window_positions.get_open_window(&func.id())?;
+                Some((func.as_ref(), wp))
+            })
+
     }
 
-    pub fn list_open_typespecs(&self) -> impl Iterator<Item = &lang::TypeSpec> {
+    pub fn list_open_typespecs(&self) -> impl Iterator<Item = (&lang::TypeSpec, Window)> {
         self.env_genie.typespecs()
-            .filter(move |ts| self.controller.open_windows.contains(&ts.id()))
-            .map(|b| b.as_ref())
+            .filter_map(move |ts| {
+                let wp = self.controller.window_positions.get_open_window(&ts.id())?;
+                Some((ts.as_ref(), wp))
+            })
     }
 
 
@@ -457,7 +464,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_all(vec![
             self.render_main_menu_bar(),
             self.render_scripts(),
-            self.render_console_window(),
+            //self.render_console_window(),
             self.render_edit_code_funcs(),
             self.render_edit_pyfuncs(),
             self.render_edit_jsfuncs(),
@@ -600,29 +607,38 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_edit_code_funcs(&self) -> T::DrawResult {
         let code_funcs = self.list_open_functions()
-            .filter_map(|func| func.downcast_ref::<code_function::CodeFunction>());
-        self.ui_toolkit.draw_all(code_funcs.map(|f| self.render_edit_code_func(f)).collect())
+            .filter_map(|(func, window)| {
+                Some((func.downcast_ref::<code_function::CodeFunction>()?, window))
+            });
+        self.ui_toolkit.draw_all(code_funcs.map(|(f, window)| self.render_edit_code_func(f, &window)).collect())
     }
 
     fn render_scripts(&self) -> T::DrawResult {
-        let open_scripts = self.controller.script_by_id.values()
-            .filter(|script| self.controller.open_windows.contains(&script.id()));
+        let open_scripts = self.controller.window_positions.get_open_windows(self.controller.script_by_id.keys())
+            .map(move |window| {
+                (self.controller.script_by_id.get(&window.id).unwrap(), window)
+            });
+
         self.ui_toolkit.draw_all(
-            open_scripts.map(|script| {
-                self.render_script(script)
+            open_scripts.map(|(script, window)| {
+                self.render_script(script, &window)
             }).collect()
         )
     }
 
-    fn render_script(&self, script: &scripts::Script) -> T::DrawResult {
+    fn render_script(&self, script: &scripts::Script, window: &Window) -> T::DrawResult {
         self.ui_toolkit.draw_window(&format!("Script {}", script.id()),
+            window.size,
+            (window.x, window.y),
             &|| {
                 self.ui_toolkit.draw_layout_with_bottom_bar(
                     &|| self.render_code(script.id(), 1.),
                     &|| self.render_run_button(script.code()))
             },
             None::<fn(Keypress)>,
-            None::<fn()>)
+            None::<fn()>,
+            onwindowchange(Rc::clone(&self.command_buffer), script.id()),
+        )
     }
 
     fn render_run_button(&self, code_node: CodeNode) -> T::DrawResult {
@@ -635,10 +651,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    fn render_edit_code_func(&self, code_func: &code_function::CodeFunction) -> T::DrawResult {
+    fn render_edit_code_func(&self, code_func: &code_function::CodeFunction, window: &Window) -> T::DrawResult {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let code_func_id = code_func.id();
-        self.ui_toolkit.draw_window(&format!("Edit function: {}", code_func.id()), &|| {
+        self.ui_toolkit.draw_window(&format!("Edit function: {}", code_func.id()),
+            window.size,
+            window.pos(),
+        &|| {
             let cont1 = Rc::clone(&self.command_buffer);
             let code_func1 = code_func.clone();
 
@@ -665,17 +684,25 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             cmd_buffer.borrow_mut().add_controller_command(move |controller| {
                 controller.close_window(code_func_id);
             })
-        }))
+        }),
+        onwindowchange(Rc::clone(&self.command_buffer), code_func.id()))
     }
 
     fn render_edit_pyfuncs(&self) -> T::DrawResult {
         let pyfuncs = self.list_open_functions()
-            .filter_map(|func| func.downcast_ref::<pystuff::PyFunc>());
-        self.ui_toolkit.draw_all(pyfuncs.map(|f| self.render_edit_pyfunc(f)).collect())
+            .filter_map(|(func, window)| {
+                Some((func.downcast_ref::<pystuff::PyFunc>()?, window))
+            });
+        self.ui_toolkit.draw_all(pyfuncs.map(|(f, window)| {
+            self.render_edit_pyfunc(f, &window)
+        }).collect())
     }
 
-    fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc) -> T::DrawResult {
-        self.ui_toolkit.draw_window(&format!("Edit PyFunc: {}", pyfunc.id), &|| {
+    fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc, window: &Window) -> T::DrawResult {
+        self.ui_toolkit.draw_window(&format!("Edit PyFunc: {}", pyfunc.id),
+            window.size,
+            window.pos(),
+        &|| {
             let cont1 = Rc::clone(&self.command_buffer);
             let pyfunc1 = pyfunc.clone();
             let cont2 = Rc::clone(&self.command_buffer);
@@ -722,17 +749,26 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             ])
         },
         None::<fn(Keypress)>,
-        None::<fn()>)
+        None::<fn()>,
+        onwindowchange(Rc::clone(&self.command_buffer), pyfunc.id()))
+
     }
 
     fn render_edit_jsfuncs(&self) -> T::DrawResult {
         let jsfuncs = self.list_open_functions()
-            .filter_map(|func| func.downcast_ref::<jsstuff::JSFunc>());
-        self.ui_toolkit.draw_all(jsfuncs.map(|f| self.render_edit_jsfunc(f)).collect())
+            .filter_map(|(func, window)| {
+                Some((func.downcast_ref::<jsstuff::JSFunc>()?, window))
+            });
+        self.ui_toolkit.draw_all(jsfuncs.map(|(f, window)| {
+            self.render_edit_jsfunc(f, &window)
+        }).collect())
     }
 
-    fn render_edit_jsfunc(&self, jsfunc: &jsstuff::JSFunc) -> T::DrawResult {
-        self.ui_toolkit.draw_window(&format!("Edit JSFunc: {}", jsfunc.id), &|| {
+    fn render_edit_jsfunc(&self, jsfunc: &jsstuff::JSFunc, window: &Window) -> T::DrawResult {
+        self.ui_toolkit.draw_window(&format!("Edit JSFunc: {}", jsfunc.id),
+            window.size,
+            window.pos(),
+        &|| {
             let cont1 = Rc::clone(&self.command_buffer);
             let jsfunc1 = jsfunc.clone();
             let cont3 = Rc::clone(&self.command_buffer);
@@ -767,33 +803,42 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             ])
         },
         None::<fn(Keypress)>,
-        None::<fn()>)
+        None::<fn()>,
+        onwindowchange(Rc::clone(&self.command_buffer), jsfunc.id()))
     }
 
     fn render_edit_structs(&self) -> T::DrawResult {
         let structs = self.list_open_typespecs()
-            .filter_map(|ts| ts.downcast_ref::<structs::Struct>());
-        self.ui_toolkit.draw_all(structs.map(|s| self.render_edit_struct(s)).collect())
+            .filter_map(|(ts, window)| {
+                Some((ts.downcast_ref::<structs::Struct>()?, window))
+            });
+        self.ui_toolkit.draw_all(structs.map(|(s, window)| self.render_edit_struct(s, &window)).collect())
     }
 
     fn render_edit_enums(&self) -> T::DrawResult {
         let enums = self.list_open_typespecs()
-            .filter_map(|ts| ts.downcast_ref::<enums::Enum>());
-        self.ui_toolkit.draw_all(enums.map(|e| self.render_edit_enum(e)).collect())
+            .filter_map(|(ts, window)| {
+                Some((ts.downcast_ref::<enums::Enum>()?, window))
+            });
+        self.ui_toolkit.draw_all(enums.map(|(e, window)| self.render_edit_enum(e, &window)).collect())
     }
 
 
     fn render_chat_triggers(&self) -> T::DrawResult {
         let triggers = self.list_open_functions()
-            .filter_map(|func| func.downcast_ref::<ChatTrigger>());
-        self.ui_toolkit.draw_all(triggers.map(|trigger| self.render_chat_trigger(trigger)).collect())
+            .filter_map(|(func, window)| {
+                Some((func.downcast_ref::<ChatTrigger>()?, window))
+            });
+        self.ui_toolkit.draw_all(triggers.map(|(trigger, window)| self.render_chat_trigger(trigger, &window)).collect())
     }
 
-    fn render_chat_trigger(&self, chat_trigger: &ChatTrigger) -> T::DrawResult {
+    fn render_chat_trigger(&self, chat_trigger: &ChatTrigger, window: &Window) -> T::DrawResult {
         let chat_trigger_id = chat_trigger.id;
         let cmd_buffer3 = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_window(
             &format!("Edit chat trigger: {}", chat_trigger.id()),
+            window.size,
+            window.pos(),
             &|| {
                 let cmd_buffer1 = Rc::clone(&self.command_buffer);
                 let cmd_buffer2 = Rc::clone(&self.command_buffer);
@@ -831,19 +876,22 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     controller.close_window(chat_trigger_id);
                 })
             }),
+            onwindowchange(Rc::clone(&self.command_buffer), chat_trigger_id)
         )
     }
 
     fn render_json_http_client_builders(&self) -> T::DrawResult {
         let builders = self.controller.list_json_http_client_builders();
-        self.ui_toolkit.draw_all(builders.map(|builder| self.render_json_http_client_builder(builder)).collect())
+        self.ui_toolkit.draw_all(builders.map(|(builder, window)| self.render_json_http_client_builder(builder, &window)).collect())
     }
 
-    fn render_json_http_client_builder(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
+    fn render_json_http_client_builder(&self, builder: &JSONHTTPClientBuilder, window: &Window) -> T::DrawResult {
         let cmdbuffer = Rc::clone(&self.command_buffer);
         let json_http_client_id = builder.json_http_client_id;
         self.ui_toolkit.draw_window(
             &format!("Edit JSON HTTP Client: {}", builder.json_http_client_id),
+            window.size,
+            (window.x, window.y),
             &|| {
                 let client = self.env_genie.get_json_http_client(builder.json_http_client_id).unwrap();
                 let client1 = client.clone();
@@ -911,7 +959,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 cmdbuffer.borrow_mut().add_controller_command(move |controller| {
                     controller.close_window(json_http_client_id);
                 })
-            }))
+            }),
+            onwindowchange(Rc::clone(&self.command_buffer), json_http_client_id)
+        )
     }
 
     fn render_json_return_type_selector(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
@@ -1042,11 +1092,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn render_edit_struct(&self, strukt: &structs::Struct) -> T::DrawResult {
+    fn render_edit_struct(&self, strukt: &structs::Struct, window: &Window) -> T::DrawResult {
         let strukt_id = strukt.id();
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_window(
             &format!("Edit Struct: {}", strukt.id),
+            window.size,
+            window.pos(),
             &|| {
                 let cont1 = Rc::clone(&self.command_buffer);
                 let strukt1 = strukt.clone();
@@ -1084,6 +1136,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     controller.close_window(strukt_id);
                 })
             }),
+            onwindowchange(Rc::clone(&self.command_buffer), strukt_id),
         )
     }
 
@@ -1158,11 +1211,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn render_edit_enum(&self, eneom: &enums::Enum) -> T::DrawResult {
+    fn render_edit_enum(&self, eneom: &enums::Enum, window: &Window) -> T::DrawResult {
         let eneom_id = eneom.id;
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_window(
             &format!("Edit Enum: {}", eneom.id),
+            window.size,
+            window.pos(),
             &|| {
                 let cont1 = Rc::clone(&self.command_buffer);
                 let eneom1 = eneom.clone();
@@ -1200,6 +1255,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     controller.close_window(eneom_id);
                 })
             }),
+            onwindowchange(Rc::clone(&self.command_buffer), eneom_id),
         )
     }
 
@@ -1542,23 +1598,34 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    fn render_console_window(&self) -> T::DrawResult {
-        let console = self.env_genie.read_console();
-        if console.is_empty() {
-            return self.ui_toolkit.draw_all(vec![])
-        }
-        self.ui_toolkit.draw_window("Console", &|| {
-            self.ui_toolkit.draw_text_box(console)
-        },
-        None::<fn(Keypress)>,
-        None::<fn()>)
-    }
+    // TODO: reimplement the console. i disabled it because it needs an ID for the window placement
+    // scheme
+//    fn render_console_window(&self) -> T::DrawResult {
+//        let console = self.env_genie.read_console();
+//        if console.is_empty() {
+//            return self.ui_toolkit.draw_all(vec![])
+//        }
+//        self.ui_toolkit.draw_window("Console", &|| {
+//            self.ui_toolkit.draw_text_box(console)
+//        },
+//        None::<fn(Keypress)>,
+//        None::<fn()>)
+//    }
 
     fn render_code(&self, code_id: lang::ID, height_percentage: f32) -> T::DrawResult {
         let code_editor = self.controller.get_editor(code_id).unwrap();
         CodeEditorRenderer::new(self.ui_toolkit, code_editor,
                                 Rc::clone(&self.command_buffer),
                                 self.env_genie).render(height_percentage)
+    }
+}
+
+
+fn onwindowchange(cmd_buffer: Rc<RefCell<CommandBuffer>>, window_id: lang::ID) -> impl Fn((isize, isize), (usize, usize)) + 'static {
+    move |pos, size| {
+        cmd_buffer.borrow_mut().add_controller_command(move |controller| {
+            controller.window_positions.set_window(window_id, pos, size)
+        })
     }
 }
 

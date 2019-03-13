@@ -23,14 +23,22 @@ lazy_static! {
     static ref TK_CACHE : Arc<Mutex<TkCache>> = Arc::new(Mutex::new(TkCache::new()));
 }
 
+#[derive(Clone, Copy, PartialEq)]
+struct Window {
+    pos: (f32, f32),
+    size: (f32, f32),
+}
+
 struct TkCache {
     focused_child_regions: HashMap<String,bool>,
+    windows: HashMap<String, Window>,
 }
 
 impl TkCache {
     fn new() -> Self {
         Self {
-            focused_child_regions: HashMap::new()
+            focused_child_regions: HashMap::new(),
+            windows: HashMap::new(),
         }
     }
 
@@ -271,19 +279,42 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             });
     }
 
-    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, f: &Fn(),
-                                                                 handle_keypress: Option<F>,
-                                                                 onclose: Option<G>) {
-        let prev_window_size = self.state.borrow().prev_window_size;
-        let prev_window_pos = self.state.borrow().prev_window_pos;
+    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self, window_name: &str,
+                                                                    size: (usize, usize),
+                                                                    pos: (isize, isize),
+                                                                    f: &Fn(),
+                                                                    handle_keypress: Option<F>,
+                                                                    onclose: Option<G>,
+                                                                    onwindowchange: H)
+    where H: Fn((isize, isize), (usize, usize)) + 'static {
+        let window_name = self.imlabel(window_name);
+        let window_name_str : &str = window_name.as_ref();
+
+        let window_after_prev_draw = {
+            let cache = TK_CACHE.lock().unwrap();
+            cache.windows.get(window_name_str).cloned()
+        };
+
+        let mut window_builder = self.ui.window(&window_name)
+            .movable(true)
+            .scrollable(true);
+
+        if let Some(window) = window_after_prev_draw {
+            if window.size != (size.0 as f32, size.1 as f32) {
+                window_builder = window_builder
+                    .size((size.0 as f32, size.1 as f32), ImGuiCond::Always)
+            }
+            if window.pos != (pos.0 as f32, pos.1 as f32) {
+                window_builder = window_builder
+                    .position((pos.0 as f32, pos.1 as f32), ImGuiCond::Always);
+            }
+        } else {
+            window_builder = window_builder
+                .size((size.0 as f32, size.1 as f32), ImGuiCond::FirstUseEver)
+                .position((pos.0 as f32, pos.1 as f32), ImGuiCond::FirstUseEver);
+        }
 
         let mut should_stay_open = true;
-
-        let window_name = self.imlabel(window_name);
-        let mut window_builder = self.ui.window(&window_name)
-            .size(INITIAL_WINDOW_SIZE, ImGuiCond::FirstUseEver)
-            .scrollable(true)
-            .position((prev_window_pos.0, prev_window_size.1 + prev_window_pos.1), ImGuiCond::FirstUseEver);
 
         if onclose.is_some() {
             window_builder = window_builder.opened(&mut should_stay_open);
@@ -291,8 +322,17 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         window_builder.build(&|| {
             f();
-            self.state.borrow_mut().prev_window_size = self.ui.get_window_size();
-            self.state.borrow_mut().prev_window_pos = self.ui.get_window_pos();
+            let mut cache = TK_CACHE.lock().unwrap();
+            let prev_window = cache.windows.get(window_name_str).cloned();
+            let drawn_window = Window {
+                pos: self.ui.get_window_pos(),
+                size: self.ui.get_window_size()
+            };
+            cache.windows.insert(window_name_str.to_string(), drawn_window);
+            if prev_window.is_some() && prev_window.unwrap() != drawn_window {
+                onwindowchange((drawn_window.pos.0 as isize, drawn_window.pos.1 as isize),
+                               (drawn_window.size.0 as usize, drawn_window.size.1 as usize))
+            }
 
             if let Some(keypress) = self.keypress {
                 if self.ui.is_window_focused() {

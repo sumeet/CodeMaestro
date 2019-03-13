@@ -8,7 +8,14 @@ pub trait UiToolkit {
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
     // if there's no `onclose` specified, then the window isn't closable and won't show a close button
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult;
-    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>, onclose: Option<G>) -> Self::DrawResult;
+    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self, window_name: &str,
+                                                                    size: (usize, usize),
+                                                                    pos: (isize, isize),
+                                                                    draw_fn: &Fn() -> Self::DrawResult,
+                                                                    handle_keypress: Option<F>,
+                                                                    onclose: Option<G>,
+                                                                    onwindowchange: H) -> Self::DrawResult
+        where H: Fn((isize, isize), (usize, usize)) + 'static;
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, height_percentage: f32, handle_keypress: Option<F>) -> Self::DrawResult;
     fn draw_x_scrollable_list<'a>(&'a self, items: impl ExactSizeIterator<Item = (&'a Fn() -> Self::DrawResult, bool)>, lines_height: usize) -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
