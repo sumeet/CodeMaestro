@@ -225,23 +225,22 @@ fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Erro
     }.save()
 }
 
-fn init_save_state(command_buffer: &mut CommandBuffer,
-                   env: &mut env::ExecutionEnvironment,
-                   controller: &mut Controller) {
+fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionEnvironment) {
     let loaded_state = save_state::load();
     let env_genie = EnvGenie::new(env);
     for code_location in loaded_state.open_code_editors.iter() {
         match code_location {
             CodeLocation::Function(id) => {
-                let code_func = env_genie.get_code_func(*id)
+                env_genie.get_code_func(*id)
                     .map(|code_func| {
                         command_buffer.load_code_func(code_func.clone())
                     });
             },
-            CodeLocation::Script(id) =>  {
+
+            CodeLocation::Script(_id) =>  {
                 // lazy, no support for scripts yet
             }
-            CodeLocation::Test(id) =>  {
+            CodeLocation::Test(_id) =>  {
                 // lazy, no support for tests yet
             }
             CodeLocation::JSONHTTPClientURLParams(id) => {
@@ -282,10 +281,9 @@ impl App {
     pub fn new() -> Self {
         let interpreter = env::Interpreter::new();
         let mut command_buffer = editor::CommandBuffer::new();
-        let mut controller = init_controller(&interpreter);
+        let controller = init_controller(&interpreter);
 
-        init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut(),
-                        &mut controller);
+        init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut());
 
         let command_buffer =
             Rc::new(RefCell::new(command_buffer));

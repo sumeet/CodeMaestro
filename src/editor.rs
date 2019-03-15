@@ -34,7 +34,6 @@ use super::json2;
 use super::tests;
 use super::json_http_client::JSONHTTPClient;
 use super::json_http_client_builder::JSONHTTPClientBuilder;
-use std::collections::HashSet;
 use crate::opener::Opener;
 use crate::opener::MenuItem;
 use crate::window_positions::Window;

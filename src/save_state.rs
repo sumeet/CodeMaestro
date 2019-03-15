@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
 use cfg_if::cfg_if;
-use super::lang;
 use super::window_positions::{WindowPositions};
 use crate::code_editor::CodeLocation;
 
@@ -41,8 +40,6 @@ mod native {
     use lazy_static::lazy_static;
     use std::path::PathBuf;
     use std::fs::File;
-    use super::Serialize;
-    use crate::window_positions::WindowPositions;
     use crate::save_state::{StateSerialize, StateDeserialize};
 
     lazy_static! {
@@ -59,7 +56,7 @@ mod native {
     pub fn load() -> StateDeserialize {
         File::open(&*STATE_FILE_NAME)
             .map(|file| serde_json::from_reader(file))
-            .unwrap_or_else(|e| {
+            .unwrap_or_else(|_| {
                 let default = StateDeserialize::default();
                 let f = File::create(&*STATE_FILE_NAME).unwrap();
                 serde_json::to_writer_pretty(f, &default).unwrap();

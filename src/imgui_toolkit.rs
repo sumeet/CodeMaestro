@@ -16,7 +16,6 @@ use std::collections::hash_map::HashMap;
 pub const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
-const FIRST_WINDOW_PADDING: (f32, f32) = (25.0, 50.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (400.0, 500.0);
 
 lazy_static! {
@@ -67,8 +66,6 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
 }
 
 struct State {
-    prev_window_size: (f32, f32),
-    prev_window_pos: (f32, f32),
     used_labels: HashMap<String,i32>,
 
 }
@@ -82,8 +79,6 @@ fn buf(text: &str) -> ImString {
 impl State {
     fn new() -> Self {
         State {
-            prev_window_pos: FIRST_WINDOW_PADDING,
-            prev_window_size: (0.0, 0.0),
             used_labels: HashMap::new(),
         }
     }
@@ -366,7 +361,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         };
 
         self.ui.with_color_var(ImGuiCol::Border, color, &|| {
-            self.ui.child_frame(&child_frame_id, (0., 0.))
+            self.ui.child_frame(&child_frame_id, (0., height))
                 .show_borders(true)
                 .scrollbar_horizontal(true)
                 .build(&|| {
