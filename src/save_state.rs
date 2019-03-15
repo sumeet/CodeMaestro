@@ -31,7 +31,29 @@ pub fn save(window_positions: &WindowPositions, open_code_editors: &[CodeLocatio
 
 #[cfg(feature = "javascript")]
 mod js {
-    // TODO: use local storage
+    use stdweb::web::{window,Storage};
+    use lazy_static::lazy_static;
+    use super::{StateSerialize,StateDeserialize};
+
+    lazy_static! {
+        static ref STORAGE : Storage = window().local_storage();
+    }
+
+    pub fn load() -> StateDeserialize {
+        STORAGE.get("state").map(|stored| serde_json::from_str(&stored))
+            .unwrap_or_else(|| {
+                let default = StateDeserialize::default();
+                STORAGE.insert("state", &serde_json::to_string(&default).unwrap())
+                    .unwrap();
+                Ok(default)
+            }).unwrap()
+    }
+
+    pub fn save_state(state_serialize: &StateSerialize) {
+        STORAGE.insert("state", &serde_json::to_string(state_serialize).unwrap())
+            .unwrap()
+    }
+
 }
 
 #[cfg(feature = "default")]

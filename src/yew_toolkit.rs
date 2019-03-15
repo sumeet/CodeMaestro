@@ -202,8 +202,15 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self, window_name: &str, f: &Fn() -> Self::DrawResult,
-                                                                 handle_keypress: Option<F>, onclose: Option<G>) -> Self::DrawResult {
+    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self, window_name: &str,
+                                                                    size: (usize, usize),
+                                                                    pos: (isize, isize),
+                                                                    f: &Fn() -> Self::DrawResult,
+                                                                    handle_keypress: Option<F>,
+                                                                    onclose: Option<G>,
+                                                                    onwindowchange: H) -> Self::DrawResult
+    where H: Fn((isize, isize), (usize, usize)) + 'static
+    {
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
         let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
@@ -214,7 +221,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-           <div class="window", style={ format!("background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+           <div class="window", style={ format!("color: white; background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {
@@ -341,7 +348,7 @@ impl UiToolkit for YewToolkit {
             <button id={ self.incr_last_drawn_element_id().to_string() },
                  style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", self.rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
-            { label }
+            { symbolize_text(label) }
             </button>
         }
     }
@@ -390,8 +397,9 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_text(&self, text: &str) -> Self::DrawResult {
+        let text = text.replace(" ", " ");
         html! {
-            <span>{ text }</span>
+            <span>{ symbolize_text(&text) }</span>
         }
     }
 
@@ -403,7 +411,6 @@ impl UiToolkit for YewToolkit {
 
     fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
-//            <div style="position: fixed; line-height: 1; width: 100%; top: 0; left: 0;",>
             <div>
                 {{ draw_menus() }}
             </div>
@@ -413,7 +420,7 @@ impl UiToolkit for YewToolkit {
     fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         // TODO: implement this for realsies
         html! {
-            <div>
+            <div style="display: flex;", >
                 <p>{label}</p>
                 {{ draw_menu_items() }}
             </div>
@@ -422,7 +429,11 @@ impl UiToolkit for YewToolkit {
 
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult {
         // TODO: do this for realsies
-        self.draw_button(label, editor::GREY_COLOR, onselect)
+        html! {
+            <div style="float: left;",>
+                {{ self.draw_button(label, editor::GREY_COLOR, onselect) }}
+            </div>
+        }
     }
 
     fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
@@ -889,7 +900,31 @@ fn add_global_keydown_event_listener(renderer_state: Rc<RefCell<RendererState>>)
     });
 }
 
+fn symbolize_text(text: &str) -> Html<Model> {
+    html! {
+        <span>
+            { for text.chars().map(|char| {
+                if is_in_symbol_range(char) {
+                    html! {
+                        <span style="display: inline-block; font-size: 57%; transform: translateY(-1px);",>
+                          { char }
+                        </span>
+                    }
+                } else {
+                    html! {
+                        <span>{ char }</span>
+                    }
+                }
+            })}
+        </span>
+    }
+}
 
-
-
-
+fn is_in_symbol_range(c: char) -> bool {
+    match c as u32 {
+        0xf000 ... 0xf72f => {
+            true
+        },
+        _ => false,
+    }
+}

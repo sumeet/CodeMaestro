@@ -1,0 +1,6 @@
+- implement function call rendering in code, there's enough groundwork to
+implement it now
+
+- many functions need their argument names hidden, esp when there's only one argument. for instance Print, or Reply, or Capitalize.
+
+- some functions need their argument names visible, even if there's only one argument. for example, `Reverse geocode` which takes a location
