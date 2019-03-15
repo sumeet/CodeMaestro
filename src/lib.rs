@@ -48,6 +48,7 @@ mod function;
 mod code_function;
 mod tests;
 mod chat_trigger;
+mod save_state;
 mod scripts;
 mod external_func;
 #[cfg(feature = "default")]
@@ -125,6 +126,8 @@ use imgui_toolkit::draw_app;
 use yew_toolkit::draw_app;
 
 use cfg_if::cfg_if;
+use crate::editor::CommandBuffer;
+use crate::code_editor::CodeLocation;
 
 
 cfg_if! {
@@ -222,6 +225,53 @@ fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Erro
     }.save()
 }
 
+fn init_save_state(command_buffer: &mut CommandBuffer,
+                   env: &mut env::ExecutionEnvironment,
+                   controller: &mut Controller) {
+    let loaded_state = save_state::load();
+    let env_genie = EnvGenie::new(env);
+    for code_location in loaded_state.open_code_editors.iter() {
+        match code_location {
+            CodeLocation::Function(id) => {
+                let code_func = env_genie.get_code_func(*id)
+                    .map(|code_func| {
+                        command_buffer.load_code_func(code_func.clone())
+                    });
+            },
+            CodeLocation::Script(id) =>  {
+                // lazy, no support for scripts yet
+            }
+            CodeLocation::Test(id) =>  {
+                // lazy, no support for tests yet
+            }
+            CodeLocation::JSONHTTPClientURLParams(id) => {
+                env_genie.get_json_http_client(*id)
+                    .map(|client| {
+                        command_buffer.load_json_http_client(client.clone())
+                    });
+            }
+            CodeLocation::JSONHTTPClientURL(id) =>  {
+                env_genie.get_json_http_client(*id)
+                    .map(|client| {
+                        command_buffer.load_json_http_client(client.clone())
+                    });
+            }
+            CodeLocation::ChatTrigger(id) =>  {
+                env_genie.get_chat_trigger(*id)
+                    .map(|chat_trigger| {
+                        command_buffer.load_chat_trigger(chat_trigger.clone())
+                    });
+            }
+
+        }
+    }
+
+    let window_positions = loaded_state.window_positions;
+    command_buffer.add_controller_command(move |controller| {
+        controller.load_serialized_window_positions(window_positions);
+    })
+}
+
 pub struct App {
     pub interpreter: env::Interpreter,
     command_buffer: Rc<RefCell<editor::CommandBuffer>>,
@@ -231,8 +281,12 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         let interpreter = env::Interpreter::new();
-        let command_buffer = editor::CommandBuffer::new();
-        let controller = init_controller(&interpreter);
+        let mut command_buffer = editor::CommandBuffer::new();
+        let mut controller = init_controller(&interpreter);
+
+        init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut(),
+                        &mut controller);
+
         let command_buffer =
             Rc::new(RefCell::new(command_buffer));
         Self {

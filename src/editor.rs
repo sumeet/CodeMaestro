@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::iter;
 use std::boxed::FnBox;
 
+use super::save_state;
 use super::window_positions::{WindowPositions};
 use super::ui_toolkit::{UiToolkit,SelectableItem};
 use super::builtins;
@@ -107,7 +108,7 @@ pub struct Controller {
     builtins: builtins::Builtins,
 
     pub opener: Option<Opener>,
-    pub window_positions: WindowPositions,
+    window_positions: WindowPositions,
 }
 
 impl<'a> Controller {
@@ -121,8 +122,35 @@ impl<'a> Controller {
             json_client_builder_by_func_id: HashMap::new(),
             builtins,
             opener: None,
-            window_positions: WindowPositions::new((3000, 4000)),
+            window_positions: WindowPositions::default(),
         }
+    }
+
+    pub fn load_serialized_window_positions(&mut self, window_positions: WindowPositions) {
+        self.window_positions = window_positions;
+    }
+
+    pub fn set_window_position(&mut self, window_id: lang::ID, pos: (isize, isize),
+                               size: (usize, usize)) {
+        self.window_positions.set_window(window_id, pos, size);
+        self.save_state();
+    }
+
+    pub fn open_window(&mut self, id: lang::ID) {
+        self.window_positions.add_window(id);
+        self.save_state();
+    }
+
+    pub fn close_window(&mut self, id: lang::ID) {
+        self.window_positions.close_window(id);
+        self.save_state();
+    }
+
+    fn save_state(&self) {
+        let open_code_editors = self.code_editor_by_id.values()
+            .map(|editor| editor.location)
+            .collect_vec();
+        save_state::save(&self.window_positions, &open_code_editors)
     }
 
     pub fn handle_global_keypress(&mut self, keypress: Keypress) {
@@ -136,14 +164,6 @@ impl<'a> Controller {
 
     pub fn is_builtin(&self, id: lang::ID) -> bool {
         self.builtins.is_builtin(id)
-    }
-
-    pub fn open_window(&mut self, id: lang::ID) {
-        self.window_positions.add_window(id);
-    }
-
-    pub fn close_window(&mut self, id: lang::ID) {
-        self.window_positions.close_window(id)
     }
 
     pub fn open_opener(&mut self) {
@@ -1624,7 +1644,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 fn onwindowchange(cmd_buffer: Rc<RefCell<CommandBuffer>>, window_id: lang::ID) -> impl Fn((isize, isize), (usize, usize)) + 'static {
     move |pos, size| {
         cmd_buffer.borrow_mut().add_controller_command(move |controller| {
-            controller.window_positions.set_window(window_id, pos, size)
+            controller.set_window_position(window_id, pos, size)
         })
     }
 }

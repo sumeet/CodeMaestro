@@ -4,6 +4,7 @@ use std::iter;
 
 use itertools::Itertools;
 use gen_iter::GenIter;
+use serde_derive::{Serialize,Deserialize};
 
 use super::code_function;
 use super::scripts;
@@ -30,7 +31,7 @@ pub struct CodeEditor {
     pub location: CodeLocation,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Serialize, Deserialize)]
 pub enum CodeLocation {
     Function(lang::ID),
     Script(lang::ID),

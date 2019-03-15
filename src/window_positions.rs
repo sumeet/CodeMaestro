@@ -1,21 +1,22 @@
 use std::collections::HashMap;
+use serde_derive::{Deserialize,Serialize};
 use super::lang;
 
 const INITIAL_WINDOW_SIZE: (usize, usize) = (400, 500);
 
+#[derive(Deserialize,Serialize)]
 pub struct WindowPositions {
     size: (usize, usize),
     open_windows: HashMap<lang::ID, Window>,
 }
 
-impl WindowPositions {
-    pub fn new(size: (usize, usize)) -> Self {
-        Self {
-            size,
-            open_windows: HashMap::new(),
-        }
+impl Default for WindowPositions {
+    fn default() -> Self {
+        Self { size: (4000, 3000), open_windows: HashMap::new() }
     }
+}
 
+impl WindowPositions {
     pub fn add_window(&mut self, window_id: lang::ID) {
         if self.open_windows.contains_key(&window_id) {
             return
@@ -41,12 +42,7 @@ impl WindowPositions {
     }
 
     pub fn get_open_window(&self, id: &lang::ID) -> Option<Window> {
-        self.open_windows.get(id).map(|w| {
-            let mut w = w.clone();
-//            w.x -= 300;
-//            w.y -= 300;
-            w
-        })
+        self.open_windows.get(id).map(Clone::clone)
     }
 
     pub fn get_open_windows<'a>(&'a self, ids: impl Iterator<Item = &'a lang::ID> + 'a) -> impl Iterator<Item = Window> + 'a {
@@ -59,7 +55,7 @@ impl WindowPositions {
 }
 
 // TODO: could mutate this window if we were to implement scrolling of the background ourselves
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Window {
     pub id: lang::ID,
     pub x: isize,

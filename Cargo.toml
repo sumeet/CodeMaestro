@@ -9,7 +9,8 @@ edition = "2018"
 
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "pyo3", "slack",
-           "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest", "noob"]
+           "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest", "noob",
+           "directories"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
@@ -55,6 +56,7 @@ yew = { git = "https://github.com/DenisKolodin/yew", optional = true }
 slack = { git = "https://github.com/sumeet/slack-rs", features = ["future"], branch = "master", optional = true }
 noob = {version = "1.1.0", optional = true}
 regex = {version = "1.1.0"}
+directories = {version = "1.0.2", optional = true}
 
 # wow i can't believe i need this
 futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat"] }
