@@ -12,6 +12,8 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
+use crate::code_editor_renderer::{BLUE_COLOR, PURPLE_COLOR};
+use crate::imgui_support::{BUTTON_HOVERED_COLOR, BUTTON_ACTIVE_COLOR};
 
 pub const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
@@ -132,6 +134,40 @@ impl<'a> ImguiToolkit<'a> {
             (window_min.1 <= item_min.y) && (item_min.y <= window_max.1) &&
             (window_min.1 <= item_max.y) && (item_max.y <= window_max.1))
     }
+
+    fn mouse_clicked_in_last_drawn_element(&self) -> bool {
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() }.into();
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() }.into();
+        let mouse_pos = self.ui.imgui().mouse_pos();
+        self.is_left_button_down() && Rect { min, max }.contains(mouse_pos)
+    }
+
+    fn mouse_released_in_last_drawn_element(&self) -> bool {
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() }.into();
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() }.into();
+        let mouse_pos = self.ui.imgui().mouse_pos();
+        self.was_left_button_released() && Rect { min, max }.contains(mouse_pos)
+    }
+
+    fn was_left_button_released(&self) -> bool {
+        self.ui.imgui().is_mouse_released(ImMouseButton::Left)
+    }
+
+    fn is_left_button_down(&self) -> bool {
+        self.ui.imgui().is_mouse_down(ImMouseButton::Left)
+    }
+}
+
+struct Rect {
+    min: (f32, f32),
+    max: (f32, f32),
+}
+
+impl Rect {
+    pub fn contains(&self, p: (f32, f32)) -> bool {
+        return self.min.0 <= p.0 && p.0 <= self.max.0 &&
+            self.min.1 <= p.1 && p.1 <= self.max.1
+    }
 }
 
 impl<'a> UiToolkit for ImguiToolkit<'a> {
@@ -156,6 +192,44 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 imgui_sys::igSetKeyboardFocusHere(-1)
             }
         }
+    }
+
+    fn buttonize<F: Fn() + 'static>(&self, draw_fn: &Fn(), onclick: F) {
+        // HAXXX: disable buttons that were drawn with `draw_button` from displaying as hovered.
+        // i think in actually this is very very very messy because what happens if someone clicks
+        // an inner button, do we run all the click handlers???
+//        self.ui.with_color_vars(&[(ImGuiCol::ButtonHovered, (1., 1., 1., 0.)),
+//                                            (ImGuiCol::ButtonActive, (1., 1., 1., 0.))], &|| {
+            self.ui.group(draw_fn);
+//                self.ui.with_color_vars(&[(ImGuiCol::ButtonHovered, (1., 1., 1., 0.)),
+//                                                    (ImGuiCol::ButtonActive, (1., 1., 1., 0.))], draw_fn));
+
+            // grabbed this code from draw_box_around
+            if self.ui.is_item_hovered() {
+                let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+                let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+                self.ui.get_window_draw_list()
+                    .add_rect(min, max, BUTTON_HOVERED_COLOR)
+                    .filled(true)
+                    .build();
+            }
+
+
+            if self.mouse_clicked_in_last_drawn_element() {
+                let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+                let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+                self.ui.get_window_draw_list()
+                    .add_rect(min, max, BUTTON_ACTIVE_COLOR)
+                    .filled(true)
+                    .build();
+            }
+
+            if self.mouse_released_in_last_drawn_element() {
+                println!("i know that the mouse was on da button");
+                onclick()
+            }
+
+//        })
     }
 
     fn draw_statusbar(&self, draw_fn: &Fn()) {
@@ -271,6 +345,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         }
                     }
                 }
+
+                // i think this is a good place to fuck around
+                self.draw_all_on_same_line(&[
+                    &|| self.ui.with_color_vars(&[(ImGuiCol::FrameBg, BLUE_COLOR)], &|| {
+                        self.draw_text("some other shiat")
+                    }),
+                    &|| self.ui.with_color_vars(&[(ImGuiCol::FrameBg, PURPLE_COLOR)], &|| {
+                        self.draw_text("some shiatr")
+                    }),
+                ])
             });
     }
 
@@ -497,6 +581,63 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .thickness(1.)
             .filled(true)
             .build()
+    }
+
+    fn draw_buttony_text(&self, label: &str, color: [f32; 4]) {
+        let style = self.ui.imgui().style();
+        let mut padding = style.frame_padding;
+
+        let original_cursor_pos = self.ui.get_cursor_pos();
+        //padding.y = 0.;
+        let label = im_str!("{}", label);
+        let text_size = self.ui.calc_text_size(&label, false, 0.);
+        let total_size = (text_size.x + (padding.x * 2.), text_size.y + (padding.y * 2.));
+
+
+
+        let draw_cursor_pos = self.ui.get_cursor_screen_pos();
+        let end_of_button_bg_rect = (draw_cursor_pos.0 + total_size.0, draw_cursor_pos.1 + total_size.1);
+        self.ui.get_window_draw_list()
+            .add_rect(draw_cursor_pos, end_of_button_bg_rect, color)
+            .filled(true)
+            .build();
+
+        let draw_cursor_pos = self.ui.get_cursor_screen_pos();
+        let buttony_text_start_cursor_pos = (draw_cursor_pos.0 + padding.x, draw_cursor_pos.1 + padding.y);
+//        self.ui.set_cursor_pos(buttony_text_start_cursor_pos);
+//        self.ui.text(label);
+        let draw_list = self.ui.get_window_draw_list();
+        let text_color = style.colors[ImGuiCol::Text as usize];
+        draw_list.add_text(buttony_text_start_cursor_pos, text_color, label);
+
+//        self.ui.same_line_spacing(0.0, 0.0);
+//
+//
+//        // set cursor pos to the end of the rectangle
+        self.ui.set_cursor_pos(original_cursor_pos);
+//        self.ui.with_color_var(ImGuiCol::Button, (1., 1., 1., 1.), || {
+            self.ui.invisible_button(&self.imlabel(""), total_size);
+//        })
+//        let mut cursor_pos = self.ui.get_cursor_screen_pos();
+//        cursor_pos.0 += padding.x;
+//        cursor_pos.1 -= padding.y;
+//        self.ui.set_cursor_screen_pos(cursor_pos);
+//        self.ui.text("");
+
+
+        // just for tests
+//        println!("before button");
+//        let screen_pos = self.ui.get_cursor_screen_pos();
+//        println!("{:?}", screen_pos);
+//        self.draw_button(label.as_ref(), color, &||{});
+//
+//        println!("estimated after button");
+//        let end_of_button_bg_rect = (screen_pos.0 + total_size.0, screen_pos.1 + total_size.1);
+//        println!("{:?}", end_of_button_bg_rect);
+//
+//        println!("after button");
+//        let screen_pos = self.ui.get_cursor_screen_pos();
+//        println!("{:?}", screen_pos);
     }
 
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {

@@ -5,6 +5,12 @@ use glium::glutin::WindowEvent::*;
 use glium::glutin::{Event};
 use glium::glutin::VirtualKeyCode as Key;
 
+// pulled out from imgui classic theme, style.colors[ImGuiCol::ButtonHovered]
+pub static BUTTON_HOVERED_COLOR : (f32, f32, f32, f32) = (0.4, 0.48, 0.71, 0.6);
+// pulled out from imgui classic theme, style.colors[ImGuiCol::ButtonActive]
+// and modified a little bit, sorry for the mess
+pub static BUTTON_ACTIVE_COLOR : (f32, f32, f32, f32) = (0.46, 0.54, 0.8, 0.6);
+
 use super::editor::{Key as AppKey,Keypress};
 use imgui_winit_support;
 
@@ -42,6 +48,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);
     println!("bordershadow: {:?}", style.colors[ImGuiCol::BorderShadow as usize]);
     println!("childbg: {:?}", style.colors[ImGuiCol::WindowBg as usize]);
+    println!("buttonhovered: {:?}", style.colors[ImGuiCol::ButtonHovered as usize]);
+    println!("buttonactive: {:?}", style.colors[ImGuiCol::ButtonActive as usize]);
 
 
     // merge mode off for the first entry, should be on for the rest of them

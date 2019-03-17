@@ -23,6 +23,8 @@ pub trait UiToolkit {
     fn draw_separator(&self) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
+    fn buttonize<F: Fn() + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, onclick: F) -> Self::DrawResult;
+    fn draw_buttony_text(&self, label: &str, color: Color) -> Self::DrawResult;
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: Color, onclick: F) -> Self::DrawResult;
     fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: Color, onclick: F) -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;

@@ -443,6 +443,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 self.ui_toolkit.draw_right_border_inside(darker_color, 1, &|| {
                     self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
                         self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
+                            // don't show the return type if the function returns null. there's no
+                            // use in looking at it
                             if typ.matches_spec(&lang::NULL_TYPESPEC) {
                                 self.ui_toolkit.draw_button(name, color, &|| {})
                             } else {
@@ -470,10 +472,12 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.ui_toolkit.draw_right_border_inside(darker_color, 1, &|| {
                         self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
                             self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
-                                self.ui_toolkit.draw_all_on_same_line(&[
-                                    &|| self.ui_toolkit.draw_button(&sym, darker_color, &||{}),
-                                    &|| self.ui_toolkit.draw_button(name, color, &|| {}),
-                                ])
+                                self.ui_toolkit.buttonize(&|| {
+                                    self.ui_toolkit.draw_all_on_same_line(&[
+                                        &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),
+                                        &|| self.ui_toolkit.draw_buttony_text(name, color),
+                                    ])
+                                }, || {})
                             })
                         })
                     })
