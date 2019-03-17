@@ -279,8 +279,7 @@ impl UiToolkit for YewToolkit {
             let global_keydown_handler = self.global_keydown_handler();
             html! {
             // HAX TODO: can't get this element to be a percentage of the total size, so just hardcode it for now
-//                <div style={ format!("height: {}%; overflow: auto;", height_percentage * 100.) },
-                  <div style="height: 300px;",
+                <div style={ format!("height: calc({}%);", height_percentage * 100.) },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     onkeypress=|e| {
@@ -343,10 +342,22 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn buttonize<F: Fn() + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, onclick: F) -> Self::DrawResult {
+        html! {
+            <div onclick=|_| { onclick(); Msg::Redraw }, >
+                { draw_fn() }
+            </div>
+        }
+    }
+
+    fn draw_buttony_text(&self, label: &str, color: [f32; 4]) -> Self::DrawResult {
+        self.draw_button(label, color, &|| {})
+    }
+
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
-                 style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", self.rgba(color)),
+                 style=format!("color: white; background-color: {}; display: block; border: none; outline: none; line-height: 2em; height: 80%", self.rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { symbolize_text(label) }
             </button>
