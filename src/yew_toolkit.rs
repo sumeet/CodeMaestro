@@ -357,7 +357,7 @@ impl UiToolkit for YewToolkit {
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
-                 style=format!("color: white; background-color: {}; display: block; border: none; outline: none; line-height: 2em; height: 80%", self.rgba(color)),
+                 style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", self.rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { symbolize_text(label) }
             </button>
