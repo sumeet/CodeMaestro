@@ -412,7 +412,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let func = func.unwrap();
         // TODO: rework this for when we have generics. the function arguments will need to take
         // the actual parameters as parameters
-        self.render_hoohaw(&func.name(), GREY_COLOR, &func.returns())
+        self.render_function_name(&func.name(), GREY_COLOR, &func.returns())
     }
 
     fn render_variable_reference(&self, variable_reference: &lang::VariableReference) -> T::DrawResult {
@@ -434,8 +434,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         color
     }
 
-
-    fn render_hoohaw(&self, name: &str, color: Color, typ: &lang::Type) -> T::DrawResult {
+    fn render_function_name(&self, name: &str, color: Color, typ: &lang::Type) -> T::DrawResult {
         let sym = self.env_genie.get_symbol_for_type(typ);
 
         let darker_color = self.darken(self.darken(self.darken(color)));
