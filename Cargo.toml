@@ -10,7 +10,7 @@ edition = "2018"
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "pyo3", "slack",
            "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest", "noob",
-           "directories", "gotham", "futures-cpupool", "diesel", "dotenv"]
+           "directories", "gotham", "futures-cpupool", "diesel", "r2d2", "dotenv"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
@@ -60,6 +60,7 @@ directories = {version = "1.0.2", optional = true}
 gotham = {version = "0.3.0", optional = true}
 futures-cpupool = {version = "0.1.8", optional = true}
 diesel = {version = "1.4.1", optional = true, features = ["postgres", "extras"]}
+r2d2 = {version = "*", optional = true}
 dotenv = {version = "0.13.0", optional = true}
 
 # wow i can't believe i need this

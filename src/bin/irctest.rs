@@ -244,10 +244,12 @@ use futures_cpupool::CpuPool;
 use diesel;
 //use diesel::prelude::*;
 use diesel::Insertable;
+use ::r2d2::{Error as R2D2Error};
 use diesel::r2d2;
 use lazy_static::lazy_static;
 use cs::schema::codes;
 use diesel::query_dsl::RunQueryDsl;
+use std::error::Error;
 
 pub type Conn = diesel::pg::PgConnection;
 pub type Pool = r2d2::Pool<r2d2::ConnectionManager<Conn>>;
@@ -304,5 +306,6 @@ fn insert_new_code(code: serde_json::Value) -> impl OldFuture {
     };
     exec_async(|conn| {
         diesel::insert_into(codes).values(newcode).get_result(conn)
+            .map_err(|e| R2D2Error(e.description()))
     })
 }
