@@ -41,6 +41,8 @@ mod undo;
 mod result;
 mod http_request;
 mod json_http_client;
+#[macro_use] extern crate diesel;
+pub mod schema;
 mod json_http_client_builder;
 mod code_generation;
 mod code_validation;

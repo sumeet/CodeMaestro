@@ -1,4 +1,5 @@
 #![feature(await_macro, async_await, futures_api)]
+#![feature(custom_attribute)]
 
 extern crate cs;
 
@@ -17,6 +18,40 @@ use irc_proto::{Command};
 use tokio::runtime::current_thread::Runtime;
 use futures::future::join_all;
 use noob;
+use gotham;
+
+fn say_hello(state: gotham::state::State) -> (gotham::state::State, &'static str) {
+    (state, "Hello world!")
+}
+
+async fn http_server() -> Result<(), ()> {
+    let val : serde_json::Value = serde_json::from_str(r#"{"hoohaw": 123}"#).unwrap();
+    await!(forward(insert_new_code(val)));
+    await!(forward(gotham::init_server("0.0.0.0:9000", || Ok(say_hello)))).unwrap();
+    Ok::<(), ()>(())
+}
+
+//pub type
+
+fn main() {
+    let getrekt_slack_token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
+    let sandh_slack_token = "xoxb-562464349142-560290195488-MfjUZW4VTBYrDTO5wBzltnC6";
+    let discord_bot_token = "NTQ5OTAyOTcwMzg5NzkwNzIx.D1auqw.QN0-mQBA4KmLZImlaRVwJHRsImQ";
+
+    let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
+
+    let futures : Vec<Box<dyn OldFuture<Item = (), Error = ()>>> = vec![
+        Box::new(backward(new_irc_conn(darwin_config(), Rc::clone(&chat_thingy)))),
+        Box::new(backward(new_irc_conn(esper_config(), Rc::clone(&chat_thingy)))),
+        Box::new(backward(slack(getrekt_slack_token, Rc::clone(&chat_thingy)))),
+        Box::new(backward(slack(sandh_slack_token, Rc::clone(&chat_thingy)))),
+        Box::new(backward(discord(discord_bot_token, Rc::clone(&chat_thingy)))),
+        Box::new(backward(http_server())),
+    ];
+
+    let joined = join_all(futures);
+    Runtime::new().unwrap().block_on(joined).unwrap();
+}
 
 struct ChatThingy {
     interp: env::Interpreter,
@@ -116,26 +151,6 @@ fn esper_config() -> Config {
     }
 }
 
-fn main() {
-    let getrekt_slack_token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
-    let sandh_slack_token = "xoxb-562464349142-560290195488-MfjUZW4VTBYrDTO5wBzltnC6";
-    let discord_bot_token = "NTQ5OTAyOTcwMzg5NzkwNzIx.D1auqw.QN0-mQBA4KmLZImlaRVwJHRsImQ";
-
-    let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
-
-    let futures : Vec<Box<dyn OldFuture<Item = (), Error = ()>>> = vec![
-        Box::new(backward(new_irc_conn(darwin_config(), Rc::clone(&chat_thingy)))),
-        Box::new(backward(new_irc_conn(esper_config(), Rc::clone(&chat_thingy)))),
-        Box::new(backward(slack(getrekt_slack_token, Rc::clone(&chat_thingy)))),
-        Box::new(backward(slack(sandh_slack_token, Rc::clone(&chat_thingy)))),
-        Box::new(backward(discord(discord_bot_token, Rc::clone(&chat_thingy)))),
-    ];
-
-    let joined = join_all(futures);
-    Runtime::new().unwrap().block_on(joined).unwrap();
-}
-
-
 async fn discord(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     let (client, mut stream) = await!(forward(noob::Client::connect(token))).unwrap_or_else(|e| {
         panic!("error connecting to discord: {:?}", e)
@@ -223,3 +238,71 @@ async fn slack(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Res
     Ok::<(), ()>(())
 }
 
+
+// database shit
+use futures_cpupool::CpuPool;
+use diesel;
+//use diesel::prelude::*;
+use diesel::Insertable;
+use diesel::r2d2;
+use lazy_static::lazy_static;
+use cs::schema::codes;
+use diesel::query_dsl::RunQueryDsl;
+
+pub type Conn = diesel::pg::PgConnection;
+pub type Pool = r2d2::Pool<r2d2::ConnectionManager<Conn>>;
+
+lazy_static! {
+    static ref DIESEL_CONN_POOL : Pool = connect();
+}
+
+fn connect() -> Pool {
+    let db_url = std::env::var("DATABASE_URL").expect("couldn't find DATABASE_URL");
+    let manager = r2d2::ConnectionManager::<Conn>::new(db_url);
+    r2d2::Pool::builder().build(manager).expect("Failed to create pool")
+}
+
+pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
+    where
+        T: Send + 'static,
+        E: From<r2d2::PoolError> + Send + 'static,
+        F: FnOnce(&Conn) -> R + Send + 'static,
+        R: IntoFuture<Item = T, Error = E> + Send + 'static,
+        <R as IntoFuture>::Future: Send,
+{
+    lazy_static! {
+      static ref THREAD_POOL: CpuPool = {
+        CpuPool::new_num_cpus()
+      };
+    }
+
+    let pool = DIESEL_CONN_POOL.clone();
+    THREAD_POOL.spawn_fn(move || {
+        pool
+            .get()
+            .map_err(|err| E::from(err))
+            .map(|conn| f(&conn))
+            .into_future()
+            .and_then(|f| f)
+    })
+}
+
+#[derive(Insertable)]
+#[table_name="codes"]
+struct NewCode {
+    added_by: String,
+    code: serde_json::Value,
+    instance_id: i32,
+}
+
+fn insert_new_code(code: serde_json::Value) -> impl OldFuture {
+    use cs::schema::codes::dsl::codes;
+    let newcode = NewCode {
+        added_by: "sumeet".to_string(),
+        code,
+        instance_id: 123,
+    };
+    exec_async(|conn| {
+        diesel::insert_into(codes).values(newcode).get_result(conn)
+    })
+}
