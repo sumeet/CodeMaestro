@@ -26,7 +26,7 @@ fn say_hello(state: gotham::state::State) -> (gotham::state::State, &'static str
 
 async fn http_server() -> Result<(), ()> {
     let val : serde_json::Value = serde_json::from_str(r#"{"hoohaw": 123}"#).unwrap();
-    await!(forward(insert_new_code(val)));
+    await!(forward(insert_new_code(val))).unwrap();
     await!(forward(gotham::init_server("0.0.0.0:9000", || Ok(say_hello)))).unwrap();
     Ok::<(), ()>(())
 }
@@ -34,6 +34,8 @@ async fn http_server() -> Result<(), ()> {
 //pub type
 
 fn main() {
+    dotenv().ok();
+
     let getrekt_slack_token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
     let sandh_slack_token = "xoxb-562464349142-560290195488-MfjUZW4VTBYrDTO5wBzltnC6";
     let discord_bot_token = "NTQ5OTAyOTcwMzg5NzkwNzIx.D1auqw.QN0-mQBA4KmLZImlaRVwJHRsImQ";
@@ -249,6 +251,7 @@ use diesel::r2d2;
 use lazy_static::lazy_static;
 use cs::schema::codes;
 use diesel::query_dsl::RunQueryDsl;
+use dotenv::dotenv;
 use std::error::Error;
 
 pub type Conn = diesel::pg::PgConnection;
@@ -267,7 +270,7 @@ fn connect() -> Pool {
 pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
     where
         T: Send + 'static,
-        E: From<r2d2::PoolError> + Send + 'static,
+        E: std::error::Error + Send + 'static,
         F: FnOnce(&Conn) -> R + Send + 'static,
         R: IntoFuture<Item = T, Error = E> + Send + 'static,
         <R as IntoFuture>::Future: Send,
@@ -282,7 +285,7 @@ pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
     THREAD_POOL.spawn_fn(move || {
         pool
             .get()
-            .map_err(|err| E::from(err))
+            .map_err(|err| panic!("ugh fuck this thing"))
             .map(|conn| f(&conn))
             .into_future()
             .and_then(|f| f)
@@ -297,7 +300,7 @@ struct NewCode {
     instance_id: i32,
 }
 
-fn insert_new_code(code: serde_json::Value) -> impl OldFuture {
+fn insert_new_code(code: serde_json::Value) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
     use cs::schema::codes::dsl::codes;
     let newcode = NewCode {
         added_by: "sumeet".to_string(),
@@ -305,7 +308,6 @@ fn insert_new_code(code: serde_json::Value) -> impl OldFuture {
         instance_id: 123,
     };
     exec_async(|conn| {
-        diesel::insert_into(codes).values(newcode).get_result(conn)
-            .map_err(|e| R2D2Error(e.description()))
+        diesel::insert_into(codes).values(newcode).execute(conn)
     })
 }
