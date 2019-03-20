@@ -384,6 +384,14 @@ impl CommandBuffer {
         self.add_environment_command(move |env| env.add_typespec(ts))
     }
 
+    pub fn run_future<I, E: std::fmt::Debug,
+                      F: std::future::Future<Output = Result<I, E>> + 'static>(&mut self,
+                                                                               future: F) {
+        self.add_integrating_command(move |_, _, async_executor, _| {
+            async_executor.exec(future);
+        })
+    }
+
     // environment actions
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
         let code = code.clone();

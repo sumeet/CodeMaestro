@@ -18,7 +18,6 @@ use irc_proto::{Command};
 use tokio::runtime::current_thread::Runtime;
 use futures::future::join_all;
 use noob;
-use gotham;
 use hyper::{Body,Request,Response,Server};
 use hyper::service::{service_fn};
 use serde::Deserialize;
@@ -74,10 +73,6 @@ impl ChatThingy {
         for typespec in &world.typespecs {
             env.add_typespec_box(typespec.clone());
         }
-    }
-
-    pub fn env(&self) -> Rc<RefCell<env::ExecutionEnvironment>> {
-        Rc::clone(&self.interp.env)
     }
 
     pub fn message_received(&self, sender: String, text: String) -> impl std::future::Future {
@@ -257,12 +252,10 @@ use futures_cpupool::CpuPool;
 use diesel;
 //use diesel::prelude::*;
 use diesel::{Insertable,Queryable};
-use ::r2d2::{Error as R2D2Error};
 use diesel::r2d2;
 use lazy_static::lazy_static;
 use cs::schema::codes;
 use diesel::query_dsl::RunQueryDsl; use dotenv::dotenv;
-use std::error::Error;
 
 pub type Conn = diesel::pg::PgConnection;
 pub type Pool = r2d2::Pool<r2d2::ConnectionManager<Conn>>;
