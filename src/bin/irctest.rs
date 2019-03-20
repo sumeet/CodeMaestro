@@ -19,15 +19,65 @@ use tokio::runtime::current_thread::Runtime;
 use futures::future::join_all;
 use noob;
 use gotham;
+use hyper::{Body,Request,Response,Server};
+use hyper::service::{service_fn};
+use serde::Deserialize;
+use cs::code_loading::TheWorld;
 
-fn say_hello(state: gotham::state::State) -> (gotham::state::State, &'static str) {
-    (state, "Hello world!")
+
+async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error::Error + 'static>>
+    where for<'de> T: Deserialize<'de>,
+{
+    let (parts, body) = req.into_parts();
+    let body = await!(forward(body.concat2()))?;
+    let body = serde_json::from_slice(&body)?;
+    Ok(Request::from_parts(parts, body))
 }
 
-async fn http_server() -> Result<(), ()> {
-    let val : serde_json::Value = serde_json::from_str(r#"{"hoohaw": 123}"#).unwrap();
-    await!(forward(insert_new_code(val))).unwrap();
-    await!(forward(gotham::init_server("0.0.0.0:9000", || Ok(say_hello)))).unwrap();
+fn handler(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
+    move |body| {
+        let chat_thingy = Rc::clone(&chat_thingy);
+        Box::new(backward(async move {
+            let body = await!(deserialize::<TheWorld>(body));
+            if let Err(e) = body {
+                println!("error: {:?}", e);
+                return Ok(Response::builder().status(400).body("ur world sucked".into()).unwrap())
+            }
+
+            let the_world = body.unwrap().into_body();
+            let chat_thingy = chat_thingy.borrow();
+            let env = chat_thingy.env();
+            let mut env = env.borrow_mut();
+
+            // TODO: this is duped from lib.rs
+            for function in the_world.functions {
+                env.add_function_box(function);
+            }
+            for typespec in the_world.typespecs {
+                env.add_typespec_box(typespec);
+            }
+
+            Ok(Response::new(Body::from("hoohaw")))
+        }))
+    }
+}
+
+async fn http_server(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+    let addr = ([0, 0, 0, 0], 9000).into();
+    await!(forward(Server::bind(&addr)
+        .executor(tokio::runtime::current_thread::TaskExecutor::current())
+        .serve(|| service_fn(handler(Rc::clone(&chat_thingy)))))).unwrap();
+//            let w = await!(deserialize::<TheWorld>(req));
+//            if let Err(e) = w {
+//                println!("there was an error: {:?}", e);
+//                return Response::builder()
+//            }
+
+//            Response::new(Body::from("hoohaw"))
+//        })))).unwrap();
+//    let val : serde_json::Value = serde_json::from_str(r#"{"hoohaw": 123}"#).unwrap();
+//    await!(forward(insert_new_code(val))).unwrap();
+//    await!(forward(gotham::init_server("0.0.0.0:9000", || Ok(say_hello)))).unwrap();
     Ok::<(), ()>(())
 }
 
@@ -48,7 +98,7 @@ fn main() {
         Box::new(backward(slack(getrekt_slack_token, Rc::clone(&chat_thingy)))),
         Box::new(backward(slack(sandh_slack_token, Rc::clone(&chat_thingy)))),
         Box::new(backward(discord(discord_bot_token, Rc::clone(&chat_thingy)))),
-        Box::new(backward(http_server())),
+        Box::new(backward(http_server(Rc::clone(&chat_thingy)))),
     ];
 
     let joined = join_all(futures);
@@ -67,6 +117,10 @@ impl ChatThingy {
         let reply_function = ChatReply::new(Rc::clone(&reply_buffer));
         interp.env.borrow_mut().add_function(reply_function);
         Self { interp, reply_buffer }
+    }
+
+    pub fn env(&self) -> Rc<RefCell<env::ExecutionEnvironment>> {
+        Rc::clone(&self.interp.env)
     }
 
     pub fn message_received(&self, sender: String, text: String) -> impl std::future::Future {

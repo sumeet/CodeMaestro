@@ -10,10 +10,11 @@ edition = "2018"
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "pyo3", "slack",
            "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest", "noob",
-           "directories", "gotham", "futures-cpupool", "diesel", "r2d2", "dotenv"]
+           "directories", "gotham", "futures-cpupool", "diesel", "r2d2", "dotenv", "hyper"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
+hyper = {version = "*", optional = true}
 objekt = "0.1.1"
 debug-cell = "0.1.1"
 serde = "1.0.88"

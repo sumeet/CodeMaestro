@@ -28,7 +28,7 @@ mod structs;
 mod enums;
 #[macro_use] pub mod env;
 mod env_genie;
-mod code_loading;
+pub mod code_loading;
 mod editor;
 mod window_positions;
 mod opener;
@@ -173,6 +173,8 @@ fn init_controller(interpreter: &env::Interpreter) -> Controller {
     for test in the_world.tests {
         controller.load_test(test);
     }
+
+    // TODO: this is duped in irctest.rs
     for function in the_world.functions {
         env.add_function_box(function);
     }

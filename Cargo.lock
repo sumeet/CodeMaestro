@@ -369,6 +369,7 @@ dependencies = [
  "glutin 0.19.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gotham 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "http 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hyper 0.12.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "imgui 0.0.23-pre (git+https://github.com/sumeet/imgui-rs)",
  "imgui-glium-renderer 0.0.23-pre (git+https://github.com/sumeet/imgui-rs)",
  "imgui-sys 0.0.23-pre (git+https://github.com/sumeet/imgui-rs)",
