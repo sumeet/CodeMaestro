@@ -23,65 +23,10 @@ use hyper::{Body,Request,Response,Server};
 use hyper::service::{service_fn};
 use serde::Deserialize;
 use cs::code_loading::TheWorld;
+use diesel::query_dsl::QueryDsl;
+use diesel::prelude::*;
 
-
-async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error::Error + 'static>>
-    where for<'de> T: Deserialize<'de>,
-{
-    let (parts, body) = req.into_parts();
-    let body = await!(forward(body.concat2()))?;
-    let body = serde_json::from_slice(&body)?;
-    Ok(Request::from_parts(parts, body))
-}
-
-fn handler(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
-    move |body| {
-        let chat_thingy = Rc::clone(&chat_thingy);
-        Box::new(backward(async move {
-            let body = await!(deserialize::<TheWorld>(body));
-            if let Err(e) = body {
-                println!("error: {:?}", e);
-                return Ok(Response::builder().status(400).body("ur world sucked".into()).unwrap())
-            }
-
-            let the_world = body.unwrap().into_body();
-            let chat_thingy = chat_thingy.borrow();
-            let env = chat_thingy.env();
-            let mut env = env.borrow_mut();
-
-            // TODO: this is duped from lib.rs
-            for function in the_world.functions {
-                env.add_function_box(function);
-            }
-            for typespec in the_world.typespecs {
-                env.add_typespec_box(typespec);
-            }
-
-            Ok(Response::new(Body::from("hoohaw")))
-        }))
-    }
-}
-
-async fn http_server(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
-    let addr = ([0, 0, 0, 0], 9000).into();
-    await!(forward(Server::bind(&addr)
-        .executor(tokio::runtime::current_thread::TaskExecutor::current())
-        .serve(|| service_fn(handler(Rc::clone(&chat_thingy)))))).unwrap();
-//            let w = await!(deserialize::<TheWorld>(req));
-//            if let Err(e) = w {
-//                println!("there was an error: {:?}", e);
-//                return Response::builder()
-//            }
-
-//            Response::new(Body::from("hoohaw"))
-//        })))).unwrap();
-//    let val : serde_json::Value = serde_json::from_str(r#"{"hoohaw": 123}"#).unwrap();
-//    await!(forward(insert_new_code(val))).unwrap();
-//    await!(forward(gotham::init_server("0.0.0.0:9000", || Ok(say_hello)))).unwrap();
-    Ok::<(), ()>(())
-}
-
-//pub type
+const INSTANCE_ID : i32 = 123;
 
 fn main() {
     dotenv().ok();
@@ -93,6 +38,7 @@ fn main() {
     let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
 
     let futures : Vec<Box<dyn OldFuture<Item = (), Error = ()>>> = vec![
+        Box::new(backward(load_code_from_the_db(Rc::clone(&chat_thingy)))),
         Box::new(backward(new_irc_conn(darwin_config(), Rc::clone(&chat_thingy)))),
         Box::new(backward(new_irc_conn(esper_config(), Rc::clone(&chat_thingy)))),
         Box::new(backward(slack(getrekt_slack_token, Rc::clone(&chat_thingy)))),
@@ -117,6 +63,17 @@ impl ChatThingy {
         let reply_function = ChatReply::new(Rc::clone(&reply_buffer));
         interp.env.borrow_mut().add_function(reply_function);
         Self { interp, reply_buffer }
+    }
+
+    // TODO: this is duped from lib.rs
+    pub fn load_world(&self, world: &TheWorld) {
+        let mut env = self.interp.env.borrow_mut();
+        for function in &world.functions {
+            env.add_function_box(function.clone());
+        }
+        for typespec in &world.typespecs {
+            env.add_typespec_box(typespec.clone());
+        }
     }
 
     pub fn env(&self) -> Rc<RefCell<env::ExecutionEnvironment>> {
@@ -299,13 +256,12 @@ async fn slack(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Res
 use futures_cpupool::CpuPool;
 use diesel;
 //use diesel::prelude::*;
-use diesel::Insertable;
+use diesel::{Insertable,Queryable};
 use ::r2d2::{Error as R2D2Error};
 use diesel::r2d2;
 use lazy_static::lazy_static;
 use cs::schema::codes;
-use diesel::query_dsl::RunQueryDsl;
-use dotenv::dotenv;
+use diesel::query_dsl::RunQueryDsl; use dotenv::dotenv;
 use std::error::Error;
 
 pub type Conn = diesel::pg::PgConnection;
@@ -339,7 +295,8 @@ pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
     THREAD_POOL.spawn_fn(move || {
         pool
             .get()
-            .map_err(|err| panic!("ugh fuck this thing"))
+            // TODO: this is still super fucked. we'll crash any time the insert fails lol
+            .map_err(|_err| panic!("ugh fuck this thing"))
             .map(|conn| f(&conn))
             .into_future()
             .and_then(|f| f)
@@ -354,14 +311,82 @@ struct NewCode {
     instance_id: i32,
 }
 
-fn insert_new_code(code: serde_json::Value) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
+#[derive(Queryable)]
+struct Code {
+    id: i32,
+    added_by: String,
+    code: serde_json::Value,
+    instance_id: i32,
+    created_at: std::time::SystemTime,
+    updated_at: std::time::SystemTime,
+}
+
+fn insert_new_code(code: &TheWorld) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
     use cs::schema::codes::dsl::codes;
     let newcode = NewCode {
         added_by: "sumeet".to_string(),
-        code,
-        instance_id: 123,
+        code: serde_json::to_value(code).unwrap(),
+        instance_id: INSTANCE_ID,
     };
     exec_async(|conn| {
         diesel::insert_into(codes).values(newcode).execute(conn)
     })
+}
+
+async fn load_code_from_the_db(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+    use crate::codes::dsl::*;
+
+    let code_rows = await!(forward(exec_async(|conn| {
+        codes.filter(instance_id.eq(INSTANCE_ID))
+            .load::<Code>(conn)
+
+    }))).unwrap();
+    for code_row in code_rows {
+        let the_world = serde_json::from_value(code_row.code);
+        match the_world {
+            Ok(ref the_world) => {
+                println!("loading smth from the world");
+                chat_thingy.borrow().load_world(the_world);
+            }
+            Err(e) => println!("error deserializing world: {:?}", e),
+        }
+    }
+    println!("done loading from db");
+    Ok::<(), ()>(())
+}
+
+
+async fn http_server(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+    await!(forward(Server::bind(&([0, 0, 0, 0], 9000).into())
+        .executor(tokio::runtime::current_thread::TaskExecutor::current())
+        .serve(|| service_fn(handler(Rc::clone(&chat_thingy)))))).unwrap();
+    Ok::<(), ()>(())
+}
+
+
+async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error::Error + 'static>>
+    where for<'de> T: Deserialize<'de>,
+{
+    let (parts, body) = req.into_parts();
+    let body = await!(forward(body.concat2()))?;
+    let body = serde_json::from_slice(&body)?;
+    Ok(Request::from_parts(parts, body))
+}
+
+fn handler(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
+    move |body| {
+        let chat_thingy = Rc::clone(&chat_thingy);
+        Box::new(backward(async move {
+            let body = await!(deserialize::<TheWorld>(body));
+            if let Err(e) = body {
+                println!("error: {:?}", e);
+                return Ok(Response::builder().status(400).body("ur world sucked".into()).unwrap())
+            }
+
+            let the_world = body.unwrap().into_body();
+            await!(forward(insert_new_code(&the_world))).unwrap();
+            chat_thingy.borrow().load_world(&the_world);
+            Ok(Response::new(Body::from("던지다")))
+        }))
+    }
 }
