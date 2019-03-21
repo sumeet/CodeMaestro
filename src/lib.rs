@@ -42,6 +42,7 @@ mod opener;
 mod result;
 mod undo;
 mod window_positions;
+#[cfg(feature = "default")]
 #[macro_use]
 extern crate diesel;
 mod chat_trigger;
@@ -54,6 +55,7 @@ mod json_http_client_builder;
 #[cfg(feature = "default")]
 mod pystuff;
 mod save_state;
+#[cfg(feature = "default")]
 pub mod schema;
 mod scripts;
 mod send_to_server_overlay;
@@ -174,32 +176,25 @@ fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Erro
     functions.push(Box::new(builtins::Capitalize {}));
     functions.push(Box::new(builtins::HTTPGet {}));
     functions.push(Box::new(builtins::JoinString {}));
-    functions.push(Box::new(builtins::ChatReply::new(Rc::new(RefCell::new(
-        vec![],
-    )))));
+    functions.push(Box::new(builtins::ChatReply::new(Rc::new(RefCell::new(vec![])))));
 
-    let struct_ids = &[
-        // HTTP Form param
-        uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap(),
-        // Chat Message
-        uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap(),
-        // HTTP Response
-        uuid::Uuid::parse_str("31d96c85-5966-4866-a90a-e6db3707b140").unwrap(),
-    ];
-    let enum_ids = &[
-        // Result
-        uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap(),
-    ];
+    let struct_ids = &[// HTTP Form param
+                       uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap(),
+                       // Chat Message
+                       uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap(),
+                       // HTTP Response
+                       uuid::Uuid::parse_str("31d96c85-5966-4866-a90a-e6db3707b140").unwrap()];
+    let enum_ids = &[// Result
+                     uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap()];
 
-    builtins::Builtins {
-        funcs: functions.into_iter().map(|f| (f.id(), f)).collect(),
-        typespecs: struct_ids
-            .iter()
-            .chain(enum_ids.iter())
-            .map(|ts_id| (*ts_id, env.find_typespec(*ts_id).unwrap().clone()))
-            .collect(),
-    }
-    .save()
+    builtins::Builtins { funcs: functions.into_iter().map(|f| (f.id(), f)).collect(),
+                         typespecs: struct_ids.iter()
+                                              .chain(enum_ids.iter())
+                                              .map(|ts_id| {
+                                                  (*ts_id,
+                                                   env.find_typespec(*ts_id).unwrap().clone())
+                                              })
+                                              .collect() }.save()
 }
 
 fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionEnvironment) {
@@ -208,9 +203,8 @@ fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionE
     for code_location in loaded_state.open_code_editors.iter() {
         match code_location {
             CodeLocation::Function(id) => {
-                env_genie
-                    .get_code_func(*id)
-                    .map(|code_func| command_buffer.load_code_func(code_func.clone()));
+                env_genie.get_code_func(*id)
+                         .map(|code_func| command_buffer.load_code_func(code_func.clone()));
             }
 
             CodeLocation::Script(_id) => {
@@ -220,14 +214,12 @@ fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionE
                 // lazy, no support for tests yet
             }
             CodeLocation::JSONHTTPClientURLParams(id) => {
-                env_genie
-                    .get_json_http_client(*id)
-                    .map(|client| command_buffer.load_json_http_client(client.clone()));
+                env_genie.get_json_http_client(*id)
+                         .map(|client| command_buffer.load_json_http_client(client.clone()));
             }
             CodeLocation::JSONHTTPClientURL(id) => {
-                env_genie
-                    .get_json_http_client(*id)
-                    .map(|client| command_buffer.load_json_http_client(client.clone()));
+                env_genie.get_json_http_client(*id)
+                         .map(|client| command_buffer.load_json_http_client(client.clone()));
             }
             CodeLocation::ChatTrigger(id) => {
                 env_genie
@@ -239,8 +231,8 @@ fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionE
 
     let window_positions = loaded_state.window_positions;
     command_buffer.add_controller_command(move |controller| {
-        controller.load_serialized_window_positions(window_positions);
-    })
+                      controller.load_serialized_window_positions(window_positions);
+                  })
 }
 
 pub struct App {
@@ -258,11 +250,9 @@ impl App {
         init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut());
 
         let command_buffer = Rc::new(RefCell::new(command_buffer));
-        Self {
-            interpreter,
-            command_buffer,
-            controller,
-        }
+        Self { interpreter,
+               command_buffer,
+               controller }
     }
 
     pub fn load_saved_code_from_disk(&mut self) {
@@ -294,12 +284,10 @@ impl App {
         let env = self.interpreter.env();
         let env = env.borrow();
         let env_genie = env_genie::EnvGenie::new(&env);
-        let renderer = editor::Renderer::new(
-            ui_toolkit,
-            &self.controller,
-            Rc::clone(&command_buffer),
-            &env_genie,
-        );
+        let renderer = editor::Renderer::new(ui_toolkit,
+                                             &self.controller,
+                                             Rc::clone(&command_buffer),
+                                             &env_genie);
         renderer.render_app()
     }
 
@@ -309,15 +297,11 @@ impl App {
             //println!("some queued commands, flushing");
             command_buffer.flush_to_controller(&mut self.controller);
             command_buffer.flush_to_interpreter(&mut self.interpreter);
-            command_buffer.flush_integrating(
-                &mut self.controller,
-                &mut self.interpreter,
-                &mut async_executor,
-            );
-            code_validation::validate_and_fix(
-                &mut self.interpreter.env().borrow_mut(),
-                &mut command_buffer,
-            );
+            command_buffer.flush_integrating(&mut self.controller,
+                                             &mut self.interpreter,
+                                             &mut async_executor);
+            code_validation::validate_and_fix(&mut self.interpreter.env().borrow_mut(),
+                                              &mut command_buffer);
         }
     }
 }
