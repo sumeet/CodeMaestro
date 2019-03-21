@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use cfg_if::cfg_if;
-use super::window_positions::{WindowPositions};
+use super::window_positions::WindowPositions;
 use crate::code_editor::CodeLocation;
+use cfg_if::cfg_if;
+use serde::{Deserialize, Serialize};
 
 cfg_if! {
     if #[cfg(feature = "javascript")] {
@@ -16,7 +16,7 @@ cfg_if! {
 #[derive(Serialize)]
 pub struct StateSerialize<'a> {
     window_positions: &'a WindowPositions,
-    open_code_editors: &'a[CodeLocation],
+    open_code_editors: &'a [CodeLocation],
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -26,64 +26,68 @@ pub struct StateDeserialize {
 }
 
 pub fn save(window_positions: &WindowPositions, open_code_editors: &[CodeLocation]) {
-    save_state(&StateSerialize { window_positions, open_code_editors })
+    save_state(&StateSerialize { window_positions,
+                                 open_code_editors })
 }
 
 #[cfg(feature = "javascript")]
 mod js {
-    use stdweb::web::{window,Storage};
+    use super::{StateDeserialize, StateSerialize};
     use lazy_static::lazy_static;
-    use super::{StateSerialize,StateDeserialize};
+    use stdweb::web::{window, Storage};
 
     lazy_static! {
-        static ref STORAGE : Storage = window().local_storage();
+        static ref STORAGE: Storage = window().local_storage();
     }
 
     pub fn load() -> StateDeserialize {
-        STORAGE.get("state").map(|stored| serde_json::from_str(&stored))
-            .unwrap_or_else(|| {
-                let default = StateDeserialize::default();
-                STORAGE.insert("state", &serde_json::to_string(&default).unwrap())
-                    .unwrap();
-                Ok(default)
-            }).unwrap()
+        STORAGE.get("state")
+               .map(|stored| serde_json::from_str(&stored))
+               .unwrap_or_else(|| {
+                   let default = StateDeserialize::default();
+                   STORAGE.insert("state", &serde_json::to_string(&default).unwrap())
+                          .unwrap();
+                   Ok(default)
+               })
+               .unwrap()
     }
 
     pub fn save_state(state_serialize: &StateSerialize) {
         STORAGE.insert("state", &serde_json::to_string(state_serialize).unwrap())
-            .unwrap()
+               .unwrap()
     }
 
 }
 
 #[cfg(feature = "default")]
 mod native {
-    use directories::{ProjectDirs};
+    use crate::save_state::{StateDeserialize, StateSerialize};
+    use directories::ProjectDirs;
     use lazy_static::lazy_static;
+    use std::fs::{create_dir_all, File};
     use std::path::PathBuf;
-    use std::fs::File;
-    use crate::save_state::{StateSerialize, StateDeserialize};
 
     lazy_static! {
-        static ref PROJECT_DIRS : PathBuf = {
+        static ref CONFIG_DIR : PathBuf = {
             ProjectDirs::from("org", "sumeet", "cs").unwrap()
                 .config_dir().into()
         };
         // HAXXXXXXXXXXXXX
         static ref STATE_FILE_NAME : PathBuf = {
-            PROJECT_DIRS.with_file_name("state.json").into()
+            CONFIG_DIR.with_file_name("state.json").into()
         };
     }
 
     pub fn load() -> StateDeserialize {
-        File::open(&*STATE_FILE_NAME)
-            .map(|file| serde_json::from_reader(file))
-            .unwrap_or_else(|_| {
-                let default = StateDeserialize::default();
-                let f = File::create(&*STATE_FILE_NAME).unwrap();
-                serde_json::to_writer_pretty(f, &default).unwrap();
-                Ok(default)
-            }).unwrap()
+        File::open(&*STATE_FILE_NAME).map(|file| serde_json::from_reader(file))
+                                     .unwrap_or_else(|_| {
+                                         let default = StateDeserialize::default();
+                                         create_dir_all(CONFIG_DIR.as_path()).unwrap();
+                                         let f = File::create(&*STATE_FILE_NAME).unwrap();
+                                         serde_json::to_writer_pretty(f, &default).unwrap();
+                                         Ok(default)
+                                     })
+                                     .unwrap()
     }
 
     // JANK
