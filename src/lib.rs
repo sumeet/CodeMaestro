@@ -52,7 +52,7 @@ mod code_validation;
 mod external_func;
 mod function;
 mod json_http_client_builder;
-#[cfg(feature = "default")]
+#[cfg(feature = "python")]
 mod pystuff;
 mod save_state;
 #[cfg(feature = "default")]
@@ -61,10 +61,10 @@ mod scripts;
 mod send_to_server_overlay;
 mod tests;
 
-#[cfg(feature = "javascript")]
+#[cfg(not(feature = "python"))]
 mod fakepystuff;
 
-#[cfg(feature = "javascript")]
+#[cfg(not(feature = "python"))]
 mod pystuff {
     pub use super::fakepystuff::*;
 }

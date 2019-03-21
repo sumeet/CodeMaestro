@@ -8,9 +8,10 @@ edition = "2018"
 #default-run = "cs"
 
 [features]
-default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "pyo3", "slack",
+default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "slack",
            "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest", "noob",
            "directories", "gotham", "futures-cpupool", "diesel", "r2d2", "dotenv", "hyper"]
+python = ["pyo3"]
 javascript = ["yew", "stdweb"]
 
 [dependencies]
