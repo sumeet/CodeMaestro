@@ -1,5 +1,5 @@
 extern crate cs;
 
 fn main() {
-    cs::main()
+    cs::run_editor()
 }

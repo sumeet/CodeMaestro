@@ -316,6 +316,7 @@ struct Code {
 
 fn insert_new_code(code: &TheWorld) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
     use cs::schema::codes::dsl::codes;
+    println!("{:?}", code);
     let newcode = NewCode {
         added_by: "sumeet".to_string(),
         code: serde_json::to_value(code).unwrap(),
@@ -332,7 +333,6 @@ async fn load_code_from_the_db(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(
     let code_rows = await!(forward(exec_async(|conn| {
         codes.filter(instance_id.eq(INSTANCE_ID))
             .load::<Code>(conn)
-
     }))).unwrap();
     for code_row in code_rows {
         let the_world = serde_json::from_value(code_row.code);
@@ -362,6 +362,7 @@ async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error
 {
     let (parts, body) = req.into_parts();
     let body = await!(forward(body.concat2()))?;
+    println!("{}", std::str::from_utf8(&body).as_ref().unwrap());
     let body = serde_json::from_slice(&body)?;
     Ok(Request::from_parts(parts, body))
 }

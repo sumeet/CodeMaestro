@@ -1,19 +1,19 @@
-use super::{App};
-use super::ui_toolkit::{UiToolkit,SelectableItem};
-use super::editor::{Keypress};
-use super::imgui_support;
 use super::async_executor;
+use super::editor::Keypress;
+use super::imgui_support;
+use super::ui_toolkit::{SelectableItem, UiToolkit};
+use super::App;
 use itertools::Itertools;
 
+use crate::code_editor_renderer::{BLUE_COLOR, PURPLE_COLOR};
+use crate::imgui_support::{BUTTON_ACTIVE_COLOR, BUTTON_HOVERED_COLOR};
 use imgui::*;
 use lazy_static::lazy_static;
+use std::cell::RefCell;
+use std::collections::hash_map::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
-use std::cell::RefCell;
-use std::collections::hash_map::HashMap;
-use crate::code_editor_renderer::{BLUE_COLOR, PURPLE_COLOR};
-use crate::imgui_support::{BUTTON_HOVERED_COLOR, BUTTON_ACTIVE_COLOR};
 
 pub const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
@@ -21,7 +21,7 @@ const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (400.0, 500.0);
 
 lazy_static! {
-    static ref TK_CACHE : Arc<Mutex<TkCache>> = Arc::new(Mutex::new(TkCache::new()));
+    static ref TK_CACHE: Arc<Mutex<TkCache>> = Arc::new(Mutex::new(TkCache::new()));
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -31,45 +31,45 @@ struct Window {
 }
 
 struct TkCache {
-    focused_child_regions: HashMap<String,bool>,
+    focused_child_regions: HashMap<String, bool>,
     windows: HashMap<String, Window>,
 }
 
 impl TkCache {
     fn new() -> Self {
-        Self {
-            focused_child_regions: HashMap::new(),
-            windows: HashMap::new(),
-        }
+        Self { focused_child_regions: HashMap::new(),
+               windows: HashMap::new() }
     }
 
     pub fn is_focused(child_window_id: &str) -> bool {
-        *TK_CACHE.lock().unwrap().focused_child_regions.get(child_window_id)
-            .unwrap_or(&false)
+        *TK_CACHE.lock()
+                 .unwrap()
+                 .focused_child_regions
+                 .get(child_window_id)
+                 .unwrap_or(&false)
     }
 
     pub fn set_is_focused(child_window_id: &str, is_focused: bool) {
-        TK_CACHE.lock().unwrap().focused_child_regions.insert(child_window_id.to_string(),
-                                                              is_focused);
+        TK_CACHE.lock()
+                .unwrap()
+                .focused_child_regions
+                .insert(child_window_id.to_string(), is_focused);
     }
 }
 
 pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::AsyncExecutor) {
-    imgui_support::run("cs".to_string(), CLEAR_COLOR,
-       |ui, keypress| {
-            let mut app = app.borrow_mut();
-            app.flush_commands(&mut async_executor);
-            async_executor.turn();
-            let mut toolkit = ImguiToolkit::new(ui, keypress);
-            app.draw(&mut toolkit);
-            true
-        },
-    );
+    imgui_support::run("cs".to_string(), CLEAR_COLOR, |ui, keypress| {
+        let mut app = app.borrow_mut();
+        app.flush_commands(&mut async_executor);
+        async_executor.turn();
+        let mut toolkit = ImguiToolkit::new(ui, keypress);
+        app.draw(&mut toolkit);
+        true
+    });
 }
 
 struct State {
-    used_labels: HashMap<String,i32>,
-
+    used_labels: HashMap<String, i32>,
 }
 
 fn buf(text: &str) -> ImString {
@@ -80,9 +80,7 @@ fn buf(text: &str) -> ImString {
 
 impl State {
     fn new() -> Self {
-        State {
-            used_labels: HashMap::new(),
-        }
+        State { used_labels: HashMap::new() }
     }
 }
 
@@ -94,11 +92,9 @@ pub struct ImguiToolkit<'a> {
 
 impl<'a> ImguiToolkit<'a> {
     pub fn new(ui: &'a Ui, keypress: Option<Keypress>) -> ImguiToolkit<'a> {
-        ImguiToolkit {
-            ui,
-            keypress,
-            state: RefCell::new(State::new()),
-        }
+        ImguiToolkit { ui,
+                       keypress,
+                       state: RefCell::new(State::new()) }
     }
 
     // stupid, but it works. imgui does this stupid shit where if you use the same label for two
@@ -129,10 +125,14 @@ impl<'a> ImguiToolkit<'a> {
         println!("item_min: {:?}", item_min);
         println!("item_max: {:?}", item_min);
 
-        ((window_min.0 <= item_min.x) && (item_min.x <= window_max.0) &&
-            (window_min.0 <= item_max.x) && (item_max.x <= window_max.0) &&
-            (window_min.1 <= item_min.y) && (item_min.y <= window_max.1) &&
-            (window_min.1 <= item_max.y) && (item_max.y <= window_max.1))
+        ((window_min.0 <= item_min.x)
+         && (item_min.x <= window_max.0)
+         && (window_min.0 <= item_max.x)
+         && (item_max.x <= window_max.0)
+         && (window_min.1 <= item_min.y)
+         && (item_min.y <= window_max.1)
+         && (window_min.1 <= item_max.y)
+         && (item_max.y <= window_max.1))
     }
 
     fn mouse_clicked_in_last_drawn_element(&self) -> bool {
@@ -165,8 +165,7 @@ struct Rect {
 
 impl Rect {
     pub fn contains(&self, p: (f32, f32)) -> bool {
-        return self.min.0 <= p.0 && p.0 <= self.max.0 &&
-            self.min.1 <= p.1 && p.1 <= self.max.1
+        return self.min.0 <= p.0 && p.0 <= self.max.0 && self.min.1 <= p.1 && p.1 <= self.max.1;
     }
 }
 
@@ -180,8 +179,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     // TODO: these should be draw funcs that we execute in here
-    fn draw_all(&self, _draw_results: Vec<()>) {
-    }
+    fn draw_all(&self, _draw_results: Vec<()>) {}
 
     fn focused(&self, draw_fn: &Fn()) {
         draw_fn();
@@ -198,38 +196,39 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         // HAXXX: disable buttons that were drawn with `draw_button` from displaying as hovered.
         // i think in actually this is very very very messy because what happens if someone clicks
         // an inner button, do we run all the click handlers???
-//        self.ui.with_color_vars(&[(ImGuiCol::ButtonHovered, (1., 1., 1., 0.)),
-//                                            (ImGuiCol::ButtonActive, (1., 1., 1., 0.))], &|| {
-            self.ui.group(draw_fn);
-//                self.ui.with_color_vars(&[(ImGuiCol::ButtonHovered, (1., 1., 1., 0.)),
-//                                                    (ImGuiCol::ButtonActive, (1., 1., 1., 0.))], draw_fn));
+        //        self.ui.with_color_vars(&[(ImGuiCol::ButtonHovered, (1., 1., 1., 0.)),
+        //                                            (ImGuiCol::ButtonActive, (1., 1., 1., 0.))], &|| {
+        self.ui.group(draw_fn);
+        //                self.ui.with_color_vars(&[(ImGuiCol::ButtonHovered, (1., 1., 1., 0.)),
+        //                                                    (ImGuiCol::ButtonActive, (1., 1., 1., 0.))], draw_fn));
 
-            // grabbed this code from draw_box_around
-            if self.ui.is_item_hovered() {
-                let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-                let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-                self.ui.get_window_draw_list()
-                    .add_rect(min, max, BUTTON_HOVERED_COLOR)
-                    .filled(true)
-                    .build();
-            }
+        // grabbed this code from draw_box_around
+        if self.ui.is_item_hovered() {
+            let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+            let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+            self.ui
+                .get_window_draw_list()
+                .add_rect(min, max, BUTTON_HOVERED_COLOR)
+                .filled(true)
+                .build();
+        }
 
+        if self.mouse_clicked_in_last_drawn_element() {
+            let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+            let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+            self.ui
+                .get_window_draw_list()
+                .add_rect(min, max, BUTTON_ACTIVE_COLOR)
+                .filled(true)
+                .build();
+        }
 
-            if self.mouse_clicked_in_last_drawn_element() {
-                let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-                let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-                self.ui.get_window_draw_list()
-                    .add_rect(min, max, BUTTON_ACTIVE_COLOR)
-                    .filled(true)
-                    .build();
-            }
+        if self.mouse_released_in_last_drawn_element() {
+            println!("i know that the mouse was on da button");
+            onclick()
+        }
 
-            if self.mouse_released_in_last_drawn_element() {
-                println!("i know that the mouse was on da button");
-                onclick()
-            }
-
-//        })
+        //        })
     }
 
     fn draw_statusbar(&self, draw_fn: &Fn()) {
@@ -244,41 +243,37 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let window_pos = (0.0, display_size.1 - status_height);
         let window_size = (display_size.0, status_height);
 
-        self.ui.with_style_vars(
-            &[
-                StyleVar::WindowRounding(0.0),
-                StyleVar::WindowPadding(ImVec2::new(x_padding, y_padding))
-            ],
-            &|| {
-                self.ui.window(&self.imlabel("statusbar"))
-                    .collapsible(false)
-                    .horizontal_scrollbar(false)
-                    .scroll_bar(false)
-                    .scrollable(false)
-                    .resizable(false)
-                    .always_auto_resize(false)
-                    .title_bar(false)
-                    .no_focus_on_appearing(true)
-                    .movable(false)
-                    .no_bring_to_front_on_focus(true)
-                    .position(window_pos, ImGuiCond::Always)
-                    .size(window_size, ImGuiCond::Always)
-                    .build(draw_fn);
-            }
-        )
+        self.ui.with_style_vars(&[StyleVar::WindowRounding(0.0),
+                                  StyleVar::WindowPadding(ImVec2::new(x_padding, y_padding))],
+                                &|| {
+                                    self.ui
+                                        .window(&self.imlabel("statusbar"))
+                                        .collapsible(false)
+                                        .horizontal_scrollbar(false)
+                                        .scroll_bar(false)
+                                        .scrollable(false)
+                                        .resizable(false)
+                                        .always_auto_resize(false)
+                                        .title_bar(false)
+                                        .no_focus_on_appearing(true)
+                                        .movable(false)
+                                        .no_bring_to_front_on_focus(true)
+                                        .position(window_pos, ImGuiCond::Always)
+                                        .size(window_size, ImGuiCond::Always)
+                                        .build(draw_fn);
+                                })
     }
 
     fn draw_text(&self, text: &str) {
-        self.ui.with_color_vars(
-            &[(ImGuiCol::ButtonHovered, TRANSPARENT_COLOR),
-              (ImGuiCol::ButtonActive, TRANSPARENT_COLOR),
-            ],
-            &|| { self.draw_button(text, TRANSPARENT_COLOR, &||{}) }
-        )
+        self.ui
+            .with_color_vars(&[(ImGuiCol::ButtonHovered, TRANSPARENT_COLOR),
+                               (ImGuiCol::ButtonActive, TRANSPARENT_COLOR)],
+                             &|| self.draw_button(text, TRANSPARENT_COLOR, &|| {}))
     }
 
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {
-        self.ui.label_text(im_str!("{}", label), im_str!("{}", text))
+        self.ui
+            .label_text(im_str!("{}", label), im_str!("{}", text))
     }
 
     fn draw_all_on_same_line(&self, draw_fns: &[&Fn()]) {
@@ -308,7 +303,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let (first_rhs, rest) = rhss.split_first().unwrap();
         let (last_rhs, inner_rhs) = rest.split_last().unwrap();
 
-        unsafe { imgui_sys::igPushStyleVarVec2(imgui_sys::ImGuiStyleVar::ItemSpacing, (0.0, -1.0).into()) };
+        unsafe {
+            imgui_sys::igPushStyleVarVec2(imgui_sys::ImGuiStyleVar::ItemSpacing, (0.0, -1.0).into())
+        };
         self.ui.group(|| lhs());
 
         self.ui.same_line_spacing(0., 0.);
@@ -325,12 +322,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         last_rhs();
     }
 
-    fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn(),
-                                                      handle_keypress: Option<F>) -> Self::DrawResult {
+    fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
+                                                      draw_fn: &Fn(),
+                                                      handle_keypress: Option<F>)
+                                                      -> Self::DrawResult {
         let (display_size_x, display_size_y) = self.ui.imgui().display_size();
-        self.ui.window(&self.imlabel("draw_centered_popup"))
+        self.ui
+            .window(&self.imlabel("draw_centered_popup"))
             .size(INITIAL_WINDOW_SIZE, ImGuiCond::Always)
-            .position((display_size_x * 0.5, display_size_y * 0.5), ImGuiCond::Always)
+            .position((display_size_x * 0.5, display_size_y * 0.5),
+                      ImGuiCond::Always)
             .position_pivot((0.5, 0.5))
             .resizable(false)
             .scrollable(true)
@@ -348,49 +349,82 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
                 // i think this is a good place to fuck around
                 self.draw_all_on_same_line(&[
-                    &|| self.ui.with_color_vars(&[(ImGuiCol::FrameBg, BLUE_COLOR)], &|| {
-                        self.draw_text("some other shiat")
-                    }),
-                    &|| self.ui.with_color_vars(&[(ImGuiCol::FrameBg, PURPLE_COLOR)], &|| {
-                        self.draw_text("some shiatr")
-                    }),
-                ])
+                &|| {
+                    self.ui
+                        .with_color_vars(&[(ImGuiCol::FrameBg, BLUE_COLOR)], &|| {
+                            self.draw_text("some other shiat")
+                        })
+                },
+                &|| {
+                    self.ui
+                        .with_color_vars(&[(ImGuiCol::FrameBg, PURPLE_COLOR)], &|| {
+                            self.draw_text("some shiatr")
+                        })
+                },
+            ])
             });
     }
 
-    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self, window_name: &str,
+    // stolen from https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp#L3944
+    fn draw_top_right_overlay(&self, draw_fn: &Fn()) {
+        let distance = 10.0;
+        let (display_size_x, _) = self.ui.imgui().display_size();
+        self.ui
+            .window(&self.imlabel("top_right_overlay"))
+            .flags(ImGuiWindowFlags::NoNav)
+            .position(// 2.5: HARDCODE HAX
+                      (display_size_x - distance, distance * 2.5),
+                      ImGuiCond::Always)
+            .position_pivot((1.0, 0.0))
+            .movable(false)
+            .title_bar(false)
+            .resizable(false)
+            .always_auto_resize(true)
+            .save_settings(false)
+            .no_focus_on_appearing(true)
+            .build(draw_fn)
+    }
+
+    // taken from https://github.com/ocornut/imgui/issues/1901#issuecomment-400563921
+    fn draw_spinner(&self) {
+        let time = self.ui.imgui().get_time();
+        self.ui
+            .text(["|", "/", "-", "\\"][(time / 0.05) as usize & 3])
+    }
+
+    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self,
+                                                                    window_name: &str,
                                                                     size: (usize, usize),
                                                                     pos: (isize, isize),
                                                                     f: &Fn(),
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
                                                                     onwindowchange: H)
-    where H: Fn((isize, isize), (usize, usize)) + 'static {
+        where H: Fn((isize, isize), (usize, usize)) + 'static
+    {
         let window_name = self.imlabel(window_name);
-        let window_name_str : &str = window_name.as_ref();
+        let window_name_str: &str = window_name.as_ref();
 
         let window_after_prev_draw = {
             let cache = TK_CACHE.lock().unwrap();
             cache.windows.get(window_name_str).cloned()
         };
 
-        let mut window_builder = self.ui.window(&window_name)
-            .movable(true)
-            .scrollable(true);
+        let mut window_builder = self.ui.window(&window_name).movable(true).scrollable(true);
 
         if let Some(window) = window_after_prev_draw {
             if window.size != (size.0 as f32, size.1 as f32) {
-                window_builder = window_builder
-                    .size((size.0 as f32, size.1 as f32), ImGuiCond::Always)
+                window_builder =
+                    window_builder.size((size.0 as f32, size.1 as f32), ImGuiCond::Always)
             }
             if window.pos != (pos.0 as f32, pos.1 as f32) {
-                window_builder = window_builder
-                    .position((pos.0 as f32, pos.1 as f32), ImGuiCond::Always);
+                window_builder =
+                    window_builder.position((pos.0 as f32, pos.1 as f32), ImGuiCond::Always);
             }
         } else {
-            window_builder = window_builder
-                .size((size.0 as f32, size.1 as f32), ImGuiCond::FirstUseEver)
-                .position((pos.0 as f32, pos.1 as f32), ImGuiCond::FirstUseEver);
+            window_builder =
+                window_builder.size((size.0 as f32, size.1 as f32), ImGuiCond::FirstUseEver)
+                              .position((pos.0 as f32, pos.1 as f32), ImGuiCond::FirstUseEver);
         }
 
         let mut should_stay_open = true;
@@ -400,27 +434,28 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
 
         window_builder.build(&|| {
-            f();
-            let mut cache = TK_CACHE.lock().unwrap();
-            let prev_window = cache.windows.get(window_name_str).cloned();
-            let drawn_window = Window {
-                pos: self.ui.get_window_pos(),
-                size: self.ui.get_window_size()
-            };
-            cache.windows.insert(window_name_str.to_string(), drawn_window);
-            if prev_window.is_some() && prev_window.unwrap() != drawn_window {
-                onwindowchange((drawn_window.pos.0 as isize, drawn_window.pos.1 as isize),
-                               (drawn_window.size.0 as usize, drawn_window.size.1 as usize))
-            }
+                          f();
+                          let mut cache = TK_CACHE.lock().unwrap();
+                          let prev_window = cache.windows.get(window_name_str).cloned();
+                          let drawn_window = Window { pos: self.ui.get_window_pos(),
+                                                      size: self.ui.get_window_size() };
+                          cache.windows
+                               .insert(window_name_str.to_string(), drawn_window);
+                          if prev_window.is_some() && prev_window.unwrap() != drawn_window {
+                              onwindowchange((drawn_window.pos.0 as isize,
+                                              drawn_window.pos.1 as isize),
+                                             (drawn_window.size.0 as usize,
+                                              drawn_window.size.1 as usize))
+                          }
 
-            if let Some(keypress) = self.keypress {
-                if self.ui.is_window_focused() {
-                    if let Some(ref handle_keypress) = handle_keypress {
-                        handle_keypress(keypress)
-                    }
-                }
-            }
-        });
+                          if let Some(keypress) = self.keypress {
+                              if self.ui.is_window_focused() {
+                                  if let Some(ref handle_keypress) = handle_keypress {
+                                      handle_keypress(keypress)
+                                  }
+                              }
+                          }
+                      });
 
         if let Some(onclose) = onclose {
             if !should_stay_open {
@@ -429,7 +464,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn(), height_percentage: f32, handle_keypress: Option<F>) {
+    fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
+                                                    draw_fn: &Fn(),
+                                                    height_percentage: f32,
+                                                    handle_keypress: Option<F>) {
         let height = height_percentage * unsafe { imgui_sys::igGetWindowHeight() };
 
         // TODO: this is hardcoded and can't be shared with wasm or any other system
@@ -445,25 +483,29 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         };
 
         self.ui.with_color_var(ImGuiCol::Border, color, &|| {
-            self.ui.child_frame(&child_frame_id, (0., height))
-                .show_borders(true)
-                .scrollbar_horizontal(true)
-                .build(&|| {
-                    draw_fn();
-                    if let Some(keypress) = self.keypress {
-                        if self.ui.is_child_window_focused() {
-                            if let Some(ref handle_keypress) = handle_keypress {
-                                handle_keypress(keypress)
-                            }
-                        }
-                    }
+                   self.ui
+                       .child_frame(&child_frame_id, (0., height))
+                       .show_borders(true)
+                       .scrollbar_horizontal(true)
+                       .build(&|| {
+                           draw_fn();
+                           if let Some(keypress) = self.keypress {
+                               if self.ui.is_child_window_focused() {
+                                   if let Some(ref handle_keypress) = handle_keypress {
+                                       handle_keypress(keypress)
+                                   }
+                               }
+                           }
 
-                    TkCache::set_is_focused(child_frame_id.as_ref(), self.ui.is_child_window_focused())
-                });
-        });
+                           TkCache::set_is_focused(child_frame_id.as_ref(),
+                                                   self.ui.is_child_window_focused())
+                       });
+               });
     }
 
-    fn draw_x_scrollable_list<'b>(&'b self, items: impl ExactSizeIterator<Item = (&'b Fn(), bool)>, lines_height: usize) {
+    fn draw_x_scrollable_list<'b>(&'b self,
+                                  items: impl ExactSizeIterator<Item = (&'b Fn(), bool)>,
+                                  lines_height: usize) {
         let height = self.ui.get_text_line_height_with_spacing();
         let first_element_screen_x = Rc::new(RefCell::new(0.));
 
@@ -472,39 +514,46 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             return;
         }
         let last_element_index = length - 1;
-        let items : Vec<Box<Fn()>> = items.enumerate().map(|(i, (draw_fn, is_focused))| {
-            let first_element_screen_x = Rc::clone(&first_element_screen_x);
-            let x : Box<Fn()> = Box::new(move || {
-                if i == 0 {
-                    println!("setting first element screen x: {}", self.ui.get_cursor_screen_pos().0);
-                    first_element_screen_x.replace(self.ui.get_cursor_pos().0);
-                }
-                let (focused_element_x, _) = self.ui.get_cursor_screen_pos();
-                draw_fn();
-                if is_focused {
-                    if i == 0 {
-                        unsafe { imgui_sys::igSetScrollX(0.) };
-                    } else if i == last_element_index {
-                        unsafe { imgui_sys::igSetScrollX(imgui_sys::igGetScrollMaxX()) };
-                    } else if !self.is_last_drawn_item_totally_visible_and_some_more_to_the_right() {
-                        // TODO: this thing is still wonky, but it works ok enough for now
-                        //let set_to = focused_element_x - *first_element_screen_x.borrow();
-                        let set_to = {
-                            if focused_element_x < 0.0 {
-                                (unsafe { imgui_sys::igGetScrollX() }) - 5.
-                            } else {
-                                (unsafe { imgui_sys::igGetScrollX() }) + 5.
-                            }
-                        };
-                        println!("set to: {}", set_to);
-                        unsafe { imgui_sys::igSetScrollX(set_to) };
-                    }
-                }
-            });
-            x
-        }).collect_vec();
+        let items: Vec<Box<Fn()>> =
+            items.enumerate()
+                 .map(|(i, (draw_fn, is_focused))| {
+                     let first_element_screen_x = Rc::clone(&first_element_screen_x);
+                     let x: Box<Fn()> = Box::new(move || {
+                         if i == 0 {
+                             println!("setting first element screen x: {}",
+                                      self.ui.get_cursor_screen_pos().0);
+                             first_element_screen_x.replace(self.ui.get_cursor_pos().0);
+                         }
+                         let (focused_element_x, _) = self.ui.get_cursor_screen_pos();
+                         draw_fn();
+                         if is_focused {
+                             if i == 0 {
+                            unsafe { imgui_sys::igSetScrollX(0.) };
+                        } else if i == last_element_index {
+                            unsafe { imgui_sys::igSetScrollX(imgui_sys::igGetScrollMaxX()) };
+                        } else if !self
+                            .is_last_drawn_item_totally_visible_and_some_more_to_the_right()
+                        {
+                            // TODO: this thing is still wonky, but it works ok enough for now
+                            //let set_to = focused_element_x - *first_element_screen_x.borrow();
+                            let set_to = {
+                                if focused_element_x < 0.0 {
+                                    (unsafe { imgui_sys::igGetScrollX() }) - 5.
+                                } else {
+                                    (unsafe { imgui_sys::igGetScrollX() }) + 5.
+                                }
+                            };
+                            println!("set to: {}", set_to);
+                            unsafe { imgui_sys::igSetScrollX(set_to) };
+                        }
+                         }
+                     });
+                     x
+                 })
+                 .collect_vec();
 
-        self.ui.child_frame(&self.imlabel(""), (0., lines_height as f32 * height))
+        self.ui
+            .child_frame(&self.imlabel(""), (0., lines_height as f32 * height))
             .show_borders(false)
             .always_show_vertical_scroll_bar(false)
             .scrollbar_horizontal(false)
@@ -516,7 +565,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
-        self.ui.child_frame(&self.imlabel(""), (0.0, -frame_height))
+        self.ui
+            .child_frame(&self.imlabel(""), (0.0, -frame_height))
             .build(draw_content_fn);
         draw_bottom_bar_fn()
     }
@@ -533,7 +583,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        self.ui.get_window_draw_list()
+        self.ui
+            .get_window_draw_list()
             .add_rect(min, max, color)
             .filled(true)
             .build();
@@ -543,7 +594,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        self.ui.get_window_draw_list()
+        self.ui
+            .get_window_draw_list()
             .add_rect(min, (max.x, min.y + thickness as f32 - 1.), color)
             .thickness(1.)
             .filled(true)
@@ -554,7 +606,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        self.ui.get_window_draw_list()
+        self.ui
+            .get_window_draw_list()
             .add_rect((max.x - thickness as f32, min.y), max, color)
             .thickness(1.)
             .filled(true)
@@ -565,7 +618,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        self.ui.get_window_draw_list()
+        self.ui
+            .get_window_draw_list()
             .add_rect(min, (min.x - thickness as f32, max.y), color)
             .thickness(1.)
             .filled(true)
@@ -576,7 +630,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        self.ui.get_window_draw_list()
+        self.ui
+            .get_window_draw_list()
             .add_rect((min.x, max.y - thickness as f32), max, color)
             .thickness(1.)
             .filled(true)
@@ -593,69 +648,72 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let text_size = self.ui.calc_text_size(&label, false, 0.);
         let total_size = (text_size.x + (padding.x * 2.), text_size.y + (padding.y * 2.));
 
-
-
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
-        let end_of_button_bg_rect = (draw_cursor_pos.0 + total_size.0, draw_cursor_pos.1 + total_size.1);
-        self.ui.get_window_draw_list()
+        let end_of_button_bg_rect =
+            (draw_cursor_pos.0 + total_size.0, draw_cursor_pos.1 + total_size.1);
+        self.ui
+            .get_window_draw_list()
             .add_rect(draw_cursor_pos, end_of_button_bg_rect, color)
             .filled(true)
             .build();
 
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
-        let buttony_text_start_cursor_pos = (draw_cursor_pos.0 + padding.x, draw_cursor_pos.1 + padding.y);
-//        self.ui.set_cursor_pos(buttony_text_start_cursor_pos);
-//        self.ui.text(label);
+        let buttony_text_start_cursor_pos =
+            (draw_cursor_pos.0 + padding.x, draw_cursor_pos.1 + padding.y);
+        //        self.ui.set_cursor_pos(buttony_text_start_cursor_pos);
+        //        self.ui.text(label);
         let draw_list = self.ui.get_window_draw_list();
         let text_color = style.colors[ImGuiCol::Text as usize];
         draw_list.add_text(buttony_text_start_cursor_pos, text_color, label);
 
-//        self.ui.same_line_spacing(0.0, 0.0);
-//
-//
-//        // set cursor pos to the end of the rectangle
+        //        self.ui.same_line_spacing(0.0, 0.0);
+        //
+        //
+        //        // set cursor pos to the end of the rectangle
         self.ui.set_cursor_pos(original_cursor_pos);
-//        self.ui.with_color_var(ImGuiCol::Button, (1., 1., 1., 1.), || {
-            self.ui.invisible_button(&self.imlabel(""), total_size);
-//        })
-//        let mut cursor_pos = self.ui.get_cursor_screen_pos();
-//        cursor_pos.0 += padding.x;
-//        cursor_pos.1 -= padding.y;
-//        self.ui.set_cursor_screen_pos(cursor_pos);
-//        self.ui.text("");
-
+        //        self.ui.with_color_var(ImGuiCol::Button, (1., 1., 1., 1.), || {
+        self.ui.invisible_button(&self.imlabel(""), total_size);
+        //        })
+        //        let mut cursor_pos = self.ui.get_cursor_screen_pos();
+        //        cursor_pos.0 += padding.x;
+        //        cursor_pos.1 -= padding.y;
+        //        self.ui.set_cursor_screen_pos(cursor_pos);
+        //        self.ui.text("");
 
         // just for tests
-//        println!("before button");
-//        let screen_pos = self.ui.get_cursor_screen_pos();
-//        println!("{:?}", screen_pos);
-//        self.draw_button(label.as_ref(), color, &||{});
-//
-//        println!("estimated after button");
-//        let end_of_button_bg_rect = (screen_pos.0 + total_size.0, screen_pos.1 + total_size.1);
-//        println!("{:?}", end_of_button_bg_rect);
-//
-//        println!("after button");
-//        let screen_pos = self.ui.get_cursor_screen_pos();
-//        println!("{:?}", screen_pos);
+        //        println!("before button");
+        //        let screen_pos = self.ui.get_cursor_screen_pos();
+        //        println!("{:?}", screen_pos);
+        //        self.draw_button(label.as_ref(), color, &||{});
+        //
+        //        println!("estimated after button");
+        //        let end_of_button_bg_rect = (screen_pos.0 + total_size.0, screen_pos.1 + total_size.1);
+        //        println!("{:?}", end_of_button_bg_rect);
+        //
+        //        println!("after button");
+        //        let screen_pos = self.ui.get_cursor_screen_pos();
+        //        println!("{:?}", screen_pos);
     }
 
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
         self.ui.with_color_var(ImGuiCol::Button, color, || {
-            if self.ui.button(&self.imlabel(label), BUTTON_SIZE) {
-                on_button_activate()
-            }
-        });
+                   if self.ui.button(&self.imlabel(label), BUTTON_SIZE) {
+                       on_button_activate()
+                   }
+               });
     }
 
     // XXX: why do i have the small button look like a normal button again????
     // maybe it's because the code icons looked like this
-    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
+    fn draw_small_button<F: Fn() + 'static>(&self,
+                                            label: &str,
+                                            color: [f32; 4],
+                                            on_button_activate: F) {
         self.ui.with_color_var(ImGuiCol::Button, color, || {
-            if self.ui.small_button(&self.imlabel(label)) {
-                on_button_activate()
-            }
-        })
+                   if self.ui.small_button(&self.imlabel(label)) {
+                       on_button_activate()
+                   }
+               })
     }
 
     fn draw_text_box(&self, text: &str) {
@@ -664,31 +722,43 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igSetScrollHereY(1.0) };
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str,
-                                                                       onchange: F, ondone: D) {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self,
+                                                                       existing_value: &str,
+                                                                       onchange: F,
+                                                                       ondone: D) {
         self.draw_text_input_with_label("", existing_value, onchange, ondone)
     }
 
-    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self, label: &str, existing_value: &str, onchange: F) {
+    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self,
+                                                                         label: &str,
+                                                                         existing_value: &str,
+                                                                         onchange: F) {
         let mut box_input = buf(existing_value);
-        self.ui.input_text_multiline(&self.imlabel(label), &mut box_input, (0., 100.)).build();
+        self.ui
+            .input_text_multiline(&self.imlabel(label), &mut box_input, (0., 100.))
+            .build();
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
         }
     }
 
-    fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, label: &str, existing_value: &str, onchange: F, ondone: D) {
+    fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self,
+                                                                                  label: &str,
+                                                                                  existing_value: &str,
+                                                                                  onchange: F,
+                                                                                  ondone: D) {
         let mut box_input = buf(existing_value);
 
         let mut flags = ImGuiInputTextFlags::empty();
         flags.set(ImGuiInputTextFlags::EnterReturnsTrue, true);
 
-        let enter_pressed = self.ui.input_text(&self.imlabel(label), &mut box_input)
-            .flags(flags)
-            .build();
+        let enter_pressed = self.ui
+                                .input_text(&self.imlabel(label), &mut box_input)
+                                .flags(flags)
+                                .build();
         if enter_pressed {
             ondone();
-            return
+            return;
         }
 
         if box_input.as_ref() as &str != existing_value {
@@ -696,61 +766,75 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_combo_box_with_label<F, G, H, T>(&self, label: &str, is_item_selected: G,
-                                              format_item: H, items: &[&T],
-                                              onchange: F) -> Self::DrawResult
+    fn draw_combo_box_with_label<F, G, H, T>(&self,
+                                             label: &str,
+                                             is_item_selected: G,
+                                             format_item: H,
+                                             items: &[&T],
+                                             onchange: F)
+                                             -> Self::DrawResult
         where T: Clone,
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
-              H: Fn(&T) -> String {
-        let mut selected_item_in_combo_box = items.into_iter()
-            .position(|i| is_item_selected(i)).unwrap() as i32;
+              H: Fn(&T) -> String
+    {
+        let mut selected_item_in_combo_box =
+            items.into_iter().position(|i| is_item_selected(i)).unwrap() as i32;
         let previous_selection = selected_item_in_combo_box.clone();
 
         let formatted_items = items.into_iter()
-                .map(|s| im_str!("{}", format_item(s)).clone())
-                .collect_vec();
+                                   .map(|s| im_str!("{}", format_item(s)).clone())
+                                   .collect_vec();
 
-        self.ui.combo(
-            &self.imlabel(label),
-            &mut selected_item_in_combo_box,
-            &formatted_items.iter().map(|s| s.as_ref()).collect_vec(),
-            5
-        );
+        self.ui.combo(&self.imlabel(label),
+                      &mut selected_item_in_combo_box,
+                      &formatted_items.iter().map(|s| s.as_ref()).collect_vec(),
+                      5);
         if selected_item_in_combo_box != previous_selection {
             onchange(items[selected_item_in_combo_box as usize])
         }
     }
 
-    fn draw_selectables<F, G, H, T>(&self, is_item_selected: G, format_item: H, items: &[&T], onchange: F)
+    fn draw_selectables<F, G, H, T>(&self,
+                                    is_item_selected: G,
+                                    format_item: H,
+                                    items: &[&T],
+                                    onchange: F)
         where T: 'static,
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
-              H: Fn(&T) -> &str {
+              H: Fn(&T) -> &str
+    {
         for item in items {
             if self.ui.selectable(&self.imlabel(&format_item(item)),
                                   is_item_selected(item),
                                   ImGuiSelectableFlags::empty(),
-                                  (0., 0.)) {
+                                  (0., 0.))
+            {
                 onchange(item)
             }
         }
     }
 
-    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: Vec<SelectableItem<T>>, onselect: F) -> Self::DrawResult {
+    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self,
+                                                       items: Vec<SelectableItem<T>>,
+                                                       onselect: F)
+                                                       -> Self::DrawResult {
         for selectable in items {
             match selectable {
                 SelectableItem::GroupHeader(label) => {
-                    self.draw_all_on_same_line(&[
-                        &|| self.draw_text("-" ),
-                        &|| self.draw_text(label),
-                    ])
-                },
-                SelectableItem::Selectable { item, label, is_selected } => {
+                    self.draw_all_on_same_line(&[&|| self.draw_text("-"), &|| {
+                                                   self.draw_text(label)
+                                               }])
+                }
+                SelectableItem::Selectable { item,
+                                             label,
+                                             is_selected, } => {
                     if self.ui.selectable(&self.imlabel(&label),
                                           is_selected,
                                           ImGuiSelectableFlags::empty(),
-                                          (0., 0.)) {
+                                          (0., 0.))
+                    {
                         onselect(&item)
                     }
                 }
@@ -758,7 +842,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool, onchange: F) {
+    fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self,
+                                                       label: &str,
+                                                       value: bool,
+                                                       onchange: F) {
         let mut val = value;
         self.ui.checkbox(&self.imlabel(label), &mut val);
         if val != value {
@@ -780,11 +867,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-//    fn draw_tree_node(&self, label: &str, draw_fn: &Fn()) {
-//        self.ui.tree_node(im_str!("{}", label)).leaf(false).build(draw_fn)
-//    }
-//
-//    fn draw_tree_leaf(&self, label: &str, draw_fn: &Fn()) {
-//        self.ui.tree_node(im_str!("{}", label)).leaf(true).build(draw_fn)
-//    }
+    //    fn draw_tree_node(&self, label: &str, draw_fn: &Fn()) {
+    //        self.ui.tree_node(im_str!("{}", label)).leaf(false).build(draw_fn)
+    //    }
+    //
+    //    fn draw_tree_leaf(&self, label: &str, draw_fn: &Fn()) {
+    //        self.ui.tree_node(im_str!("{}", label)).leaf(true).build(draw_fn)
+    //    }
 }

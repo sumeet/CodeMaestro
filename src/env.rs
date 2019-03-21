@@ -76,7 +76,7 @@ impl Interpreter {
             }
             lang::CodeNode::NumberLiteral(number_literal) => {
                 let val = number_literal.value;
-                Box::pin( async move { lang::Value::Number(val) })
+                Box::pin( async move { lang::Value::Number(val.into()) })
             }
             lang::CodeNode::Assignment(assignment) => {
                 Box::pin(self.evaluate_assignment(&assignment))

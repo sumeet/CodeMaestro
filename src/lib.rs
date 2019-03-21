@@ -10,7 +10,7 @@
 #![feature(slice_patterns)]
 #![feature(drain_filter)]
 #![feature(generators)]
-#![recursion_limit="256"]
+#![recursion_limit = "256"]
 #![feature(fnbox)]
 
 #[cfg(feature = "default")]
@@ -20,41 +20,44 @@ mod imgui_toolkit;
 #[cfg(feature = "javascript")]
 mod yew_toolkit;
 
-mod ui_toolkit;
 pub mod asynk;
 pub mod builtins;
+mod enums;
 pub mod lang;
 mod structs;
-mod enums;
-#[macro_use] pub mod env;
-mod env_genie;
-pub mod code_loading;
-mod editor;
-mod window_positions;
-mod opener;
-mod insert_code_menu;
+mod ui_toolkit;
+#[macro_use]
+pub mod env;
 mod code_editor;
 mod code_editor_renderer;
+pub mod code_loading;
 mod edit_types;
-mod json2;
-mod undo;
-mod result;
+mod editor;
+mod env_genie;
 mod http_request;
+mod insert_code_menu;
+mod json2;
 mod json_http_client;
-#[macro_use] extern crate diesel;
-pub mod schema;
-mod json_http_client_builder;
+mod opener;
+mod result;
+mod undo;
+mod window_positions;
+#[macro_use]
+extern crate diesel;
+mod chat_trigger;
+mod code_function;
 mod code_generation;
 mod code_validation;
-mod function;
-mod code_function;
-mod tests;
-mod chat_trigger;
-mod save_state;
-mod scripts;
 mod external_func;
+mod function;
+mod json_http_client_builder;
 #[cfg(feature = "default")]
 mod pystuff;
+mod save_state;
+pub mod schema;
+mod scripts;
+mod send_to_server_overlay;
+mod tests;
 
 #[cfg(feature = "javascript")]
 mod fakepystuff;
@@ -75,7 +78,6 @@ mod jsstuff {
     pub use super::fakejsstuff::*;
 }
 
-
 #[cfg(feature = "default")]
 mod tokio_executor;
 
@@ -92,33 +94,20 @@ mod async_executor {
     pub use super::stdweb_executor::*;
 }
 
-#[cfg(feature = "javascript")]
-mod wasm_http_client;
-
-#[cfg(feature = "javascript")]
-mod http_client {
-    pub use super::wasm_http_client::*;
-}
-
-
+mod http_client;
 #[cfg(feature = "default")]
 mod native_http_client;
-
-#[cfg(feature = "default")]
-mod http_client {
-    pub use super::native_http_client::*;
-}
-
-pub use external_func::resolve_all_futures;
+#[cfg(feature = "javascript")]
+mod wasm_http_client;
 pub use env_genie::EnvGenie;
-
+pub use external_func::resolve_all_futures;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use self::editor::{Controller};
+use self::editor::Controller;
+use self::env::ExecutionEnvironment;
 use self::ui_toolkit::UiToolkit;
-use self::env::{ExecutionEnvironment};
 //use debug_cell::RefCell;
 
 #[cfg(feature = "default")]
@@ -127,10 +116,9 @@ use imgui_toolkit::draw_app;
 #[cfg(feature = "javascript")]
 use yew_toolkit::draw_app;
 
-use cfg_if::cfg_if;
-use crate::editor::CommandBuffer;
 use crate::code_editor::CodeLocation;
-
+use crate::editor::CommandBuffer;
+use cfg_if::cfg_if;
 
 cfg_if! {
     if #[cfg(feature = "javascript")] {
@@ -145,46 +133,24 @@ cfg_if! {
     }
 }
 
-pub fn main() {
+pub fn run_editor() {
     init_debug();
 
     async_executor::with_executor_context(|async_executor| {
         let app = App::new_rc();
+        app.borrow_mut().load_saved_code_from_disk();
         draw_app(app, async_executor);
     })
 }
 
-// TODO: this is a mess
+// TODO: this is a mess, but not as bad as it was before (the part about the builtins)
 fn init_controller(interpreter: &env::Interpreter) -> Controller {
     let builtins = builtins::Builtins::load().unwrap();
-
-    let mut controller = Controller::new(builtins.clone());
-    let codestring = include_str!("../codesample.json");
-    let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
-
     let env = interpreter.env();
-    let mut env = env.borrow_mut();
-
-    load_builtins(builtins, &mut env);
-
-    for script in the_world.scripts {
-        controller.load_script(script)
-    }
-    for test in the_world.tests {
-        controller.load_test(test);
-    }
-
-    // TODO: this is duped in irctest.rs
-    for function in the_world.functions {
-        env.add_function_box(function);
-    }
-    for typespec in the_world.typespecs {
-        env.add_typespec_box(typespec);
-    }
+    load_builtins(builtins.clone(), &mut env.borrow_mut());
 
     //_save_builtins(&env).unwrap();
-
-    controller
+    Controller::new(builtins)
 }
 
 fn load_builtins(builtins: builtins::Builtins, env: &mut ExecutionEnvironment) {
@@ -198,15 +164,19 @@ fn load_builtins(builtins: builtins::Builtins, env: &mut ExecutionEnvironment) {
 
 // this is only ever used when changing builtins
 fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Error>> {
-    #[allow(unused_imports)] use lang::Function;
-    #[allow(unused_imports)] use std::collections::HashMap;
+    #[allow(unused_imports)]
+    use lang::Function;
+    #[allow(unused_imports)]
+    use std::collections::HashMap;
 
-    let mut functions : Vec<Box<lang::Function>> = vec![];
-    functions.push(Box::new(builtins::Print{}));
-    functions.push(Box::new(builtins::Capitalize{}));
-    functions.push(Box::new(builtins::HTTPGet{}));
-    functions.push(Box::new(builtins::JoinString{}));
-    functions.push(Box::new(builtins::ChatReply::new(Rc::new(RefCell::new(vec![])))));
+    let mut functions: Vec<Box<lang::Function>> = vec![];
+    functions.push(Box::new(builtins::Print {}));
+    functions.push(Box::new(builtins::Capitalize {}));
+    functions.push(Box::new(builtins::HTTPGet {}));
+    functions.push(Box::new(builtins::JoinString {}));
+    functions.push(Box::new(builtins::ChatReply::new(Rc::new(RefCell::new(
+        vec![],
+    )))));
 
     let struct_ids = &[
         // HTTP Form param
@@ -223,10 +193,13 @@ fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Erro
 
     builtins::Builtins {
         funcs: functions.into_iter().map(|f| (f.id(), f)).collect(),
-        typespecs: struct_ids.iter().chain(enum_ids.iter())
+        typespecs: struct_ids
+            .iter()
+            .chain(enum_ids.iter())
             .map(|ts_id| (*ts_id, env.find_typespec(*ts_id).unwrap().clone()))
             .collect(),
-    }.save()
+    }
+    .save()
 }
 
 fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionEnvironment) {
@@ -235,37 +208,32 @@ fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionE
     for code_location in loaded_state.open_code_editors.iter() {
         match code_location {
             CodeLocation::Function(id) => {
-                env_genie.get_code_func(*id)
-                    .map(|code_func| {
-                        command_buffer.load_code_func(code_func.clone())
-                    });
-            },
+                env_genie
+                    .get_code_func(*id)
+                    .map(|code_func| command_buffer.load_code_func(code_func.clone()));
+            }
 
-            CodeLocation::Script(_id) =>  {
+            CodeLocation::Script(_id) => {
                 // lazy, no support for scripts yet
             }
-            CodeLocation::Test(_id) =>  {
+            CodeLocation::Test(_id) => {
                 // lazy, no support for tests yet
             }
             CodeLocation::JSONHTTPClientURLParams(id) => {
-                env_genie.get_json_http_client(*id)
-                    .map(|client| {
-                        command_buffer.load_json_http_client(client.clone())
-                    });
+                env_genie
+                    .get_json_http_client(*id)
+                    .map(|client| command_buffer.load_json_http_client(client.clone()));
             }
-            CodeLocation::JSONHTTPClientURL(id) =>  {
-                env_genie.get_json_http_client(*id)
-                    .map(|client| {
-                        command_buffer.load_json_http_client(client.clone())
-                    });
+            CodeLocation::JSONHTTPClientURL(id) => {
+                env_genie
+                    .get_json_http_client(*id)
+                    .map(|client| command_buffer.load_json_http_client(client.clone()));
             }
-            CodeLocation::ChatTrigger(id) =>  {
-                env_genie.get_chat_trigger(*id)
-                    .map(|chat_trigger| {
-                        command_buffer.load_chat_trigger(chat_trigger.clone())
-                    });
+            CodeLocation::ChatTrigger(id) => {
+                env_genie
+                    .get_chat_trigger(*id)
+                    .map(|chat_trigger| command_buffer.load_chat_trigger(chat_trigger.clone()));
             }
-
         }
     }
 
@@ -289,12 +257,31 @@ impl App {
 
         init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut());
 
-        let command_buffer =
-            Rc::new(RefCell::new(command_buffer));
+        let command_buffer = Rc::new(RefCell::new(command_buffer));
         Self {
             interpreter,
             command_buffer,
             controller,
+        }
+    }
+
+    pub fn load_saved_code_from_disk(&mut self) {
+        let codestring = include_str!("../codesample.json");
+        let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
+        for script in the_world.scripts {
+            self.controller.load_script(script)
+        }
+        for test in the_world.tests {
+            self.controller.load_test(test);
+        }
+
+        let mut env = self.interpreter.env.borrow_mut();
+        // TODO: this is duped in irctest.rs
+        for function in the_world.functions {
+            env.add_function_box(function);
+        }
+        for typespec in the_world.typespecs {
+            env.add_typespec_box(typespec);
         }
     }
 
@@ -311,7 +298,8 @@ impl App {
             ui_toolkit,
             &self.controller,
             Rc::clone(&command_buffer),
-            &env_genie);
+            &env_genie,
+        );
         renderer.render_app()
     }
 
@@ -321,11 +309,15 @@ impl App {
             //println!("some queued commands, flushing");
             command_buffer.flush_to_controller(&mut self.controller);
             command_buffer.flush_to_interpreter(&mut self.interpreter);
-            command_buffer.flush_integrating(&mut self.controller,
-                                             &mut self.interpreter,
-                                             &mut async_executor);
-            code_validation::validate_and_fix(&mut self.interpreter.env().borrow_mut(),
-                                              &mut command_buffer);
+            command_buffer.flush_integrating(
+                &mut self.controller,
+                &mut self.interpreter,
+                &mut async_executor,
+            );
+            code_validation::validate_and_fix(
+                &mut self.interpreter.env().borrow_mut(),
+                &mut command_buffer,
+            );
         }
     }
 }

@@ -1,7 +1,7 @@
 use super::lang;
-use serde_derive::{Serialize, Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Test {
     pub id: lang::ID,
     pub name: String,
@@ -11,12 +11,10 @@ pub struct Test {
 
 impl Test {
     pub fn new(subject: TestSubject) -> Self {
-        Self {
-            id: lang::new_id(),
-            name: "New test".to_string(),
-            subject,
-            code: lang::Block::new(),
-        }
+        Self { id: lang::new_id(),
+               name: "New test".to_string(),
+               subject,
+               code: lang::Block::new() }
     }
 
     pub fn code_id(&self) -> lang::ID {
@@ -32,7 +30,7 @@ impl Test {
     }
 }
 
-#[derive(PartialEq, Clone, Copy, Hash, Eq, Serialize, Deserialize)]
+#[derive(PartialEq, Clone, Copy, Hash, Eq, Serialize, Deserialize, Debug)]
 pub enum TestSubject {
     Function(lang::ID),
 }

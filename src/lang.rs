@@ -1,19 +1,19 @@
-use std::fmt;
 use std::borrow::Borrow;
 use std::borrow::BorrowMut;
 use std::collections::HashMap;
-use std::iter;
+use std::fmt;
 use std::future::Future;
+use std::iter;
 
 #[cfg(feature = "javascript")]
-use stdweb::{js,_js_impl};
+use stdweb::{_js_impl, js};
 
-use itertools::Itertools;
-use uuid::Uuid;
-use lazy_static::lazy_static;
-use objekt::{clone_trait_object};
 use downcast_rs::impl_downcast;
-use serde_derive::{Serialize,Deserialize};
+use itertools::Itertools;
+use lazy_static::lazy_static;
+use objekt::clone_trait_object;
+use serde_derive::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use super::env;
 
@@ -24,36 +24,30 @@ lazy_static! {
         symbol: "\u{f192}".to_string(),
         num_params: 0,
     };
-
     pub static ref BOOLEAN_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Boolean".to_string(),
         id: uuid::Uuid::parse_str(&"d00d688f-0c9e-43af-a19f-ab02e46b4c2c").unwrap(),
         symbol: "\u{f6af}".to_string(),
         num_params: 0,
     };
-
     pub static ref STRING_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "String".to_string(),
         id: uuid::Uuid::parse_str("e0e8271e-5f94-4d00-bad9-46a2ce4d6568").unwrap(),
         symbol: "\u{f10d}".to_string(),
         num_params: 0,
     };
-
     pub static ref NUMBER_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Number".to_string(),
         id: uuid::Uuid::parse_str("6dbe9096-4ff5-42f1-b2ff-36eacc3ced59").unwrap(),
         symbol: "\u{f292}".to_string(),
         num_params: 0,
     };
-
-
     pub static ref LIST_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "List".to_string(),
         id: uuid::Uuid::parse_str("4c726a5e-d9c2-481b-bbe8-ca5319176aad").unwrap(),
         symbol: "\u{f03a}".to_string(),
         num_params: 1,
     };
-
     pub static ref ERROR_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Error".to_string(),
         id: uuid::Uuid::parse_str("a6ad92ed-1b21-44fe-9ad0-e08326acd6f6").unwrap(),
@@ -64,7 +58,7 @@ lazy_static! {
 
 #[typetag::serde(tag = "type")]
 pub trait Function: objekt::Clone + downcast_rs::Downcast {
-    fn call(&self, interpreter: env::Interpreter, args: HashMap<ID,Value>) -> Value;
+    fn call(&self, interpreter: env::Interpreter, args: HashMap<ID, Value>) -> Value;
     fn name(&self) -> &str;
     fn id(&self) -> ID;
     fn takes_args(&self) -> Vec<ArgumentDefinition>;
@@ -80,8 +74,7 @@ impl fmt::Debug for Function {
 clone_trait_object!(Function);
 impl_downcast!(Function);
 
-
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub enum CodeNode {
     FunctionCall(FunctionCall),
     FunctionReference(FunctionReference),
@@ -124,9 +117,8 @@ impl Error {
 
 use futures_util::future::Shared;
 use futures_util::FutureExt;
-use std::pin::Pin;
 use std::collections::BTreeMap;
-
+use std::pin::Pin;
 
 pub type ValueFuture = Shared<Pin<Box<Future<Output = Value>>>>;
 type StructValues = HashMap<ID, Value>;
@@ -139,7 +131,7 @@ pub enum Value {
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Vec<Value>),
-    Struct {struct_id: ID, values: StructValues},
+    Struct { struct_id: ID, values: StructValues },
     Future(ValueFuture),
     Enum { variant_id: ID, value: Box<Value> },
 }
@@ -157,68 +149,70 @@ impl Value {
     pub fn as_boolean(&self) -> Option<bool> {
         match self {
             Value::Boolean(b) => Some(*b),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Value::String(s) => Some(s),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn as_vec(&self) -> Option<&Vec<Value>> {
         match self {
             Value::List(v) => Some(v),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn into_vec(self) -> Option<Vec<Value>> {
         match self {
             Value::List(v) => Some(v),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn into_i128(self) -> Option<i128> {
         match self {
             Value::Number(i) => Some(i),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn as_struct(&self) -> Option<(ID, &StructValues)> {
         match self {
-            Value::Struct {struct_id, values} => Some((*struct_id, values)),
-            _ => None
+            Value::Struct { struct_id, values } => Some((*struct_id, values)),
+            _ => None,
         }
     }
 
     pub fn into_struct(self) -> Option<(ID, StructValues)> {
         match self {
-            Value::Struct {struct_id, values} => Some((struct_id, values)),
-            _ => None
+            Value::Struct { struct_id, values } => Some((struct_id, values)),
+            _ => None,
         }
     }
 
     pub fn as_enum(&self) -> Option<(ID, &Value)> {
         match self {
-            Value::Enum { variant_id, box value } => Some((*variant_id, value)),
-            _ => None
+            Value::Enum { variant_id,
+                          box value, } => Some((*variant_id, value)),
+            _ => None,
         }
     }
 
     pub fn into_enum(self) -> Option<(ID, Value)> {
         match self {
-            Value::Enum { variant_id, box value } => Some((variant_id, value)),
-            _ => None
+            Value::Enum { variant_id,
+                          box value, } => Some((variant_id, value)),
+            _ => None,
         }
     }
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct BuiltInTypeSpec {
     pub readable_name: String,
     pub id: ID,
@@ -227,7 +221,7 @@ pub struct BuiltInTypeSpec {
 }
 
 #[typetag::serde(tag = "type")]
-pub trait TypeSpec : objekt::Clone + downcast_rs::Downcast {
+pub trait TypeSpec: objekt::Clone + downcast_rs::Downcast {
     fn readable_name(&self) -> &str;
     fn id(&self) -> ID;
     fn symbol(&self) -> &str;
@@ -271,7 +265,7 @@ impl BuiltInTypeSpec {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Type {
     pub typespec_id: ID,
     pub params: Vec<Type>,
@@ -287,23 +281,21 @@ impl Type {
         if params.len() != spec.num_params() {
             panic!("wrong number of params")
         }
-        Self {
-            typespec_id: spec.id(),
-            params,
-        }
+        Self { typespec_id: spec.id(),
+               params }
     }
 
     pub fn from_spec_id(typespec_id: ID, params: Vec<Self>) -> Self {
-        Self { typespec_id, params }
+        Self { typespec_id,
+               params }
     }
 
     pub fn id(&self) -> ID {
         let mut mashed_hashes = vec![self.typespec_id.to_string()];
         mashed_hashes.extend(self.params.iter().map(|t| t.id().to_string()));
         // v5 uuids aren't random, they are hashes
-        uuid::Uuid::new_v5(
-            &uuid::Uuid::NAMESPACE_OID,
-            mashed_hashes.join(":").as_bytes())
+        uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID,
+                           mashed_hashes.join(":").as_bytes())
     }
 
     pub fn matches(&self, other: &Self) -> bool {
@@ -320,14 +312,14 @@ impl CodeNode {
     pub fn into_list_literal(&self) -> &ListLiteral {
         match self {
             CodeNode::ListLiteral(ref list_literal) => list_literal,
-            _ => panic!("tried converting into list literal but this ain't an list literal")
+            _ => panic!("tried converting into list literal but this ain't an list literal"),
         }
     }
 
     pub fn into_argument(&self) -> &Argument {
         match self {
             CodeNode::Argument(ref argument) => argument,
-            _ => panic!("tried converting into argument but this ain't an argument")
+            _ => panic!("tried converting into argument but this ain't an argument"),
         }
     }
 
@@ -380,23 +372,18 @@ impl CodeNode {
 
     pub fn description(&self) -> String {
         match self {
-            CodeNode::FunctionCall(function_call) => {
-                format!("Function call: {}", function_call.id)
-            }
+            CodeNode::FunctionCall(function_call) => format!("Function call: {}", function_call.id),
             CodeNode::StringLiteral(string_literal) => {
                 format!("String literal: {}", string_literal.value)
-            },
+            }
             CodeNode::NumberLiteral(number_literal) => {
                 format!("Number literal: {}", number_literal.value)
             }
-            CodeNode::Assignment(assignment) => {
-                format!("Assignment: {}", assignment.name)
-            }
-            CodeNode::Block(block) => {
-                format!("Code block: ID {}", block.id)
-            }
+            CodeNode::Assignment(assignment) => format!("Assignment: {}", assignment.name),
+            CodeNode::Block(block) => format!("Code block: ID {}", block.id),
             CodeNode::VariableReference(variable_reference) => {
-                format!("Variable reference: Assignment ID {}", variable_reference.assignment_id)
+                format!("Variable reference: Assignment ID {}",
+                        variable_reference.assignment_id)
             }
             CodeNode::FunctionReference(function_reference) => {
                 format!("Function reference: {:?}", function_reference)
@@ -404,25 +391,17 @@ impl CodeNode {
             CodeNode::FunctionDefinition(function_definition) => {
                 format!("Function reference: Name {}", function_definition.name)
             }
-            CodeNode::Argument(argument) => {
-                format!("Argument: ID {}", argument.id)
-            }
+            CodeNode::Argument(argument) => format!("Argument: ID {}", argument.id),
             CodeNode::Placeholder(placeholder) => {
                 format!("Placeholder: {}", placeholder.description)
-            },
+            }
             CodeNode::NullLiteral => "NullLiteral".to_string(),
             CodeNode::StructLiteral(struct_literal) => {
                 format!("Struct literal: {}", struct_literal.id)
-            },
-            CodeNode::StructLiteralField(field) => {
-                format!("Struct literal field: {}", field.id)
-            },
-            CodeNode::Conditional(conditional) => {
-                format!("Conditional: {}", conditional.id)
-            },
-            CodeNode::ListLiteral(list_literal) => {
-                format!("List literal: {}", list_literal.id)
-            },
+            }
+            CodeNode::StructLiteralField(field) => format!("Struct literal field: {}", field.id),
+            CodeNode::Conditional(conditional) => format!("Conditional: {}", conditional.id),
+            CodeNode::ListLiteral(list_literal) => format!("List literal: {}", list_literal.id),
             CodeNode::Match(mach) => format!("Match: {}", mach.id),
             CodeNode::StructFieldGet(sfg) => format!("Struct field get: {}", sfg.id),
             CodeNode::ListIndex(list_index) => format!("List index: {}", list_index.id),
@@ -438,20 +417,14 @@ impl CodeNode {
             CodeNode::NumberLiteral(number_literal) => number_literal.id,
             CodeNode::Assignment(assignment) => assignment.id,
             CodeNode::Block(block) => block.id,
-            CodeNode::VariableReference(variable_reference) => {
-                variable_reference.id
-            }
-            CodeNode::FunctionDefinition(function_definition) => {
-                function_definition.id
-            }
-            CodeNode::FunctionReference(function_reference) => {
-                function_reference.id
-            }
+            CodeNode::VariableReference(variable_reference) => variable_reference.id,
+            CodeNode::FunctionDefinition(function_definition) => function_definition.id,
+            CodeNode::FunctionReference(function_reference) => function_reference.id,
             CodeNode::Argument(argument) => argument.id,
             CodeNode::Placeholder(placeholder) => placeholder.id,
             CodeNode::NullLiteral => {
                 uuid::Uuid::parse_str("1a2de9c5-043c-43c8-ad05-622bb278d5ab").unwrap()
-            },
+            }
             CodeNode::StructLiteral(struct_literal) => struct_literal.id,
             CodeNode::StructLiteralField(field) => field.id,
             CodeNode::Conditional(conditional) => conditional.id,
@@ -464,12 +437,11 @@ impl CodeNode {
 
     pub fn previous_child(&self, node_id: ID) -> Option<&CodeNode> {
         let children = self.children();
-        let position = children.iter()
-            .position(|n| n.id() == node_id);
+        let position = children.iter().position(|n| n.id() == node_id);
         if let Some(position) = position {
             if position > 0 {
                 if let Some(next) = children.get(position - 1) {
-                    return Some(next)
+                    return Some(next);
                 }
             }
         }
@@ -478,11 +450,10 @@ impl CodeNode {
 
     pub fn next_child(&self, node_id: ID) -> Option<&CodeNode> {
         let children = self.children();
-        let position = children.iter()
-            .position(|n| n.id() == node_id);
+        let position = children.iter().position(|n| n.id() == node_id);
         if let Some(position) = position {
             if let Some(next) = children.get(position + 1) {
-                return Some(next)
+                return Some(next);
             }
         }
         None
@@ -492,68 +463,44 @@ impl CodeNode {
         self.children_iter().collect()
     }
 
-    pub fn children_iter<'a>(&'a self) -> Box<Iterator<Item = &'a CodeNode> +'a> {
+    pub fn children_iter<'a>(&'a self) -> Box<Iterator<Item = &'a CodeNode> + 'a> {
         match self {
-            CodeNode::FunctionCall(function_call) => {
-               Box::new(iter::once(function_call.function_reference.as_ref())
-                    .chain(function_call.args.iter()))
-            }
-            CodeNode::StringLiteral(_) => {
-                Box::new(iter::empty())
-            }
-            CodeNode::NumberLiteral(_) => {
-                Box::new(iter::empty())
-            }
+            CodeNode::FunctionCall(function_call) => Box::new(
+                iter::once(function_call.function_reference.as_ref())
+                    .chain(function_call.args.iter()),
+            ),
+            CodeNode::StringLiteral(_) => Box::new(iter::empty()),
+            CodeNode::NumberLiteral(_) => Box::new(iter::empty()),
             CodeNode::Assignment(assignment) => {
                 Box::new(iter::once(assignment.expression.borrow()))
             }
-            CodeNode::Block(block) => {
-                Box::new(block.expressions.iter())
-            }
-            CodeNode::VariableReference(_) => {
-                Box::new(iter::empty())
-            }
-            CodeNode::FunctionDefinition(_) => {
-                Box::new(iter::empty())
-            }
-            CodeNode::FunctionReference(_) => {
-                Box::new(iter::empty())
-            }
-            CodeNode::Argument(argument) => {
-                Box::new(iter::once(argument.expr.borrow()))
-            }
-            CodeNode::Placeholder(_) => {
-                Box::new(iter::empty())
-            }
+            CodeNode::Block(block) => Box::new(block.expressions.iter()),
+            CodeNode::VariableReference(_) => Box::new(iter::empty()),
+            CodeNode::FunctionDefinition(_) => Box::new(iter::empty()),
+            CodeNode::FunctionReference(_) => Box::new(iter::empty()),
+            CodeNode::Argument(argument) => Box::new(iter::once(argument.expr.borrow())),
+            CodeNode::Placeholder(_) => Box::new(iter::empty()),
             CodeNode::NullLiteral => Box::new(iter::empty()),
-            CodeNode::StructLiteral(struct_literal) => {
-                Box::new(struct_literal.fields.iter())
-            },
-            CodeNode::StructLiteralField(field) => {
-                Box::new(iter::once(field.expr.borrow()))
-            },
+            CodeNode::StructLiteral(struct_literal) => Box::new(struct_literal.fields.iter()),
+            CodeNode::StructLiteralField(field) => Box::new(iter::once(field.expr.borrow())),
             CodeNode::Conditional(ref conditional) => {
-                let i =
-                    iter::once(conditional.condition.as_ref())
-                        .chain(iter::once(conditional.true_branch.as_ref()));
+                let i = iter::once(conditional.condition.as_ref())
+                    .chain(iter::once(conditional.true_branch.as_ref()));
                 match &conditional.else_branch {
-                    None => {
-                        Box::new(i)
-                       },
-                   Some(else_branch) => {
-                       Box::new(i.chain(iter::once(else_branch.as_ref())))
-                   }
+                    None => Box::new(i),
+                    Some(else_branch) => Box::new(i.chain(iter::once(else_branch.as_ref()))),
                 }
-            },
+            }
             CodeNode::ListLiteral(list_literal) => Box::new(list_literal.elements.iter()),
             CodeNode::Match(mach) => Box::new(
-                iter::once(mach.match_expression.borrow()).chain(mach.branch_by_variant_id.values())
+                iter::once(mach.match_expression.borrow())
+                    .chain(mach.branch_by_variant_id.values()),
             ),
             CodeNode::StructFieldGet(sfg) => Box::new(iter::once(sfg.struct_expr.as_ref())),
-            CodeNode::ListIndex(list_index) => {
-                Box::new(iter::once(list_index.list_expr.as_ref())
-                    .chain(iter::once(list_index.index_expr.as_ref())))
-            }
+            CodeNode::ListIndex(list_index) => Box::new(
+                iter::once(list_index.list_expr.as_ref())
+                    .chain(iter::once(list_index.index_expr.as_ref())),
+            ),
         }
     }
 
@@ -563,10 +510,7 @@ impl CodeNode {
 
     pub fn all_children_dfs_iter<'a>(&'a self) -> Box<Iterator<Item = &'a CodeNode> + 'a> {
         Box::new(self.children_iter()
-            .flat_map(|child| {
-                iter::once(child).chain(child.all_children_dfs_iter())
-            })
-        )
+                     .flat_map(|child| iter::once(child).chain(child.all_children_dfs_iter())))
     }
 
     pub fn all_children_dfs(&self) -> Vec<&CodeNode> {
@@ -576,69 +520,39 @@ impl CodeNode {
     pub fn children_mut(&mut self) -> Vec<&mut CodeNode> {
         match self {
             CodeNode::FunctionCall(function_call) => {
-                let mut children: Vec<&mut CodeNode> = function_call.args
-                    .iter_mut()
-                    .collect();
+                let mut children: Vec<&mut CodeNode> = function_call.args.iter_mut().collect();
                 children.insert(0, &mut function_call.function_reference);
                 children
             }
-            CodeNode::StringLiteral(_) => {
-                Vec::new()
-            }
-            CodeNode::NumberLiteral(_) => {
-                Vec::new()
-            }
-            CodeNode::Assignment(assignment) => {
-                vec![assignment.expression.borrow_mut()]
-            }
-            CodeNode::Block(block) => {
-                block.expressions.iter_mut().collect()
-            }
-            CodeNode::VariableReference(_) => {
-                Vec::new()
-            }
-            CodeNode::FunctionDefinition(_) => {
-                Vec::new()
-            }
-            CodeNode::FunctionReference(_) => {
-                Vec::new()
-            }
-            CodeNode::Argument(argument) => {
-                vec![argument.expr.borrow_mut()]
-            }
-            CodeNode::Placeholder(_placeholder) => {
-                vec![]
-            }
+            CodeNode::StringLiteral(_) => Vec::new(),
+            CodeNode::NumberLiteral(_) => Vec::new(),
+            CodeNode::Assignment(assignment) => vec![assignment.expression.borrow_mut()],
+            CodeNode::Block(block) => block.expressions.iter_mut().collect(),
+            CodeNode::VariableReference(_) => Vec::new(),
+            CodeNode::FunctionDefinition(_) => Vec::new(),
+            CodeNode::FunctionReference(_) => Vec::new(),
+            CodeNode::Argument(argument) => vec![argument.expr.borrow_mut()],
+            CodeNode::Placeholder(_placeholder) => vec![],
             CodeNode::NullLiteral => vec![],
-            CodeNode::StructLiteral(struct_literal) => {
-                struct_literal.fields.iter_mut().collect()
-            },
-            CodeNode::StructLiteralField(field) => {
-                vec![field.expr.borrow_mut()]
-            }
+            CodeNode::StructLiteral(struct_literal) => struct_literal.fields.iter_mut().collect(),
+            CodeNode::StructLiteralField(field) => vec![field.expr.borrow_mut()],
             CodeNode::Conditional(ref mut conditional) => {
-                let i =
-                    iter::once(conditional.condition.as_mut())
-                        .chain(iter::once(conditional.true_branch.as_mut()));
+                let i = iter::once(conditional.condition.as_mut())
+                    .chain(iter::once(conditional.true_branch.as_mut()));
                 match &mut conditional.else_branch {
-                    None => {
-                        i.collect()
-                    },
-                    Some(else_branch) => {
-                        i.chain(iter::once(else_branch.as_mut())).collect()
-                    }
+                    None => i.collect(),
+                    Some(else_branch) => i.chain(iter::once(else_branch.as_mut())).collect(),
                 }
-            },
+            }
             CodeNode::ListLiteral(list_literal) => list_literal.elements.iter_mut().collect_vec(),
             CodeNode::Match(mach) => {
-                iter::once(mach.match_expression.borrow_mut()).chain(mach.branch_by_variant_id.values_mut()).collect()
-            },
-            CodeNode::StructFieldGet(sfg) => {
-                vec![sfg.struct_expr.borrow_mut()]
+                iter::once(mach.match_expression.borrow_mut()).chain(mach.branch_by_variant_id
+                                                                         .values_mut())
+                                                              .collect()
             }
-            CodeNode::ListIndex(list_index) => {
-                vec![list_index.list_expr.borrow_mut(), list_index.index_expr.borrow_mut()]
-            }
+            CodeNode::StructFieldGet(sfg) => vec![sfg.struct_expr.borrow_mut()],
+            CodeNode::ListIndex(list_index) => vec![list_index.list_expr.borrow_mut(),
+                                                    list_index.index_expr.borrow_mut(),],
         }
     }
 
@@ -650,17 +564,17 @@ impl CodeNode {
     pub fn replace_with(&mut self, id: ID, mut replace_with: CodeNode) -> Option<CodeNode> {
         if self.id() == id {
             *self = replace_with;
-            return None
+            return None;
         }
         for child in self.children_mut() {
             let ret = child.replace_with(id, replace_with);
             if let Some(cn) = ret {
                 replace_with = cn;
             } else {
-                return None
+                return None;
             }
         }
-        return Some(replace_with)
+        return Some(replace_with);
     }
 
     pub fn find_node(&self, id: ID) -> Option<&CodeNode> {
@@ -669,7 +583,7 @@ impl CodeNode {
         } else {
             for child in self.children_iter() {
                 if let Some(found_node) = child.find_node(id) {
-                    return Some(found_node)
+                    return Some(found_node);
                 }
             }
             None
@@ -678,15 +592,15 @@ impl CodeNode {
 
     pub fn find_parent(&self, id: ID) -> Option<&CodeNode> {
         if self.id() == id {
-            return None
+            return None;
         } else {
             for child in self.children_iter() {
                 if child.id() == id {
-                    return Some(self)
+                    return Some(self);
                 } else {
                     let found_parent = child.find_parent(id);
                     if let Some(code_node) = found_parent {
-                        return Some(code_node)
+                        return Some(code_node);
                     }
                 }
             }
@@ -714,13 +628,13 @@ pub fn new_id() -> ID {
     Uuid::parse_str(&uuid.into_string().unwrap()).unwrap()
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct StringLiteral {
     pub value: String,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct FunctionCall {
     pub function_reference: Box<CodeNode>,
     pub args: Vec<CodeNode>,
@@ -731,7 +645,7 @@ impl FunctionCall {
     pub fn function_reference(&self) -> &FunctionReference {
         match *self.function_reference {
             CodeNode::FunctionReference(ref function_reference) => function_reference,
-            _ => panic!("tried converting into argument but this ain't an argument")
+            _ => panic!("tried converting into argument but this ain't an argument"),
         }
     }
 
@@ -740,7 +654,7 @@ impl FunctionCall {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Assignment {
     pub name: String,
     // TODO: consider differentiating between CodeNodes and Expressions.
@@ -748,7 +662,7 @@ pub struct Assignment {
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Block {
     pub expressions: Vec<CodeNode>,
     pub id: ID,
@@ -756,10 +670,8 @@ pub struct Block {
 
 impl Block {
     pub fn new() -> Self {
-        Self {
-            id: new_id(),
-            expressions: vec![],
-        }
+        Self { id: new_id(),
+               expressions: vec![] }
     }
 
     pub fn find_position(&self, exp_id: ID) -> Option<usize> {
@@ -773,20 +685,19 @@ pub struct VariableReference {
     pub id: ID,
 }
 
-
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct FunctionReference {
     pub function_id: ID,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct FunctionDefinition {
     pub name: String,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct ArgumentDefinition {
     pub id: ID,
     pub arg_type: Type,
@@ -799,25 +710,27 @@ impl ArgumentDefinition {
     }
 
     pub fn new_with_id(id: ID, arg_type: Type, short_name: String) -> ArgumentDefinition {
-        ArgumentDefinition { id, short_name, arg_type }
+        ArgumentDefinition { id,
+                             short_name,
+                             arg_type }
     }
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Argument {
     pub id: ID,
     pub argument_definition_id: ID,
     pub expr: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Placeholder {
     pub id: ID,
     pub description: String,
     pub typ: Type,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct StructLiteral {
     pub id: ID,
     pub struct_id: ID,
@@ -826,18 +739,20 @@ pub struct StructLiteral {
 
 impl StructLiteral {
     pub fn fields(&self) -> impl Iterator<Item = &StructLiteralField> {
-        self.fields.iter().map(|f| f.into_struct_literal_field().unwrap())
+        self.fields
+            .iter()
+            .map(|f| f.into_struct_literal_field().unwrap())
     }
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct StructLiteralField {
     pub id: ID,
     pub struct_field_id: ID,
     pub expr: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Conditional {
     pub id: ID,
     // this can be any expression
@@ -848,7 +763,7 @@ pub struct Conditional {
     pub else_branch: Option<Box<CodeNode>>,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Match {
     pub id: ID,
     pub match_expression: Box<CodeNode>,
@@ -859,34 +774,36 @@ pub struct Match {
 
 impl Match {
     pub fn variable_id(match_id: ID, variant_id: ID) -> ID {
-        uuid::Uuid::new_v5(
-            &uuid::Uuid::NAMESPACE_OID,
-            [match_id, variant_id].iter().join(":").as_bytes())
+        uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID,
+                           [match_id, variant_id].iter().join(":").as_bytes())
     }
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct ListLiteral {
     pub id: ID,
     pub element_type: Type,
     pub elements: Vec<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct StructFieldGet {
     pub id: ID,
     pub struct_expr: Box<CodeNode>,
     pub struct_field_id: ID,
 }
 
-
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct NumberLiteral {
     pub id: ID,
-    pub value: i128,
+    // TODO: this should be i128 to match Value, but there's some weird serde error in serializing
+    // this, when we serialize into the DB. i have no idea what the problem is, but making this i64
+    // for now just fixes the problem. we need to actually figure out the number system in this
+    // language later anyway
+    pub value: i64,
 }
 
-#[derive(Deserialize, Serialize, Clone ,Debug, PartialEq)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct ListIndex {
     pub id: ID,
     pub list_expr: Box<CodeNode>,
