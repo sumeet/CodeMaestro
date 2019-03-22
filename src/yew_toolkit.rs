@@ -1,18 +1,18 @@
-use super::{App as CSApp, UiToolkit};
-use super::editor;
-use super::editor::{Key as AppKey,Keypress};
 use super::async_executor::AsyncExecutor;
-use stdweb::{js,_js_impl};
+use super::editor;
+use super::editor::{Key as AppKey, Keypress};
+use super::{App as CSApp, UiToolkit};
+use stdweb::{_js_impl, js};
 //use stdweb::{console,__internal_console_unsafe};
-use stdweb::web::{document,IElement,IEventTarget};
-use yew::{html};
-use yew::prelude::*;
+use crate::ui_toolkit::SelectableItem;
+use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
-use stdweb::traits::IKeyboardEvent;
 use stdweb::traits::IEvent;
-use itertools::Itertools;
-use crate::ui_toolkit::SelectableItem;
+use stdweb::traits::IKeyboardEvent;
+use stdweb::web::{document, IElement, IEventTarget};
+use yew::html;
+use yew::prelude::*;
 
 pub struct Model {
     app: Option<Rc<RefCell<CSApp>>>,
@@ -22,7 +22,9 @@ pub struct Model {
 }
 
 pub enum Msg {
-    Init(Rc<RefCell<CSApp>>, AsyncExecutor, Rc<RefCell<RendererState>>),
+    Init(Rc<RefCell<CSApp>>,
+         AsyncExecutor,
+         Rc<RefCell<RendererState>>),
     Redraw,
     DontRedraw,
 }
@@ -32,11 +34,9 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
-        Model {
-            app: None,
-            async_executor: None,
-            renderer_state: None,
-        }
+        Model { app: None,
+                async_executor: None,
+                renderer_state: None }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
@@ -51,11 +51,13 @@ impl Component for Model {
                 true
             }
             Msg::Redraw => {
-                if let (Some(app), Some(mut async_executor)) = (self.app.as_ref(), self.async_executor.as_mut()) {
+                if let (Some(app), Some(mut async_executor)) =
+                    (self.app.as_ref(), self.async_executor.as_mut())
+                {
                     app.borrow_mut().flush_commands(&mut async_executor);
                 }
                 true
-            },
+            }
             Msg::DontRedraw => false,
         }
     }
@@ -75,12 +77,33 @@ struct YewToolkit {
 impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
 
-    fn draw_x_scrollable_list<'a>(&'a self, items: impl ExactSizeIterator<Item = (&'a Fn() -> Self::DrawResult, bool)>, lines_height: usize) -> Self::DrawResult {
+    fn draw_top_right_overlay(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        html! {
+            <div style={ format!("position: absolute; top: 10px; right: 10px; color: white; background-color: {}",self.rgba(WINDOW_BG_COLOR)) }, >
+                {{ draw_fn() }}
+            </div>
+        }
+    }
+
+    fn draw_spinner(&self) -> Self::DrawResult {
+        html! {
+            <div class="spinner", >
+                {" "}
+            </div>
+        }
+    }
+
+    fn draw_x_scrollable_list<'a>(&'a self,
+                                  items: impl ExactSizeIterator<Item = (&'a Fn()
+                                                                   -> Self::DrawResult,
+                                                            bool)>,
+                                  lines_height: usize)
+                                  -> Self::DrawResult {
         let items = items.map(|(draw_fn, is_selected)| {
-            let drawn = draw_fn();
-            let last_drawn_id = *self.last_drawn_element_id.borrow();
-            if is_selected {
-                self.renderer_state.borrow().add_run_after_render(move || {
+                             let drawn = draw_fn();
+                             let last_drawn_id = *self.last_drawn_element_id.borrow();
+                             if is_selected {
+                                 self.renderer_state.borrow().add_run_after_render(move || {
                     js! {
                         var el = document.getElementById(@{last_drawn_id});
                         if (el) {
@@ -88,9 +111,10 @@ impl UiToolkit for YewToolkit {
                         }
                     }
                 });
-            }
-            drawn
-        }).collect_vec();
+                             }
+                             drawn
+                         })
+                         .collect_vec();
         html! {
             //   TODO: margin-bottom is HAXXX
             <div style={format!("display: flex; height: {}em; max-height: {}em; overflow: hidden; margin-bottom: 0.2em;", lines_height, lines_height)}, >
@@ -103,7 +127,10 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, handle_keypress: Option<F>) -> Self::DrawResult {
+    fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
+                                                      draw_fn: &Fn() -> Self::DrawResult,
+                                                      handle_keypress: Option<F>)
+                                                      -> Self::DrawResult {
         let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
             if let Some(handle_keypress) = &handle_keypress {
                 handle_keypress(keypress)
@@ -160,7 +187,12 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(
-        &self, label: &str, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult {
+        &self,
+        label: &str,
+        existing_value: &str,
+        onchange: F,
+        ondone: D)
+        -> Self::DrawResult {
         html! {
             <div>
                 {{ self.draw_text_input(existing_value, onchange, ondone) }}
@@ -169,9 +201,11 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self, label: &str, value: bool,
-                                                       onchange: F) -> Self::DrawResult {
-
+    fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self,
+                                                       label: &str,
+                                                       value: bool,
+                                                       onchange: F)
+                                                       -> Self::DrawResult {
         html! {
             <div>
                 <input type="checkbox", checked=value, onclick=|_| { onchange(!value) ; Msg::Redraw }, />
@@ -189,9 +223,11 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-
-    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(
-        &self, label: &str, existing_value: &str, onchange: F) -> Self::DrawResult {
+    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self,
+                                                                         label: &str,
+                                                                         existing_value: &str,
+                                                                         onchange: F)
+                                                                         -> Self::DrawResult {
         html! {
             <div>
                 <textarea rows=5, value=existing_value,
@@ -202,14 +238,16 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self, window_name: &str,
+    fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self,
+                                                                    window_name: &str,
                                                                     size: (usize, usize),
                                                                     pos: (isize, isize),
                                                                     f: &Fn() -> Self::DrawResult,
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
-                                                                    onwindowchange: H) -> Self::DrawResult
-    where H: Fn((isize, isize), (usize, usize)) + 'static
+                                                                    onwindowchange: H)
+                                                                    -> Self::DrawResult
+        where H: Fn((isize, isize), (usize, usize)) + 'static
     {
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
@@ -270,7 +308,11 @@ impl UiToolkit for YewToolkit {
     }
 
     // TODO: clean up bc code is duped between here and draw_code_window
-    fn draw_child_region<F: Fn(Keypress) + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, height_percentage: f32, handle_keypress: Option<F>) -> Self::DrawResult {
+    fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
+                                                    draw_fn: &Fn() -> Self::DrawResult,
+                                                    height_percentage: f32,
+                                                    handle_keypress: Option<F>)
+                                                    -> Self::DrawResult {
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
         if let Some(handle_keypress) = handle_keypress {
@@ -320,10 +362,12 @@ impl UiToolkit for YewToolkit {
                 </div>
             }
         }
-
     }
 
-    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn() -> Self::DrawResult, draw_bottom_bar_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_layout_with_bottom_bar(&self,
+                                   draw_content_fn: &Fn() -> Self::DrawResult,
+                                   draw_bottom_bar_fn: &Fn() -> Self::DrawResult)
+                                   -> Self::DrawResult {
         // TODO: this only renders the bottom bar directly under the content. the bottom bar needs
         // to be fixed at the bottom
         html! {
@@ -342,7 +386,10 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn buttonize<F: Fn() + 'static>(&self, draw_fn: &Fn() -> Self::DrawResult, onclick: F) -> Self::DrawResult {
+    fn buttonize<F: Fn() + 'static>(&self,
+                                    draw_fn: &Fn() -> Self::DrawResult,
+                                    onclick: F)
+                                    -> Self::DrawResult {
         html! {
             <div onclick=|_| { onclick(); Msg::Redraw }, >
                 { draw_fn() }
@@ -354,7 +401,11 @@ impl UiToolkit for YewToolkit {
         self.draw_button(label, color, &|| {})
     }
 
-    fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) -> Self::DrawResult {
+    fn draw_button<F: Fn() + 'static>(&self,
+                                      label: &str,
+                                      color: [f32; 4],
+                                      on_button_press_callback: F)
+                                      -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
                  style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", self.rgba(color)),
@@ -364,7 +415,11 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_small_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_press_callback: F) -> Self::DrawResult {
+    fn draw_small_button<F: Fn() + 'static>(&self,
+                                            label: &str,
+                                            color: [f32; 4],
+                                            on_button_press_callback: F)
+                                            -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
                  style=format!("display: block; font-size: 75%; color: white; background-color: {}; border: none; outline: none;", self.rgba(color)),
@@ -393,7 +448,11 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self, existing_value: &str, onchange: F, ondone: D) -> Self::DrawResult {
+    fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self,
+                                                                       existing_value: &str,
+                                                                       onchange: F,
+                                                                       ondone: D)
+                                                                       -> Self::DrawResult {
         let ondone = Rc::new(ondone);
         let ondone2 = Rc::clone(&ondone);
         html! {
@@ -428,7 +487,10 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_menu(&self, label: &str, draw_menu_items: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_menu(&self,
+                 label: &str,
+                 draw_menu_items: &Fn() -> Self::DrawResult)
+                 -> Self::DrawResult {
         // TODO: implement this for realsies
         html! {
             <div style="display: flex;", >
@@ -455,16 +517,20 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-
-    fn draw_combo_box_with_label<F, G, H, T>(&self, label: &str, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
+    fn draw_combo_box_with_label<F, G, H, T>(&self,
+                                             label: &str,
+                                             is_item_selected: G,
+                                             format_item: H,
+                                             items: &[&T],
+                                             onchange: F)
+                                             -> Self::DrawResult
         where T: Clone + 'static,
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
-              H: Fn(&T) -> String {
-        let formatted_items = items.into_iter()
-            .map(|i| format_item(i)).collect_vec();
-        let selected_item_in_combo_box = items.into_iter()
-            .position(|i| is_item_selected(i));
+              H: Fn(&T) -> String
+    {
+        let formatted_items = items.into_iter().map(|i| format_item(i)).collect_vec();
+        let selected_item_in_combo_box = items.into_iter().position(|i| is_item_selected(i));
         let items = items.into_iter().map(|i| (*i).clone()).collect_vec();
         html! {
             <select onchange=|event| {
@@ -502,15 +568,19 @@ impl UiToolkit for YewToolkit {
     }
 
     // TODO: make this NOT a total copy and paste of draw_combo_box_with_label
-    fn draw_selectables<F, G, H, T>(&self, is_item_selected: G, format_item: H, items: &[&T], onchange: F) -> Self::DrawResult
+    fn draw_selectables<F, G, H, T>(&self,
+                                    is_item_selected: G,
+                                    format_item: H,
+                                    items: &[&T],
+                                    onchange: F)
+                                    -> Self::DrawResult
         where T: Clone + 'static,
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
-              H: Fn(&T) -> &str {
-        let formatted_items = items.into_iter()
-            .map(|i| format_item(i)).collect_vec();
-        let selected_item_in_combo_box = items.into_iter()
-            .position(|i| is_item_selected(i));
+              H: Fn(&T) -> &str
+    {
+        let formatted_items = items.into_iter().map(|i| format_item(i)).collect_vec();
+        let selected_item_in_combo_box = items.into_iter().position(|i| is_item_selected(i));
         let items = items.into_iter().map(|i| (*i).clone()).collect_vec();
         html! {
             <select size={items.len().to_string()}, onchange=|event| {
@@ -546,7 +616,10 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self, items: Vec<SelectableItem<T>>, onselect: F) -> Self::DrawResult {
+    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self,
+                                                       items: Vec<SelectableItem<T>>,
+                                                       onselect: F)
+                                                       -> Self::DrawResult {
         let items = Rc::new(items);
         let items_rc = Rc::clone(&items);
         html! {
@@ -595,7 +668,10 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_box_around(&self,
+                       color: [f32; 4],
+                       draw_fn: &Fn() -> Self::DrawResult)
+                       -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
                 <div>
@@ -609,9 +685,11 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-
-    fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8,
-                              draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_top_border_inside(&self,
+                              color: [f32; 4],
+                              thickness: u8,
+                              draw_fn: &Fn() -> Self::DrawResult)
+                              -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
                 <div>
@@ -625,8 +703,11 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8,
-                                draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_right_border_inside(&self,
+                                color: [f32; 4],
+                                thickness: u8,
+                                draw_fn: &Fn() -> Self::DrawResult)
+                                -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
                 <div>
@@ -640,8 +721,11 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_left_border_inside(&self, color: [f32; 4], thickness: u8,
-                               draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_left_border_inside(&self,
+                               color: [f32; 4],
+                               thickness: u8,
+                               draw_fn: &Fn() -> Self::DrawResult)
+                               -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
                 <div>
@@ -655,8 +739,11 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8,
-                                 draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_bottom_border_inside(&self,
+                                 color: [f32; 4],
+                                 thickness: u8,
+                                 draw_fn: &Fn() -> Self::DrawResult)
+                                 -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
                 <div>
@@ -678,7 +765,10 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn align(&self, lhs: &Fn() -> Self::DrawResult, rhs: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult {
+    fn align(&self,
+             lhs: &Fn() -> Self::DrawResult,
+             rhs: &[&Fn() -> Self::DrawResult])
+             -> Self::DrawResult {
         html! {
             <div>
                 <div style={"display: inline-block; vertical-align: top;"},>
@@ -694,25 +784,30 @@ impl UiToolkit for YewToolkit {
     }
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
-        self.renderer_state.borrow().set_global_keydown_handler(handle_keypress);
+        self.renderer_state
+            .borrow()
+            .set_global_keydown_handler(handle_keypress);
     }
 }
 
 impl YewToolkit {
     fn new(renderer_state: Rc<RefCell<RendererState>>) -> Self {
-        YewToolkit {
-            last_drawn_element_id: RefCell::new(0),
-            focused_element_id: RefCell::new(0),
-            renderer_state,
-        }
+        YewToolkit { last_drawn_element_id: RefCell::new(0),
+                     focused_element_id: RefCell::new(0),
+                     renderer_state }
     }
 
     fn focus_last_drawn_element(&self) {
-        self.focused_element_id.replace(self.get_last_drawn_element_id());
+        self.focused_element_id
+            .replace(self.get_last_drawn_element_id());
     }
 
     fn rgba(&self, color: [f32; 4]) -> String {
-       format!("rgba({}, {}, {}, {})", color[0]*255.0, color[1]*255.0, color[2]*255.0, color[3])
+        format!("rgba({}, {}, {}, {})",
+                color[0] * 255.0,
+                color[1] * 255.0,
+                color[2] * 255.0,
+                color[3])
     }
 
     fn incr_last_drawn_element_id(&self) -> u32 {
@@ -744,12 +839,12 @@ pub struct RendererState {
 }
 
 impl RendererState {
-    pub fn new(yew_app: html::Scope<Model>, funcs_to_run_after_render: Rc<RefCell<Vec<Box<Fn()>>>>) -> Self {
-        Self {
-            global_key_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
-            yew_app: Rc::new(RefCell::new(yew_app)),
-            funcs_to_run_after_render,
-        }
+    pub fn new(yew_app: html::Scope<Model>,
+               funcs_to_run_after_render: Rc<RefCell<Vec<Box<Fn()>>>>)
+               -> Self {
+        Self { global_key_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
+               yew_app: Rc::new(RefCell::new(yew_app)),
+               funcs_to_run_after_render }
     }
 
     pub fn run_all_after_render(&self) {
@@ -759,7 +854,9 @@ impl RendererState {
     }
 
     pub fn add_run_after_render(&self, fun: impl Fn() + 'static) {
-        self.funcs_to_run_after_render.borrow_mut().push(Box::new(fun))
+        self.funcs_to_run_after_render
+            .borrow_mut()
+            .push(Box::new(fun))
     }
 
     pub fn send_msg(&self, msg: Msg) {
@@ -789,10 +886,10 @@ impl Renderable<Model> for Model {
         if let (Some(app), Some(renderer_state)) = (&self.app, &self.renderer_state) {
             let mut tk = YewToolkit::new(Rc::clone(renderer_state));
             let drawn = app.borrow_mut().draw(&mut tk);
-            document().body().unwrap()
-                .set_attribute("data-focused-id",
-                              &tk.get_focused_element_id().to_string())
-                .unwrap();
+            document().body()
+                      .unwrap()
+                      .set_attribute("data-focused-id", &tk.get_focused_element_id().to_string())
+                      .unwrap();
 
             drawn
         } else {
@@ -805,8 +902,7 @@ fn map_keypress_event<F: IKeyboardEvent>(keypress_event: &F) -> Option<Keypress>
     let keystring_from_event = keypress_event.key();
     let appkey = map_key(&keystring_from_event)?;
     let was_shift_pressed =
-        keypress_event.shift_key() ||
-        was_shift_key_pressed(&keystring_from_event);
+        keypress_event.shift_key() || was_shift_key_pressed(&keystring_from_event);
     Some(Keypress::new(appkey, keypress_event.ctrl_key(), was_shift_pressed))
 }
 
@@ -828,7 +924,7 @@ fn map_key(key: &str) -> Option<AppKey> {
         "arrowleft" => Some(AppKey::LeftArrow),
         "arrowright" => Some(AppKey::RightArrow),
         "esc" | "escape" => Some(AppKey::Escape),
-        _ => None
+        _ => None,
     }
 }
 
@@ -839,7 +935,7 @@ fn was_shift_key_pressed(key: &str) -> bool {
 pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     yew::initialize();
 
-    let hoohaw : Rc<RefCell<Vec<Box<Fn()>>>> = Rc::new(RefCell::new(vec![]));
+    let hoohaw: Rc<RefCell<Vec<Box<Fn()>>>> = Rc::new(RefCell::new(vec![]));
 
     // dirty hacks to focus something
     js! {
@@ -894,21 +990,23 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
 
     setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&renderer_state));
     add_global_keydown_event_listener(Rc::clone(&renderer_state));
-    renderer_state.borrow().send_msg(Msg::Init(Rc::clone(&app), async_executor.clone(), Rc::clone(&renderer_state)));
+    renderer_state.borrow().send_msg(Msg::Init(Rc::clone(&app),
+                                               async_executor.clone(),
+                                               Rc::clone(&renderer_state)));
     yew::run_loop();
 }
 
 fn setup_ui_update_on_io_event_completion(async_executor: &mut AsyncExecutor,
                                           renderer_state: Rc<RefCell<RendererState>>) {
     async_executor.setonupdate(Rc::new(move || {
-        renderer_state.borrow_mut().send_msg(Msg::Redraw);
-    }));
+                                   renderer_state.borrow_mut().send_msg(Msg::Redraw);
+                               }));
 }
 
 fn add_global_keydown_event_listener(renderer_state: Rc<RefCell<RendererState>>) {
     document().add_event_listener(move |e: KeyDownEvent| {
-        renderer_state.borrow().handle_global_key(&e);
-    });
+                  renderer_state.borrow().handle_global_key(&e);
+              });
 }
 
 fn symbolize_text(text: &str) -> Html<Model> {
@@ -933,9 +1031,7 @@ fn symbolize_text(text: &str) -> Html<Model> {
 
 fn is_in_symbol_range(c: char) -> bool {
     match c as u32 {
-        0xf000 ... 0xf72f => {
-            true
-        },
+        0xf000...0xf72f => true,
         _ => false,
     }
 }
