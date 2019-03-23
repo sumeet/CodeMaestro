@@ -326,8 +326,6 @@ impl CommandBuffer {
             || !self.interpreter_commands.is_empty()
     }
 
-    // TODO: this is kind of hax, having the caller pass in Rc RefCell command buffer, so we can
-    // manipulate it from inside the future (we only have a ref to &mut command buffer here)
     pub fn save_to_net(&mut self) {
         self.add_integrating_command(
             move |controller, interpreter, async_executor, _| {
@@ -336,7 +334,7 @@ impl CommandBuffer {
 
                 async_executor.exec(async move {
                     overlay.borrow_mut().mark_as_submitting();
-                    let resp = await!(http_client::post_json("http://localhost:9000/", &theworld));
+                    let resp = await!(http_client::post_json("http://cs.goob.es/", &theworld));
                     match resp {
                         Err(e) => overlay.borrow_mut().mark_error(e.description().to_owned()),
                         Ok(resp) => {
