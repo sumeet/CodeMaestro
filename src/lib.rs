@@ -140,7 +140,6 @@ pub fn run_editor() {
 
     async_executor::with_executor_context(|async_executor| {
         let app = App::new_rc();
-        app.borrow_mut().load_saved_code_from_disk();
         draw_app(app, async_executor);
     })
 }
@@ -241,38 +240,38 @@ pub struct App {
     controller: Controller,
 }
 
+pub fn load_saved_code_from_disk(controller: &mut Controller, env: &mut ExecutionEnvironment) {
+    let codestring = include_str!("../codesample.json");
+    let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
+    for script in the_world.scripts {
+        controller.load_script(script)
+    }
+    for test in the_world.tests {
+        controller.load_test(test);
+    }
+
+    // TODO: this is duped in irctest.rs
+    for function in the_world.functions {
+        env.add_function_box(function);
+    }
+    for typespec in the_world.typespecs {
+        env.add_typespec_box(typespec);
+    }
+}
+
 impl App {
     pub fn new() -> Self {
         let interpreter = env::Interpreter::new();
         let mut command_buffer = editor::CommandBuffer::new();
-        let controller = init_controller(&interpreter);
+        let mut controller = init_controller(&interpreter);
 
+        load_saved_code_from_disk(&mut controller, &mut interpreter.env.borrow_mut());
         init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut());
 
         let command_buffer = Rc::new(RefCell::new(command_buffer));
         Self { interpreter,
                command_buffer,
                controller }
-    }
-
-    pub fn load_saved_code_from_disk(&mut self) {
-        let codestring = include_str!("../codesample.json");
-        let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
-        for script in the_world.scripts {
-            self.controller.load_script(script)
-        }
-        for test in the_world.tests {
-            self.controller.load_test(test);
-        }
-
-        let mut env = self.interpreter.env.borrow_mut();
-        // TODO: this is duped in irctest.rs
-        for function in the_world.functions {
-            env.add_function_box(function);
-        }
-        for typespec in the_world.typespecs {
-            env.add_typespec_box(typespec);
-        }
     }
 
     pub fn new_rc() -> Rc<RefCell<App>> {

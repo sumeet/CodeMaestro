@@ -638,12 +638,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build()
     }
 
+    // holy shit it's a mess, but it works.
+    // draw buttony text because an actual button will trigger all sorts of hover and action
+    // behaviors in imgui, and sometimes we want buttony things grouped together, looking like
+    // a single button, not individual buttons. hence draw_buttony_text.
     fn draw_buttony_text(&self, label: &str, color: [f32; 4]) {
         let style = self.ui.imgui().style();
-        let mut padding = style.frame_padding;
+        let padding = style.frame_padding;
 
         let original_cursor_pos = self.ui.get_cursor_pos();
-        //padding.y = 0.;
         let label = im_str!("{}", label);
         let text_size = self.ui.calc_text_size(&label, false, 0.);
         let total_size = (text_size.x + (padding.x * 2.), text_size.y + (padding.y * 2.));
@@ -660,39 +663,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
         let buttony_text_start_cursor_pos =
             (draw_cursor_pos.0 + padding.x, draw_cursor_pos.1 + padding.y);
-        //        self.ui.set_cursor_pos(buttony_text_start_cursor_pos);
-        //        self.ui.text(label);
         let draw_list = self.ui.get_window_draw_list();
         let text_color = style.colors[ImGuiCol::Text as usize];
         draw_list.add_text(buttony_text_start_cursor_pos, text_color, label);
-
-        //        self.ui.same_line_spacing(0.0, 0.0);
-        //
-        //
-        //        // set cursor pos to the end of the rectangle
         self.ui.set_cursor_pos(original_cursor_pos);
-        //        self.ui.with_color_var(ImGuiCol::Button, (1., 1., 1., 1.), || {
-        self.ui.invisible_button(&self.imlabel(""), total_size);
-        //        })
-        //        let mut cursor_pos = self.ui.get_cursor_screen_pos();
-        //        cursor_pos.0 += padding.x;
-        //        cursor_pos.1 -= padding.y;
-        //        self.ui.set_cursor_screen_pos(cursor_pos);
-        //        self.ui.text("");
 
-        // just for tests
-        //        println!("before button");
-        //        let screen_pos = self.ui.get_cursor_screen_pos();
-        //        println!("{:?}", screen_pos);
-        //        self.draw_button(label.as_ref(), color, &||{});
-        //
-        //        println!("estimated after button");
-        //        let end_of_button_bg_rect = (screen_pos.0 + total_size.0, screen_pos.1 + total_size.1);
-        //        println!("{:?}", end_of_button_bg_rect);
-        //
-        //        println!("after button");
-        //        let screen_pos = self.ui.get_cursor_screen_pos();
-        //        println!("{:?}", screen_pos);
+        self.ui.invisible_button(&self.imlabel(""), total_size);
     }
 
     fn draw_button<F: Fn() + 'static>(&self, label: &str, color: [f32; 4], on_button_activate: F) {
