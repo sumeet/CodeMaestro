@@ -320,8 +320,7 @@ impl UiToolkit for YewToolkit {
             let handle_keypress_2 = Rc::clone(&handle_keypress_1);
             let global_keydown_handler = self.global_keydown_handler();
             html! {
-            // HAX TODO: can't get this element to be a percentage of the total size, so just hardcode it for now
-                <div style={ format!("height: calc({}%);", height_percentage * 100.) },
+                <div style={ format!("height: calc({}%); white-space: nowrap;", height_percentage * 100.) },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     onkeypress=|e| {
