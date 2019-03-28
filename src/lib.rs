@@ -145,13 +145,21 @@ pub fn run_editor() {
 }
 
 // TODO: this is a mess, but not as bad as it was before (the part about the builtins)
-fn init_controller(interpreter: &env::Interpreter) -> Controller {
+fn init_controller(_interpreter: &env::Interpreter) -> Controller {
     let builtins = builtins::Builtins::load().unwrap();
-    let env = interpreter.env();
-    load_builtins(builtins.clone(), &mut env.borrow_mut());
 
+    // this is commented out because we don't need to save builtins right now. uncomment it when we
+    // need to save new builtins
     //_save_builtins(&env).unwrap();
     Controller::new(builtins)
+}
+
+// TODO: builtins loaded twice from disk, once here, once in init_controller.
+pub fn init_interpreter() -> env::Interpreter {
+    let interpreter = env::Interpreter::new();
+    let builtins = builtins::Builtins::load().unwrap();
+    load_builtins(builtins, &mut interpreter.env.borrow_mut());
+    interpreter
 }
 
 fn load_builtins(builtins: builtins::Builtins, env: &mut ExecutionEnvironment) {
@@ -261,7 +269,7 @@ pub fn load_saved_code_from_disk(controller: &mut Controller, env: &mut Executio
 
 impl App {
     pub fn new() -> Self {
-        let interpreter = env::Interpreter::new();
+        let interpreter = init_interpreter();
         let mut command_buffer = editor::CommandBuffer::new();
         let mut controller = init_controller(&interpreter);
 

@@ -334,7 +334,7 @@ impl CommandBuffer {
 
                 async_executor.exec(async move {
                     overlay.borrow_mut().mark_as_submitting();
-                    let resp = await!(http_client::post_json("http://cs.goob.es/", &theworld));
+                    let resp = await!(http_client::post_json("http://localhost:9000/", &theworld));
                     match resp {
                         Err(e) => overlay.borrow_mut().mark_error(e.description().to_owned()),
                         Ok(resp) => {

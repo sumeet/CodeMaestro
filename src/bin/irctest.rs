@@ -37,13 +37,17 @@ fn main() {
     let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
 
     let futures : Vec<Box<dyn OldFuture<Item = (), Error = ()>>> = vec![
+        // these are mandatory
+        Box::new(backward(http_server(Rc::clone(&chat_thingy)))),
         Box::new(backward(load_code_from_the_db(Rc::clone(&chat_thingy)))),
+
+        // these are for connecting to various chat services
         Box::new(backward(new_irc_conn(darwin_config(), Rc::clone(&chat_thingy)))),
         Box::new(backward(new_irc_conn(esper_config(), Rc::clone(&chat_thingy)))),
         Box::new(backward(slack(getrekt_slack_token, Rc::clone(&chat_thingy)))),
         Box::new(backward(slack(sandh_slack_token, Rc::clone(&chat_thingy)))),
         Box::new(backward(discord(discord_bot_token, Rc::clone(&chat_thingy)))),
-        Box::new(backward(http_server(Rc::clone(&chat_thingy)))),
+//        Box::new(backward(new_irc_conn(_local_config(), Rc::clone(&chat_thingy)))),
     ];
 
     let joined = join_all(futures);
@@ -58,7 +62,7 @@ struct ChatThingy {
 impl ChatThingy {
     pub fn new() -> Self {
         let reply_buffer = Rc::new(RefCell::new(vec![]));
-        let interp = cs::App::new().interpreter;
+        let interp = cs::init_interpreter();
         let reply_function = ChatReply::new(Rc::clone(&reply_buffer));
         interp.env.borrow_mut().add_function(reply_function);
         Self { interp, reply_buffer }
@@ -84,6 +88,7 @@ impl ChatThingy {
 
         let triggered_values = triggers.iter()
             .filter_map(|ct| {
+                println!("{:?}", ct);
                 ct.try_to_trigger(self.interp.dup(), sender.clone(),
                                   text.clone())
             })
@@ -135,6 +140,17 @@ async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatT
         }
     }
     Ok::<(), ()>(())
+}
+
+fn _local_config() -> Config {
+    Config {
+        nickname: Some("cs".to_owned()),
+        server: Some("localhost".to_owned()),
+        channels: Some(vec!["#hohaw".to_owned()]),
+        use_ssl: Some(false),
+        port: Some(6667),
+        ..Config::default()
+    }
 }
 
 fn darwin_config() -> Config {
