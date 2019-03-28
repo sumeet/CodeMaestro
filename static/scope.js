@@ -4,8 +4,10 @@ function CS_EVAL__(js_code, locals) {
     return eval(eval_string);
 }
 
-async function CS_FETCH__(url) {
-    var resp = await fetch(url);
+// CS_FETCH__(@{request_url}, @{request_method}, @{request_headers}, @{request_body});
+
+async function CS_FETCH__(url, method, headers, body) {
+    var resp = await fetch(url, {method, headers, body});
     return {
         text: await resp.text(),
         status: resp.status,
