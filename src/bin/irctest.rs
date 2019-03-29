@@ -28,8 +28,6 @@ use diesel::prelude::*;
 const INSTANCE_ID : i32 = 123;
 
 fn main() {
-    dotenv().ok();
-
     let getrekt_slack_token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
     let sandh_slack_token = "xoxb-562464349142-560290195488-MfjUZW4VTBYrDTO5wBzltnC6";
     let discord_bot_token = "NTQ5OTAyOTcwMzg5NzkwNzIx.D1auqw.QN0-mQBA4KmLZImlaRVwJHRsImQ";
@@ -271,7 +269,8 @@ use diesel::{Insertable,Queryable};
 use diesel::r2d2;
 use lazy_static::lazy_static;
 use cs::schema::codes;
-use diesel::query_dsl::RunQueryDsl; use dotenv::dotenv;
+use diesel::query_dsl::RunQueryDsl;
+use cs::config;
 
 pub type Conn = diesel::pg::PgConnection;
 pub type Pool = r2d2::Pool<r2d2::ConnectionManager<Conn>>;
@@ -281,7 +280,7 @@ lazy_static! {
 }
 
 fn connect() -> Pool {
-    let db_url = std::env::var("DATABASE_URL").expect("couldn't find DATABASE_URL");
+    let db_url = config::get("DATABASE_URL").expect("couldn't find DATABASE_URL");
     let manager = r2d2::ConnectionManager::<Conn>::new(db_url);
     r2d2::Pool::builder().build(manager).expect("Failed to create pool")
 }

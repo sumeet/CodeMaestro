@@ -31,6 +31,7 @@ pub mod env;
 mod code_editor;
 mod code_editor_renderer;
 pub mod code_loading;
+pub mod config;
 mod edit_types;
 mod editor;
 mod env_genie;

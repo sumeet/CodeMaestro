@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::iter;
 use std::rc::Rc;
 
+use super::config;
 use super::async_executor;
 use super::builtins;
 use super::chat_trigger::ChatTrigger;
@@ -19,7 +20,6 @@ use super::env;
 use super::env_genie;
 use super::external_func;
 use super::function;
-use super::http_request;
 use super::http_client;
 use super::json2;
 use super::json_http_client::JSONHTTPClient;
@@ -334,7 +334,8 @@ impl CommandBuffer {
 
                 async_executor.exec(async move {
                     overlay.borrow_mut().mark_as_submitting();
-                    let resp = await!(http_client::post_json("http://localhost:9000/", &theworld));
+                    let server_listen_url = config::get("SERVER_LISTEN_URL").expect("plz set SERVER_LISTEN_URL");
+                    let resp = await!(http_client::post_json(server_listen_url, &theworld));
                     match resp {
                         Err(e) => overlay.borrow_mut().mark_error(e.description().to_owned()),
                         Ok(resp) => {

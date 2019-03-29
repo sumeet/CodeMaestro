@@ -70,7 +70,6 @@ const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 struct YewToolkit {
     last_drawn_element_id: RefCell<u32>,
     focused_element_id: RefCell<u32>,
-    //pub global_keydown_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
     renderer_state: Rc<RefCell<RendererState>>,
 }
 

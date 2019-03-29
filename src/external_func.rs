@@ -10,11 +10,14 @@ pub trait ModifyableFunc: objekt::Clone + lang::Function + function::SettableArg
 
 clone_trait_object!(ModifyableFunc);
 
+// TODO: this is a mess. we need this in JS land but now in native. lol
+#[allow(dead_code)]
 pub struct ValueWithEnv<'a> {
     pub value: lang::Value,
     pub env: &'a env::ExecutionEnvironment,
 }
 
+#[allow(dead_code)]
 pub fn to_named_args(func: &lang::Function,
                      args: HashMap<lang::ID, lang::Value>) -> impl Iterator<Item=(String, lang::Value)>
 {
