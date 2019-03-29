@@ -2,8 +2,6 @@ use super::async_executor::AsyncExecutor;
 use super::editor;
 use super::editor::{Key as AppKey, Keypress};
 use super::{App as CSApp, UiToolkit};
-use stdweb::{_js_impl, js};
-//use stdweb::{console,__internal_console_unsafe};
 use crate::ui_toolkit::SelectableItem;
 use itertools::Itertools;
 use std::cell::RefCell;
@@ -11,6 +9,8 @@ use std::rc::Rc;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::web::{document, IElement, IEventTarget};
+//use stdweb::{__internal_console_unsafe, console};
+use stdweb::{_js_impl, js};
 use yew::html;
 use yew::prelude::*;
 
@@ -104,13 +104,13 @@ impl UiToolkit for YewToolkit {
                              let last_drawn_id = *self.last_drawn_element_id.borrow();
                              if is_selected {
                                  self.renderer_state.borrow().add_run_after_render(move || {
-                    js! {
-                        var el = document.getElementById(@{last_drawn_id});
-                        if (el) {
-                            el.scrollIntoView({inline: "center"});
-                        }
-                    }
-                });
+                                    js! {
+                                        var el = document.getElementById(@{last_drawn_id});
+                                        if (el) {
+                                            el.scrollIntoView({inline: "center"});
+                                        }
+                                    }
+                                 });
                              }
                              drawn
                          })
@@ -976,7 +976,9 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
 
     let run_after_render = {
         let renderer_state = Rc::clone(&renderer_state);
-        move || renderer_state.borrow().run_all_after_render()
+        move || {
+            renderer_state.borrow().run_all_after_render();
+        }
     };
     js! {
         var observer = new MutationObserver(function() {
@@ -998,7 +1000,7 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
 fn setup_ui_update_on_io_event_completion(async_executor: &mut AsyncExecutor,
                                           renderer_state: Rc<RefCell<RendererState>>) {
     async_executor.setonupdate(Rc::new(move || {
-                                   renderer_state.borrow_mut().send_msg(Msg::Redraw);
+                                   renderer_state.borrow().send_msg(Msg::Redraw);
                                }));
 }
 
