@@ -16,7 +16,6 @@ use yew::prelude::*;
 
 pub struct Model {
     app: Option<Rc<RefCell<CSApp>>>,
-    // TODO: NUKE THAT ASYNC EXECUTOR (i think)
     async_executor: Option<AsyncExecutor>,
     renderer_state: Option<Rc<RefCell<RendererState>>>,
 }
