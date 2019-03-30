@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+./target/release/diesel migration run
+./scripts/gen-env.py > static/env.js

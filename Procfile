@@ -1,1 +1,1 @@
-web: ./target/release/diesel migration run && ./target/release/irctest
+web: ./scripts/run-on-server-release && ./target/release/irctest
