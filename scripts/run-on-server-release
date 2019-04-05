@@ -8,3 +8,4 @@ set -e
 cargo install cargo-web
 cargo web build --no-default-features --features=javascript --release --target=wasm32-unknown-unknown --bin cs
 cp ./target/wasm32-unknown-unknown/release/cs.wasm ./static/cs.wasm
+cp ./target/wasm32-unknown-unknown/release/cs.js ./static/cs.js
