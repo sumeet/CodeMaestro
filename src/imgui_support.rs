@@ -1,30 +1,31 @@
-use imgui::{FontGlyphRange, ImFontConfig, ImGui, Ui, ImGuiCol};
-use std::time::Instant;
 use glium::glutin::ElementState::Pressed;
-use glium::glutin::WindowEvent::*;
-use glium::glutin::{Event};
+use glium::glutin::Event;
 use glium::glutin::VirtualKeyCode as Key;
+use glium::glutin::WindowEvent::*;
+use imgui::{FontGlyphRange, ImFontConfig, ImGui, ImGuiCol, Ui};
+use std::time::Instant;
 
 // pulled out from imgui classic theme, style.colors[ImGuiCol::ButtonHovered]
-pub static BUTTON_HOVERED_COLOR : (f32, f32, f32, f32) = (0.4, 0.48, 0.71, 0.6);
+pub static BUTTON_HOVERED_COLOR: (f32, f32, f32, f32) = (0.4, 0.48, 0.71, 0.6);
 // pulled out from imgui classic theme, style.colors[ImGuiCol::ButtonActive]
 // and modified a little bit, sorry for the mess
-pub static BUTTON_ACTIVE_COLOR : (f32, f32, f32, f32) = (0.46, 0.54, 0.8, 0.6);
+pub static BUTTON_ACTIVE_COLOR: (f32, f32, f32, f32) = (0.46, 0.54, 0.8, 0.6);
 
-use super::editor::{Key as AppKey,Keypress};
+use super::editor::{Key as AppKey, Keypress};
 use imgui_winit_support;
 
 pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
-                                                    clear_color: [f32; 4], mut run_ui: F) {
-    use glium::glutin;
+                                                    clear_color: [f32; 4],
+                                                    mut run_ui: F) {
     use glium::{Display, Surface};
     use imgui_glium_renderer::Renderer;
 
     let mut events_loop = glutin::EventsLoop::new();
     let context = glutin::ContextBuilder::new().with_vsync(true);
-    let builder = glutin::WindowBuilder::new()
-        .with_title(title)
-        .with_dimensions(glutin::dpi::LogicalSize::new(1024f64, 768f64));
+    let builder =
+        glutin::WindowBuilder::new().with_title(title)
+                                    .with_dimensions(glutin::dpi::LogicalSize::new(1024f64,
+                                                                                   768f64));
     let display = Display::new(builder, context, &events_loop).unwrap();
     let window = display.gl_window();
 
@@ -37,7 +38,9 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     let icon_font_size = font_size / 1.75;
     let icon_y_offset = (-2.0 * hidpi_factor) as f32;
 
-    unsafe { imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle()); }
+    unsafe {
+        imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
+    }
     let mut style = imgui.style_mut();
     // the default BG color is transparent black, which is super annoying. make it a little
     // lighter (0.3 -> 0.35), so it contrasts with the black used for signifying nesting.
@@ -46,113 +49,94 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     style.colors[ImGuiCol::WindowBg as usize] = (0.375, 0.375, 0.375, 1.0).into();
 
     println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);
-    println!("bordershadow: {:?}", style.colors[ImGuiCol::BorderShadow as usize]);
+    println!("bordershadow: {:?}",
+             style.colors[ImGuiCol::BorderShadow as usize]);
     println!("childbg: {:?}", style.colors[ImGuiCol::WindowBg as usize]);
-    println!("buttonhovered: {:?}", style.colors[ImGuiCol::ButtonHovered as usize]);
-    println!("buttonactive: {:?}", style.colors[ImGuiCol::ButtonActive as usize]);
-
+    println!("buttonhovered: {:?}",
+             style.colors[ImGuiCol::ButtonHovered as usize]);
+    println!("buttonactive: {:?}",
+             style.colors[ImGuiCol::ButtonActive as usize]);
 
     // merge mode off for the first entry, should be on for the rest of them
     // TODO: also i think you have to add the fonts in such a way that the more specific ranges are
     // listed first... idk, i'm testing it out
-    imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/calibri.ttf"),
-        ImFontConfig::new()
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(font_size)
-            .rasterizer_multiply(1.75),
-        &FontGlyphRange::default(),
-    );
+    imgui.fonts()
+         .add_font_with_config(include_bytes!("../fonts/calibri.ttf"),
+                               ImFontConfig::new().oversample_h(1)
+                                                  .pixel_snap_h(true)
+                                                  .size_pixels(font_size)
+                                                  .rasterizer_multiply(1.75),
+                               &FontGlyphRange::default());
 
-    let range = FontGlyphRange::from_slice(&[
-        0xf100, 0xf104, // the range for custom fonts, small because it's only the ones we use
-        0,
-    ]);
-    imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/fontcustom.ttf"),
-        ImFontConfig::new()
-            .glyph_offset((0.0, icon_y_offset))
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(icon_font_size)
-            .merge_mode(true)
-            .rasterizer_multiply(1.75),
-        &range,
-    );
+    let range = FontGlyphRange::from_slice(&[0xf100,
+                                             0xf104, // the range for custom fonts, small because it's only the ones we use
+                                             0]);
+    imgui.fonts()
+         .add_font_with_config(include_bytes!("../fonts/fontcustom.ttf"),
+                               ImFontConfig::new().glyph_offset((0.0, icon_y_offset))
+                                                  .oversample_h(1)
+                                                  .pixel_snap_h(true)
+                                                  .size_pixels(icon_font_size)
+                                                  .merge_mode(true)
+                                                  .rasterizer_multiply(1.75),
+                               &range);
 
+    imgui.fonts()
+         .add_font_with_config(include_bytes!("../fonts/NanumGothic.ttf"),
+                               ImFontConfig::new().oversample_h(1)
+                                                  .pixel_snap_h(true)
+                                                  .size_pixels(font_size)
+                                                  .merge_mode(true)
+                                                  .rasterizer_multiply(1.75),
+                               &FontGlyphRange::korean());
 
-    imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/NanumGothic.ttf"),
-        ImFontConfig::new()
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(font_size)
-            .merge_mode(true)
-            .rasterizer_multiply(1.75),
-        &FontGlyphRange::korean(),
-    );
+    imgui.fonts()
+         .add_font_with_config(include_bytes!("../fonts/Osaka-UI-03.ttf"),
+                               ImFontConfig::new().oversample_h(1)
+                                                  .pixel_snap_h(true)
+                                                  .size_pixels(font_size)
+                                                  .merge_mode(true)
+                                                  .rasterizer_multiply(1.75),
+                               &FontGlyphRange::japanese());
 
-    imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/Osaka-UI-03.ttf"),
-        ImFontConfig::new()
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(font_size)
-            .merge_mode(true)
-            .rasterizer_multiply(1.75),
-        &FontGlyphRange::japanese(),
-    );
+    let range = FontGlyphRange::from_slice(&[0xf004,
+                                             0xf5c8, // the range for font awesome regular 400
+                                             0]);
+    imgui.fonts()
+         .add_font_with_config(include_bytes!("../fonts/fa-regular-400.ttf"),
+                               ImFontConfig::new().glyph_offset((0.0, icon_y_offset))
+                                                  .oversample_h(1)
+                                                  .pixel_snap_h(true)
+                                                  .size_pixels(icon_font_size)
+                                                  .merge_mode(true)
+                                                  .rasterizer_multiply(1.75),
+                               &range);
 
-    let range = FontGlyphRange::from_slice(&[
-        0xf004, 0xf5c8, // the range for font awesome regular 400
-        0,
-    ]);
-    imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/fa-regular-400.ttf"),
-        ImFontConfig::new()
-            .glyph_offset((0.0, icon_y_offset))
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(icon_font_size)
-            .merge_mode(true)
-            .rasterizer_multiply(1.75),
-        &range,
-    );
+    let range = FontGlyphRange::from_slice(&[0xf000,
+                                             0xf72f, // the range for font awesome solid 900
+                                             0]);
+    imgui.fonts()
+         .add_font_with_config(include_bytes!("../fonts/fa-solid-900.ttf"),
+                               ImFontConfig::new().glyph_offset((0.0, icon_y_offset))
+                                                  .oversample_h(1)
+                                                  .pixel_snap_h(true)
+                                                  .size_pixels(icon_font_size)
+                                                  .merge_mode(true)
+                                                  .rasterizer_multiply(1.75),
+                               &range);
 
-
-    let range = FontGlyphRange::from_slice(&[
-        0xf000, 0xf72f, // the range for font awesome solid 900
-        0,
-    ]);
-    imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/fa-solid-900.ttf"),
-        ImFontConfig::new()
-            .glyph_offset((0.0, icon_y_offset))
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(icon_font_size)
-            .merge_mode(true)
-            .rasterizer_multiply(1.75),
-        &range,
-    );
-
-
-    let range = FontGlyphRange::from_slice(&[
-        0xf298, 0xf298, // the range for font awesome brands 400 (that we use)
-        0,
-    ]);
-    imgui.fonts().add_font_with_config(
-        include_bytes!("../fonts/fa-brands-400.ttf"),
-        ImFontConfig::new()
-            .glyph_offset((0.0, icon_y_offset))
-            .oversample_h(1)
-            .pixel_snap_h(true)
-            .size_pixels(icon_font_size)
-            .merge_mode(true)
-            .rasterizer_multiply(1.75),
-        &range,
-    );
+    let range = FontGlyphRange::from_slice(&[0xf298,
+                                             0xf298, // the range for font awesome brands 400 (that we use)
+                                             0]);
+    imgui.fonts()
+         .add_font_with_config(include_bytes!("../fonts/fa-brands-400.ttf"),
+                               ImFontConfig::new().glyph_offset((0.0, icon_y_offset))
+                                                  .oversample_h(1)
+                                                  .pixel_snap_h(true)
+                                                  .size_pixels(icon_font_size)
+                                                  .merge_mode(true)
+                                                  .rasterizer_multiply(1.75),
+                               &range);
 
     imgui.set_font_global_scale((1.0 / hidpi_factor) as f32);
 
@@ -164,33 +148,37 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     let mut quit = false;
 
     loop {
-        let mut keypress : Option<Keypress> = None;
+        let mut keypress: Option<Keypress> = None;
 
         events_loop.poll_events(|event| {
-            imgui_winit_support::handle_event(&mut imgui, &event, window.get_hidpi_factor(),
-                                              hidpi_factor);
+                       imgui_winit_support::handle_event(&mut imgui,
+                                                         &event,
+                                                         window.get_hidpi_factor(),
+                                                         hidpi_factor);
 
-            if let Event::WindowEvent { event, .. } = event {
-                match event {
-                    CloseRequested => quit = true,
-                    KeyboardInput { input, .. } => {
-                        let pressed = input.state == Pressed;
-                        if pressed {
-                            match input.virtual_keycode {
-                                Some(key) => {
-                                    if let Some(key) = map_key(key) {
-                                        keypress = Some(Keypress::new(
-                                            key, imgui.key_ctrl(), imgui.key_shift()));
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                    _ => (),
-                }
-            }
-        });
+                       if let Event::WindowEvent { event, .. } = event {
+                           match event {
+                               CloseRequested => quit = true,
+                               KeyboardInput { input, .. } => {
+                                   let pressed = input.state == Pressed;
+                                   if pressed {
+                                       match input.virtual_keycode {
+                                           Some(key) => {
+                                               if let Some(key) = map_key(key) {
+                                                   keypress =
+                                                       Some(Keypress::new(key,
+                                                                          imgui.key_ctrl(),
+                                                                          imgui.key_shift()));
+                                               }
+                                           }
+                                           _ => {}
+                                       }
+                                   }
+                               }
+                               _ => (),
+                           }
+                       }
+                   });
 
         let now = Instant::now();
         let delta = now - last_frame;
@@ -207,12 +195,10 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
         }
 
         let mut target = display.draw();
-        target.clear_color(
-            clear_color[0],
-            clear_color[1],
-            clear_color[2],
-            clear_color[3],
-        );
+        target.clear_color(clear_color[0],
+                           clear_color[1],
+                           clear_color[2],
+                           clear_color[3]);
         renderer.render(&mut target, ui).expect("Rendering failed");
         target.finish().unwrap();
 
@@ -244,6 +230,6 @@ fn map_key(key: Key) -> Option<AppKey> {
         Key::Down => Some(AppKey::DownArrow),
         Key::Left => Some(AppKey::LeftArrow),
         Key::Right => Some(AppKey::RightArrow),
-        _ => None
+        _ => None,
     }
 }

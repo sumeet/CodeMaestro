@@ -4,7 +4,6 @@
 #![feature(nll)]
 #![feature(arbitrary_self_types)]
 #![feature(slice_concat_ext)]
-#![feature(refcell_replace_swap)]
 #![feature(box_patterns)]
 #![feature(await_macro, async_await, futures_api)]
 #![feature(slice_patterns)]
