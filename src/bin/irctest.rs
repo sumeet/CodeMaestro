@@ -397,7 +397,11 @@ async fn load_code_from_the_db(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(
 
 
 async fn http_server(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
-    await!(forward(Server::bind(&([0, 0, 0, 0], 9000).into())
+    let port = config::get("PORT")
+        .expect("PORT envvar not set")
+        .parse()
+        .expect("PORT must be an integer");
+    await!(forward(Server::bind(&([0, 0, 0, 0], port).into())
         .executor(tokio::runtime::current_thread::TaskExecutor::current())
         .serve(|| service_fn(http_handler(Rc::clone(&chat_thingy)))))).unwrap();
     Ok::<(), ()>(())
