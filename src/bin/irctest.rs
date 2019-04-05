@@ -24,6 +24,7 @@ use hyper_staticfile::{Static};
 use serde::Deserialize;
 use cs::code_loading::TheWorld;
 use diesel::query_dsl::QueryDsl;
+use tokio_threadpool::ThreadPool;
 use diesel::prelude::*;
 
 const INSTANCE_ID : i32 = 123;
@@ -315,14 +316,11 @@ pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
 
 pub fn serve_static(req: Request<Body>) -> impl std::future::Future<Output = Result<Response<Body>, std::io::Error>> {
     lazy_static! {
-      static ref THREAD_POOL2: CpuPool = {
-        CpuPool::new_num_cpus()
-      };
-
+      static ref THREAD_POOL2: ThreadPool = ThreadPool::new();
       static ref STATIC : Static = Static::new("static/");
     }
 
-    forward(THREAD_POOL2.spawn(backward(async move {
+    forward(THREAD_POOL2.spawn_handle(backward(async move {
         await!(forward(STATIC.serve(req)))
     })))
 }
