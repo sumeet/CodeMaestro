@@ -313,16 +313,34 @@ pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
     })
 }
 
+use http_fs::config::{StaticFileConfig};
+use http_fs::{StaticFiles};
+use std::path::Path;
+use hyper::service::Service;
 
-pub fn serve_static(req: Request<Body>) -> impl std::future::Future<Output = Result<Response<Body>, std::io::Error>> {
-    lazy_static! {
-      static ref THREAD_POOL2: ThreadPool = ThreadPool::new();
-      static ref STATIC : Static = Static::new("static/");
+#[derive(Clone)]
+pub struct DirectoryConfig;
+impl StaticFileConfig for DirectoryConfig {
+    type FileService = http_fs::config::DefaultConfig;
+    type DirService = http_fs::config::DefaultConfig;
+
+    fn handle_directory(&self, _path: &Path) -> bool {
+        false
     }
 
-    forward(THREAD_POOL2.spawn_handle(backward(async move {
-        await!(forward(STATIC.serve(req)))
-    })))
+    fn index_file(&self, _path: &Path) -> Option<&Path> {
+        Some(Path::new("index.html"))
+    }
+
+    fn serve_dir(&self) -> &Path {
+        Path::new("static/")
+    }
+}
+
+
+pub fn serve_static(req: Request<Body>) -> impl std::future::Future<Output = Result<Response<Body>, std::io::Error>> {
+    let mut static_files = StaticFiles::new(DirectoryConfig);
+    forward(static_files.call(req))
 }
 
 #[derive(Insertable)]
