@@ -20,6 +20,7 @@ use futures::future::join_all;
 use noob;
 use hyper::{Body,Request,Response,Server};
 use hyper::service::{service_fn};
+use hyper_staticfile::{Static};
 use serde::Deserialize;
 use cs::code_loading::TheWorld;
 use diesel::query_dsl::QueryDsl;
@@ -311,6 +312,21 @@ pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
     })
 }
 
+
+pub fn serve_static(req: Request<Body>) -> impl std::future::Future<Output = Result<Response<Body>, std::io::Error>> {
+    lazy_static! {
+      static ref THREAD_POOL2: CpuPool = {
+        CpuPool::new_num_cpus()
+      };
+
+      static ref STATIC : Static = Static::new("static/");
+    }
+
+    forward(THREAD_POOL2.spawn(backward(async move {
+        await!(forward(STATIC.serve(req)))
+    })))
+}
+
 #[derive(Insertable)]
 #[table_name="codes"]
 struct NewCode {
@@ -367,7 +383,7 @@ async fn load_code_from_the_db(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(
 async fn http_server(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     await!(forward(Server::bind(&([0, 0, 0, 0], 9000).into())
         .executor(tokio::runtime::current_thread::TaskExecutor::current())
-        .serve(|| service_fn(handler(Rc::clone(&chat_thingy)))))).unwrap();
+        .serve(|| service_fn(http_handler(Rc::clone(&chat_thingy)))))).unwrap();
     Ok::<(), ()>(())
 }
 
@@ -382,20 +398,32 @@ async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error
     Ok(Request::from_parts(parts, body))
 }
 
-fn handler(chat_thingy: Rc<RefCell<ChatThingy>>) -> impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
-    move |body| {
-        let chat_thingy = Rc::clone(&chat_thingy);
-        Box::new(backward(async move {
-            let body = await!(deserialize::<TheWorld>(body));
-            if let Err(e) = body {
-                println!("error: {:?}", e);
-                return Ok(Response::builder().status(400).body("ur world sucked".into()).unwrap())
-            }
+fn http_handler(chat_thingy: Rc<RefCell<ChatThingy>>) ->
+    impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
 
-            let the_world = body.unwrap().into_body();
-            await!(forward(insert_new_code(&the_world))).unwrap();
-            chat_thingy.borrow().load_world(&the_world);
-            Ok(Response::new(Body::from("던지다")))
-        }))
+    move |request| {
+        if request.uri() == "/postthecode" {
+            let chat_thingy = Rc::clone(&chat_thingy);
+            Box::new(backward(async move {
+                let body = await!(deserialize::<TheWorld>(request));
+                if let Err(e) = body {
+                    println!("error: {:?}", e);
+                    return Ok(Response::builder().status(400).body("ur world sucked".into()).unwrap())
+                }
+
+                let the_world = body.unwrap().into_body();
+                await!(forward(insert_new_code(&the_world))).unwrap();
+                chat_thingy.borrow().load_world(&the_world);
+                Ok(Response::new(Body::from("던지다")))
+            }))
+        } else {
+            Box::new(backward(async move {
+                // oh jesus christ, the unimplemented
+                await!(serve_static(request)).map_err(|e| {
+                    println!("{:?}", e);
+                    unimplemented!()
+                })
+            }))
+        }
     }
 }
