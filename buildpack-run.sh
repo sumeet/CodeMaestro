@@ -10,6 +10,6 @@ export RUSTUP_HOME="$CACHE_DIR/multirust"
 # to do the right thing when new versions are released.
 export CARGO_HOME="$CACHE_DIR/cargo"
 # Include binaries installed by cargo and rustup in our path.
-export PATH="\$CARGO_HOME/bin:\$PATH"
+export PATH="$CARGO_HOME/bin:$PATH"
 
 ./scripts/run-on-server-release
