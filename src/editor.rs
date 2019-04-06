@@ -335,7 +335,8 @@ impl CommandBuffer {
                 async_executor.exec(async move {
                     overlay.borrow_mut().mark_as_submitting();
                     let server_listen_url = config::get("SERVER_LISTEN_URL").expect("plz set SERVER_LISTEN_URL");
-                    let resp = await!(http_client::post_json(server_listen_url, &theworld));
+                    let post_url = std::path::Path::new(server_listen_url).join("/postthecode");
+                    let resp = await!(http_client::post_json(post_url.to_str().unwrap(), &theworld));
                     match resp {
                         Err(e) => overlay.borrow_mut().mark_error(e.description().to_owned()),
                         Ok(resp) => {
