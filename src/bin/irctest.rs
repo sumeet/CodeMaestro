@@ -350,6 +350,8 @@ struct NewCode {
 }
 
 #[derive(Queryable)]
+// for some reason, Queryable requires that we have all DB fields even if we don't use them
+#[allow(dead_code)]
 struct Code {
     id: i32,
     added_by: String,
