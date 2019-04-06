@@ -20,11 +20,9 @@ use futures::future::join_all;
 use noob;
 use hyper::{Body,Request,Response,Server};
 use hyper::service::{service_fn};
-use hyper_staticfile::{Static};
 use serde::Deserialize;
 use cs::code_loading::TheWorld;
 use diesel::query_dsl::QueryDsl;
-use tokio_threadpool::ThreadPool;
 use diesel::prelude::*;
 
 const INSTANCE_ID : i32 = 123;
