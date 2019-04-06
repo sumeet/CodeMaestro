@@ -5,7 +5,7 @@ set -e
 ./scripts/gen-env.py > ./static/env.js
 
 # set up cargo-web
-cargo install cargo-web
+cargo install cargo-web || echo "cargo-web already installed"
 cargo web build --no-default-features --features=javascript --release --target=wasm32-unknown-unknown --bin cs
 cp ./target/wasm32-unknown-unknown/release/cs.wasm ./static/cs.wasm
 cp ./target/wasm32-unknown-unknown/release/cs.js ./static/cs.js
