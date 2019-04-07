@@ -236,14 +236,15 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    // TODO: wasm needs to call back into the app and tell it the window positions
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self,
                                                                     window_name: &str,
-                                                                    size: (usize, usize),
-                                                                    pos: (isize, isize),
+                                                                    _size: (usize, usize),
+                                                                    _pos: (isize, isize),
                                                                     f: &Fn() -> Self::DrawResult,
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
-                                                                    onwindowchange: H)
+                                                                    _onwindowchange: H)
                                                                     -> Self::DrawResult
         where H: Fn((isize, isize), (usize, usize)) + 'static
     {
