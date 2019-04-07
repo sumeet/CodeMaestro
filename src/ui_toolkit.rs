@@ -1,5 +1,6 @@
 // TODO: move Keypress and Color to this file
-use super::editor::{Color, Keypress};
+pub use super::editor::Color;
+use super::editor::Keypress;
 
 pub trait UiToolkit {
     type DrawResult;
@@ -24,6 +25,7 @@ pub trait UiToolkit {
                                                                     -> Self::DrawResult
         where H: Fn((isize, isize), (usize, usize)) + 'static;
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
+                                                    bg: Color,
                                                     draw_fn: &Fn() -> Self::DrawResult,
                                                     height_percentage: f32,
                                                     handle_keypress: Option<F>)

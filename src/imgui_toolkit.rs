@@ -1,7 +1,7 @@
 use super::async_executor;
 use super::editor::Keypress;
 use super::imgui_support;
-use super::ui_toolkit::{SelectableItem, UiToolkit};
+use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
 use super::App;
 use itertools::Itertools;
 
@@ -465,6 +465,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
+                                                    // TODO: actually use this bg color lol
+                                                    _bg: Color,
                                                     draw_fn: &Fn(),
                                                     height_percentage: f32,
                                                     handle_keypress: Option<F>) {

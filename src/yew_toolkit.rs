@@ -2,7 +2,7 @@ use super::async_executor::AsyncExecutor;
 use super::editor;
 use super::editor::{Key as AppKey, Keypress};
 use super::{App as CSApp, UiToolkit};
-use crate::ui_toolkit::SelectableItem;
+use crate::ui_toolkit::{Color, SelectableItem};
 use itertools::Itertools;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -305,8 +305,9 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    // TODO: clean up bc code is duped between here and draw_code_window
+    // TODO: clean up bc code is duped between here and draw_window
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
+                                                    bg: Color,
                                                     draw_fn: &Fn() -> Self::DrawResult,
                                                     height_percentage: f32,
                                                     handle_keypress: Option<F>)
@@ -317,8 +318,9 @@ impl UiToolkit for YewToolkit {
             let handle_keypress_1 = Rc::new(handle_keypress);
             let handle_keypress_2 = Rc::clone(&handle_keypress_1);
             let global_keydown_handler = self.global_keydown_handler();
+            // TODO: border color is hardcoded, ripped from imgui
             html! {
-                <div style={ format!("height: calc({}%); white-space: nowrap;", height_percentage * 100.) },
+                <div style={ format!("border: 1px solid #6a6a6a; min-height: 100px; height: calc({}%); white-space: nowrap; background-color: {};", height_percentage * 100., self.rgba(bg)) },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     onkeypress=|e| {
