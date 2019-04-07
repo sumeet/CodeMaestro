@@ -248,7 +248,7 @@ pub struct App {
     controller: Controller,
 }
 
-pub fn load_saved_code_from_disk(controller: &mut Controller, env: &mut ExecutionEnvironment) {
+pub fn _load_saved_code_from_disk(controller: &mut Controller, env: &mut ExecutionEnvironment) {
     let codestring = include_str!("../codesample.json");
     let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
     for script in the_world.scripts {
@@ -271,9 +271,9 @@ impl App {
     pub fn new() -> Self {
         let interpreter = init_interpreter();
         let mut command_buffer = editor::CommandBuffer::new();
-        let mut controller = init_controller(&interpreter);
+        let controller = init_controller(&interpreter);
 
-        load_saved_code_from_disk(&mut controller, &mut interpreter.env.borrow_mut());
+        //load_saved_code_from_disk(&mut controller, &mut interpreter.env.borrow_mut());
         init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut());
 
         let command_buffer = Rc::new(RefCell::new(command_buffer));
