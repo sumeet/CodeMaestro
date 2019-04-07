@@ -192,7 +192,7 @@ impl UiToolkit for YewToolkit {
         ondone: D)
         -> Self::DrawResult {
         html! {
-            <div>
+            <div style="display: flex;",>
                 {{ self.draw_text_input(existing_value, onchange, ondone) }}
                 <label>{{ label }}</label>
             </div>
