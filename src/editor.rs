@@ -40,6 +40,7 @@ use crate::opener::Opener;
 use crate::window_positions::Window;
 use itertools::Itertools;
 use crate::send_to_server_overlay::{SendToServerOverlay,SendToServerOverlayStatus};
+use crate::code_loading::TheWorld;
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
@@ -334,9 +335,7 @@ impl CommandBuffer {
 
                 async_executor.exec(async move {
                     overlay.borrow_mut().mark_as_submitting();
-                    let server_listen_url = config::get("SERVER_LISTEN_URL").expect("plz set SERVER_LISTEN_URL");
-                    let post_url = std::path::Path::new(server_listen_url).join("/postthecode");
-                    let resp = await!(http_client::post_json(post_url.to_str().unwrap(), &theworld));
+                    let resp = await!(postthecode(&theworld));
                     match resp {
                         Err(e) => overlay.borrow_mut().mark_error(e.description().to_owned()),
                         Ok(resp) => {
@@ -500,6 +499,13 @@ impl CommandBuffer {
             command.call_box((controller, interpreter, async_executor, self))
         }
     }
+}
+
+async fn postthecode(theworld: &TheWorld) -> Result<http::Response<String>, Box<std::error::Error>> {
+    let server_listen_url = config::get("SERVER_LISTEN_URL").ok_or("SERVER_LISTEN_URL not found")?;
+    let server_listen_url = url::Url::parse(server_listen_url)?;
+    let post_url = server_listen_url.join("/postthecode")?;
+    Ok(await!(http_client::post_json(post_url.as_str(), theworld))?)
 }
 
 pub struct Renderer<'a, T> {
