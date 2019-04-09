@@ -105,6 +105,12 @@ impl ChatThingy {
 
 async fn new_irc_conn(mut config: Config, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     config.version = Some("cs: program me!".to_string());
+    config.alt_nicks = Some(
+        (1..6).map(|n| {
+            let underscores = std::iter::repeat("_").take(n).join("");
+            format!("{}{}", config.nickname.as_ref().unwrap(), underscores)
+        }).collect()
+    );
     let irc_client_future = IrcClient::new_future(config).unwrap();
     let PackedIrcClient(client,
                         irc_future) = await!(forward(irc_client_future)).unwrap();
