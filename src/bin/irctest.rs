@@ -1,5 +1,4 @@
 #![feature(await_macro, async_await, futures_api)]
-#![feature(custom_attribute)]
 
 extern crate cs;
 
@@ -24,10 +23,54 @@ use serde::Deserialize;
 use cs::code_loading::TheWorld;
 use diesel::query_dsl::QueryDsl;
 use diesel::prelude::*;
+use std::thread;
+use serde_json::json;
+use serde_derive::{Deserialize as Deserializeable, Serialize as Serializeable};
 
 const INSTANCE_ID : i32 = 123;
 
 fn main() {
+    use std::fs::File;
+    use std::io::BufReader;
+
+    // args for running administrative tasks
+    let mut args = std::env::args();
+    let main_arg = args.nth(1);
+    if main_arg == Some("load_service_configs".to_string()) {
+        let filename = args.next().expect("expected a filename");
+        let file = File::open(filename).unwrap();
+        let configs : Vec<NewServiceConfig> = serde_json::from_reader(BufReader::new(file)).unwrap();
+        Runtime::new().unwrap().block_on(insert_new_service_configs(configs)).unwrap();
+        std::process::exit(0);
+    }
+
+//    let handles = (0..2).map(|_| thread::spawn(|| mayn())).collect_vec();
+//    for handle in handles {
+//        handle.join().unwrap();
+//    }
+    mayn()
+}
+
+// GHETTO: use this to add new services
+fn _generate_configs() {
+    let configs = [
+        NewServiceConfig {
+            instance_id: 1,
+            nickname: "getrekt".to_string(),
+            service_type: "slack".to_string(),
+            config: json!({"token": "TOKEN_GOES_HERE"}),
+        },
+        NewServiceConfig {
+            instance_id: 5,
+            nickname: "esper".to_string(),
+            service_type: "irc".to_string(),
+            config: json!(esper_config()),
+        },
+    ];
+    println!("{}", json!(configs));
+}
+
+fn mayn() {
     let getrekt_slack_token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
     let sandh_slack_token = "xoxb-562464349142-560290195488-MfjUZW4VTBYrDTO5wBzltnC6";
     let discord_bot_token = "NTQ5OTAyOTcwMzg5NzkwNzIx.D1auqw.QN0-mQBA4KmLZImlaRVwJHRsImQ";
@@ -36,7 +79,7 @@ fn main() {
 
     let futures : Vec<Box<dyn OldFuture<Item = (), Error = ()>>> = vec![
         // these are mandatory
-        Box::new(backward(http_server(Rc::clone(&chat_thingy)))),
+//        Box::new(backward(http_server(Rc::clone(&chat_thingy)))),
         Box::new(backward(load_code_from_the_db(Rc::clone(&chat_thingy)))),
 
         // these are for connecting to various chat services
@@ -274,7 +317,7 @@ use diesel;
 use diesel::{Insertable,Queryable};
 use diesel::r2d2;
 use lazy_static::lazy_static;
-use cs::schema::codes;
+use cs::schema::{codes,service_configs};
 use diesel::query_dsl::RunQueryDsl;
 use cs::config;
 
@@ -367,9 +410,31 @@ struct Code {
     updated_at: std::time::SystemTime,
 }
 
+#[derive(Insertable, Serializeable, Deserializeable)]
+#[table_name="service_configs"]
+struct NewServiceConfig {
+    instance_id: i32,
+    nickname: String,
+    service_type: String,
+    config: serde_json::Value,
+}
+
+
+#[derive(Queryable)]
+// for some reason, Queryable requires that we have all DB fields even if we don't use them
+#[allow(dead_code)]
+struct ServiceConfig {
+    id: i32,
+    instance_id: i32,
+    nickname: String,
+    service_type: String,
+    config: serde_json::Value,
+    created_at: std::time::SystemTime,
+    updated_at: std::time::SystemTime,
+}
+
 fn insert_new_code(code: &TheWorld) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
     use cs::schema::codes::dsl::codes;
-    println!("{:?}", code);
     let newcode = NewCode {
         added_by: "sumeet".to_string(),
         code: serde_json::to_value(code).unwrap(),
@@ -377,6 +442,13 @@ fn insert_new_code(code: &TheWorld) -> impl OldFuture<Error = impl std::error::E
     };
     exec_async(|conn| {
         diesel::insert_into(codes).values(newcode).execute(conn)
+    })
+}
+
+fn insert_new_service_configs(configs: Vec<NewServiceConfig>) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
+    use cs::schema::service_configs::dsl::service_configs;
+    exec_async(move |conn| {
+        diesel::insert_into(service_configs).values(configs).execute(conn)
     })
 }
 
