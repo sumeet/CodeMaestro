@@ -2,6 +2,7 @@
 
 extern crate cs;
 
+use std::collections::HashMap;
 use cs::asynk::{backward, forward, OldFuture};
 use itertools::Itertools;
 use std::cell::RefCell;
@@ -24,7 +25,6 @@ use cs::code_loading::TheWorld;
 use diesel::query_dsl::QueryDsl;
 use diesel::prelude::*;
 use std::thread;
-use serde_json::json;
 use serde_derive::{Deserialize as Deserializeable, Serialize as Serializeable};
 
 const INSTANCE_ID : i32 = 123;
@@ -33,6 +33,8 @@ fn main() {
     use std::fs::File;
     use std::io::BufReader;
 
+    let mut runtime = Runtime::new().unwrap();
+
     // args for running administrative tasks
     let mut args = std::env::args();
     let main_arg = args.nth(1);
@@ -40,59 +42,54 @@ fn main() {
         let filename = args.next().expect("expected a filename");
         let file = File::open(filename).unwrap();
         let configs : Vec<NewServiceConfig> = serde_json::from_reader(BufReader::new(file)).unwrap();
-        Runtime::new().unwrap().block_on(insert_new_service_configs(configs)).unwrap();
+        runtime.block_on(insert_new_service_configs(configs)).unwrap();
         std::process::exit(0);
     }
 
-//    let handles = (0..2).map(|_| thread::spawn(|| mayn())).collect_vec();
-//    for handle in handles {
-//        handle.join().unwrap();
-//    }
-    mayn()
+    let service_configs_by_instance_id = runtime.block_on(backward(load_instances())).unwrap();
+
+    let threads = service_configs_by_instance_id.into_iter().map(|(instance_id, service_configs)| {
+        thread::spawn(move || {
+            start_new_interpreter_instance_with_services(instance_id, &service_configs);
+        })
+    }).collect_vec();
+    for thread in threads {
+        thread.join().unwrap();
+    }
 }
 
-// GHETTO: use this to add new services
-fn _generate_configs() {
-    let configs = [
-        NewServiceConfig {
-            instance_id: 1,
-            nickname: "getrekt".to_string(),
-            service_type: "slack".to_string(),
-            config: json!({"token": "TOKEN_GOES_HERE"}),
-        },
-        NewServiceConfig {
-            instance_id: 5,
-            nickname: "esper".to_string(),
-            service_type: "irc".to_string(),
-            config: json!(esper_config()),
-        },
-    ];
-    println!("{}", json!(configs));
-}
-
-fn mayn() {
-    let getrekt_slack_token = "xoxb-492475447088-515728907968-8tDDF4YTSMwRHRQQa8gIw43p";
-    let sandh_slack_token = "xoxb-562464349142-560290195488-MfjUZW4VTBYrDTO5wBzltnC6";
-    let discord_bot_token = "NTQ5OTAyOTcwMzg5NzkwNzIx.D1auqw.QN0-mQBA4KmLZImlaRVwJHRsImQ";
-
+fn start_new_interpreter_instance_with_services(instance_id: i32, service_configs: &[ServiceConfig]) {
+    let mut runtime = Runtime::new().unwrap();
     let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
 
-    let futures : Vec<Box<dyn OldFuture<Item = (), Error = ()>>> = vec![
-        // these are mandatory
-//        Box::new(backward(http_server(Rc::clone(&chat_thingy)))),
-        Box::new(backward(load_code_from_the_db(Rc::clone(&chat_thingy)))),
-
-        // these are for connecting to various chat services
-        Box::new(backward(new_irc_conn(darwin_config(), Rc::clone(&chat_thingy)))),
-        Box::new(backward(new_irc_conn(esper_config(), Rc::clone(&chat_thingy)))),
-        Box::new(backward(slack(getrekt_slack_token, Rc::clone(&chat_thingy)))),
-        Box::new(backward(slack(sandh_slack_token, Rc::clone(&chat_thingy)))),
-        Box::new(backward(discord(discord_bot_token, Rc::clone(&chat_thingy)))),
-//        Box::new(backward(new_irc_conn(_local_config(), Rc::clone(&chat_thingy)))),
-    ];
-
+    runtime.block_on(
+        backward(load_code_from_the_db_into(Rc::clone(&chat_thingy),
+                                              instance_id))
+    ).unwrap();
+    let futures = service_configs.iter()
+        .map(|service_config| {
+            backward(new_conn(service_config, Rc::clone(&chat_thingy)))
+        });
     let joined = join_all(futures);
-    Runtime::new().unwrap().block_on(joined).unwrap();
+    runtime.block_on(joined).unwrap();
+}
+
+async fn new_conn(service_config: &ServiceConfig, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+    match service_config.service_type.as_str() {
+        "irc" => {
+            println!("new irc conn");
+            await!(new_irc_conn(service_config.irc_config().unwrap(), chat_thingy))
+        },
+        "discord" => {
+            println!("new discord conn");
+            await!(new_discord_conn(service_config.discord_token().unwrap(), chat_thingy))
+        },
+        "slack" => {
+            println!("new slack conn");
+            await!(new_slack_conn(service_config.slack_token().unwrap(), chat_thingy))
+        },
+        _ => panic!("unknown service type: {}", service_config.service_type),
+    }
 }
 
 struct ChatThingy {
@@ -189,40 +186,7 @@ async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatT
     Ok::<(), ()>(())
 }
 
-fn _local_config() -> Config {
-    Config {
-        nickname: Some("cs".to_owned()),
-        server: Some("localhost".to_owned()),
-        channels: Some(vec!["#hohaw".to_owned()]),
-        use_ssl: Some(false),
-        port: Some(6667),
-        ..Config::default()
-    }
-}
-
-fn darwin_config() -> Config {
-   Config {
-        nickname: Some("cs".to_owned()),
-        server: Some("irc.darwin.network".to_owned()),
-        channels: Some(vec!["#darwin".to_owned()]),
-        use_ssl: Some(true),
-        password: Some("smellyoulater".to_string()),
-        port: Some(6697),
-        ..Config::default()
-    }
-}
-
-fn esper_config() -> Config {
-    Config {
-        nickname: Some("ceeess".to_owned()),
-        server: Some("irc.esper.net".to_owned()),
-        channels: Some(vec!["#devnullzone".to_owned()]),
-        port: Some(6667),
-        ..Config::default()
-    }
-}
-
-async fn discord(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+async fn new_discord_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     let (client, mut stream) = await!(forward(noob::Client::connect(token))).unwrap_or_else(|e| {
         panic!("error connecting to discord: {:?}", e)
     });
@@ -243,7 +207,7 @@ async fn discord(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> R
     Ok::<(), ()>(())
 }
 
-async fn slack(token: &'static str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     use slack::{Event, Message};
     use slack::api::MessageStandard;
     use slack::future::client::{Client, EventHandler};
@@ -420,17 +384,35 @@ struct NewServiceConfig {
 }
 
 
-#[derive(Queryable)]
+#[derive(Queryable, Debug)]
 // for some reason, Queryable requires that we have all DB fields even if we don't use them
 #[allow(dead_code)]
 struct ServiceConfig {
     id: i32,
-    instance_id: i32,
     nickname: String,
+    instance_id: i32,
     service_type: String,
-    config: serde_json::Value,
     created_at: std::time::SystemTime,
     updated_at: std::time::SystemTime,
+    config: serde_json::Value,
+}
+
+impl ServiceConfig {
+    pub fn discord_token(&self) -> Result<&str, Box<std::error::Error>> {
+        Ok(self.config.get("token")
+            .ok_or("discord token not found in config")?
+            .as_str().ok_or("discord token not a string")?)
+    }
+
+    pub fn slack_token(&self) -> Result<&str, Box<std::error::Error>> {
+        Ok(self.config.get("token")
+            .ok_or("slack token not found in config")?
+            .as_str().ok_or("slack token not a string")?)
+    }
+
+    pub fn irc_config(&self) -> Result<Config, Box<std::error::Error>> {
+       Ok(serde_json::from_value(self.config.clone())?)
+    }
 }
 
 fn insert_new_code(code: &TheWorld) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
@@ -452,11 +434,23 @@ fn insert_new_service_configs(configs: Vec<NewServiceConfig>) -> impl OldFuture<
     })
 }
 
-async fn load_code_from_the_db(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+async fn load_instances() -> Result<HashMap<i32, Vec<ServiceConfig>>, Box<std::error::Error>> {
+    use crate::service_configs::dsl::*;
+
+    let all_service_configs = await!(forward(exec_async(|conn| {
+        service_configs.load::<ServiceConfig>(conn)
+    })))?;
+
+    Ok(all_service_configs.into_iter()
+        .map(|service_config| (service_config.instance_id, service_config))
+        .into_group_map())
+}
+
+async fn load_code_from_the_db_into(chat_thingy: Rc<RefCell<ChatThingy>>, for_instance_id: i32) -> Result<(), ()> {
     use crate::codes::dsl::*;
 
-    let code_rows = await!(forward(exec_async(|conn| {
-        codes.filter(instance_id.eq(INSTANCE_ID))
+    let code_rows = await!(forward(exec_async(move |conn| {
+        codes.filter(instance_id.eq(for_instance_id))
             .load::<Code>(conn)
     }))).unwrap();
     for code_row in code_rows {
