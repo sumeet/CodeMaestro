@@ -467,14 +467,14 @@ async fn load_code_from_the_db_into(chat_thingy: Rc<RefCell<ChatThingy>>, for_in
 }
 
 
-async fn http_server(chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+async fn http_server(chat_thingy_by_instance_id: HashMap<i32, Rc<RefCell<ChatThingy>>>) -> Result<(), ()> {
     let port = config::get("PORT")
         .expect("PORT envvar not set")
         .parse()
         .expect("PORT must be an integer");
     await!(forward(Server::bind(&([0, 0, 0, 0], port).into())
         .executor(tokio::runtime::current_thread::TaskExecutor::current())
-        .serve(|| service_fn(http_handler(Rc::clone(&chat_thingy)))))).unwrap();
+        .serve(move || service_fn(http_handler(chat_thingy_by_instance_id.clone()))))).unwrap();
     Ok::<(), ()>(())
 }
 
@@ -489,25 +489,19 @@ async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error
     Ok(Request::from_parts(parts, body))
 }
 
-fn http_handler(chat_thingy: Rc<RefCell<ChatThingy>>) ->
+fn http_handler(chat_thingy_by_instance_id: HashMap<i32, Rc<RefCell<ChatThingy>>>) ->
     impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
 
     move |request| {
         let uri = request.uri();
-        if uri.path() == "/postthecode" {
-            let chat_thingy = Rc::clone(&chat_thingy);
+        let new_code_intent = extract_intent(uri);
+        let chat_thingy = new_code_intent.as_ref()
+            .and_then(|intent| chat_thingy_by_instance_id.get(&intent.instance_id));
+        if uri.path() == "/postthecode" && chat_thingy.is_some() {
+            let chat_thingy = Rc::clone(chat_thingy.unwrap());
+            let new_code_intent = new_code_intent.unwrap();
             let query = uri.query().map(|s| s.to_owned());
             Box::new(backward(async move {
-                if query.is_none() {
-                    return Ok(validation_error("ur qs sucked"))
-                }
-
-                let new_code_intent = NewCodeIntent::decode(query.as_ref().unwrap());
-                if new_code_intent.is_err() {
-                    return Ok(validation_error("ur intent sucked"))
-                }
-                let new_code_intent = new_code_intent.unwrap();
-
                 let body = await!(deserialize::<TheWorld>(request));
                 if let Err(e) = body {
                     println!("error: {:?}", e);
@@ -516,7 +510,9 @@ fn http_handler(chat_thingy: Rc<RefCell<ChatThingy>>) ->
 
                 let the_world = body.unwrap().into_body();
                 await!(forward(insert_new_code(&the_world, new_code_intent.instance_id))).unwrap();
+
                 chat_thingy.borrow().load_world(&the_world);
+
                 Ok(Response::new(Body::from("던지다")))
             }))
         } else {
@@ -529,6 +525,10 @@ fn http_handler(chat_thingy: Rc<RefCell<ChatThingy>>) ->
             }))
         }
     }
+}
+
+fn extract_intent(uri: &http::Uri) -> Option<NewCodeIntent> {
+    Some(NewCodeIntent::decode(uri.query()?).ok()?)
 }
 
 fn validation_error(str: &'static str) -> Response<Body> {
