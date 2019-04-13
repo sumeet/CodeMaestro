@@ -10,7 +10,7 @@ edition = "2018"
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "slack",
            "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest", "noob",
-           "directories", "gotham", "http-fs", "futures-cpupool", "diesel", "r2d2", "dotenv", "hyper"]
+           "directories", "gotham", "http-fs", "futures-cpupool", "diesel", "r2d2", "dotenv", "hyper", "branca"]
 python = ["pyo3"]
 javascript = ["yew", "stdweb"]
 
@@ -65,6 +65,7 @@ http-fs = {git = "https://gitlab.com/Douman/http-fs", optional = true, features 
 diesel = {version = "1.4.1", optional = true, features = ["postgres", "extras"]}
 r2d2 = {version = "*", optional = true}
 dotenv = {version = "0.13.0", optional = true}
+branca = {version = "0.8.0", optional = true}
 
 # wow i can't believe i need this
 futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat"] }

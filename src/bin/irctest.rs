@@ -27,8 +27,6 @@ use diesel::prelude::*;
 use std::thread;
 use serde_derive::{Deserialize as Deserializeable, Serialize as Serializeable};
 
-const INSTANCE_ID : i32 = 123;
-
 fn main() {
     use std::fs::File;
     use std::io::BufReader;
@@ -328,6 +326,7 @@ use http_fs::config::{StaticFileConfig};
 use http_fs::{StaticFiles};
 use std::path::Path;
 use hyper::service::Service;
+use branca::Branca;
 
 #[derive(Clone)]
 pub struct DirectoryConfig;
@@ -415,12 +414,12 @@ impl ServiceConfig {
     }
 }
 
-fn insert_new_code(code: &TheWorld) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
+fn insert_new_code(code: &TheWorld, instance_id: i32) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
     use cs::schema::codes::dsl::codes;
     let newcode = NewCode {
         added_by: "sumeet".to_string(),
         code: serde_json::to_value(code).unwrap(),
-        instance_id: INSTANCE_ID,
+        instance_id,
     };
     exec_async(|conn| {
         diesel::insert_into(codes).values(newcode).execute(conn)
@@ -494,17 +493,29 @@ fn http_handler(chat_thingy: Rc<RefCell<ChatThingy>>) ->
     impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
 
     move |request| {
-        if request.uri() == "/postthecode" {
+        let uri = request.uri();
+        if uri.path() == "/postthecode" {
             let chat_thingy = Rc::clone(&chat_thingy);
+            let query = uri.query().map(|s| s.to_owned());
             Box::new(backward(async move {
+                if query.is_none() {
+                    return Ok(validation_error("ur qs sucked"))
+                }
+
+                let new_code_intent = NewCodeIntent::decode(query.as_ref().unwrap());
+                if new_code_intent.is_err() {
+                    return Ok(validation_error("ur intent sucked"))
+                }
+                let new_code_intent = new_code_intent.unwrap();
+
                 let body = await!(deserialize::<TheWorld>(request));
                 if let Err(e) = body {
                     println!("error: {:?}", e);
-                    return Ok(Response::builder().status(400).body("ur world sucked".into()).unwrap())
+                    return Ok(validation_error("ur world sucked"))
                 }
 
                 let the_world = body.unwrap().into_body();
-                await!(forward(insert_new_code(&the_world))).unwrap();
+                await!(forward(insert_new_code(&the_world, new_code_intent.instance_id))).unwrap();
                 chat_thingy.borrow().load_world(&the_world);
                 Ok(Response::new(Body::from("던지다")))
             }))
@@ -517,5 +528,31 @@ fn http_handler(chat_thingy: Rc<RefCell<ChatThingy>>) ->
                 })
             }))
         }
+    }
+}
+
+fn validation_error(str: &'static str) -> Response<Body> {
+    Response::builder().status(400).body(str.into()).unwrap()
+}
+
+#[derive(Serializeable, Deserializeable)]
+struct NewCodeIntent {
+    instance_id: i32,
+}
+
+lazy_static! {
+    static ref SIGNING_TOKEN: Branca = {
+        let signing_secret = config::get("SIGNING_SECRET").expect("SIGNING_SECRET");
+        Branca::new(signing_secret.as_bytes()).unwrap()
+    };
+}
+
+impl NewCodeIntent {
+    fn encode(&self) -> Result<String, Box<std::error::Error>> {
+        Ok(SIGNING_TOKEN.encode(&serde_json::to_string(self)?)?)
+    }
+
+    fn decode(str: &str) -> Result<Self, Box<std::error::Error>> {
+        Ok(serde_json::from_str(&SIGNING_TOKEN.decode(str, 0)?)?)
     }
 }
