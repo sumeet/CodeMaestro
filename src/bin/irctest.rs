@@ -47,16 +47,23 @@ fn main() {
 
     let service_configs_by_instance_id = runtime.block_on(backward(load_instances())).unwrap();
 
-    let thread_and_new_code_senders = service_configs_by_instance_id.into_iter().map(|(instance_id, service_configs)| {
+    let mut new_code_sender_by_instance_id = HashMap::new();
+
+    let mut threads = service_configs_by_instance_id.into_iter().map(|(instance_id, service_configs)| {
         // GHETTO: this is for sending worlds from the web interface into the interp
         let (tx, rx) = mpsc::unbounded::<TheWorld>();
-        let thread = thread::spawn(move || {
+        new_code_sender_by_instance_id.insert(instance_id, tx);
+        thread::spawn(move || {
             start_new_interpreter_instance_with_services(instance_id, &service_configs, rx);
-        });
-        (thread, tx)
+        })
     }).collect_vec();
 
-    for (thread, _) in thread_and_new_code_senders {
+    threads.push(thread::spawn(move || {
+        let mut runtime = Runtime::new().unwrap();
+        runtime.block_on(backward(http_server(new_code_sender_by_instance_id))).unwrap();
+    }));
+
+    for thread in threads {
         thread.join().unwrap();
     }
 }
@@ -483,14 +490,14 @@ async fn load_code_from_the_db_into(chat_thingy: Rc<RefCell<ChatThingy>>, for_in
 }
 
 
-async fn http_server(chat_thingy_by_instance_id: HashMap<i32, Rc<RefCell<ChatThingy>>>) -> Result<(), ()> {
+async fn http_server(new_code_sender_by_instance_id: HashMap<i32, mpsc::UnboundedSender<TheWorld>>) -> Result<(), ()> {
     let port = config::get("PORT")
         .expect("PORT envvar not set")
         .parse()
         .expect("PORT must be an integer");
     await!(forward(Server::bind(&([0, 0, 0, 0], port).into())
         .executor(tokio::runtime::current_thread::TaskExecutor::current())
-        .serve(move || service_fn(http_handler(chat_thingy_by_instance_id.clone()))))).unwrap();
+        .serve(move || service_fn(http_handler(new_code_sender_by_instance_id.clone()))))).unwrap();
     Ok::<(), ()>(())
 }
 
@@ -505,16 +512,19 @@ async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error
     Ok(Request::from_parts(parts, body))
 }
 
-fn http_handler(chat_thingy_by_instance_id: HashMap<i32, Rc<RefCell<ChatThingy>>>) ->
+fn http_handler(new_code_sender_by_instance_id: HashMap<i32, mpsc::UnboundedSender<TheWorld>>) ->
     impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
 
     move |request| {
         let uri = request.uri();
-        let new_code_intent = extract_intent(uri);
-        let chat_thingy = new_code_intent.as_ref()
-            .and_then(|intent| chat_thingy_by_instance_id.get(&intent.instance_id));
-        if uri.path() == "/postthecode" && chat_thingy.is_some() {
-            let chat_thingy = Rc::clone(chat_thingy.unwrap());
+        //let new_code_intent = extract_intent(uri);
+        let new_code_intent = Some(NewCodeIntent {
+            instance_id: 1,
+        });
+        let new_code_sender = new_code_intent.as_ref()
+            .and_then(|intent| new_code_sender_by_instance_id.get(&intent.instance_id));
+        if uri.path() == "/postthecode" && new_code_sender.is_some() {
+            let mut new_code_sender = new_code_sender.unwrap().clone();
             let new_code_intent = new_code_intent.unwrap();
             let query = uri.query().map(|s| s.to_owned());
             Box::new(backward(async move {
@@ -527,7 +537,8 @@ fn http_handler(chat_thingy_by_instance_id: HashMap<i32, Rc<RefCell<ChatThingy>>
                 let the_world = body.unwrap().into_body();
                 await!(forward(insert_new_code(&the_world, new_code_intent.instance_id))).unwrap();
 
-                chat_thingy.borrow().load_world(&the_world);
+                use futures_util::sink::SinkExt;
+                await!(new_code_sender.send(the_world)).unwrap();
 
                 Ok(Response::new(Body::from("던지다")))
             }))
