@@ -15,6 +15,7 @@ use serde::{Deserialize as DeserializeTrait,Deserializer,Serializer,Serialize as
 use serde::ser::SerializeStruct;
 use serde_json;
 use std::fs::File;
+use std::sync::{Arc, Mutex};
 
 // this gets loaded through codesample.json... TODO: make a builtins.json file
 lazy_static! {
@@ -247,7 +248,8 @@ pub fn new_result(ok_type: lang::Type) -> lang::Type {
 
 #[derive(Clone)]
 pub struct ChatReply {
-    output_buffer: Rc<RefCell<Vec<String>>>,
+//    output_buffer: Rc<RefCell<Vec<String>>>,
+    output_buffer: Arc<Mutex<Vec<String>>>,
 }
 
 impl<'de> DeserializeTrait<'de> for ChatReply {
@@ -255,7 +257,7 @@ impl<'de> DeserializeTrait<'de> for ChatReply {
         where
             D: Deserializer<'de>,
     {
-        Ok(ChatReply::new(Rc::new(RefCell::new(vec![]))))
+        Ok(ChatReply::new(Arc::new(Mutex::new(vec![]))))
     }
 }
 
@@ -270,7 +272,7 @@ impl SerializeTrait for ChatReply {
 }
 
 impl ChatReply {
-    pub fn new(output_buffer: Rc<RefCell<Vec<String>>>) -> Self {
+    pub fn new(output_buffer: Arc<Mutex<Vec<String>>>) -> Self {
         Self { output_buffer }
     }
 }
@@ -280,7 +282,7 @@ impl lang::Function for ChatReply {
     fn call(&self, _interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
         let text_to_send = args.get(&self.takes_args()[0].id).unwrap()
             .as_str().unwrap();
-        self.output_buffer.borrow_mut().push(text_to_send.to_string());
+        self.output_buffer.lock().unwrap().push(text_to_send.to_string());
         lang::Value::Null
     }
 

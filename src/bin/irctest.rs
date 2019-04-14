@@ -17,6 +17,7 @@ use irc::client::PackedIrcClient;
 use irc_proto::{Command};
 use tokio::runtime::current_thread::Runtime;
 use futures::future::join_all;
+use futures_channel::mpsc;
 use noob;
 use hyper::{Body,Request,Response,Server};
 use hyper::service::{service_fn};
@@ -46,17 +47,21 @@ fn main() {
 
     let service_configs_by_instance_id = runtime.block_on(backward(load_instances())).unwrap();
 
-    let threads = service_configs_by_instance_id.into_iter().map(|(instance_id, service_configs)| {
-        thread::spawn(move || {
-            start_new_interpreter_instance_with_services(instance_id, &service_configs);
-        })
+    let thread_and_new_code_senders = service_configs_by_instance_id.into_iter().map(|(instance_id, service_configs)| {
+        // GHETTO: this is for sending worlds from the web interface into the interp
+        let (tx, rx) = mpsc::unbounded::<TheWorld>();
+        let thread = thread::spawn(move || {
+            start_new_interpreter_instance_with_services(instance_id, &service_configs, rx);
+        });
+        (thread, tx)
     }).collect_vec();
-    for thread in threads {
+
+    for (thread, _) in thread_and_new_code_senders {
         thread.join().unwrap();
     }
 }
 
-fn start_new_interpreter_instance_with_services(instance_id: i32, service_configs: &[ServiceConfig]) {
+fn start_new_interpreter_instance_with_services(instance_id: i32, service_configs: &[ServiceConfig], new_code_receiver: mpsc::UnboundedReceiver<TheWorld>) {
     let mut runtime = Runtime::new().unwrap();
     let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
 
@@ -64,12 +69,21 @@ fn start_new_interpreter_instance_with_services(instance_id: i32, service_config
         backward(load_code_from_the_db_into(Rc::clone(&chat_thingy),
                                               instance_id))
     ).unwrap();
-    let futures = service_configs.iter()
+    let mut futures = service_configs.iter()
         .map(|service_config| {
-            backward(new_conn(service_config, Rc::clone(&chat_thingy)))
-        });
+            let b : Box<OldFuture<Item = (), Error = ()>> = Box::new(backward(new_conn(service_config, Rc::clone(&chat_thingy))));
+            b
+        }).collect_vec();
+    futures.push(Box::new(backward(receive_code(chat_thingy, new_code_receiver))));
     let joined = join_all(futures);
     runtime.block_on(joined).unwrap();
+}
+
+async fn receive_code(chat_thingy: Rc<RefCell<ChatThingy>>, mut rx: mpsc::UnboundedReceiver<TheWorld>) -> Result<(), ()> {
+    while let Some(world) = await!(rx.next()) {
+        chat_thingy.borrow_mut().load_world(&world);
+    }
+    Ok::<(), ()>(())
 }
 
 async fn new_conn(service_config: &ServiceConfig, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
@@ -92,14 +106,14 @@ async fn new_conn(service_config: &ServiceConfig, chat_thingy: Rc<RefCell<ChatTh
 
 struct ChatThingy {
     interp: env::Interpreter,
-    reply_buffer: Rc<RefCell<Vec<String>>>,
+    reply_buffer: Arc<Mutex<Vec<String>>>,
 }
 
 impl ChatThingy {
     pub fn new() -> Self {
-        let reply_buffer = Rc::new(RefCell::new(vec![]));
+        let reply_buffer = Arc::new(Mutex::new(vec![]));
         let interp = cs::init_interpreter();
-        let reply_function = ChatReply::new(Rc::clone(&reply_buffer));
+        let reply_function = ChatReply::new(Arc::clone(&reply_buffer));
         interp.env.borrow_mut().add_function(reply_function);
         Self { interp, reply_buffer }
     }
@@ -172,7 +186,7 @@ async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatT
             if let Command::PRIVMSG(sender, text) = &message.command {
                 if let Some(response_target) = message.response_target() {
                     await!(chat_thingy.borrow_mut().message_received(sender.clone(), text.clone()));
-                    for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
+                    for reply in chat_thingy.borrow_mut().reply_buffer.lock().unwrap().drain(..) {
                         client.send_privmsg(response_target, &reply).map_err(|err| {
                             println!("error sending msg: {:?}", err)
                         }).ok();
@@ -193,7 +207,7 @@ async fn new_discord_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> 
             Ok(noob::Event::MessageCreate(msg)) => {
                 await!(chat_thingy.borrow_mut().message_received(msg.author.username, msg.content));
 
-                for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
+                for reply in chat_thingy.borrow_mut().reply_buffer.lock().unwrap().drain(..) {
                     await!(forward(client.send_message(&noob::MessageBuilder::new(&reply), &msg.channel_id)))
                         .map_err(|e| println!("error sending discord message: {:?}", e)).ok();
                 }
@@ -242,7 +256,7 @@ async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Re
 
                             await!(chat_thingy.borrow_mut().message_received(sender, text));
 
-                            for reply in chat_thingy.borrow_mut().reply_buffer.borrow_mut().drain(..) {
+                            for reply in chat_thingy.borrow_mut().reply_buffer.lock().unwrap().drain(..) {
                                 msg_sender.send_message(&channel, &reply).map_err(|err| {
                                     println!("error sending slack message: {:?}", err)
                                 }).ok();
@@ -327,6 +341,8 @@ use http_fs::{StaticFiles};
 use std::path::Path;
 use hyper::service::Service;
 use branca::Branca;
+use std::sync::{Arc, Mutex};
+use futures_util::stream::StreamExt;
 
 #[derive(Clone)]
 pub struct DirectoryConfig;

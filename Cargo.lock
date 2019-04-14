@@ -400,6 +400,7 @@ dependencies = [
  "downcast-rs 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
+ "futures-channel-preview 0.3.0-alpha.13 (git+https://github.com/rust-lang-nursery/futures-rs)",
  "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-util-preview 0.3.0-alpha.13 (git+https://github.com/rust-lang-nursery/futures-rs)",
  "gen-iter 0.1.2 (git+https://github.com/sumeet/gen-iter)",

@@ -15,6 +15,7 @@ use crate::lang::BuiltInTypeSpec;
 use crate::structs::Struct;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
+use std::sync::{Arc, Mutex};
 
 type Error = Box<std::error::Error>;
 
@@ -63,7 +64,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<lang::Function>, E
                    .and_then(|typ| typ.as_str())
                    .ok_or_else(|| format!("couldn't decode funcs from {:?}", value))?;
     Ok(match typ {
-        "ChatReply" => Box::new(builtins::ChatReply::new(Rc::new(RefCell::new(vec![])))),
+        "ChatReply" => Box::new(builtins::ChatReply::new(Arc::new(Mutex::new(vec![])))),
         "Capitalize" => Box::new(builtins::Capitalize {}),
         "HTTPGet" => Box::new(builtins::HTTPGet {}),
         "JoinString" => Box::new(builtins::JoinString {}),

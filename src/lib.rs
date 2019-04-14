@@ -121,6 +121,7 @@ use yew_toolkit::draw_app;
 use crate::code_editor::CodeLocation;
 use crate::editor::CommandBuffer;
 use cfg_if::cfg_if;
+use std::sync::{Arc, Mutex};
 
 cfg_if! {
     if #[cfg(feature = "javascript")] {
@@ -183,7 +184,7 @@ fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Erro
     functions.push(Box::new(builtins::Capitalize {}));
     functions.push(Box::new(builtins::HTTPGet {}));
     functions.push(Box::new(builtins::JoinString {}));
-    functions.push(Box::new(builtins::ChatReply::new(Rc::new(RefCell::new(vec![])))));
+    functions.push(Box::new(builtins::ChatReply::new(Arc::new(Mutex::new(vec![])))));
 
     let struct_ids = &[// HTTP Form param
                        uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap(),

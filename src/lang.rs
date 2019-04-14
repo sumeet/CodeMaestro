@@ -57,7 +57,7 @@ lazy_static! {
 }
 
 #[typetag::serde(tag = "type")]
-pub trait Function: objekt::Clone + downcast_rs::Downcast {
+pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn call(&self, interpreter: env::Interpreter, args: HashMap<ID, Value>) -> Value;
     fn name(&self) -> &str;
     fn id(&self) -> ID;
@@ -221,7 +221,7 @@ pub struct BuiltInTypeSpec {
 }
 
 #[typetag::serde(tag = "type")]
-pub trait TypeSpec: objekt::Clone + downcast_rs::Downcast {
+pub trait TypeSpec: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn readable_name(&self) -> &str;
     fn id(&self) -> ID;
     fn symbol(&self) -> &str;

@@ -10,7 +10,7 @@ edition = "2018"
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "slack",
            "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest", "noob",
-           "directories", "gotham", "http-fs", "futures-cpupool", "diesel", "r2d2", "dotenv", "hyper", "branca"]
+           "directories", "gotham", "http-fs", "futures-cpupool", "diesel", "r2d2", "dotenv", "hyper", "branca", "futures-channel-preview"]
 python = ["pyo3"]
 javascript = ["yew", "stdweb"]
 
@@ -69,6 +69,8 @@ branca = {version = "0.8.0", optional = true}
 
 # wow i can't believe i need this
 futures-util-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat"] }
+
+futures-channel-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", optional = true }
 
 [patch.crates-io]
 futures-core-preview = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
