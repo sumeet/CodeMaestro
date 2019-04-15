@@ -47,6 +47,19 @@ fn main() {
 
     let service_configs_by_instance_id = runtime.block_on(backward(load_instances())).unwrap();
 
+
+    if main_arg == Some("list_instance_urls".to_string()) {
+        for (instance_id, service_configs) in service_configs_by_instance_id.iter() {
+            let url = GenerateProgramBotUrl::new(*instance_id).generate_url().unwrap();
+            let nicknames = service_configs.iter().map(|sc| &sc.nickname).join(", ");
+            println!("instance {}: {}", instance_id, nicknames);
+            println!("{}", url);
+            println!();
+        }
+        std::process::exit(0);
+    }
+
+
     let mut new_code_sender_by_instance_id = HashMap::new();
 
     let mut threads = service_configs_by_instance_id.into_iter().map(|(instance_id, service_configs)| {
@@ -120,6 +133,11 @@ impl GenerateProgramBotUrl {
     fn new(instance_id: i32) -> Self {
         Self { instance_id }
     }
+
+    fn generate_url(&self) -> Result<url::Url, Box<std::error::Error>> {
+        let token = NewCodeIntent::token(self.instance_id)?;
+        Ok(config::post_code_url(&token)?)
+    }
 }
 
 use cs::lang;
@@ -142,8 +160,7 @@ impl lang::Function for GenerateProgramBotUrl {
     }
 
     fn call(&self, _interpreter: env::Interpreter, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        let token = NewCodeIntent::token(self.instance_id).unwrap();
-        lang::Value::String(config::post_code_url(&token).unwrap().into_string())
+        lang::Value::String(self.generate_url().unwrap().into_string())
     }
 }
 
