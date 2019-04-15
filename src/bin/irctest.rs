@@ -2,6 +2,8 @@
 
 extern crate cs;
 
+use std::pin::Pin;
+
 use std::collections::HashMap;
 use cs::asynk::{backward, forward, OldFuture};
 use itertools::Itertools;
@@ -140,33 +142,10 @@ impl GenerateProgramBotUrl {
     }
 }
 
-use cs::lang;
-#[typetag::serde]
-impl lang::Function for GenerateProgramBotUrl {
-    fn id(&self) -> lang::ID {
-        uuid::Uuid::parse_str("308a6d7a-1cc3-49e6-b964-7c0c884a352b").unwrap()
-    }
-
-    fn name(&self) -> &str {
-        "Generate Program Bot URL"
-    }
-
-    fn returns(&self) -> lang::Type {
-        lang::Type::from_spec(&*lang::STRING_TYPESPEC)
-    }
-
-    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![]
-    }
-
-    fn call(&self, _interpreter: env::Interpreter, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
-        lang::Value::String(self.generate_url().unwrap().into_string())
-    }
-}
-
 struct ChatThingy {
     interp: env::Interpreter,
     reply_buffer: Arc<Mutex<Vec<String>>>,
+    instance_id: i32,
 }
 
 impl ChatThingy {
@@ -176,9 +155,8 @@ impl ChatThingy {
 
         let reply_function = ChatReply::new(Arc::clone(&reply_buffer));
         interp.env.borrow_mut().add_function(reply_function);
-        interp.env.borrow_mut().add_function(GenerateProgramBotUrl::new(instance_id));
 
-        Self { interp, reply_buffer }
+        Self { interp, reply_buffer, instance_id }
     }
 
     // TODO: this is duped from lib.rs
@@ -192,7 +170,13 @@ impl ChatThingy {
         }
     }
 
-    pub fn message_received(&self, sender: String, text: String) -> impl std::future::Future {
+    pub fn message_received(&self, sender: String, text: String) -> Pin<Box<std::future::Future<Output = ()>>> {
+        if text == ".letmeprogramyou" {
+            let program_url = GenerateProgramBotUrl::new(self.instance_id).generate_url().unwrap();
+            self.reply_buffer.lock().unwrap().push(program_url.to_string());
+            return Box::pin(async { () });
+        }
+
         let triggers = {
             let env = self.interp.env.borrow();
             let env_genie = EnvGenie::new(&env);
@@ -207,13 +191,13 @@ impl ChatThingy {
             })
             .collect_vec();
 
-        async move {
+        Box::pin(async move {
             for value in triggered_values {
                 println!("there's a triggered value d00d");
                 await!(resolve_all_futures(value));
             }
             ()
-        }
+        })
     }
 }
 
