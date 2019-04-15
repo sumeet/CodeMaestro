@@ -8,8 +8,6 @@ use url;
 use http::Request;
 use super::http_client;
 use maplit::hashmap;
-use std::cell::RefCell;
-use std::rc::Rc;
 use serde_derive::{Serialize,Deserialize};
 use serde::{Deserialize as DeserializeTrait,Deserializer,Serializer,Serialize as SerializeTrait};
 use serde::ser::SerializeStruct;

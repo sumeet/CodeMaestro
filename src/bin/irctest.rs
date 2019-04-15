@@ -562,7 +562,6 @@ fn http_handler(new_code_sender_by_instance_id: HashMap<i32, mpsc::UnboundedSend
         if uri.path() == "/postthecode" && new_code_sender.is_some() {
             let mut new_code_sender = new_code_sender.unwrap().clone();
             let new_code_intent = new_code_intent.unwrap();
-            let query = uri.query().map(|s| s.to_owned());
             Box::new(backward(async move {
                 let body = await!(deserialize::<TheWorld>(request));
                 if let Err(e) = body {

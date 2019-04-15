@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 use std::fs::File;
-use std::rc::Rc;
 
 use super::builtins;
 use super::lang;
