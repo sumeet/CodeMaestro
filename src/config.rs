@@ -36,6 +36,13 @@ pub fn server_listen_url() -> Result<url::Url, Box<std::error::Error>> {
     Ok(url::Url::parse(get_or_err("SERVER_LISTEN_URL")?)?)
 }
 
+pub fn edit_code_url(querystring: &str) -> Result<url::Url, Box<std::error::Error>> {
+    // XXX this /postthecode is duped in irctest.rs
+    let mut url = server_listen_url()?;
+    url.set_query(Some(querystring));
+    Ok(url)
+}
+
 pub fn post_code_url(querystring: &str) -> Result<url::Url, Box<std::error::Error>> {
     // XXX this /postthecode is duped in irctest.rs
     let mut url = server_listen_url()?.join("/postthecode")?;

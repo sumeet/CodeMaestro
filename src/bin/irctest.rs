@@ -136,7 +136,7 @@ impl GenerateProgramBotUrl {
 
     fn generate_url(&self) -> Result<url::Url, Box<std::error::Error>> {
         let token = NewCodeIntent::token(self.instance_id)?;
-        Ok(config::post_code_url(&token)?)
+        Ok(config::edit_code_url(&token)?)
     }
 }
 
