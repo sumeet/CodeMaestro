@@ -502,9 +502,8 @@ impl CommandBuffer {
 }
 
 async fn postthecode(theworld: &TheWorld) -> Result<http::Response<String>, Box<std::error::Error>> {
-    let server_listen_url = config::get("SERVER_LISTEN_URL").ok_or("SERVER_LISTEN_URL not found")?;
-    let server_listen_url = url::Url::parse(server_listen_url)?;
-    let post_url = server_listen_url.join("/postthecode")?;
+    let postcodetoken = config::get_or_err("SERVER_POST_TOKEN")?;
+    let post_url = config::post_code_url(postcodetoken)?;
     Ok(await!(http_client::post_json(post_url.as_str(), theworld))?)
 }
 

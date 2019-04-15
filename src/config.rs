@@ -1,5 +1,6 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
+use url;
 
 #[cfg(feature = "javascript")]
 lazy_static! {
@@ -25,4 +26,19 @@ lazy_static! {
 
 pub fn get(key: &str) -> Option<&str> {
     ENV.get(key).map(|v| v.as_str())
+}
+
+pub fn get_or_err(key: &str) -> Result<&str, Box<std::error::Error>> {
+    Ok(get(key).ok_or(format!("{} not set", key))?)
+}
+
+pub fn server_listen_url() -> Result<url::Url, Box<std::error::Error>> {
+    Ok(url::Url::parse(get_or_err("SERVER_LISTEN_URL")?)?)
+}
+
+pub fn post_code_url(querystring: &str) -> Result<url::Url, Box<std::error::Error>> {
+    // XXX this /postthecode is duped in irctest.rs
+    let mut url = server_listen_url()?.join("/postthecode")?;
+    url.set_query(Some(querystring));
+    Ok(url)
 }

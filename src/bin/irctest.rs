@@ -70,7 +70,7 @@ fn main() {
 
 fn start_new_interpreter_instance_with_services(instance_id: i32, service_configs: &[ServiceConfig], new_code_receiver: mpsc::UnboundedReceiver<TheWorld>) {
     let mut runtime = Runtime::new().unwrap();
-    let chat_thingy = Rc::new(RefCell::new(ChatThingy::new()));
+    let chat_thingy = Rc::new(RefCell::new(ChatThingy::new(instance_id)));
 
     runtime.block_on(
         backward(load_code_from_the_db_into(Rc::clone(&chat_thingy),
@@ -111,17 +111,56 @@ async fn new_conn(service_config: &ServiceConfig, chat_thingy: Rc<RefCell<ChatTh
     }
 }
 
+#[derive(Serializeable, Deserializeable, Clone)]
+struct GenerateProgramBotUrl {
+    instance_id: i32,
+}
+
+impl GenerateProgramBotUrl {
+    fn new(instance_id: i32) -> Self {
+        Self { instance_id }
+    }
+}
+
+use cs::lang;
+#[typetag::serde]
+impl lang::Function for GenerateProgramBotUrl {
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("308a6d7a-1cc3-49e6-b964-7c0c884a352b").unwrap()
+    }
+
+    fn name(&self) -> &str {
+        "Generate Program Bot URL"
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::STRING_TYPESPEC)
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![]
+    }
+
+    fn call(&self, _interpreter: env::Interpreter, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+        let token = NewCodeIntent::token(self.instance_id).unwrap();
+        lang::Value::String(config::post_code_url(&token).unwrap().into_string())
+    }
+}
+
 struct ChatThingy {
     interp: env::Interpreter,
     reply_buffer: Arc<Mutex<Vec<String>>>,
 }
 
 impl ChatThingy {
-    pub fn new() -> Self {
+    pub fn new(instance_id: i32) -> Self {
         let reply_buffer = Arc::new(Mutex::new(vec![]));
         let interp = cs::init_interpreter();
+
         let reply_function = ChatReply::new(Arc::clone(&reply_buffer));
         interp.env.borrow_mut().add_function(reply_function);
+        interp.env.borrow_mut().add_function(GenerateProgramBotUrl::new(instance_id));
+
         Self { interp, reply_buffer }
     }
 
@@ -160,7 +199,6 @@ impl ChatThingy {
         }
     }
 }
-
 
 async fn new_irc_conn(mut config: Config, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     config.version = Some("cs: program me!".to_string());
@@ -517,10 +555,7 @@ fn http_handler(new_code_sender_by_instance_id: HashMap<i32, mpsc::UnboundedSend
 
     move |request| {
         let uri = request.uri();
-        //let new_code_intent = extract_intent(uri);
-        let new_code_intent = Some(NewCodeIntent {
-            instance_id: 1,
-        });
+        let new_code_intent = extract_intent(uri);
         let new_code_sender = new_code_intent.as_ref()
             .and_then(|intent| new_code_sender_by_instance_id.get(&intent.instance_id));
         if uri.path() == "/postthecode" && new_code_sender.is_some() {
@@ -565,6 +600,12 @@ fn validation_error(str: &'static str) -> Response<Body> {
 #[derive(Serializeable, Deserializeable)]
 struct NewCodeIntent {
     instance_id: i32,
+}
+
+impl NewCodeIntent {
+    fn token(instance_id: i32) -> Result<String, Box<std::error::Error>> {
+        Ok(Self { instance_id }.encode()?)
+    }
 }
 
 lazy_static! {
