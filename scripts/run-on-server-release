@@ -5,7 +5,9 @@ set -e
 ./scripts/gen-env.py > ./static/env.js
 
 # set up cargo-web
-cargo install cargo-web || echo "cargo-web already installed"
+#cargo install cargo-web || echo "cargo-web already installed"
+cargo uninstall cargo-web
+cargo install https://github.com/sumeet/cargo-web
 cargo web build --no-default-features --features=javascript --release --target=wasm32-unknown-unknown --bin cs
 
 # this var is set by buildpack-run.sh
