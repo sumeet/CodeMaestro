@@ -28,6 +28,7 @@ pub trait UiToolkit {
                                                     bg: Color,
                                                     draw_fn: &Fn() -> Self::DrawResult,
                                                     height_percentage: f32,
+                                                    draw_context_menu: Option<&Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult;
     fn draw_x_scrollable_list<'a>(&'a self,

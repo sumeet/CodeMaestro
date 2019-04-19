@@ -469,6 +469,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                     _bg: Color,
                                                     draw_fn: &Fn(),
                                                     height_percentage: f32,
+                                                    draw_context_menu: Option<&Fn()>,
                                                     handle_keypress: Option<F>) {
         let height = height_percentage * unsafe { imgui_sys::igGetWindowHeight() };
 
@@ -500,7 +501,22 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                            }
 
                            TkCache::set_is_focused(child_frame_id.as_ref(),
-                                                   self.ui.is_child_window_focused())
+                                                   self.ui.is_child_window_focused());
+
+                           if let Some(draw_context_menu) = draw_context_menu {
+                               let label = self.imlabel("draw_context_menu");
+                               if unsafe {
+                                   let mouse_button = 1;
+                                   imgui_sys::igBeginPopupContextWindow(label.as_ptr(),
+                                                                        mouse_button,
+                                                                        false)
+                               } {
+                                   draw_context_menu();
+                                   unsafe {
+                                       imgui_sys::igEndPopup();
+                                   }
+                               }
+                           }
                        });
                });
     }

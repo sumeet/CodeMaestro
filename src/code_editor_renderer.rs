@@ -56,10 +56,19 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     pub fn render(&self, height_percentage: f32) -> T::DrawResult {
         let code = self.code_editor.get_code();
+        let cmd_buffer1 = Rc::clone(&self.command_buffer);
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_child_region(TEXT_ENTRY_BG_COLOR,
                                           &|| self.render_code(code),
                                           height_percentage,
+                                          Some(&move || {
+                                              let cmd_buffer1 = Rc::clone(&cmd_buffer1);
+                                              self.ui_toolkit.draw_menu_item("Insert code", move || {
+                                                  cmd_buffer1.borrow_mut().add_editor_command(move |code_editor| {
+                                                      code_editor.set_insertion_point_on_next_line_in_block();
+                                                  })
+                                              })
+                                          }),
                                           Some(move |keypress| {
                                               cmd_buffer.borrow_mut()
                                                         .add_editor_command(move |code_editor| {

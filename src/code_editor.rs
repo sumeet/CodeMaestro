@@ -266,7 +266,7 @@ impl CodeEditor {
         }
     }
 
-    fn set_insertion_point_on_next_line_in_block(&mut self) {
+    pub fn set_insertion_point_on_next_line_in_block(&mut self) {
         if self.no_node_selected() {
             let block_id = self.get_code().id();
             self.mark_as_editing(InsertionPoint::BeginningOfBlock(block_id));
