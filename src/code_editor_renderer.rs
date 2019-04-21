@@ -23,6 +23,8 @@ pub const YELLOW_COLOR: Color = [253.0 / 255.0, 159.0 / 255.0, 19.0 / 255.0, 1.0
 pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
 pub const BLUE_COLOR: Color = [100.0 / 255.0, 149.0 / 255.0, 237.0 / 255.0, 1.0];
+pub const GREEN_COLOR: Color = [80. / 255., 161. / 255., 78. / 255., 1.];
+pub const SEPARATOR_COLOR: Color = [144. / 255., 144. / 255., 144. / 255., 1.];
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const PURPLE_COLOR: Color = [0.486, 0.353, 0.952, 1.0];
@@ -533,16 +535,66 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             .map(|match_variant| match_variant.enum_variant.name)
     }
 
+    // TODO: combine the insertion point stuff with the insertion point stuff elsewhere, mainly
+    // the is_insertion_point_before_or_after stuff
     fn render_block(&self, block: &lang::Block) -> T::DrawResult {
         // TODO: i think i could move the is_insertion_point_before_or_after crapola to here
+        let should_display_hover_insertion_points = self.insertion_point().is_none();
+
         let mut to_draw = match self.code_editor.insertion_point() {
             Some(InsertionPoint::BeginningOfBlock(block_id)) if block.id == block_id => {
                 vec![self.render_insert_code_node()]
             }
             _ => vec![],
         };
-        to_draw.extend(block.expressions.iter().map(|code| self.render_code(code)));
+        if block.expressions.is_empty() {
+            return if should_display_hover_insertion_points {
+                // THE NULL STATE
+                self.render_add_code_here_button(InsertionPoint::BeginningOfBlock(block.id))
+            } else {
+                self.ui_toolkit.draw_all(to_draw)
+            };
+        }
+
+        let first_code_id = block.expressions.first().unwrap().id();
+        if should_display_hover_insertion_points {
+            to_draw.push(self.render_add_code_here_line(InsertionPoint::Before(first_code_id)));
+        }
+        to_draw.extend(block.expressions.iter().map(|code| {
+                   if should_display_hover_insertion_points {
+                       self.ui_toolkit.draw_all(vec![
+                    self.render_code(code),
+                    self.render_add_code_here_line(InsertionPoint::After(code.id())),
+                ])
+                   } else {
+                       self.render_code(code)
+                   }
+               }));
         self.ui_toolkit.draw_all(to_draw)
+    }
+
+    fn render_add_code_here_line(&self, insertion_point: InsertionPoint) -> T::DrawResult {
+        self.ui_toolkit.replace_on_hover(&|| {
+                                             self.ui_toolkit
+                                                 .draw_code_line_separator(100.,
+                                                                           2.,
+                                                                           SEPARATOR_COLOR)
+                                         },
+                                         &|| self.render_add_code_here_button(insertion_point))
+    }
+
+    // this is for the button itself. for the line with hover, see ^
+    fn render_add_code_here_button(&self, insertion_point: InsertionPoint) -> T::DrawResult {
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        self.ui_toolkit.buttonize(&|| {
+                                      self.ui_toolkit
+                                          .draw_buttony_text("\u{f0fe} Add code here", GREEN_COLOR)
+                                  },
+                                  move || {
+                                      cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                          editor.mark_as_editing(insertion_point);
+                                      })
+                                  })
     }
 
     fn render_function_call(&self, function_call: &lang::FunctionCall) -> T::DrawResult {

@@ -6,6 +6,11 @@ pub trait UiToolkit {
     type DrawResult;
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static);
+    fn draw_code_line_separator(&self, width: f32, height: f32, color: Color) -> Self::DrawResult;
+    fn replace_on_hover(&self,
+                        draw_when_not_hovered: &Fn() -> Self::DrawResult,
+                        draw_when_hovered: &Fn() -> Self::DrawResult)
+                        -> Self::DrawResult;
     fn draw_spinner(&self) -> Self::DrawResult;
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
     // if there's no `onclose` specified, then the window isn't closable and won't show a close button

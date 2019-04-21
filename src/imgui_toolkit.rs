@@ -33,11 +33,13 @@ struct Window {
 struct TkCache {
     focused_child_regions: HashMap<String, bool>,
     windows: HashMap<String, Window>,
+    replace_on_hover: HashMap<String, bool>,
 }
 
 impl TkCache {
     fn new() -> Self {
         Self { focused_child_regions: HashMap::new(),
+               replace_on_hover: HashMap::new(),
                windows: HashMap::new() }
     }
 
@@ -54,6 +56,21 @@ impl TkCache {
                 .unwrap()
                 .focused_child_regions
                 .insert(child_window_id.to_string(), is_focused);
+    }
+
+    pub fn is_hovered(label: &str) -> bool {
+        *TK_CACHE.lock()
+                 .unwrap()
+                 .replace_on_hover
+                 .get(label)
+                 .unwrap_or(&false)
+    }
+
+    pub fn set_is_hovered(label: String, is_hovered: bool) {
+        TK_CACHE.lock()
+                .unwrap()
+                .replace_on_hover
+                .insert(label, is_hovered);
     }
 }
 
@@ -538,8 +555,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                      let first_element_screen_x = Rc::clone(&first_element_screen_x);
                      let x: Box<Fn()> = Box::new(move || {
                          if i == 0 {
-                             println!("setting first element screen x: {}",
-                                      self.ui.get_cursor_screen_pos().0);
                              first_element_screen_x.replace(self.ui.get_cursor_pos().0);
                          }
                          let (focused_element_x, _) = self.ui.get_cursor_screen_pos();
@@ -595,6 +610,41 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_empty_line(&self) {
         self.ui.new_line();
+    }
+
+    // HAX: this is awfully specific to have in a UI toolkit library... whatever
+    fn draw_code_line_separator(&self, width: f32, height: f32, color: [f32; 4]) {
+        self.ui
+            .invisible_button(&self.imlabel("code_line_separator"), (width, height));
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+
+        let center_of_circle = (min.x, (min.y + max.y) / 2.);
+        let radius = (max.y - min.y) / 2.;
+
+        let mut line = (center_of_circle, (max.x, center_of_circle.1));
+        // idk why exactly, but these -0.5s get the line to match up nicely with the circle
+        (line.0).1 -= 0.5;
+        (line.1).1 -= 0.5;
+
+        let draw_list = self.ui.get_window_draw_list();
+        draw_list.add_circle(center_of_circle, radius, color)
+                 .filled(true)
+                 .build();
+        draw_list.add_line(line.0, line.1, color).build();
+    }
+
+    fn replace_on_hover(&self, draw_when_not_hovered: &Fn(), draw_when_hovered: &Fn()) {
+        let replace_on_hover_label = self.imlabel("replace_on_hover_label");
+        self.ui.group(&|| {
+                   if TkCache::is_hovered(replace_on_hover_label.as_ref()) {
+                       draw_when_hovered()
+                   } else {
+                       draw_when_not_hovered()
+                   }
+               });
+        let label: &str = replace_on_hover_label.as_ref();
+        TkCache::set_is_hovered(label.to_owned(), self.ui.is_item_hovered())
     }
 
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn()) {
