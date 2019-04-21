@@ -241,7 +241,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
 
         if self.mouse_released_in_last_drawn_element() {
-            println!("i know that the mouse was on da button");
             onclick()
         }
 
