@@ -306,11 +306,36 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    // TODO: implement these
+    fn draw_code_line_separator(&self, width: f32, height: f32, color: Color) -> Self::DrawResult {
+        let line_offset = height / 2.;
+        let circle_diameter = height * 2.;
+        html! {
+            <div style={ format!("margin-top: 3px; margin-bottom: 3px; display: flex; width: {}px; height: {}px;", width, height)}, >
+                <div style={ format!("background-color: {}; height: {}px; width: {}px; clip-path: circle();", self.rgba(color), circle_diameter, circle_diameter) },>
+                    {" "}
+                </div>
+
+                <div style={ format!("margin-top: {}px; background-color: {}; height: 1px; width: {}px;", line_offset, self.rgba(color), width) }, >
+                    {" "}
+                </div>
+            </div>
+        }
+    }
+
+    fn replace_on_hover(&self,
+                        draw_when_not_hovered: &Fn() -> Self::DrawResult,
+                        draw_when_hovered: &Fn() -> Self::DrawResult)
+                        -> Self::DrawResult {
+        draw_when_not_hovered()
+    }
+
     // TODO: clean up bc code is duped between here and draw_window
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
                                                     draw_fn: &Fn() -> Self::DrawResult,
                                                     height_percentage: f32,
+                                                    draw_context_menu: Option<&Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult {
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
@@ -398,7 +423,12 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_buttony_text(&self, label: &str, color: [f32; 4]) -> Self::DrawResult {
-        self.draw_button(label, color, &|| {})
+        html! {
+            <button id={ self.incr_last_drawn_element_id().to_string() },
+                style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", self.rgba(color)), >
+                { symbolize_text(label) }
+            </button>
+        }
     }
 
     fn draw_button<F: Fn() + 'static>(&self,
@@ -406,13 +436,8 @@ impl UiToolkit for YewToolkit {
                                       color: [f32; 4],
                                       on_button_press_callback: F)
                                       -> Self::DrawResult {
-        html! {
-            <button id={ self.incr_last_drawn_element_id().to_string() },
-                 style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", self.rgba(color)),
-                 onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
-            { symbolize_text(label) }
-            </button>
-        }
+        self.buttonize(&|| self.draw_buttony_text(label, color),
+                       on_button_press_callback)
     }
 
     fn draw_small_button<F: Fn() + 'static>(&self,
