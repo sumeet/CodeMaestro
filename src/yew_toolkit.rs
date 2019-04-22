@@ -327,7 +327,22 @@ impl UiToolkit for YewToolkit {
                         draw_when_not_hovered: &Fn() -> Self::DrawResult,
                         draw_when_hovered: &Fn() -> Self::DrawResult)
                         -> Self::DrawResult {
-        draw_when_not_hovered()
+        let not_hovered_id = self.incr_last_drawn_element_id();
+        let hovered_id = self.incr_last_drawn_element_id();
+        // HAXXXX: ok this is insane, but the dom diffing engine in yew will mutate the hidden div
+        // tags, and not reshow them when new stuff comes on the screen, and so we've gotta use replaceonhoverhack
+        // tags instead. gonna define replaceonhoverhack to be display: block in the css file
+        html! {
+            <replaceonhoverhack onmouseover=|_| { hide(not_hovered_id) ; show(hovered_id); Msg::DontRedraw },
+                onmouseout=|_| { hide(hovered_id) ; show(not_hovered_id); Msg::DontRedraw }, >
+                <replaceonhoverhack id={not_hovered_id.to_string()}, >
+                    { draw_when_not_hovered() }
+                </replaceonhoverhack>
+                <replaceonhoverhack id={hovered_id.to_string()}, style="display: none;", >
+                    { draw_when_hovered() }
+                </replaceonhoverhack>
+            </replaceonhoverhack>
+        }
     }
 
     // TODO: clean up bc code is duped between here and draw_window
@@ -960,7 +975,7 @@ fn was_shift_key_pressed(key: &str) -> bool {
 pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     yew::initialize();
 
-    let hoohaw: Rc<RefCell<Vec<Box<Fn()>>>> = Rc::new(RefCell::new(vec![]));
+    let funcs_to_run_after_render: Rc<RefCell<Vec<Box<Fn()>>>> = Rc::new(RefCell::new(vec![]));
 
     // dirty hacks to focus something
     js! {
@@ -998,7 +1013,8 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     }
 
     let yew_app = App::<Model>::new().mount_to_body();
-    let renderer_state = Rc::new(RefCell::new(RendererState::new(yew_app, hoohaw)));
+    let renderer_state =
+        Rc::new(RefCell::new(RendererState::new(yew_app, funcs_to_run_after_render)));
 
     let run_after_render = {
         let renderer_state = Rc::clone(&renderer_state);
@@ -1060,5 +1076,23 @@ fn is_in_symbol_range(c: char) -> bool {
     match c as u32 {
         0xf000...0xf72f => true,
         _ => false,
+    }
+}
+
+fn show(id: u32) {
+    js! {
+        var el = document.getElementById(@{id});
+        if (el) {
+            el.style.display = "block";
+        }
+    }
+}
+
+fn hide(id: u32) {
+    js! {
+        var el = document.getElementById(@{id});
+        if (el) {
+            el.style.display = "none";
+        }
     }
 }

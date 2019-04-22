@@ -110,3 +110,8 @@
 @-webkit-keyframes spin {
   to { -webkit-transform: rotate(360deg); }
 }
+
+/* see yew_toolkit.rs */
+replaceonhoverhack {
+    display: block;
+}
