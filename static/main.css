@@ -113,7 +113,7 @@
 
 /* see yew_toolkit.rs */
 replaceonhoverhack {
-    display: block;
+    display: inline-block;
 }
 
 

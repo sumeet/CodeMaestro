@@ -576,9 +576,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_add_code_here_line(&self, insertion_point: InsertionPoint) -> T::DrawResult {
         self.ui_toolkit.replace_on_hover(&|| {
                                              self.ui_toolkit
-                                                 .draw_code_line_separator(100.,
-                                                                           2.,
-                                                                           SEPARATOR_COLOR)
+                                                 // HAX: 70 is the size of the Insert Code button lol
+                                                 .draw_code_line_separator(70., 2., SEPARATOR_COLOR)
                                          },
                                          &|| self.render_add_code_here_button(insertion_point))
     }
