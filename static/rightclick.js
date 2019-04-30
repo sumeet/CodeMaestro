@@ -6,8 +6,6 @@ function showRightClickMenu(elId, event) {
         el.style.left = `${event.pageX}px`;
         el.style.top = `${event.pageY}px`;
         el.style.display = "";
-        console.log(el.style.left);
-        console.log(el.style.right);
     }
 }
 
@@ -16,5 +14,5 @@ document.addEventListener("click", function() {
     for (let el of els) {
         el.style.display = "none";
     }
-});
+}, true);
 
