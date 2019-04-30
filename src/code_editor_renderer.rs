@@ -588,7 +588,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.buttonize(&|| {
                                       self.ui_toolkit
-                                          .draw_buttony_text("\u{f0fe} Add code here", GREEN_COLOR)
+                                          .draw_buttony_text("\u{f0fe} Add code", GREEN_COLOR)
                                   },
                                   move || {
                                       cmd_buffer.borrow_mut().add_editor_command(move |editor| {

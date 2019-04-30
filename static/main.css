@@ -115,3 +115,9 @@
 replaceonhoverhack {
     display: block;
 }
+
+
+/* this is for right click menus */
+.context_menu {
+    position: absolute;
+}
