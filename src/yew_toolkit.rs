@@ -731,13 +731,15 @@ impl UiToolkit for YewToolkit {
                        color: [f32; 4],
                        draw_fn: &Fn() -> Self::DrawResult)
                        -> Self::DrawResult {
+        // pointer-events stuff is to allow children to respond to click handlers
+        // see https://stackoverflow.com/questions/3680429/click-through-div-to-underlying-elements
         html! {
-            <div class={"overlay-wrapper"}, >
-                <div>
+            <div style="pointer-events: none;", class={"overlay-wrapper"}, >
+                <div style="pointer-events: auto;", >
                      { draw_fn() }
                  </div>
                  <div class={"overlay"},
-                      style={ format!("top: 0, left: 0; height: 100%; background-color: {}", self.rgba(color)) }, >
+                      style={ format!("pointer-events: none; top: 0; left: 0; height: 100%; background-color: {}", self.rgba(color)) }, >
                       {" "}
                  </div>
              </div>
