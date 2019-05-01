@@ -17,41 +17,29 @@ document.addEventListener("DOMContentLoaded", function(event) {
    })
      // taken from the interactjs.io website
      .on('resizemove', function (event) {
-       var target = event.target,
-         x = (parseFloat(target.getAttribute('data-x')) || 0),
-         y = (parseFloat(target.getAttribute('data-y')) || 0);
+       var target = event.target;
 
-       // update the element's style
+       // update the element's width
        target.style.width  = event.rect.width + 'px';
        target.style.height = event.rect.height + 'px';
 
        // translate when resizing from top or left edges
-       x += event.deltaRect.left;
-       y += event.deltaRect.top;
+       var x = parseFloat(target.style.left);
+       var y = parseFloat(target.style.top);
 
-       // moving da element from where it was
-       target.style.webkitTransform = target.style.transform =
-           'translate(' + x + 'px,' + y + 'px)';
-
-       target.setAttribute('data-x', x);
-       target.setAttribute('data-y', y);
+       target.style.left = `${x + event.deltaRect.left}px`;
+       target.style.top = `${y + event.deltaRect.top}px`;
      });
 });
 
 
 // taken from the interactjs.io website
 function dragMoveListener(event) {
-  var target = event.target,
-    // keep the dragged position in the data-x/data-y attributes
-    x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
-    y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+  var target = event.target;
 
-  // translate the element
-  target.style.webkitTransform =
-  target.style.transform =
-    'translate(' + x + 'px, ' + y + 'px)';
+  var x = parseFloat(target.style.left);
+  var y = parseFloat(target.style.top);
 
-  // update the posiion attributes
-  target.setAttribute('data-x', x);
-  target.setAttribute('data-y', y);
+  target.style.left = `${x + event.dx}px`;
+  target.style.top = `${y + event.dy}px`;
 }

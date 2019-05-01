@@ -241,7 +241,7 @@ impl UiToolkit for YewToolkit {
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self,
                                                                     window_name: &str,
                                                                     _size: (usize, usize),
-                                                                    _pos: (isize, isize),
+                                                                    pos: (isize, isize),
                                                                     f: &Fn() -> Self::DrawResult,
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
@@ -259,7 +259,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-           <div class="window", style={ format!("color: white; background-color: {}", self.rgba(WINDOW_BG_COLOR)) },
+           <div class="window", style={ format!("top: {}px; left: {}px; color: white; background-color: {}", pos.0, pos.1, self.rgba(WINDOW_BG_COLOR)) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {
@@ -739,7 +739,7 @@ impl UiToolkit for YewToolkit {
                      { draw_fn() }
                  </div>
                  <div class={"overlay"},
-                      style={ format!("pointer-events: none; top: 0; left: 0; height: 100%; background-color: {}", self.rgba(color)) }, >
+                      style={ format!("pointer-events: none; top: 0px; left: 0px; height: 100%; background-color: {}", self.rgba(color)) }, >
                       {" "}
                  </div>
              </div>
