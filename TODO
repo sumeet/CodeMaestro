@@ -1,3 +1,13 @@
+- button by itself looks weird
+
+- better looking autocomplete menu, is able to show wrap operation correctly
+
+- clicking node selects it
+
+- argument access looks like a single button instead of two buttons
+
+- hovering changes color of buttons in html
+
 - implement function call rendering in code, there's enough groundwork to
 implement it now
 
