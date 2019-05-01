@@ -21,7 +21,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
        // update the element's width
        target.style.width  = event.rect.width + 'px';
-       target.style.height = event.rect.height + 'px';
+       // ULTRA HAXXX: sometimes we get events telling us to resize height
+       // to something really small right after a user-triggered resize, and
+       // we should just ignore those
+       if (event.rect.height > 100) {
+           target.style.height = event.rect.height + 'px';
+       }
 
        // translate when resizing from top or left edges
        var x = parseFloat(target.style.left);
