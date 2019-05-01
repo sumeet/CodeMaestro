@@ -1,10 +1,10 @@
 clickHandlers = []
 
-function showRightClickMenu(elId, event) {
+function showRightClickMenu(elId, rightClickEvent) {
     var el = document.getElementById(elId);
     if (el) {
-        el.style.left = `${event.pageX}px`;
-        el.style.top = `${event.pageY}px`;
+        el.style.left = `${rightClickEvent.pageX}px`;
+        el.style.top = `${rightClickEvent.pageY}px`;
         el.style.display = "";
     }
 }

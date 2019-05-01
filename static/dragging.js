@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
        x += event.deltaRect.left;
        y += event.deltaRect.top;
 
+       // moving da element from where it was
        target.style.webkitTransform = target.style.transform =
            'translate(' + x + 'px,' + y + 'px)';
 
