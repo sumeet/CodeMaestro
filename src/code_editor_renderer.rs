@@ -493,22 +493,30 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         let darker_color = self.darken(color);
         self.draw_nested_borders_around(&|| {
-                self.ui_toolkit
-                    .draw_top_border_inside(darker_color, 2, &|| {
-                        self.ui_toolkit
-                            .draw_right_border_inside(darker_color, 1, &|| {
-                                self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
-                            self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
-                                self.ui_toolkit.buttonize(&|| {
-                                    self.ui_toolkit.draw_all_on_same_line(&[
+                // UHHHH: even though i went throuhg a lot of effort to get the borders working, i
+                // think it looks better without them honestly. and also there's this bug when this
+                // is on a line by itself on web, it takes up the whole line for some reason. so
+                // let's live without the borders, either for now, or permanently.
+
+                //                self.ui_toolkit
+                //                    .draw_top_border_inside(darker_color, 2, &|| {
+                //                        self.ui_toolkit
+                //                            .draw_right_border_inside(darker_color, 1, &|| {
+                //                                self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
+                //                            self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
+                self.ui_toolkit.buttonize(
+                                          &|| {
+                                              self.ui_toolkit.draw_all_on_same_line(&[
                                         &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),
                                         &|| self.ui_toolkit.draw_buttony_text(name, color),
                                     ])
-                                }, || {})
-                            })
-                        })
-                            })
-                    })
+                                          },
+                                          || {},
+            )
+                //                            })
+                //                        })
+                //                            })
+                //                    })
             })
     }
 

@@ -1,7 +1,5 @@
 - split the project into separate crates so it can compile faster
 
-- button by itself looks weird
-
 - better looking autocomplete menu, is able to show wrap operation correctly
 
 - clicking node selects it
