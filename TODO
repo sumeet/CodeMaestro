@@ -1,4 +1,4 @@
-- panic inducing menu items that we don't need to show in wasm - Save and Exit
+- WASM: code subview doesn't take up all the remaining space. this is hard to do in html :((((
 
 - split the project into separate crates so it can compile faster
 
