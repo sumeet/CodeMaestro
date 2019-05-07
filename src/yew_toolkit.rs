@@ -576,7 +576,8 @@ impl UiToolkit for YewToolkit {
                     {label}
                 </div>
 
-                <ul class="main-menu-dropdown", style="padding: 0em 1em; z-index: 99; margin: 0; background: black; width: fit-content;", >
+                <ul class="main-menu-dropdown",
+                    style="padding: 0.25em 1em; z-index: 99; margin: 0; margin-top: 0.25em; background: black; width: fit-content; opacity: 0.85;", >
                     {{ draw_menu_items() }}
                 </ul>
             </div>
