@@ -1,5 +1,4 @@
 use super::async_executor::AsyncExecutor;
-use super::editor;
 use super::editor::{Key as AppKey, Keypress};
 use super::{App as CSApp, UiToolkit};
 use crate::ui_toolkit::{Color, SelectableItem};
@@ -538,11 +537,31 @@ impl UiToolkit for YewToolkit {
         html
     }
 
+    // we're using droppy (https://github.com/OutlawPlz/droppy/) to help us render the dropdown.
+    // TODO: the menu doesn't render correctly, and also doesn't go away when we select one of the
+    // menu items
     fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+        self.renderer_state.borrow().add_run_after_render(move || {
+                                        js! {
+                                            var el = document.querySelector(".dropdown-menu");
+                                            var existingDroppyInstance = Droppy.prototype.getInstance(el);
+                                            if (!existingDroppyInstance) {
+                                                var droppy = new Droppy(el, {
+                                                    parentSelector: "nav > div",
+                                                    dropdownSelector: ".main-menu-dropdown",
+                                                    triggerSelector: ".main-menu-label",
+                                                    closeOthers: true,
+                                                    clickOutToClose: true
+                                                });
+                                            }
+                                        }
+                                    });
+
         html! {
-            <div>
+            <nav class="dropdown-menu",
+                style="position: fixed; top: 0; left: 0; width: 100%; height: 1.25em; padding: 0.25em; background-color: #656583; color: white; user-select: none;",>
                 {{ draw_menus() }}
-            </div>
+            </nav>
         }
     }
 
@@ -552,19 +571,24 @@ impl UiToolkit for YewToolkit {
                  -> Self::DrawResult {
         // TODO: implement this for realsies
         html! {
-            <div style="display: flex;", >
-                <p>{label}</p>
-                {{ draw_menu_items() }}
+            <div>
+                <div class="main-menu-label", style="padding: 1em; display: inline; cursor: default; margin: auto;", >
+                    {label}
+                </div>
+
+                <ul class="main-menu-dropdown", style="padding: 0em 1em; z-index: 99; margin: 0; background: black; width: fit-content;", >
+                    {{ draw_menu_items() }}
+                </ul>
             </div>
         }
     }
 
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult {
-        // TODO: do this for realsies
+        use crate::code_editor_renderer::BLACK_COLOR;
         html! {
-            <div style="float: left;",>
-                {{ self.draw_button(label, editor::GREY_COLOR, onselect) }}
-            </div>
+            <li style="list-style-type: none; margin: 0; padding: 0;",>
+                {{ self.draw_button(label, BLACK_COLOR, onselect) }}
+            </li>
         }
     }
 
