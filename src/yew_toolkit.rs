@@ -261,7 +261,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-           <div class="window", style={ format!("top: {}px; left: {}px; color: white; background-color: {}", pos.0, pos.1, self.rgba(WINDOW_BG_COLOR)) },
+           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}", pos.0, pos.1, self.rgba(WINDOW_BG_COLOR)) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {
