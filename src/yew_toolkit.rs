@@ -1,10 +1,13 @@
 use super::async_executor::AsyncExecutor;
 use super::editor::{Key as AppKey, Keypress};
 use super::{App as CSApp, UiToolkit};
+use crate::code_editor_renderer::BLACK_COLOR;
 use crate::ui_toolkit::{Color, SelectableItem};
-use itertools::Itertools;
+
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use itertools::Itertools;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::web::{document, IElement, IEventTarget};
@@ -585,10 +588,18 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult {
-        use crate::code_editor_renderer::BLACK_COLOR;
         html! {
             <li style="list-style-type: none; margin: 0; padding: 0;",>
-                {{ self.draw_button(label, BLACK_COLOR, onselect) }}
+                {{ self.draw_button(label, BLACK_COLOR, move || {
+                    // close open nav bar when a menu item is selected. the lib is supposed to do this
+                    // for us, but yew's onclick handler prevents propagation :(
+                    js! {
+                        var el = document.querySelector(".dropdown-menu");
+                        var existingDroppyInstance = Droppy.prototype.getInstance(el);
+                        existingDroppyInstance.closeAll();
+                    }
+                    onselect();
+                }) }}
             </li>
         }
     }

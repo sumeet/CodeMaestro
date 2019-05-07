@@ -1,5 +1,3 @@
-- menu doesn't always disappear in wasm
-
 - panic inducing menu items that we don't need to show in wasm - Save and Exit
 
 - split the project into separate crates so it can compile faster
