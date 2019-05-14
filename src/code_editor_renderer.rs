@@ -504,15 +504,22 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 //                            .draw_right_border_inside(darker_color, 1, &|| {
                 //                                self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
                 //                            self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
-                self.ui_toolkit.buttonize(
-                                          &|| {
-                                              self.ui_toolkit.draw_all_on_same_line(&[
-                                        &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),
-                                        &|| self.ui_toolkit.draw_buttony_text(name, color),
-                                    ])
-                                          },
-                                          || {},
-            )
+                //
+                // AAAAAAAAAND this doesn't need buttonize
+                //                self.ui_toolkit.buttonize(
+                //                                          &|| {
+                self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                            self.ui_toolkit
+                                                                .draw_buttony_text(&sym,
+                                                                                   darker_color)
+                                                        },
+                                                        &|| {
+                                                            self.ui_toolkit
+                                                                .draw_buttony_text(name, color)
+                                                        }])
+                //                                          },
+                //                                          || {},
+                //            )
                 //                            })
                 //                        })
                 //                            })
@@ -790,18 +797,23 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                .find_struct_field(sfg.struct_field_id)
                                .unwrap();
 
-        self.draw_nested_borders_around(&|| {
-                self.ui_toolkit.draw_all_on_same_line(&[
-                &|| self.render_code(&sfg.struct_expr),
-                &|| {
-                    self.render_nested(&|| {
-                            self.render_name_with_type_definition(&struct_field.name,
-                                                                  BLUE_COLOR,
-                                                                  &struct_field.field_type)
-                        })
-                },
-            ])
-            })
+        self.ui_toolkit.buttonize(
+                                  &|| {
+                                      self.draw_nested_borders_around(&|| {
+                                              self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.render_code(&sfg.struct_expr),
+                    &|| {
+                        self.render_nested(&|| {
+                                self.render_name_with_type_definition(&struct_field.name,
+                                                                      BLUE_COLOR,
+                                                                      &struct_field.field_type)
+                            })
+                    },
+                ])
+                                          })
+                                  },
+                                  &|| {},
+        )
     }
 
     fn render_struct_identifier(&self,
