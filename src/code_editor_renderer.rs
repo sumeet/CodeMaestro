@@ -148,14 +148,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                      .guess_type(assignment.expression.as_ref(), self.env_genie);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                self.render_name_with_type_definition(&assignment.name, PURPLE_COLOR, &type_of_assignment)
-                // TODO: this still needs to be an inline editable button, or at least needs to let
-                // us click to change the variable name somehow
-//                self.render_inline_editable_button(
-//                    &assignment.name,
-//                    PURPLE_COLOR,
-//                    InsertionPoint::Editing(assignment.id)
-//                )
+                self.set_selected_on_click(&|| {
+                    self.render_name_with_type_definition(&assignment.name, PURPLE_COLOR, &type_of_assignment)
+                }, assignment.id)
             },
             &|| self.draw_text("   \u{f52c}   "),
             &|| self.render_code(assignment.expression.as_ref()),
@@ -236,7 +231,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         //       with the black lines (can actually make that generic so we can swap it with something
         //       else
         let type_symbol = self.env_genie.get_symbol_for_type(&t);
-        let lhs = &|| self.draw_button(&type_symbol, BLUE_COLOR, &|| {});
+        let lhs = &|| {
+            self.set_selected_on_click(&|| {
+                                           self.ui_toolkit
+                                               .draw_buttony_text(&type_symbol, BLUE_COLOR)
+                                       },
+                                       list_literal.id)
+        };
 
         let insert_pos = match self.code_editor.insert_code_menu {
             Some(InsertCodeMenu { insertion_point:
@@ -258,9 +259,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 let position_string = position_label.to_string();
                 rhs.push(Box::new(move || {
                        self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| {
-                            self.draw_button(&position_string, BLACK_COLOR, &||{})
-                        },
+                        &|| self.ui_toolkit.draw_buttony_text(&position_string, BLACK_COLOR),
                         &|| self.render_nested(&|| self.render_insert_code_node()),
                     ])
                    }));
@@ -271,7 +270,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                             rhs.push(Box::new(move || {
                                                    self.ui_toolkit.draw_all_on_same_line(&[
                         &|| {
-                            self.draw_button(&position_label.to_string(), BLACK_COLOR, &|| {})
+                            self.ui_toolkit.draw_buttony_text(&position_label.to_string(), BLACK_COLOR)
                         },
                         &|| self.render_nested(&|| self.render_code(el)),
                     ])
@@ -346,17 +345,12 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::VariableReference(variable_reference) => {
                     self.render_variable_reference(&variable_reference)
                 }
-                CodeNode::FunctionDefinition(_function_definition) => {
-                    self.draw_button(&"Function defs are unimplemented", RED_COLOR, || {})
-                }
                 CodeNode::FunctionReference(function_reference) => {
                     self.render_function_reference(&function_reference)
                 }
                 CodeNode::Argument(argument) => self.render_function_call_argument(&argument),
                 CodeNode::Placeholder(placeholder) => self.render_placeholder(&placeholder),
-                CodeNode::NullLiteral => {
-                    self.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol))
-                }
+                CodeNode::NullLiteral(null_literal_id) => self.render_null_literal(null_literal_id),
                 CodeNode::StructLiteral(struct_literal) => {
                     self.render_struct_literal(&struct_literal)
                 }
@@ -392,15 +386,29 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         }
     }
 
+    fn render_null_literal(&self, null_literal_id: &lang::ID) -> T::DrawResult {
+        self.set_selected_on_click(&|| self.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol)),
+                                   *null_literal_id)
+    }
+
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
         let mut r = YELLOW_COLOR;
         // LOL: mess around w/ some transparency
         r[3] = 0.4;
         // TODO: maybe use the traffic cone instead of the exclamation triangle,
         // which is kinda hard to see
-        self.draw_button(&format!("{} {}", PLACEHOLDER_ICON, placeholder.description),
-                         r,
-                         &|| {})
+        self.set_selected_on_click(
+                                   &|| {
+                                       self.ui_toolkit.draw_buttony_text(
+                                                                         &format!(
+                "{} {}",
+                PLACEHOLDER_ICON, placeholder.description
+            ),
+                                                                         r,
+            )
+                                   },
+                                   placeholder.id,
+        )
     }
 
     fn render_function_reference(&self,
@@ -430,16 +438,20 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_variable_reference(&self,
                                  variable_reference: &lang::VariableReference)
                                  -> T::DrawResult {
-        if let Some(name) = self.lookup_variable_name(variable_reference) {
-            let typ = self.code_editor.code_genie.guess_type(self.code_editor
-                                                                 .code_genie
-                                                                 .find_node(variable_reference.id)
-                                                                 .unwrap(),
-                                                             self.env_genie);
-            self.render_name_with_type_definition(&name, PURPLE_COLOR, &typ)
-        } else {
-            self.draw_button("Variable reference not found", RED_COLOR, &|| {})
-        }
+        let draw = &|| {
+            if let Some(name) = self.lookup_variable_name(variable_reference) {
+                let typ =
+                    self.code_editor.code_genie.guess_type(self.code_editor
+                                                               .code_genie
+                                                               .find_node(variable_reference.id)
+                                                               .unwrap(),
+                                                           self.env_genie);
+                self.render_name_with_type_definition(&name, PURPLE_COLOR, &typ)
+            } else {
+                self.draw_button("Variable reference not found", RED_COLOR, &|| {})
+            }
+        };
+        self.set_selected_on_click(draw, variable_reference.id)
     }
 
     fn darken(&self, mut color: Color) -> Color {
@@ -654,15 +666,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         };
 
         self.render_nested(&|| {
-                self.ui_toolkit.draw_all_on_same_line(&[
-                &|| {
-                    self.render_inline_editable_button(&arg_display, BLACK_COLOR,
-                                                       InsertionPoint::Replace(argument.expr.id()))
-                },
-                &|| {
-                    self.render_code(argument.expr.as_ref())
-                },
-            ])
+                self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                            self.ui_toolkit
+                                                                .draw_buttony_text(&arg_display,
+                                                                                   BLACK_COLOR)
+                                                        },
+                                                        &|| {
+                                                            self.render_code(argument.expr.as_ref())
+                                                        }])
             })
     }
 
@@ -733,11 +744,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 if self.is_editing(literal_field.id) {
                     self.render_insert_code_node()
                 } else {
-                    self.render_inline_editable_button(&field_text, BLACK_COLOR,
-                                                       InsertionPoint::StructLiteralField(literal_field.id))
+                    self.set_selected_on_click(&|| {
+                                                   self.ui_toolkit
+                                                       .draw_buttony_text(&field_text, BLACK_COLOR)
+                                               },
+                                               literal_field.id)
                 }
             },
-            &|| self.render_nested(&|| self.render_code(&literal_field.expr))
+            &|| self.render_nested(&|| self.render_code(&literal_field.expr)),
         ])
     }
 
@@ -782,18 +796,27 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                           b
                                                       })
                                                       .collect_vec();
-        self.ui_toolkit
-            .align(&|| self.render_struct_identifier(&strukt, struct_literal),
-                   &rhs.iter().map(|b| b.as_ref()).collect_vec())
+        self.ui_toolkit.align(
+                              &|| {
+                                  self.set_selected_on_click(
+                    &|| self.render_struct_identifier(&strukt, struct_literal),
+                    struct_literal.id)
+                              },
+                              &rhs.iter().map(|b| b.as_ref()).collect_vec(),
+        )
     }
 
     fn render_list_index(&self, list_index: &lang::ListIndex) -> T::DrawResult {
-        self.draw_nested_borders_around(&|| {
-            self.ui_toolkit.draw_all_on_same_line(&[
-                &|| self.render_without_nesting(&|| self.render_code(&list_index.list_expr)),
-                &|| self.render_without_nesting(&|| self.render_nested(&|| self.render_code(&list_index.index_expr))),
-            ])
-        })
+        self.set_selected_on_click(&|| {
+            self.draw_nested_borders_around(&|| {
+                self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.render_without_nesting(&|| self.render_code(&list_index.list_expr)),
+                    &|| self.render_without_nesting(&|| self.render_nested(&|| self.render_code(&list_index.index_expr))),
+                ])
+            })
+        },
+            list_index.id
+        )
     }
 
     fn render_struct_field_get(&self, sfg: &lang::StructFieldGet) -> T::DrawResult {
@@ -801,10 +824,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                .find_struct_field(sfg.struct_field_id)
                                .unwrap();
 
-        self.ui_toolkit.buttonize(
-                                  &|| {
-                                      self.draw_nested_borders_around(&|| {
-                                              self.ui_toolkit.draw_all_on_same_line(&[
+        self.set_selected_on_click(
+                                   &|| {
+                                       self.draw_nested_borders_around(&|| {
+                                               self.ui_toolkit.draw_all_on_same_line(&[
                     &|| self.render_code(&sfg.struct_expr),
                     &|| {
                         self.render_nested(&|| {
@@ -814,9 +837,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                             })
                     },
                 ])
-                                          })
-                                  },
-                                  &|| {},
+                                           })
+                                   },
+                                   sfg.id,
         )
     }
 
@@ -825,7 +848,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                 _struct_literal: &lang::StructLiteral)
                                 -> T::DrawResult {
         // TODO: handle when the typespec ain't available
-        self.draw_button(&strukt.name, BLUE_COLOR, &|| {})
+        self.ui_toolkit.draw_buttony_text(&strukt.name, BLUE_COLOR)
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
@@ -881,32 +904,26 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.indent(PX_PER_INDENTATION_LEVEL, draw_fn)
     }
 
-    fn render_inline_editable_button(&self,
-                                     label: &str,
-                                     color: Color,
-                                     insertion_point: InsertionPoint)
-                                     -> T::DrawResult {
-        let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.draw_button(label, color, move || {
-                cmd_buffer.borrow_mut().add_editor_command(move |editor| {
-                                           editor.mark_as_editing(insertion_point);
-                                       })
-            })
-    }
-
     fn render_string_literal(&self, string_literal: &lang::StringLiteral) -> T::DrawResult {
-        self.render_inline_editable_button(&format!("\u{F10D} {} \u{F10E}", string_literal.value),
-                                           CLEAR_COLOR,
-                                           InsertionPoint::Editing(string_literal.id))
+        self.set_selected_on_click(&|| {
+                                       self.ui_toolkit
+                                           .draw_buttony_text(&format!("\u{F10D} {} \u{F10E}",
+                                                                       string_literal.value),
+                                                              CLEAR_COLOR)
+                                   },
+                                   string_literal.id)
     }
 
     fn render_number_literal(&self, number_literal: &lang::NumberLiteral) -> T::DrawResult {
         // TODO: for now lettttttt's not implement the editor for number literals. i think we
         // don't need it just yet. the insert code menu can insert number literals. perhaps we
         // can implement an InsertionPoint::Replace(node_id) that will suffice for number literals
-        self.render_inline_editable_button(&number_literal.value.to_string(),
-                                           CLEAR_COLOR,
-                                           InsertionPoint::Editing(number_literal.id))
+        self.set_selected_on_click(&|| {
+                                       self.ui_toolkit
+                                           .draw_buttony_text(&number_literal.value.to_string(),
+                                                              CLEAR_COLOR)
+                                   },
+                                   number_literal.id)
     }
 
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
@@ -1044,7 +1061,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.buttonize(draw_fn, move || {
                            cmd_buffer.borrow_mut()
-                                     .add_editor_command(move |mut editor| {
+                                     .add_editor_command(move |editor| {
                                          editor.set_selected_node_id(Some(code_node_id))
                                      })
                        })

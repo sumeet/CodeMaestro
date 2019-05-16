@@ -80,11 +80,10 @@ pub enum CodeNode {
     FunctionReference(FunctionReference),
     Argument(Argument),
     StringLiteral(StringLiteral),
-    NullLiteral,
+    NullLiteral(ID),
     Assignment(Assignment),
     Block(Block),
     VariableReference(VariableReference),
-    FunctionDefinition(FunctionDefinition),
     Placeholder(Placeholder),
     StructLiteral(StructLiteral),
     StructLiteralField(StructLiteralField),
@@ -388,14 +387,11 @@ impl CodeNode {
             CodeNode::FunctionReference(function_reference) => {
                 format!("Function reference: {:?}", function_reference)
             }
-            CodeNode::FunctionDefinition(function_definition) => {
-                format!("Function reference: Name {}", function_definition.name)
-            }
             CodeNode::Argument(argument) => format!("Argument: ID {}", argument.id),
             CodeNode::Placeholder(placeholder) => {
                 format!("Placeholder: {}", placeholder.description)
             }
-            CodeNode::NullLiteral => "NullLiteral".to_string(),
+            CodeNode::NullLiteral(id) => format!("NullLiteral: ID {}", id),
             CodeNode::StructLiteral(struct_literal) => {
                 format!("Struct literal: {}", struct_literal.id)
             }
@@ -418,13 +414,10 @@ impl CodeNode {
             CodeNode::Assignment(assignment) => assignment.id,
             CodeNode::Block(block) => block.id,
             CodeNode::VariableReference(variable_reference) => variable_reference.id,
-            CodeNode::FunctionDefinition(function_definition) => function_definition.id,
             CodeNode::FunctionReference(function_reference) => function_reference.id,
             CodeNode::Argument(argument) => argument.id,
             CodeNode::Placeholder(placeholder) => placeholder.id,
-            CodeNode::NullLiteral => {
-                uuid::Uuid::parse_str("1a2de9c5-043c-43c8-ad05-622bb278d5ab").unwrap()
-            }
+            CodeNode::NullLiteral(id) => *id,
             CodeNode::StructLiteral(struct_literal) => struct_literal.id,
             CodeNode::StructLiteralField(field) => field.id,
             CodeNode::Conditional(conditional) => conditional.id,
@@ -476,11 +469,10 @@ impl CodeNode {
             }
             CodeNode::Block(block) => Box::new(block.expressions.iter()),
             CodeNode::VariableReference(_) => Box::new(iter::empty()),
-            CodeNode::FunctionDefinition(_) => Box::new(iter::empty()),
             CodeNode::FunctionReference(_) => Box::new(iter::empty()),
             CodeNode::Argument(argument) => Box::new(iter::once(argument.expr.borrow())),
             CodeNode::Placeholder(_) => Box::new(iter::empty()),
-            CodeNode::NullLiteral => Box::new(iter::empty()),
+            CodeNode::NullLiteral(_) => Box::new(iter::empty()),
             CodeNode::StructLiteral(struct_literal) => Box::new(struct_literal.fields.iter()),
             CodeNode::StructLiteralField(field) => Box::new(iter::once(field.expr.borrow())),
             CodeNode::Conditional(ref conditional) => {
@@ -529,11 +521,10 @@ impl CodeNode {
             CodeNode::Assignment(assignment) => vec![assignment.expression.borrow_mut()],
             CodeNode::Block(block) => block.expressions.iter_mut().collect(),
             CodeNode::VariableReference(_) => Vec::new(),
-            CodeNode::FunctionDefinition(_) => Vec::new(),
             CodeNode::FunctionReference(_) => Vec::new(),
             CodeNode::Argument(argument) => vec![argument.expr.borrow_mut()],
             CodeNode::Placeholder(_placeholder) => vec![],
-            CodeNode::NullLiteral => vec![],
+            CodeNode::NullLiteral(_) => vec![],
             CodeNode::StructLiteral(struct_literal) => struct_literal.fields.iter_mut().collect(),
             CodeNode::StructLiteralField(field) => vec![field.expr.borrow_mut()],
             CodeNode::Conditional(ref mut conditional) => {
@@ -688,12 +679,6 @@ pub struct VariableReference {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct FunctionReference {
     pub function_id: ID,
-    pub id: ID,
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
-pub struct FunctionDefinition {
-    pub name: String,
     pub id: ID,
 }
 

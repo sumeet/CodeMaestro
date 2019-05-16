@@ -103,11 +103,10 @@ impl Interpreter {
                 })
             }
             lang::CodeNode::FunctionReference(_) => Box::pin(async { lang::Value::Null }),
-            lang::CodeNode::FunctionDefinition(_) => Box::pin(async { lang::Value::Null }),
             // TODO: trying to evaluate a placeholder should probably panic... but we don't have a
             // concept of panic yet
             lang::CodeNode::Placeholder(_) => Box::pin(async { lang::Value::Null }),
-            lang::CodeNode::NullLiteral => Box::pin(async { lang::Value::Null }),
+            lang::CodeNode::NullLiteral(_) => Box::pin(async { lang::Value::Null }),
             lang::CodeNode::StructLiteral(struct_literal) => {
                 let value_futures : HashMap<lang::ID, Pin<Box<Future<Output = lang::Value>>>> = struct_literal.fields().map(|literal_field| {
                     (literal_field.struct_field_id, self.evaluate(&literal_field.expr))

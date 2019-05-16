@@ -135,7 +135,7 @@ pub fn new_match(eneom: &Enum,
 }
 
 pub fn new_null_literal() -> lang::CodeNode {
-    lang::CodeNode::NullLiteral
+    lang::CodeNode::NullLiteral(lang::new_id())
 }
 
 pub fn new_assignment(name: String, expression: lang::CodeNode) -> lang::CodeNode {

@@ -1,6 +1,6 @@
-use crate::lang::CodeNode;
+//use crate::lang::CodeNode;
 
-pub struct ClickBehavior {}
+//pub struct ClickBehavior {}
 
 //pub fn handle_click(code_node: &CodeNode) -> ClickBehavior {
 //    match code_node {
@@ -17,9 +17,6 @@ pub struct ClickBehavior {}
 //        CodeNode::Block(block) => self.render_block(&block),
 //        CodeNode::VariableReference(variable_reference) => {
 //            self.render_variable_reference(&variable_reference)
-//        }
-//        CodeNode::FunctionDefinition(_function_definition) => {
-//            self.draw_button(&"Function defs are unimplemented", RED_COLOR, || {})
 //        }
 //        CodeNode::FunctionReference(function_reference) => {
 //            self.render_function_reference(&function_reference)

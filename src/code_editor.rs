@@ -486,11 +486,10 @@ impl CodeGenie {
                 }
             }
             CodeNode::FunctionReference(_) => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
-            CodeNode::FunctionDefinition(_) => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
             CodeNode::Argument(arg) => env_genie.get_type_for_arg(arg.argument_definition_id)
                                                 .unwrap(),
             CodeNode::Placeholder(placeholder) => placeholder.typ.clone(),
-            CodeNode::NullLiteral => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+            CodeNode::NullLiteral(_) => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
             CodeNode::StructLiteral(struct_literal) => {
                 let strukt = env_genie.find_struct(struct_literal.struct_id).unwrap();
                 lang::Type::from_spec(strukt)
@@ -816,7 +815,7 @@ impl<'a> Navigation<'a> {
             (CodeNode::Argument(_), _) | (CodeNode::StructLiteralField(_), _) => false,
             // you always want to move to literals
             (CodeNode::StringLiteral(_), _)
-            | (CodeNode::NullLiteral, _)
+            | (CodeNode::NullLiteral(_), _)
             | (CodeNode::StructLiteral(_), _)
             | (CodeNode::ListLiteral(_), _)
             | (CodeNode::NumberLiteral(_), _) => true,
