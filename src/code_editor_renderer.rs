@@ -13,6 +13,7 @@ use super::lang;
 use super::lang::CodeNode;
 use super::structs;
 use super::ui_toolkit::UiToolkit;
+use crate::editor::Keypress;
 use crate::ui_toolkit::ChildRegionHeight;
 
 // TODO: move to colors.rs
@@ -114,35 +115,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
     }
 
-    fn render_insertion_option(&self,
-                               option: &'a InsertCodeMenuOption,
-                               insertion_point: InsertionPoint)
-                               -> T::DrawResult {
-        let is_selected = option.is_selected;
-        let button_color = if is_selected { RED_COLOR } else { BLACK_COLOR };
-        let cmd_buffer = Rc::clone(&self.command_buffer);
-        let new_code_node = option.new_node.clone();
-
-        let draw = move || {
-            let cmdb = cmd_buffer.clone();
-            let new_code_node = new_code_node.clone();
-
-            self.draw_small_button(&option.label, button_color, move || {
-                    let ncn = new_code_node.clone();
-                    cmdb.borrow_mut().add_editor_command(move |editor| {
-                                         editor.hide_insert_code_menu();
-                                         editor.insert_code(ncn.clone(), insertion_point);
-                                     });
-                })
-        };
-
-        if is_selected {
-            self.draw_selected(&draw)
-        } else {
-            draw()
-        }
-    }
-
     fn render_assignment(&self, assignment: &lang::Assignment) -> T::DrawResult {
         let type_of_assignment = self.code_editor
                                      .code_genie
@@ -204,20 +176,76 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
         let options = menu.list_options(&self.code_editor.code_genie, self.env_genie);
-        let render_insertion_options: Vec<(Box<Fn() -> T::DrawResult>, bool)> =
-            options.iter()
-                   .map(|option| {
-                       let c: Box<Fn() -> T::DrawResult> = Box::new(move || {
-                           self.render_insertion_option(option, menu.insertion_point)
-                       });
-                       (c, option.is_selected)
-                   })
-                   .collect();
-        let render_insertion_options =
-            render_insertion_options.iter()
-                                    .map(|(box_fn, is_selected)| (box_fn.as_ref(), *is_selected));
-        self.ui_toolkit
-            .draw_x_scrollable_list(render_insertion_options, 1)
+        //        let render_insertion_options: Vec<(Box<Fn() -> T::DrawResult>, bool)> =
+        //            options.iter()
+        //                   .map(|option| {
+        //                       let c: Box<Fn() -> T::DrawResult> = Box::new(move || {
+        //                           self.render_insertion_option(option, menu.insertion_point)
+        //                       });
+        //                       (c, option.is_selected)
+        //                   })
+        //                   .collect();
+        //        let render_insertion_options =
+        //            render_insertion_options.iter()
+        //                                    .map(|(box_fn, is_selected)| (box_fn.as_ref(), *is_selected));
+        //        self.ui_toolkit
+        //            .draw_x_scrollable_list(render_insertion_options, 1);
+
+        self.ui_toolkit.draw_child_region(BLACK_COLOR,
+                                          &move || {
+                                              let options =
+                                                  options.iter()
+                                                      .map(|option| self.render_insertion_option(option, menu.insertion_point)).collect();
+                                              self.ui_toolkit.draw_all(options)
+                                          },
+                                          ChildRegionHeight::Pixels(150),
+                                          None::<&Fn() -> T::DrawResult>,
+                                          None::<fn(Keypress)>)
+    }
+
+    #[allow(unused)]
+    fn render_insertion_option(&self,
+                               option: &'a InsertCodeMenuOption,
+                               insertion_point: InsertionPoint)
+                               -> T::DrawResult {
+        // TODO: probably have to make a way of rendering code nodes without anything being
+        // clickable
+        let is_selected = option.is_selected;
+        //        let button_color = if is_selected { RED_COLOR } else { BLACK_COLOR };
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        let new_code_node = option.new_node.clone();
+        //
+        //        let draw = move || {
+        //            let cmdb = cmd_buffer.clone();
+        //            let new_code_node = new_code_node.clone();
+        //
+        //            self.draw_small_button(&option.label, button_color, move || {
+        //                    let ncn = new_code_node.clone();
+        //                    cmdb.borrow_mut().add_editor_command(move |editor| {
+        //                                         editor.hide_insert_code_menu();
+        //                                         editor.insert_code(ncn.clone(), insertion_point);
+        //                                     });
+        //                })
+        //        };
+        let draw = move || {
+            let cmdb = cmd_buffer.clone();
+            let new_code_node = new_code_node.clone();
+
+            self.ui_toolkit
+                .buttonize(&|| self.render_code(&option.new_node), move || {
+                    let ncn = new_code_node.clone();
+                    cmdb.borrow_mut().add_editor_command(move |editor| {
+                                         editor.hide_insert_code_menu();
+                                         editor.insert_code(ncn.clone(), insertion_point);
+                                     });
+                })
+        };
+
+        if is_selected {
+            self.draw_selected(&draw)
+        } else {
+            draw()
+        }
     }
 
     fn render_list_literal(&self,
@@ -440,13 +468,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  variable_reference: &lang::VariableReference)
                                  -> T::DrawResult {
         let draw = &|| {
-            if let Some(name) = self.lookup_variable_name(variable_reference) {
-                let typ =
-                    self.code_editor.code_genie.guess_type(self.code_editor
-                                                               .code_genie
-                                                               .find_node(variable_reference.id)
-                                                               .unwrap(),
-                                                           self.env_genie);
+            if let Some((name, typ)) = self.lookup_variable_name_and_type(variable_reference) {
                 self.render_name_with_type_definition(&name, PURPLE_COLOR, &typ)
             } else {
                 self.draw_button("Variable reference not found", RED_COLOR, &|| {})
@@ -539,19 +561,24 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             })
     }
 
-    fn lookup_variable_name(&self, variable_reference: &lang::VariableReference) -> Option<String> {
+    fn lookup_variable_name_and_type(&self,
+                                     variable_reference: &lang::VariableReference)
+                                     -> Option<(String, lang::Type)> {
         let assignment = self.code_editor
                              .code_genie
                              .find_node(variable_reference.assignment_id);
         if let Some(CodeNode::Assignment(assignment)) = assignment {
-            return Some(assignment.name.clone());
+            return Some((assignment.name.clone(),
+                         self.code_editor
+                             .code_genie
+                             .guess_type(assignment.expression.as_ref(), self.env_genie)));
         }
         // TODO: this searches all functions, but we could be smarter here because we already know which
         //       function we're inside
         if let Some(arg) = self.env_genie
                                .get_arg_definition(variable_reference.assignment_id)
         {
-            return Some(arg.short_name);
+            return Some((arg.short_name, arg.arg_type));
         }
         // variables can also refer to enum variants
         self.code_editor
@@ -559,7 +586,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             .find_enum_variant_preceding_by_assignment_id(variable_reference.id,
                                                           variable_reference.assignment_id,
                                                           self.env_genie)
-            .map(|match_variant| match_variant.enum_variant.name)
+            .map(|match_variant| {
+                (match_variant.enum_variant.name,
+                 self.code_editor
+                     .code_genie
+                     .guess_type(&lang::CodeNode::VariableReference(variable_reference.clone()),
+                                 self.env_genie))
+            })
     }
 
     // TODO: combine the insertion point stuff with the insertion point stuff elsewhere, mainly
@@ -1018,6 +1051,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             })
     }
 
+    #[allow(dead_code)]
     fn draw_small_button<F: Fn() + 'static>(&self,
                                             label: &str,
                                             color: Color,
