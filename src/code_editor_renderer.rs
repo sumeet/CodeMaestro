@@ -361,7 +361,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.render_struct_literal(&struct_literal)
                 }
                 CodeNode::StructLiteralField(_field) => {
-                    self.ui_toolkit.draw_all(vec![])
+                    panic!("struct literal fields shouldn't be rendered from here");
+                    //self.ui_toolkit.draw_all(vec![])
                     // we would, except render_struct_literal_field isn't called from here...
                     //self.render_struct_literal_field(&field)
                 }
@@ -453,33 +454,31 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         //        let darker_color = self.darken(self.darken(self.darken(color)));
         let darker_color = self.darken(self.darken(color));
 
-        self.ui_toolkit.buttonize(&|| {
-            self.draw_nested_borders_around(&|| {
-                self.ui_toolkit.draw_top_border_inside(darker_color, 2, &|| {
-                    self.ui_toolkit.draw_right_border_inside(darker_color, 1, &|| {
-                        self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
-                            self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
-                                // don't show the return type if the function returns null. there's no
-                                // use in looking at it
-                                if typ.matches_spec(&lang::NULL_TYPESPEC) {
-                                    self.ui_toolkit.draw_all_on_same_line(&[
-                                        &|| self.ui_toolkit.draw_buttony_text("\u{f104}", darker_color),
-                                        &|| self.ui_toolkit.draw_buttony_text(name, color),
-                                    ])
-                                } else {
-                                    self.ui_toolkit.draw_all_on_same_line(&[
-                                        &|| self.ui_toolkit.draw_buttony_text(&format!("\u{f104}  {}", sym), darker_color),
-                                        &|| self.ui_toolkit.draw_buttony_text(name, color),
+        self.draw_nested_borders_around(&|| {
+            self.ui_toolkit.draw_top_border_inside(darker_color, 2, &|| {
+                self.ui_toolkit.draw_right_border_inside(darker_color, 1, &|| {
+                    self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
+                        self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
+                            // don't show the return type if the function returns null. there's no
+                            // use in looking at it
+                            if typ.matches_spec(&lang::NULL_TYPESPEC) {
+                                self.ui_toolkit.draw_all_on_same_line(&[
+                                    &|| self.ui_toolkit.draw_buttony_text("\u{f104}", darker_color),
+                                    &|| self.ui_toolkit.draw_buttony_text(name, color),
+                                ])
+                            } else {
+                                self.ui_toolkit.draw_all_on_same_line(&[
+                                    &|| self.ui_toolkit.draw_buttony_text(&format!("\u{f104}  {}", sym), darker_color),
+                                    &|| self.ui_toolkit.draw_buttony_text(name, color),
 //                                        &|| self.ui_toolkit.draw_text("  "),
 //                                        &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),
-                                    ])
-                                }
-                            })
+                                ])
+                            }
                         })
                     })
                 })
             })
-        }, &|| {})
+        })
     }
 
     // this is used for rendering variable references and struct field gets. it displays the type of the
@@ -631,9 +630,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                       })
                                                       .collect_vec();
 
-        self.ui_toolkit
-            .align(&|| self.render_code(&function_call.function_reference),
-                   &rhs.iter().map(|b| b.as_ref()).collect_vec())
+        self.ui_toolkit.align(
+                              &|| {
+                                  self.set_selected_on_click(
+                    &|| self.render_code(&function_call.function_reference),
+                    function_call.id)
+                              },
+                              &rhs.iter().map(|b| b.as_ref()).collect_vec(),
+        )
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
@@ -1031,6 +1035,19 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn insertion_point(&self) -> Option<InsertionPoint> {
         Some(self.code_editor.insert_code_menu.as_ref()?.insertion_point)
+    }
+
+    fn set_selected_on_click(&self,
+                             draw_fn: &Fn() -> T::DrawResult,
+                             code_node_id: lang::ID)
+                             -> T::DrawResult {
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        self.ui_toolkit.buttonize(draw_fn, move || {
+                           cmd_buffer.borrow_mut()
+                                     .add_editor_command(move |mut editor| {
+                                         editor.set_selected_node_id(Some(code_node_id))
+                                     })
+                       })
     }
 }
 

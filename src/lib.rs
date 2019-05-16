@@ -27,6 +27,7 @@ mod structs;
 mod ui_toolkit;
 #[macro_use]
 pub mod env;
+mod click_handling;
 mod code_editor;
 mod code_editor_renderer;
 pub mod code_loading;

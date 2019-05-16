@@ -164,7 +164,7 @@ impl CodeEditor {
         &self.selected_node_id
     }
 
-    fn set_selected_node_id(&mut self, code_node_id: Option<lang::ID>) {
+    pub fn set_selected_node_id(&mut self, code_node_id: Option<lang::ID>) {
         self.selected_node_id = code_node_id;
     }
 

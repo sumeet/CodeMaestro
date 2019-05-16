@@ -6,6 +6,11 @@
 
 - clicking node selects it
 
+- probably need a hover system. so that if smth is hovered, we can light up its
+  children. for example, hovering over a function reference, and we would need
+  to make the entire function call, including the arguments be highlighted with
+  a hover effect. for the above example, in the meantime, we'll just skip this...
+
 - argument access looks like a single button instead of two buttons
 
 - hovering changes color of buttons in html
