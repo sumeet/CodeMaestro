@@ -13,6 +13,7 @@ use super::lang;
 use super::lang::CodeNode;
 use super::structs;
 use super::ui_toolkit::UiToolkit;
+use crate::ui_toolkit::ChildRegionHeight;
 
 // TODO: move to colors.rs
 pub type Color = [f32; 4];
@@ -62,7 +63,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_child_region(TEXT_ENTRY_BG_COLOR,
                                           &|| self.render_code(code),
-                                          height_percentage,
+                                          ChildRegionHeight::Percentage(height_percentage),
                                           Some(&move || {
                                               let cmd_buffer1 = Rc::clone(&cmd_buffer1);
                                               self.ui_toolkit.draw_menu_item("Insert code", move || {

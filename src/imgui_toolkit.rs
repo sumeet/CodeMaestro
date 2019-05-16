@@ -7,6 +7,7 @@ use itertools::Itertools;
 
 use crate::code_editor_renderer::{BLUE_COLOR, PURPLE_COLOR};
 use crate::imgui_support::{BUTTON_ACTIVE_COLOR, BUTTON_HOVERED_COLOR};
+use crate::ui_toolkit::ChildRegionHeight;
 use imgui::*;
 use lazy_static::lazy_static;
 use std::cell::RefCell;
@@ -484,10 +485,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                     // TODO: actually use this bg color lol
                                                     _bg: Color,
                                                     draw_fn: &Fn(),
-                                                    height_percentage: f32,
+                                                    height: ChildRegionHeight,
                                                     draw_context_menu: Option<&Fn()>,
                                                     handle_keypress: Option<F>) {
-        let height = height_percentage * unsafe { imgui_sys::igGetWindowHeight() };
+        let height = match height {
+            ChildRegionHeight::Percentage(height_percentage) => {
+                height_percentage * unsafe { imgui_sys::igGetWindowHeight() }
+            }
+            ChildRegionHeight::Pixels(pixels) => pixels as f32,
+        };
 
         // TODO: this is hardcoded and can't be shared with wasm or any other system
         let default_bg = (0.5, 0.5, 0.5, 0.5);

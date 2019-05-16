@@ -32,7 +32,7 @@ pub trait UiToolkit {
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
                                                     draw_fn: &Fn() -> Self::DrawResult,
-                                                    height_percentage: f32,
+                                                    height_percentage: ChildRegionHeight,
                                                     draw_context_menu: Option<&Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult;
@@ -161,4 +161,10 @@ pub enum SelectableItem<T: 'static> {
         label: String,
         is_selected: bool,
     },
+}
+
+#[derive(Copy, Clone)]
+pub enum ChildRegionHeight {
+    Percentage(f32),
+    Pixels(usize),
 }

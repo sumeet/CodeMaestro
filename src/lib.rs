@@ -37,6 +37,7 @@ mod editor;
 mod env_genie;
 mod http_request;
 mod insert_code_menu;
+mod insert_code_menu_renderer;
 mod json2;
 mod json_http_client;
 mod opener;

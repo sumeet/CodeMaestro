@@ -2,7 +2,7 @@ use super::async_executor::AsyncExecutor;
 use super::editor::{Key as AppKey, Keypress};
 use super::{App as CSApp, UiToolkit};
 use crate::code_editor_renderer::BLACK_COLOR;
-use crate::ui_toolkit::{Color, SelectableItem};
+use crate::ui_toolkit::{ChildRegionHeight, Color, SelectableItem};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -352,13 +352,21 @@ impl UiToolkit for YewToolkit {
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
                                                     draw_fn: &Fn() -> Self::DrawResult,
-                                                    height_percentage: f32,
+                                                    height: ChildRegionHeight,
                                                     draw_context_menu: Option<&Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult {
         let context_menu_id = self.incr_last_drawn_element_id().to_string();
         let context_menu = draw_context_menu.map(|draw_context_menu| draw_context_menu());
         let is_context_menu = context_menu.is_some();
+
+        let height_css = match height {
+            ChildRegionHeight::Percentage(height_percentage) => {
+                format!("height: calc({}%)", height_percentage * 100.)
+            }
+            ChildRegionHeight::Pixels(px) => format!("height: {}px", px),
+        };
+
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
         if let Some(handle_keypress) = handle_keypress {
@@ -372,7 +380,7 @@ impl UiToolkit for YewToolkit {
                         { context_menu.unwrap_or_else(|| VNode::from(VList::new())) }
                     </div>
 
-                    <div style={ format!("border: 1px solid #6a6a6a; min-height: 100px; height: calc({}%); white-space: nowrap; background-color: {};", height_percentage * 100., self.rgba(bg)) },
+                    <div style={ format!("border: 1px solid #6a6a6a; min-height: 100px; {}; white-space: nowrap; background-color: {};", height_css, self.rgba(bg)) },
                         id={ self.incr_last_drawn_element_id().to_string() },
                         tabindex=0,
                         oncontextmenu=|e| {
@@ -416,7 +424,7 @@ impl UiToolkit for YewToolkit {
             }
         } else {
             html! {
-                <div style={ format!("height: {}%", height_percentage) },
+                <div style={ height_css },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0, >
                     { draw_fn() }
