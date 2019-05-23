@@ -1,16 +1,16 @@
-use super::code_editor::InsertionPoint;
-use super::env_genie::EnvGenie;
-use super::code_editor::CodeGenie;
 use super::code_editor::get_type_from_list;
+use super::code_editor::CodeGenie;
+use super::code_editor::InsertionPoint;
 use super::code_editor::PLACEHOLDER_ICON;
-use super::lang;
 use super::code_generation;
+use super::env_genie::EnvGenie;
+use super::lang;
 use super::structs;
 
 use downcast_rs::impl_downcast;
-use objekt::{clone_trait_object};
-use lazy_static::lazy_static;
 use itertools::Itertools;
+use lazy_static::lazy_static;
+use objekt::clone_trait_object;
 
 use std::collections::HashMap;
 
@@ -42,9 +42,9 @@ impl InsertCodeMenu {
             // this means you're editing a literal or variable name or smth, so no menu for
             // that (i guess)
             InsertionPoint::Editing(_) => None,
-            _ => Some(
-                Self { input_str: "".to_string(), selected_option_index: 0, insertion_point }
-            )
+            _ => Some(Self { input_str: "".to_string(),
+                             selected_option_index: 0,
+                             insertion_point }),
         }
     }
 
@@ -74,7 +74,7 @@ impl InsertCodeMenu {
     // XXX: copy and paste to opener.rs
     fn selected_index(&self, num_options: usize) -> usize {
         if num_options == 0 {
-            return 0
+            return 0;
         }
         let selected = self.selected_option_index % num_options as isize;
         if selected == 0 {
@@ -86,10 +86,13 @@ impl InsertCodeMenu {
         }
     }
 
-    pub fn selected_option_code(&self, code_genie: &CodeGenie, env_genie: &EnvGenie) -> Option<lang::CodeNode> {
+    pub fn selected_option_code(&self,
+                                code_genie: &CodeGenie,
+                                env_genie: &EnvGenie)
+                                -> Option<lang::CodeNode> {
         let all_options = self.list_options(code_genie, env_genie);
         if all_options.is_empty() {
-            return None
+            return None;
         }
         let selected_index = self.selected_index(all_options.len());
         Some(all_options.get(selected_index)?.new_node.clone())
@@ -99,20 +102,24 @@ impl InsertCodeMenu {
     // to a panic, say if someone types something and changes the number of options without changing
     // the selected index.
     // TODO: can we return iterators all the way down instead of vectors? pretty sure we can!
-    pub fn list_options(&self, code_genie: &CodeGenie, env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    pub fn list_options(&self,
+                        code_genie: &CodeGenie,
+                        env_genie: &EnvGenie)
+                        -> Vec<InsertCodeMenuOption> {
         let search_params = self.search_params(code_genie, env_genie);
-        let mut all_options : Vec<InsertCodeMenuOption> = OPTIONS_GENERATORS
-            .iter()
-            .flat_map(|generator| {
-                generator.options(&search_params, code_genie, env_genie)
-            })
-            .collect();
+        let mut all_options: Vec<InsertCodeMenuOption> =
+            OPTIONS_GENERATORS.iter()
+                              .flat_map(|generator| {
+                                  generator.options(&search_params, code_genie, env_genie)
+                              })
+                              .collect();
         if all_options.is_empty() {
-            return all_options
+            return all_options;
         }
         let selected_index = self.selected_index(all_options.len());
-        all_options.get_mut(selected_index).as_mut()
-            .map(|mut option| option.is_selected = true);
+        all_options.get_mut(selected_index)
+                   .as_mut()
+                   .map(|mut option| option.is_selected = true);
         all_options
     }
 
@@ -120,14 +127,14 @@ impl InsertCodeMenu {
         match self.insertion_point {
             // TODO: if it's the last line of a function, we might wanna use the function's type...
             // but that could be too limiting
-            InsertionPoint::Before(_) | InsertionPoint::After(_) | InsertionPoint::BeginningOfBlock(_) => {
-                self.new_params(None)
-            },
+            InsertionPoint::Before(_)
+            | InsertionPoint::After(_)
+            | InsertionPoint::BeginningOfBlock(_) => self.new_params(None),
             InsertionPoint::StructLiteralField(field_id) => {
                 let node = code_genie.find_node(field_id).unwrap();
                 let exact_type = code_genie.guess_type(node, env_genie);
                 self.new_params(Some(exact_type))
-            },
+            }
             InsertionPoint::Replace(node_id_to_replace) => {
                 let node = code_genie.find_node(node_id_to_replace).unwrap();
                 let exact_type = code_genie.guess_type(node, env_genie);
@@ -137,11 +144,11 @@ impl InsertCodeMenu {
                     // isn't being used anywhere, then we could change the type to anything. so don't
                     // require a type when searching for nodes
                     if !code_genie.any_variable_referencing_assignment(assignment.id) {
-                        return self.new_params(None)
+                        return self.new_params(None);
                     }
                 }
                 self.new_params(Some(exact_type))
-            },
+            }
             InsertionPoint::Wrap(node_id_to_wrap) => {
                 let node = code_genie.find_node(node_id_to_wrap).unwrap();
                 let wrapped_node_type = code_genie.guess_type(node, env_genie);
@@ -160,9 +167,9 @@ impl InsertCodeMenu {
                 if code_genie.is_block_expression(node_id_to_wrap) {
                     return self.new_params(None).wraps_type(wrapped_node_type);
                 }
-                self.new_params(Some(exact_type)).wraps_type(wrapped_node_type)
-
-            },
+                self.new_params(Some(exact_type))
+                    .wraps_type(wrapped_node_type)
+            }
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
                 let list_literal = code_genie.find_node(list_literal_id).unwrap();
                 match list_literal {
@@ -171,19 +178,17 @@ impl InsertCodeMenu {
                     }
                     _ => panic!("should always be a list literal... ugh"),
                 }
-            },
+            }
             InsertionPoint::Editing(_) => panic!("shouldn't have gotten here"),
         }
     }
 
     // we don't have to clone that string
     fn new_params(&self, return_type: Option<lang::Type>) -> CodeSearchParams {
-        CodeSearchParams {
-            input_str: self.input_str.clone(),
-            insertion_point: self.insertion_point,
-            return_type,
-            wraps_type: None,
-        }
+        CodeSearchParams { input_str: self.input_str.clone(),
+                           insertion_point: self.insertion_point,
+                           return_type,
+                           wraps_type: None }
     }
 }
 
@@ -208,7 +213,8 @@ impl CodeSearchParams {
 
     // TODO: stil have to replace this in more places
     pub fn search_matches_identifier(&self, identifier: &str) -> bool {
-        identifier.to_lowercase().contains(&self.lowercased_trimmed_search_str())
+        identifier.to_lowercase()
+                  .contains(&self.lowercased_trimmed_search_str())
     }
 
     pub fn search_prefix(&self, prefix: &str) -> Option<String> {
@@ -231,9 +237,12 @@ impl CodeSearchParams {
 // 3: new string literal
 // 4: placeholder
 
-trait InsertCodeMenuOptionGenerator : objekt::Clone + downcast_rs::Downcast {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption>;
+trait InsertCodeMenuOptionGenerator: objekt::Clone + downcast_rs::Downcast {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption>;
 }
 
 clone_trait_object!(InsertCodeMenuOptionGenerator);
@@ -251,21 +260,25 @@ pub struct InsertCodeMenuOption {
 struct InsertFunctionWrappingOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
         // tuple of function and arg id to fill
-        let functions : &mut Iterator<Item = (lang::ID, &Box<lang::Function>)>;
+        let functions: &mut Iterator<Item = (lang::ID, &Box<lang::Function>)>;
         let mut a;
 
         if let Some(wraps_type) = &search_params.wraps_type {
             a = env_genie.all_functions()
-                .filter(|f| search_params.search_matches_identifier(&f.name()))
-                .filter_map(move |f| {
-                    let takes_args = f.takes_args();
-                    let first_matching_arg = takes_args.iter()
-                        .find(|arg| arg.arg_type.matches(wraps_type))?;
-                    Some((first_matching_arg.id, f))
-                });
+                         .filter(|f| search_params.search_matches_identifier(&f.name()))
+                         .filter_map(move |f| {
+                             let takes_args = f.takes_args();
+                             let first_matching_arg =
+                                 takes_args.iter()
+                                           .find(|arg| arg.arg_type.matches(wraps_type))?;
+                             Some((first_matching_arg.id, f))
+                         });
             functions = &mut a;
         } else {
             return vec![];
@@ -273,20 +286,22 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
 
         let wrapped_node = match &search_params.insertion_point {
             InsertionPoint::Wrap(wrapped_node_id) => {
-                code_genie.find_node(*wrapped_node_id).expect("couldn't find wrapped node id")
+                code_genie.find_node(*wrapped_node_id)
+                          .expect("couldn't find wrapped node id")
             }
             _ => panic!("we should've only gotten here and had a wrapped insertion point"),
         };
 
         functions.map(|(arg_def_id, func)| {
-            InsertCodeMenuOption {
+                     InsertCodeMenuOption {
                 label: func.name().to_string(),
                 new_node: code_generation::new_function_call_with_wrapped_arg(func.as_ref(),
                                                                               arg_def_id,
                                                                               wrapped_node.clone()),
                 is_selected: false,
             }
-        }).collect()
+                 })
+                 .collect()
     }
 }
 
@@ -294,34 +309,35 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
 struct InsertFunctionOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        let mut functions : &mut Iterator<Item = &Box<lang::Function>> = &mut env_genie.all_functions();
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               _code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        let mut functions: &mut Iterator<Item = &Box<lang::Function>> =
+            &mut env_genie.all_functions();
         let mut a;
         let mut b;
 
         let input_str = search_params.lowercased_trimmed_search_str();
         if !input_str.is_empty() {
-            a = functions
-                .filter(|f| {
-                    search_params.search_matches_identifier(&f.name())
-                });
+            a = functions.filter(|f| search_params.search_matches_identifier(&f.name()));
             functions = &mut a;
         }
 
         if let Some(return_type) = &search_params.return_type {
-            b = functions
-                .filter(move |f| f.returns().matches(return_type));
+            b = functions.filter(move |f| f.returns().matches(return_type));
             functions = &mut b;
         }
 
         functions.map(|func| {
-            InsertCodeMenuOption {
+                     InsertCodeMenuOption {
                 label: func.name().to_string(),
                 new_node: code_generation::new_function_call_with_placeholder_args(func.as_ref()),
                 is_selected: false,
             }
-        }).collect()
+                 })
+                 .collect()
     }
 }
 
@@ -356,8 +372,11 @@ fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, boo
 // 2. function arguments
 // 3. enum variants if you're inside a match branch
 impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
         let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = find_all_locals_preceding(
             search_params.insertion_point, code_genie, env_genie)
             .group_by(|variable| variable.typ.id())
@@ -365,73 +384,79 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             .map(|(id, variables)| (id, variables.collect()))
             .collect();
 
-        let mut variables : Vec<Variable> = if let Some(search_type) = &search_params.return_type {
-            variables_by_type_id.remove(&search_type.id()).unwrap_or_else(|| vec![])
+        let mut variables: Vec<Variable> = if let Some(search_type) = &search_params.return_type {
+            variables_by_type_id.remove(&search_type.id())
+                                .unwrap_or_else(|| vec![])
         } else {
             Iterator::flatten(variables_by_type_id.drain().map(|(_, v)| v)).collect()
         };
 
-        variables = variables.into_iter()
-            .filter(|variable| search_params.search_matches_identifier(&variable.name))
-            .collect();
+        variables =
+            variables.into_iter()
+                     .filter(|variable| search_params.search_matches_identifier(&variable.name))
+                     .collect();
 
-        variables.into_iter().map(|variable| {
-            let id = variable.locals_id;
-            InsertCodeMenuOption {
-                label: variable.name,
-                new_node: code_generation::new_variable_reference(id),
-                is_selected: false,
-            }
-        }).collect()
+        variables.into_iter()
+                 .map(|variable| {
+                     let id = variable.locals_id;
+                     InsertCodeMenuOption { label: variable.name,
+                                            new_node: code_generation::new_variable_reference(id),
+                                            is_selected: false }
+                 })
+                 .collect()
     }
 }
 
-fn find_all_locals_preceding<'a>(insertion_point: InsertionPoint, code_genie: &'a CodeGenie,
-                                 env_genie: &'a EnvGenie) -> impl Iterator<Item = Variable> + 'a {
+fn find_all_locals_preceding<'a>(insertion_point: InsertionPoint,
+                                 code_genie: &'a CodeGenie,
+                                 env_genie: &'a EnvGenie)
+                                 -> impl Iterator<Item = Variable> + 'a {
     find_assignments_and_function_args_preceding(insertion_point, code_genie, env_genie)
         .chain(find_enum_variants_preceding(insertion_point, code_genie, env_genie))
 }
 
-
 fn find_assignments_and_function_args_preceding<'a>(insertion_point: InsertionPoint,
-                                                    code_genie: &'a CodeGenie, env_genie: &'a EnvGenie)
+                                                    code_genie: &'a CodeGenie,
+                                                    env_genie: &'a EnvGenie)
                                                     -> impl Iterator<Item = Variable> + 'a {
-    let (insertion_id,
-         is_search_inclusive) = assignment_search_position(insertion_point);
-    code_genie.find_assignments_that_come_before_code(
-        insertion_id, is_search_inclusive)
-        .into_iter()
-        .map(move |assignment| {
-            let assignment_clone : lang::Assignment = (*assignment).clone();
-            let guessed_type = code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone), env_genie);
-            Variable { locals_id: assignment.id, typ: guessed_type, name: assignment.name.clone() }
-        })
-        .chain(
-            env_genie.code_takes_args(code_genie.root().id())
-                .map(|arg| Variable { locals_id: arg.id, typ: arg.arg_type, name: arg.short_name })
-        )
+    let (insertion_id, is_search_inclusive) = assignment_search_position(insertion_point);
+    code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
+              .into_iter()
+              .map(move |assignment| {
+                  let assignment_clone: lang::Assignment = (*assignment).clone();
+                  let guessed_type =
+                      code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone),
+                                            env_genie);
+                  Variable { locals_id: assignment.id,
+                             typ: guessed_type,
+                             name: assignment.name.clone() }
+              })
+              .chain(env_genie.code_takes_args(code_genie.root().id())
+                              .map(|arg| Variable { locals_id: arg.id,
+                                                    typ: arg.arg_type,
+                                                    name: arg.short_name }))
 }
 
 fn find_enum_variants_preceding<'a>(insertion_point: InsertionPoint,
                                     code_genie: &'a CodeGenie,
-                                    env_genie: &'a EnvGenie) -> impl Iterator<Item = Variable> + 'a {
+                                    env_genie: &'a EnvGenie)
+                                    -> impl Iterator<Item = Variable> + 'a {
     let (node_id, _) = assignment_search_position(insertion_point);
     code_genie.find_enum_variants_preceding_iter(node_id, env_genie)
-        .map(|match_variant| {
-            Variable {
-                locals_id: match_variant.assignment_id(),
-                typ: match_variant.typ,
-                name: match_variant.enum_variant.name,
-            }
-        })
+              .map(|match_variant| Variable { locals_id: match_variant.assignment_id(),
+                                              typ: match_variant.typ,
+                                              name: match_variant.enum_variant.name })
 }
 
 #[derive(Clone)]
 struct InsertLiteralOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, _code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               _code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
         let input_str = &search_params.input_str;
         if let Some(ref return_type) = search_params.return_type {
@@ -464,6 +489,16 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     });
                 options.extend(matching_list_type_options)
             }
+
+            // struct literals
+            // TODO: need to implement fuzzy matching because struct names sometimes have spaces and
+            // lowercasing isn't good enough
+            let lowercased_trimmed_search_str = search_params.lowercased_trimmed_search_str();
+            let matching_struct_options =
+                env_genie.find_structs_matching(&lowercased_trimmed_search_str)
+                         .map(|strukt| self.strukt_option(strukt));
+            options.extend(matching_struct_options);
+
             if search_params.search_matches_identifier("null") {
                 options.push(self.null_literal_option())
             }
@@ -480,46 +515,44 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
 
 impl InsertLiteralOptionGenerator {
     fn string_literal_option(&self, input_str: String) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: format!("\u{f10d}{}\u{f10e}", input_str),
-            is_selected: false,
-            new_node: code_generation::new_string_literal(input_str)
-        }
+        InsertCodeMenuOption { label: format!("\u{f10d}{}\u{f10e}", input_str),
+                               is_selected: false,
+                               new_node: code_generation::new_string_literal(input_str) }
     }
 
     fn number_literal_option(&self, number: i128) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: number.to_string(),
-            is_selected: false,
-            new_node: code_generation::new_number_literal(number)
-        }
+        InsertCodeMenuOption { label: number.to_string(),
+                               is_selected: false,
+                               new_node: code_generation::new_number_literal(number) }
     }
 
     fn null_literal_option(&self) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: lang::NULL_TYPESPEC.symbol.clone(),
-            is_selected: false,
-            new_node: code_generation::new_null_literal(),
-        }
+        InsertCodeMenuOption { label: lang::NULL_TYPESPEC.symbol.clone(),
+                               is_selected: false,
+                               new_node: code_generation::new_null_literal() }
     }
 
     fn strukt_option(&self, strukt: &structs::Struct) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: format!("{} {}", strukt.symbol, strukt.name),
-            is_selected: false,
-            new_node: code_generation::new_struct_literal_with_placeholders(strukt),
-        }
+        InsertCodeMenuOption { label: format!("{} {}", strukt.symbol, strukt.name),
+                               is_selected: false,
+                               new_node:
+                                   code_generation::new_struct_literal_with_placeholders(strukt) }
     }
 
-    fn placeholder_option(&self, input_str: String, return_type: &lang::Type) -> InsertCodeMenuOption {
-        InsertCodeMenuOption {
-            label: format!("{} {}", PLACEHOLDER_ICON, input_str),
-            is_selected: false,
-            new_node: code_generation::new_placeholder(input_str, return_type.clone()),
-        }
+    fn placeholder_option(&self,
+                          input_str: String,
+                          return_type: &lang::Type)
+                          -> InsertCodeMenuOption {
+        InsertCodeMenuOption { label: format!("{} {}", PLACEHOLDER_ICON, input_str),
+                               is_selected: false,
+                               new_node: code_generation::new_placeholder(input_str,
+                                                                          return_type.clone()) }
     }
 
-    fn list_literal_option(&self, env_genie: &EnvGenie, list_literal_type: &lang::Type) -> InsertCodeMenuOption {
+    fn list_literal_option(&self,
+                           env_genie: &EnvGenie,
+                           list_literal_type: &lang::Type)
+                           -> InsertCodeMenuOption {
         let symbol = env_genie.get_symbol_for_type(list_literal_type);
         let element_type = &list_literal_type.params[0];
         let ts = env_genie.find_typespec(element_type.typespec_id).unwrap();
@@ -539,11 +572,14 @@ impl InsertLiteralOptionGenerator {
 struct InsertConditionalOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               _env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               _env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
         if !should_insert_block_expression(search_params.insertion_point, code_genie) {
-            return options
+            return options;
         }
 
         let search_str = search_params.lowercased_trimmed_search_str();
@@ -564,8 +600,11 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
 struct InsertMatchOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
         if !should_insert_block_expression(search_params.insertion_point, code_genie) {
             return vec![];
         }
@@ -574,8 +613,8 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         if !search_str.starts_with("match") {
             return vec![];
         }
-        let (insertion_id, is_search_inclusive) = assignment_search_position(
-            search_params.insertion_point);
+        let (insertion_id, is_search_inclusive) =
+            assignment_search_position(search_params.insertion_point);
         code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
             .into_iter()
             .filter_map(|assignment| {
@@ -605,8 +644,11 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
 struct InsertAssignmentOptionGenerator {}
 
 impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               _env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               _env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
         if !should_insert_block_expression(search_params.insertion_point, code_genie) {
             return vec![];
         }
@@ -614,7 +656,9 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
         let variable_name = if let Some(var_alias) = search_params.search_prefix("let") {
             var_alias
         } else {
-            search_params.lowercased_trimmed_search_str().trim_end_matches(|c| c == '=' || c == ' ').to_string()
+            search_params.lowercased_trimmed_search_str()
+                         .trim_end_matches(|c| c == '=' || c == ' ')
+                         .to_string()
         };
 
         vec![InsertCodeMenuOption {
@@ -633,14 +677,17 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
 struct InsertStructFieldGetOfLocal {}
 
 impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
-        let optionss = find_all_locals_preceding(
-            search_params.insertion_point, code_genie, env_genie)
-            .filter_map(|variable| {
-                let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        let optionss = find_all_locals_preceding(search_params.insertion_point,
+                                                 code_genie,
+                                                 env_genie).filter_map(|variable| {
+                           let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
 
-                Some(strukt.fields.iter().filter_map(move |struct_field| {
+                           Some(strukt.fields.iter().filter_map(move |struct_field| {
                     let dotted_name = format!("{}.{}", variable.name, struct_field.name);
 
                     if !(search_params.search_matches_identifier(&variable.name) ||
@@ -662,18 +709,20 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                         is_selected: false,
                     })
                 }))
-            });
+                       });
         itertools::Itertools::flatten(optionss).collect()
     }
 }
-
 
 #[derive(Clone)]
 struct InsertListIndexOfLocal {}
 
 impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
-    fn options(&self, search_params: &CodeSearchParams, code_genie: &CodeGenie,
-               env_genie: &EnvGenie) -> Vec<InsertCodeMenuOption> {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
         find_all_locals_preceding(
             search_params.insertion_point, code_genie, env_genie)
             .filter_map(|variable| {
@@ -699,17 +748,20 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
     }
 }
 
-
 // hmmm this is used by code search
 // TODO: move into insert_code_menu.rs
-pub fn should_insert_block_expression(insertion_point: InsertionPoint, code_genie: &CodeGenie) -> bool {
+pub fn should_insert_block_expression(insertion_point: InsertionPoint,
+                                      code_genie: &CodeGenie)
+                                      -> bool {
     match insertion_point {
-        InsertionPoint::BeginningOfBlock(_) | InsertionPoint::Before(_) |
-            InsertionPoint::After(_) => true,
+        InsertionPoint::BeginningOfBlock(_)
+        | InsertionPoint::Before(_)
+        | InsertionPoint::After(_) => true,
         InsertionPoint::Replace(node_id) | InsertionPoint::Wrap(node_id) => {
             code_genie.is_block_expression(node_id)
         }
-        InsertionPoint::StructLiteralField(_) |
-        InsertionPoint::Editing(_) | InsertionPoint::ListLiteralElement {..} => false,
+        InsertionPoint::StructLiteralField(_)
+        | InsertionPoint::Editing(_)
+        | InsertionPoint::ListLiteralElement { .. } => false,
     }
 }

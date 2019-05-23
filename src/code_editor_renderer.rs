@@ -775,17 +775,21 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  field.name);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                if self.is_editing(literal_field.id) {
-                    self.render_insert_code_node()
-                } else {
-                    self.set_selected_on_click(&|| {
-                                                   self.ui_toolkit
-                                                       .draw_buttony_text(&field_text, BLACK_COLOR)
-                                               },
-                                               literal_field.id)
-                }
+                self.set_selected_on_click(&|| {
+                                               self.ui_toolkit
+                                                   .draw_buttony_text(&field_text, BLACK_COLOR)
+                                           },
+                                           literal_field.id)
             },
-            &|| self.render_nested(&|| self.render_code(&literal_field.expr)),
+            &|| {
+                self.render_nested(&|| {
+                        if self.is_editing(literal_field.id) {
+                            self.render_insert_code_node()
+                        } else {
+                            self.render_code(&literal_field.expr)
+                        }
+                    })
+            },
         ])
     }
 
@@ -799,6 +803,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let mut to_draw: Vec<Box<Fn(&CodeEditorRenderer<T>) -> T::DrawResult>> = vec![];
         for literal_field in fields {
             // this is where the bug is
+            //
+            // ^^ coming in and looking at this comment months later:::: WHAT BUG???
             let strukt_field = struct_field_by_id.get(&literal_field.struct_field_id)
                                                  .unwrap();
             let strukt_field = (*strukt_field).clone();
@@ -820,7 +826,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                          .unwrap();
 
         if struct_literal.fields.is_empty() {
-            return self.render_struct_identifier(&strukt, struct_literal);
+            return self.render_struct_identifier(&strukt);
         }
         let rhs = self.render_struct_literal_fields(&strukt, struct_literal.fields());
         let rhs: Vec<Box<Fn() -> T::DrawResult>> = rhs.into_iter()
@@ -833,7 +839,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.align(
                               &|| {
                                   self.set_selected_on_click(
-                    &|| self.render_struct_identifier(&strukt, struct_literal),
+                    &|| self.render_struct_identifier(&strukt),
                     struct_literal.id)
                               },
                               &rhs.iter().map(|b| b.as_ref()).collect_vec(),
@@ -877,12 +883,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         )
     }
 
-    fn render_struct_identifier(&self,
-                                strukt: &structs::Struct,
-                                _struct_literal: &lang::StructLiteral)
-                                -> T::DrawResult {
-        // TODO: handle when the typespec ain't available
-        self.ui_toolkit.draw_buttony_text(&strukt.name, BLUE_COLOR)
+    fn render_struct_identifier(&self, strukt: &structs::Struct) -> T::DrawResult {
+        let typ = lang::Type::from_spec(strukt);
+        self.render_name_with_type_definition(&strukt.name, BLUE_COLOR, &typ)
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
