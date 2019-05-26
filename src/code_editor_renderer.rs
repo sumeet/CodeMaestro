@@ -111,10 +111,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         }
     }
 
-    fn draw_selected(&self, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
-        self.ui_toolkit.scrolled_to_y_if_not_visible(&|| {
-                           self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
-                       })
+    fn draw_selected(&self, scroll_hash: String, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
+        self.ui_toolkit
+            .scrolled_to_y_if_not_visible(scroll_hash, &|| {
+                self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
+            })
     }
 
     fn render_assignment(&self, assignment: &lang::Assignment) -> T::DrawResult {
@@ -196,8 +197,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.draw_child_region(BLACK_COLOR,
                                           &move || {
                                               let options =
-                                                  options.iter()
-                                                      .map(|option| self.render_insertion_option(option, menu.insertion_point)).collect();
+                                                  options.iter().enumerate()
+                                                      .map(|(index, option)| self.render_insertion_option(index, option, menu.insertion_point)).collect();
                                               self.ui_toolkit.draw_all(options)
                                           },
                                           ChildRegionHeight::Pixels(150),
@@ -205,30 +206,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                           None::<fn(Keypress)>)
     }
 
-    #[allow(unused)]
     fn render_insertion_option(&self,
+                               index: usize,
                                option: &'a InsertCodeMenuOption,
                                insertion_point: InsertionPoint)
                                -> T::DrawResult {
-        // TODO: probably have to make a way of rendering code nodes without anything being
-        // clickable
         let is_selected = option.is_selected;
-        //        let button_color = if is_selected { RED_COLOR } else { BLACK_COLOR };
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let new_code_node = option.new_node.clone();
-        //
-        //        let draw = move || {
-        //            let cmdb = cmd_buffer.clone();
-        //            let new_code_node = new_code_node.clone();
-        //
-        //            self.draw_small_button(&option.label, button_color, move || {
-        //                    let ncn = new_code_node.clone();
-        //                    cmdb.borrow_mut().add_editor_command(move |editor| {
-        //                                         editor.hide_insert_code_menu();
-        //                                         editor.insert_code(ncn.clone(), insertion_point);
-        //                                     });
-        //                })
-        //        };
         let draw = move || {
             let cmdb = cmd_buffer.clone();
             let new_code_node = new_code_node.clone();
@@ -244,10 +229,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         };
 
         if is_selected {
-            self.draw_selected(&draw)
+            self.draw_selected(self.insertion_option_menu_hash(index, &insertion_point),
+                               &draw)
         } else {
             draw()
         }
+    }
+
+    fn insertion_option_menu_hash(&self, index: usize, insertion_point: &InsertionPoint) -> String {
+        format!("{}:{:?}", index, insertion_point)
     }
 
     fn render_list_literal(&self,
@@ -411,10 +401,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         }
 
         if self.is_selected(code_node.id()) {
-            self.draw_selected(&draw)
+            self.draw_selected(self.code_node_cursor_scroll_hash(code_node), &draw)
         } else {
             self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
         }
+    }
+
+    // this identifies the current selection to the UI, so it can remember the scroll of the current
+    // item. blahblahblahblah
+    fn code_node_cursor_scroll_hash(&self, code_node: &lang::CodeNode) -> String {
+        format!("{:?}:{}", self.code_editor.location, code_node.id())
     }
 
     fn render_null_literal(&self, null_literal_id: &lang::ID) -> T::DrawResult {

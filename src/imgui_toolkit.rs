@@ -12,6 +12,7 @@ use imgui::*;
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
+use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -31,17 +32,42 @@ struct Window {
     size: (f32, f32),
 }
 
+//enum ScrollStatus {
+//    FirstFocus,
+//    AlreadyFocused,
+//}
+
 struct TkCache {
     focused_child_regions: HashMap<String, bool>,
     windows: HashMap<String, Window>,
     replace_on_hover: HashMap<String, bool>,
+    //scroll_for_keyboard_nav: HashMap<String, ScrollStatus>,
+    elements_focused_in_prev_iteration: HashSet<String>,
+    elements_focused_in_this_iteration: HashSet<String>,
 }
 
 impl TkCache {
     fn new() -> Self {
         Self { focused_child_regions: HashMap::new(),
                replace_on_hover: HashMap::new(),
-               windows: HashMap::new() }
+               windows: HashMap::new(),
+               //               scroll_for_keyboard_nav: HashMap::new(),
+               elements_focused_in_prev_iteration: HashSet::new(),
+               elements_focused_in_this_iteration: HashSet::new() }
+    }
+
+    pub fn cleanup_after_iteration() {
+        let mut cache = TK_CACHE.lock().unwrap();
+        cache.elements_focused_in_prev_iteration = cache.elements_focused_in_this_iteration.clone();
+        cache.elements_focused_in_this_iteration.clear();
+    }
+
+    pub fn is_new_focus_for_scrolling(scroll_hash: String) -> bool {
+        let mut cache = TK_CACHE.lock().unwrap();
+        let is_new_focus = !cache.elements_focused_in_prev_iteration
+                                 .contains(&scroll_hash);
+        cache.elements_focused_in_this_iteration.insert(scroll_hash);
+        is_new_focus
     }
 
     pub fn is_focused(child_window_id: &str) -> bool {
@@ -82,6 +108,9 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
         async_executor.turn();
         let mut toolkit = ImguiToolkit::new(ui, keypress);
         app.draw(&mut toolkit);
+
+        TkCache::cleanup_after_iteration();
+
         true
     });
 }
@@ -185,9 +214,11 @@ impl Rect {
 impl<'a> UiToolkit for ImguiToolkit<'a> {
     type DrawResult = ();
 
-    fn scrolled_to_y_if_not_visible(&self, draw_fn: &Fn()) {
+    fn scrolled_to_y_if_not_visible(&self, scroll_hash: String, draw_fn: &Fn()) {
         self.ui.group(draw_fn);
-        if !self.is_last_drawn_item_totally_visible() {
+        // TODO: get rid of clone
+        let is_first_focus = TkCache::is_new_focus_for_scrolling(scroll_hash.clone());
+        if !self.is_last_drawn_item_totally_visible() && is_first_focus {
             unsafe { imgui_sys::igSetScrollHereY(1.) }
         }
     }
@@ -581,7 +612,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                          (unsafe { imgui_sys::igGetScrollX() }) + 5.
                                      }
                                  };
-                                 println!("set to: {}", set_to);
                                  unsafe { imgui_sys::igSetScrollX(set_to) };
                              }
                          }

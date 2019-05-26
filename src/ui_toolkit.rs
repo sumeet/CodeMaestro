@@ -152,7 +152,10 @@ pub trait UiToolkit {
              lhs: &Fn() -> Self::DrawResult,
              rhs: &[&Fn() -> Self::DrawResult])
              -> Self::DrawResult;
-    fn scrolled_to_y_if_not_visible(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn scrolled_to_y_if_not_visible(&self,
+                                    scroll_hash: String,
+                                    draw_fn: &Fn() -> Self::DrawResult)
+                                    -> Self::DrawResult;
 }
 
 pub enum SelectableItem<T: 'static> {
