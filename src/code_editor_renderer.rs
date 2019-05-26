@@ -112,7 +112,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn draw_selected(&self, draw: &Fn() -> T::DrawResult) -> T::DrawResult {
-        self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
+        self.ui_toolkit.scrolled_to_y_if_not_visible(&|| {
+                           self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
+                       })
     }
 
     fn render_assignment(&self, assignment: &lang::Assignment) -> T::DrawResult {

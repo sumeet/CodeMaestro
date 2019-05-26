@@ -130,18 +130,13 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     // HAXXXXX
-    fn is_last_drawn_item_totally_visible_and_some_more_to_the_right(&self) -> bool {
+    fn is_last_drawn_item_totally_visible(&self) -> bool {
         let window_min = self.ui.get_window_pos();
         let window_size = self.ui.get_window_size();
         let window_max = (window_min.0 + window_size.0, window_min.1 + window_size.1);
-        println!("window_min: {:?}", window_min);
-        println!("window_max: {:?}", window_min);
 
         let item_min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let mut item_max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        item_max.x += 100.;
-        println!("item_min: {:?}", item_min);
-        println!("item_max: {:?}", item_min);
+        let item_max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
 
         ((window_min.0 <= item_min.x)
          && (item_min.x <= window_max.0)
@@ -189,6 +184,13 @@ impl Rect {
 
 impl<'a> UiToolkit for ImguiToolkit<'a> {
     type DrawResult = ();
+
+    fn scrolled_to_y_if_not_visible(&self, draw_fn: &Fn()) {
+        self.ui.group(draw_fn);
+        if !self.is_last_drawn_item_totally_visible() {
+            unsafe { imgui_sys::igSetScrollHereY(1.) }
+        }
+    }
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
         if let Some(keypress) = self.keypress {
@@ -566,24 +568,22 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                          draw_fn();
                          if is_focused {
                              if i == 0 {
-                            unsafe { imgui_sys::igSetScrollX(0.) };
-                        } else if i == last_element_index {
-                            unsafe { imgui_sys::igSetScrollX(imgui_sys::igGetScrollMaxX()) };
-                        } else if !self
-                            .is_last_drawn_item_totally_visible_and_some_more_to_the_right()
-                        {
-                            // TODO: this thing is still wonky, but it works ok enough for now
-                            //let set_to = focused_element_x - *first_element_screen_x.borrow();
-                            let set_to = {
-                                if focused_element_x < 0.0 {
-                                    (unsafe { imgui_sys::igGetScrollX() }) - 5.
-                                } else {
-                                    (unsafe { imgui_sys::igGetScrollX() }) + 5.
-                                }
-                            };
-                            println!("set to: {}", set_to);
-                            unsafe { imgui_sys::igSetScrollX(set_to) };
-                        }
+                                 unsafe { imgui_sys::igSetScrollX(0.) };
+                             } else if i == last_element_index {
+                                 unsafe { imgui_sys::igSetScrollX(imgui_sys::igGetScrollMaxX()) };
+                             } else if !self.is_last_drawn_item_totally_visible() {
+                                 // TODO: this thing is still wonky, but it works ok enough for now
+                                 //let set_to = focused_element_x - *first_element_screen_x.borrow();
+                                 let set_to = {
+                                     if focused_element_x < 0.0 {
+                                         (unsafe { imgui_sys::igGetScrollX() }) - 5.
+                                     } else {
+                                         (unsafe { imgui_sys::igGetScrollX() }) + 5.
+                                     }
+                                 };
+                                 println!("set to: {}", set_to);
+                                 unsafe { imgui_sys::igSetScrollX(set_to) };
+                             }
                          }
                      });
                      x
