@@ -78,6 +78,13 @@ struct YewToolkit {
 impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
 
+    fn scrolled_to_y_if_not_visible(&self,
+                                    _scroll_hash: String,
+                                    draw_fn: &Fn() -> Self::DrawResult)
+                                    -> Self::DrawResult {
+        draw_fn()
+    }
+
     fn draw_top_right_overlay(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
             <div style={ format!("position: absolute; top: 10px; right: 10px; color: white; background-color: {}",self.rgba(WINDOW_BG_COLOR)) }, >
@@ -356,6 +363,17 @@ impl UiToolkit for YewToolkit {
                                                     draw_context_menu: Option<&Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult {
+        // TODO: this is super duped from draw_window, clean this up already!!!! :((((
+        // if there's a keypress handler provided, then send those keypresses into the app, and like,
+        // prevent the tab key from doing anything
+        let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
+            if let Some(handle_keypress) = &handle_keypress {
+                handle_keypress(keypress)
+            }
+        });
+        let handle_keypress_2 = Rc::clone(&handle_keypress_1);
+        let global_keydown_handler = self.global_keydown_handler();
+
         let context_menu_id = self.incr_last_drawn_element_id().to_string();
         let context_menu = draw_context_menu.map(|draw_context_menu| draw_context_menu());
         let is_context_menu = context_menu.is_some();
@@ -364,72 +382,57 @@ impl UiToolkit for YewToolkit {
             ChildRegionHeight::Percentage(height_percentage) => {
                 format!("height: calc({}%)", height_percentage * 100.)
             }
-            ChildRegionHeight::Pixels(px) => format!("height: {}px", px),
+            ChildRegionHeight::Pixels(px) => format!("max-height: {}px", px),
         };
 
-        // if there's a keypress handler provided, then send those keypresses into the app, and like,
-        // prevent the tab key from doing anything
-        if let Some(handle_keypress) = handle_keypress {
-            let handle_keypress_1 = Rc::new(handle_keypress);
-            let handle_keypress_2 = Rc::clone(&handle_keypress_1);
-            let global_keydown_handler = self.global_keydown_handler();
-            // TODO: border color is hardcoded, ripped from imgui
-            html! {
-                <div>
-                    <div id={ &context_menu_id }, class="context_menu", style="display: none;",>
-                        { context_menu.unwrap_or_else(|| VNode::from(VList::new())) }
-                    </div>
+        // TODO: border color is hardcoded, ripped from imgui
+        html! {
+            <div>
+                <div id={ &context_menu_id }, class="context_menu", style="display: none;",>
+                    { context_menu.unwrap_or_else(|| VNode::from(VList::new())) }
+                </div>
 
-                    <div style={ format!("border: 1px solid #6a6a6a; min-height: 100px; {}; white-space: nowrap; background-color: {};", height_css, self.rgba(bg)) },
-                        id={ self.incr_last_drawn_element_id().to_string() },
-                        tabindex=0,
-                        oncontextmenu=|e| {
-                            if is_context_menu {
-                                e.prevent_default();
-                                js! {
-                                    showRightClickMenu(@{context_menu_id.clone()}, @{e.as_ref()});
-                                }
+                <div style={ format!("border: 1px solid #6a6a6a; min-height: 100px; {}; white-space: nowrap; background-color: {}; overflow: auto;", height_css, self.rgba(bg)) },
+                    id={ self.incr_last_drawn_element_id().to_string() },
+                    tabindex=0,
+                    oncontextmenu=|e| {
+                        if is_context_menu {
+                            e.prevent_default();
+                            js! {
+                                showRightClickMenu(@{context_menu_id.clone()}, @{e.as_ref()});
                             }
-                            Msg::DontRedraw
-                        },
-                        onkeypress=|e| {
+                        }
+                        Msg::DontRedraw
+                    },
+                    onkeypress=|e| {
+                        if let Some(keypress) = map_keypress_event(&e) {
+                            handle_keypress_1(keypress);
+                        }
+                        e.prevent_default();
+                        Msg::Redraw
+                    },
+                    onkeydown=|e| {
+                        global_keydown_handler(&e);
+                        // lol for these special keys we have to listen on keydown, but the
+                        // rest we can do keypress :/
+                        if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
+                            // LOL this is for ctrl+r
+                            ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
+                            //console!(log, e.key());
                             if let Some(keypress) = map_keypress_event(&e) {
-                                handle_keypress_1(keypress);
+                                //console!(log, format!("{:?}", keypress));
+                                handle_keypress_2(keypress);
                             }
                             e.prevent_default();
                             Msg::Redraw
-                        },
-                        onkeydown=|e| {
-                            global_keydown_handler(&e);
-                            // lol for these special keys we have to listen on keydown, but the
-                            // rest we can do keypress :/
-                            if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
-                                // LOL this is for ctrl+r
-                                ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
-                                //console!(log, e.key());
-                                if let Some(keypress) = map_keypress_event(&e) {
-                                    //console!(log, format!("{:?}", keypress));
-                                    handle_keypress_2(keypress);
-                                }
-                                e.prevent_default();
-                                Msg::Redraw
-                            } else {
-                                Msg::DontRedraw
-                            }
-                        }, >
+                        } else {
+                            Msg::DontRedraw
+                        }
+                    }, >
 
-                        { draw_fn() }
-                    </div>
-                </div>
-            }
-        } else {
-            html! {
-                <div style={ height_css },
-                    id={ self.incr_last_drawn_element_id().to_string() },
-                    tabindex=0, >
                     { draw_fn() }
                 </div>
-            }
+            </div>
         }
     }
 
