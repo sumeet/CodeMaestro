@@ -1,7 +1,7 @@
 use std::future::Future as NewFuture;
 use tokio_current_thread::CurrentThread;
 use std::time;
-use super::asynk::{backward};
+use cs::asynk::{backward};
 use tokio_reactor::Reactor;
 use tokio_timer::timer::{self, Timer};
 

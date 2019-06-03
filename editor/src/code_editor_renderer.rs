@@ -7,14 +7,14 @@ use itertools::Itertools;
 use super::code_editor;
 use super::code_editor::InsertionPoint;
 use super::editor;
-use super::env_genie::EnvGenie;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
-use super::lang;
-use super::lang::CodeNode;
-use super::structs;
 use super::ui_toolkit::UiToolkit;
 use crate::editor::Keypress;
 use crate::ui_toolkit::ChildRegionHeight;
+use cs::env_genie::EnvGenie;
+use cs::lang;
+use cs::lang::CodeNode;
+use cs::structs;
 
 // TODO: move to colors.rs
 pub type Color = [f32; 4];

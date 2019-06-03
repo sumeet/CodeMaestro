@@ -2,14 +2,13 @@ use itertools::Itertools;
 use serde_json;
 use std::collections::BTreeMap;
 
-use super::env_genie::EnvGenie;
+use cs::env_genie::EnvGenie;
 use super::json2;
-use super::structs;
-use super::lang;
-use super::http_request;
-use super::json_http_client;
+use cs::structs;
+use cs::lang;
+use cs::http_request;
+use cs::json_http_client;
 use super::async_executor::AsyncExecutor;
-use super::result::{Result as EZResult};
 
 #[derive(Clone)]
 pub struct JSONHTTPClientBuilder {
@@ -108,7 +107,7 @@ fn build_return_type(env_genie: &EnvGenie,
     Some(ReturnTypeBuilder::new(env_genie, &return_type_spec).build())
 }
 
-async fn do_get_request(url: String) -> EZResult<serde_json::Value> {
+async fn do_get_request(url: String) -> Result<serde_json::Value, Box<std::error::Error>> {
     await!(json_http_client::get_json(http_request::get(&url)?))
 }
 

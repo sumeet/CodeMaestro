@@ -1,6 +1,6 @@
-use super::enums::Enum;
-use super::lang;
-use super::structs;
+use cs::enums::Enum;
+use cs::lang;
+use cs::structs;
 use std::collections::BTreeMap;
 
 pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::CodeNode {

@@ -1,21 +1,19 @@
 use crate::editor::CommandBuffer;
 use crate::editor::Controller;
-use std::iter;
-use crate::EnvGenie;
+use cs::env_genie::EnvGenie;
+use cs::lang::Function;
+use cs::lang::TypeSpec;
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use matches::matches;
-use itertools::Itertools;
-use super::lang::Function;
-use super::lang::TypeSpec;
+use std::iter;
 
 lazy_static! {
-    static ref CATEGORIES : Vec<Box<MenuCategory + Send + Sync>> = vec![
-        Box::new(ChatTriggers {}),
-        Box::new(JSONHTTPClients {}),
-        Box::new(Functions {}),
-        Box::new(Enums {}),
-        Box::new(Structs {}),
-    ];
+    static ref CATEGORIES: Vec<Box<MenuCategory + Send + Sync>> = vec![Box::new(ChatTriggers {}),
+                                                                       Box::new(JSONHTTPClients {}),
+                                                                       Box::new(Functions {}),
+                                                                       Box::new(Enums {}),
+                                                                       Box::new(Structs {}),];
 }
 
 pub struct Opener {
@@ -25,16 +23,14 @@ pub struct Opener {
 
 impl Opener {
     pub fn new() -> Self {
-        Self {
-            input_str: "".to_string(),
-            selected_index: 0,
-        }
+        Self { input_str: "".to_string(),
+               selected_index: 0 }
     }
 
     // XXX: copy and paste from insert_code_menu.rs
     fn selected_index(&self, num_total_options: usize) -> usize {
         if num_total_options == 0 {
-            return 0
+            return 0;
         }
         let selected = self.selected_index % num_total_options as isize;
         if selected == 0 {
@@ -60,8 +56,10 @@ impl Opener {
     }
 
     // controller used to see builtins
-    pub fn list_options<'a>(&'a self, controller: &'a Controller,
-                            env_genie: &'a EnvGenie<'a>) -> OptionsLister<'a> {
+    pub fn list_options<'a>(&'a self,
+                            controller: &'a Controller,
+                            env_genie: &'a EnvGenie<'a>)
+                            -> OptionsLister<'a> {
         OptionsLister::new(controller, env_genie, self)
     }
 }
@@ -73,33 +71,36 @@ pub struct OptionsLister<'a> {
 }
 
 impl<'a> OptionsLister<'a> {
-    pub fn new(controller: &'a Controller, env_genie: &'a EnvGenie<'a>,
-               opener: &'a Opener) -> Self {
-        Self {
-            controller,
-            env_genie,
-            opener,
-        }
+    pub fn new(controller: &'a Controller,
+               env_genie: &'a EnvGenie<'a>,
+               opener: &'a Opener)
+               -> Self {
+        Self { controller,
+               env_genie,
+               opener }
     }
 
     pub fn selected_option(&'a self) -> Option<MenuItem> {
         self.list().find(|menu_item| {
-            if let MenuItem::Selectable { is_selected, .. } = menu_item {
-                *is_selected
-            } else {
-                false
-            }
-        })
+                       if let MenuItem::Selectable { is_selected, .. } = menu_item {
+                           *is_selected
+                       } else {
+                           false
+                       }
+                   })
     }
 
     pub fn list(&'a self) -> impl ExactSizeIterator<Item = MenuItem> + 'a {
         let mut options = self.vec();
-        let mut selectables = options.iter_mut()
-            .filter(|menu_item| matches!(menu_item, MenuItem::Selectable { .. }))
-            .collect_vec();
+        let mut selectables =
+            options.iter_mut()
+                   .filter(|menu_item| matches!(menu_item, MenuItem::Selectable { .. }))
+                   .collect_vec();
         let selected_index = self.opener.selected_index(selectables.len());
         if selectables.len() > selected_index {
-            if let MenuItem::Selectable { ref mut is_selected, .. } = selectables[selected_index] {
+            if let MenuItem::Selectable { ref mut is_selected,
+                                          .. } = selectables[selected_index]
+            {
                 *is_selected = true
             }
         }
@@ -120,38 +121,41 @@ impl<'a> OptionsLister<'a> {
             })
         ).collect()
     }
-
 }
 
-fn filter_matches<'a>(input_str: &'a str, items: impl Iterator<Item = MenuItem>) -> impl Iterator<Item = MenuItem> {
+fn filter_matches<'a>(input_str: &'a str,
+                      items: impl Iterator<Item = MenuItem>)
+                      -> impl Iterator<Item = MenuItem> {
     // TODO: add fuzzy finding
     let input = input_str.trim().to_lowercase();
-    items.filter(move |item| {
-        match item {
-            MenuItem::Selectable { label, .. } => label.to_lowercase().contains(&input),
-            MenuItem::Heading(_) => panic!("this method shouldn't ever see a Heading"),
-        }
-    })
+    items.filter(move |item| match item {
+             MenuItem::Selectable { label, .. } => label.to_lowercase().contains(&input),
+             MenuItem::Heading(_) => panic!("this method shouldn't ever see a Heading"),
+         })
 }
 
 pub enum MenuItem {
     Heading(&'static str),
-    Selectable { label: String, when_selected: Box<Fn(&mut CommandBuffer)>, is_selected: bool }
+    Selectable {
+        label: String,
+        when_selected: Box<Fn(&mut CommandBuffer)>,
+        is_selected: bool,
+    },
 }
 
 impl MenuItem {
     fn selectable(label: String, when_selected: impl Fn(&mut CommandBuffer) + 'static) -> Self {
-        MenuItem::Selectable {
-            label,
-            when_selected: Box::new(when_selected),
-            is_selected: false,
-        }
+        MenuItem::Selectable { label,
+                               when_selected: Box::new(when_selected),
+                               is_selected: false }
     }
 }
 
 trait MenuCategory {
     fn label(&self) -> &'static str;
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a>;
+    fn items<'a>(&'a self,
+                 options_lister: &'a OptionsLister<'a>)
+                 -> Box<Iterator<Item = MenuItem> + 'a>;
 }
 
 struct ChatTriggers;
@@ -161,7 +165,9 @@ impl MenuCategory for ChatTriggers {
         "Chat triggers"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
+    fn items<'a>(&'a self,
+                 options_lister: &'a OptionsLister<'a>)
+                 -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_chat_triggers()
             .filter_map(move |ct| {
                 if options_lister.controller.is_builtin(ct.id) {
@@ -188,23 +194,24 @@ impl MenuCategory for Functions {
         "Functions"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
-        Box::new(options_lister.env_genie.list_code_funcs()
-            .filter_map(move |cf| {
-                if options_lister.controller.is_builtin(cf.id()) {
-                    return None
-                }
-                // TODO: we could avoid this clone by having load_chat_trigger take the
-                // ID instead of the whole trigger
-                let cf2 = cf.clone();
-                Some(MenuItem::selectable(
-                    cf.name.clone(),
-                    move |command_buffer| {
-                        let cf2 = cf2.clone();
-                        command_buffer.load_code_func(cf2)
-                    }
-                ))
-            }))
+    fn items<'a>(&'a self,
+                 options_lister: &'a OptionsLister<'a>)
+                 -> Box<Iterator<Item = MenuItem> + 'a> {
+        Box::new(options_lister.env_genie
+                               .list_code_funcs()
+                               .filter_map(move |cf| {
+                                   if options_lister.controller.is_builtin(cf.id()) {
+                                       return None;
+                                   }
+                                   // TODO: we could avoid this clone by having load_chat_trigger take the
+                                   // ID instead of the whole trigger
+                                   let cf2 = cf.clone();
+                                   Some(MenuItem::selectable(cf.name.clone(),
+                                                             move |command_buffer| {
+                                                                 let cf2 = cf2.clone();
+                                                                 command_buffer.load_code_func(cf2)
+                                                             }))
+                               }))
     }
 }
 
@@ -215,7 +222,9 @@ impl MenuCategory for JSONHTTPClients {
         "JSON HTTP Clients"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
+    fn items<'a>(&'a self,
+                 options_lister: &'a OptionsLister<'a>)
+                 -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_json_http_clients()
             .filter_map(move |cf| {
                 if options_lister.controller.is_builtin(cf.id()) {
@@ -242,7 +251,9 @@ impl MenuCategory for Enums {
         "Enums"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
+    fn items<'a>(&'a self,
+                 options_lister: &'a OptionsLister<'a>)
+                 -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_enums()
             .filter_map(move |eneom| {
                 if options_lister.controller.is_builtin(eneom.id()) {
@@ -269,7 +280,9 @@ impl MenuCategory for Structs {
         "Structs"
     }
 
-    fn items<'a>(&'a self, options_lister: &'a OptionsLister<'a>) -> Box<Iterator<Item = MenuItem> + 'a> {
+    fn items<'a>(&'a self,
+                 options_lister: &'a OptionsLister<'a>)
+                 -> Box<Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_structs()
             .filter_map(move |strukt| {
                 if options_lister.controller.is_builtin(strukt.id()) {

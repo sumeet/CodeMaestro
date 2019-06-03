@@ -1,0 +1,74 @@
+#![feature(await_macro, async_await, futures_api)]
+#![feature(generators)]
+#![feature(box_patterns)]
+#![feature(fnbox)]
+#![feature(drain_filter)]
+
+// crates
+use cfg_if::cfg_if;
+
+// modules
+mod app;
+mod code_editor;
+mod code_editor_renderer;
+mod code_generation;
+mod code_validation;
+mod edit_types;
+mod editor;
+#[cfg(feature = "default")]
+mod imgui_support;
+#[cfg(feature = "default")]
+mod imgui_toolkit;
+mod insert_code_menu;
+mod insert_code_menu_renderer;
+mod json2;
+mod json_http_client_builder;
+mod opener;
+mod save_state;
+mod send_to_server_overlay;
+mod ui_toolkit;
+mod undo;
+mod window_positions;
+#[cfg(feature = "javascript")]
+mod yew_toolkit;
+
+#[cfg(feature = "default")]
+mod tokio_executor;
+#[cfg(feature = "default")]
+mod async_executor {
+    pub use super::tokio_executor::*;
+}
+#[cfg(feature = "javascript")]
+mod stdweb_executor;
+#[cfg(feature = "javascript")]
+mod async_executor {
+    pub use super::stdweb_executor::*;
+}
+
+// uses for this module
+#[cfg(feature = "default")]
+use imgui_toolkit::draw_app;
+#[cfg(feature = "javascript")]
+use yew_toolkit::draw_app;
+
+cfg_if! {
+    if #[cfg(feature = "javascript")] {
+        fn init_debug() {
+            use stdweb::{js,_js_impl,console,__internal_console_unsafe};
+            ::std::panic::set_hook(Box::new(|info| {
+                console!(error, format!("!!! RUST PANIC !!! {:?}", info));
+            }));
+        }
+    } else {
+        fn init_debug() {}
+    }
+}
+
+pub fn main() {
+    init_debug();
+
+    async_executor::with_executor_context(|async_executor| {
+        let app = app::App::new_rc();
+        draw_app(app, async_executor);
+    })
+}

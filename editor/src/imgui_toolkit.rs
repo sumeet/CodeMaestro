@@ -1,8 +1,8 @@
+use super::app::App;
 use super::async_executor;
 use super::editor::Keypress;
 use super::imgui_support;
 use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
-use super::App;
 use itertools::Itertools;
 
 use crate::code_editor_renderer::{BLUE_COLOR, PURPLE_COLOR};

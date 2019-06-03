@@ -1,7 +1,6 @@
-use super::lang;
+use cs::lang;
 
-pub fn set_typespec(t: &mut lang::Type, typespec: &Box<lang::TypeSpec>,
-                    nesting_level: &[usize]) {
+pub fn set_typespec(t: &mut lang::Type, typespec: &Box<lang::TypeSpec>, nesting_level: &[usize]) {
     let mut type_to_modify = t;
     for param_index in nesting_level {
         type_to_modify = &mut type_to_modify.params[*param_index]
@@ -10,6 +9,7 @@ pub fn set_typespec(t: &mut lang::Type, typespec: &Box<lang::TypeSpec>,
     type_to_modify.params.truncate(typespec.num_params());
     let num_missing_params = typespec.num_params() - type_to_modify.params.len();
     for _ in 0..num_missing_params {
-        type_to_modify.params.push(lang::Type::from_spec(&*lang::NULL_TYPESPEC))
+        type_to_modify.params
+                      .push(lang::Type::from_spec(&*lang::NULL_TYPESPEC))
     }
 }

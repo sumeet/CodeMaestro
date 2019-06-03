@@ -5,42 +5,46 @@ use std::collections::HashMap;
 use std::iter;
 use std::rc::Rc;
 
-use super::config;
+use itertools::Itertools;
+use http;
+
 use super::async_executor;
-use super::builtins;
-use super::chat_trigger::ChatTrigger;
+use cs::env::Interpreter;
+use cs::await_eval_result;
+use cs::config;
+use cs::builtins;
+use cs::chat_trigger::ChatTrigger;
 use super::code_editor;
 use super::code_editor_renderer::CodeEditorRenderer;
-use super::code_function;
+use cs::code_function;
 use super::code_generation;
-use super::code_loading;
+use cs::code_loading;
 use super::edit_types;
-use super::enums;
-use super::env;
-use super::env_genie;
-use super::external_func;
-use super::function;
-use super::http_client;
+use cs::enums;
+use cs::env;
+use cs::env_genie;
+use cs::external_func;
+use cs::function;
+use cs::http_client;
 use super::json2;
-use super::json_http_client::JSONHTTPClient;
+use cs::json_http_client::JSONHTTPClient;
 use super::json_http_client_builder::JSONHTTPClientBuilder;
-use super::jsstuff;
-use super::lang;
-use super::lang::TypeSpec;
-use super::lang::{CodeNode, Function, Value, ID};
-use super::pystuff;
+use cs::jsstuff;
+use cs::lang;
+use cs::lang::TypeSpec;
+use cs::lang::{CodeNode, Function, Value, ID};
+use cs::pystuff;
 use super::save_state;
-use super::scripts;
-use super::structs;
-use super::tests;
+use cs::scripts;
+use cs::structs;
+use cs::tests;
 use super::ui_toolkit::{SelectableItem, UiToolkit};
 use super::window_positions::WindowPositions;
 use crate::opener::MenuItem;
 use crate::opener::Opener;
 use crate::window_positions::Window;
-use itertools::Itertools;
 use crate::send_to_server_overlay::{SendToServerOverlay,SendToServerOverlayStatus};
-use crate::code_loading::TheWorld;
+use cs::code_loading::TheWorld;
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
@@ -444,7 +448,7 @@ impl CommandBuffer {
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
         let code = code.clone();
         self.add_integrating_command(move |_controller, interpreter, async_executor, _| {
-            env::run(interpreter, async_executor, &code, callback);
+            run(interpreter, async_executor, &code, callback);
         })
     }
 
@@ -1971,3 +1975,17 @@ fn save_world(cont: &Controller, env: &env::ExecutionEnvironment) -> code_loadin
             .collect(),
     }
 }
+
+pub fn run<F: FnOnce(lang::Value) + 'static>(interpreter: &mut Interpreter,
+                                             async_executor: &mut async_executor::AsyncExecutor,
+                                             code_node: &lang::CodeNode,
+                                             callback: F) {
+    let fut = interpreter.evaluate(code_node);
+    async_executor.exec(async move {
+        callback(await_eval_result!(fut));
+        let ok : Result<(), ()> = Ok(());
+        ok
+    })
+}
+
+

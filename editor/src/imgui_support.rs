@@ -61,7 +61,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     // TODO: also i think you have to add the fonts in such a way that the more specific ranges are
     // listed first... idk, i'm testing it out
     imgui.fonts()
-         .add_font_with_config(include_bytes!("../fonts/calibri.ttf"),
+         .add_font_with_config(include_bytes!("../../fonts/calibri.ttf"),
                                ImFontConfig::new().oversample_h(1)
                                                   .pixel_snap_h(true)
                                                   .size_pixels(font_size)
@@ -72,7 +72,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                                              0xf104, // the range for custom fonts, small because it's only the ones we use
                                              0]);
     imgui.fonts()
-         .add_font_with_config(include_bytes!("../fonts/fontcustom.ttf"),
+         .add_font_with_config(include_bytes!("../../fonts/fontcustom.ttf"),
                                ImFontConfig::new().glyph_offset((0.0, icon_y_offset))
                                                   .oversample_h(1)
                                                   .pixel_snap_h(true)
@@ -82,7 +82,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                                &range);
 
     imgui.fonts()
-         .add_font_with_config(include_bytes!("../fonts/NanumGothic.ttf"),
+         .add_font_with_config(include_bytes!("../../fonts/NanumGothic.ttf"),
                                ImFontConfig::new().oversample_h(1)
                                                   .pixel_snap_h(true)
                                                   .size_pixels(font_size)
@@ -91,7 +91,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                                &FontGlyphRange::korean());
 
     imgui.fonts()
-         .add_font_with_config(include_bytes!("../fonts/Osaka-UI-03.ttf"),
+         .add_font_with_config(include_bytes!("../../fonts/Osaka-UI-03.ttf"),
                                ImFontConfig::new().oversample_h(1)
                                                   .pixel_snap_h(true)
                                                   .size_pixels(font_size)
@@ -103,7 +103,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                                              0xf5c8, // the range for font awesome regular 400
                                              0]);
     imgui.fonts()
-         .add_font_with_config(include_bytes!("../fonts/fa-regular-400.ttf"),
+         .add_font_with_config(include_bytes!("../../fonts/fa-regular-400.ttf"),
                                ImFontConfig::new().glyph_offset((0.0, icon_y_offset))
                                                   .oversample_h(1)
                                                   .pixel_snap_h(true)
@@ -116,7 +116,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                                              0xf72f, // the range for font awesome solid 900
                                              0]);
     imgui.fonts()
-         .add_font_with_config(include_bytes!("../fonts/fa-solid-900.ttf"),
+         .add_font_with_config(include_bytes!("../../fonts/fa-solid-900.ttf"),
                                ImFontConfig::new().glyph_offset((0.0, icon_y_offset))
                                                   .oversample_h(1)
                                                   .pixel_snap_h(true)
@@ -129,7 +129,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                                              0xf298, // the range for font awesome brands 400 (that we use)
                                              0]);
     imgui.fonts()
-         .add_font_with_config(include_bytes!("../fonts/fa-brands-400.ttf"),
+         .add_font_with_config(include_bytes!("../../fonts/fa-brands-400.ttf"),
                                ImFontConfig::new().glyph_offset((0.0, icon_y_offset))
                                                   .oversample_h(1)
                                                   .pixel_snap_h(true)

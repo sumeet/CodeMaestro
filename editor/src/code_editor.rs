@@ -6,18 +6,18 @@ use gen_iter::GenIter;
 use itertools::Itertools;
 use serde_derive::{Deserialize, Serialize};
 
-use super::code_function;
 use super::editor;
-use super::enums::EnumVariant;
-use super::env_genie::EnvGenie;
 use super::insert_code_menu::InsertCodeMenu;
-use super::lang;
-use super::lang::CodeNode;
-use super::scripts;
 use super::undo;
-use crate::builtins::new_result;
 use crate::editor::Controller;
-use crate::env::ExecutionEnvironment;
+use cs::builtins::new_result;
+use cs::code_function;
+use cs::enums::EnumVariant;
+use cs::env::ExecutionEnvironment;
+use cs::env_genie::EnvGenie;
+use cs::lang;
+use cs::lang::CodeNode;
+use cs::scripts;
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 

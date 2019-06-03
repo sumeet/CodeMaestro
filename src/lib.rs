@@ -12,93 +12,54 @@
 #![recursion_limit = "256"]
 #![feature(fnbox)]
 
-#[cfg(feature = "default")]
-mod imgui_support;
-#[cfg(feature = "default")]
-mod imgui_toolkit;
-#[cfg(feature = "javascript")]
-mod yew_toolkit;
-
 pub mod asynk;
 pub mod builtins;
-mod enums;
+pub mod enums;
 pub mod lang;
-mod structs;
-mod ui_toolkit;
+pub mod structs;
 #[macro_use]
 pub mod env;
 mod click_handling;
-mod code_editor;
-mod code_editor_renderer;
 pub mod code_loading;
 pub mod config;
-mod edit_types;
-mod editor;
-mod env_genie;
-mod http_request;
-mod insert_code_menu;
-mod insert_code_menu_renderer;
-mod json2;
-mod json_http_client;
-mod opener;
+pub mod env_genie;
+pub mod http_request;
+pub mod json_http_client;
 mod result;
-mod undo;
-mod window_positions;
 #[cfg(feature = "default")]
 #[macro_use]
 extern crate diesel;
-mod chat_trigger;
-mod code_function;
-mod code_generation;
-mod code_validation;
-mod external_func;
-mod function;
-mod json_http_client_builder;
+pub mod chat_trigger;
+pub mod code_function;
+pub mod external_func;
+pub mod function;
 #[cfg(feature = "python")]
-mod pystuff;
-mod save_state;
+pub mod pystuff;
 #[cfg(feature = "default")]
 pub mod schema;
-mod scripts;
-mod send_to_server_overlay;
-mod tests;
+pub mod scripts;
+pub mod tests;
 
 #[cfg(not(feature = "python"))]
 mod fakepystuff;
 
 #[cfg(not(feature = "python"))]
-mod pystuff {
+pub mod pystuff {
     pub use super::fakepystuff::*;
 }
 
 #[cfg(feature = "javascript")]
-mod jsstuff;
+pub mod jsstuff;
 
 #[cfg(feature = "default")]
 mod fakejsstuff;
 
 #[cfg(feature = "default")]
-mod jsstuff {
+pub mod jsstuff {
     pub use super::fakejsstuff::*;
 }
 
-#[cfg(feature = "default")]
-mod tokio_executor;
-
-#[cfg(feature = "default")]
-mod async_executor {
-    pub use super::tokio_executor::*;
-}
-
-#[cfg(feature = "javascript")]
-mod stdweb_executor;
-
-#[cfg(feature = "javascript")]
-mod async_executor {
-    pub use super::stdweb_executor::*;
-}
-
-mod http_client;
+pub mod http_client;
 #[cfg(feature = "default")]
 mod native_http_client;
 #[cfg(feature = "javascript")]
@@ -106,56 +67,9 @@ mod wasm_http_client;
 pub use env_genie::EnvGenie;
 pub use external_func::resolve_all_futures;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use self::editor::Controller;
 use self::env::ExecutionEnvironment;
-use self::ui_toolkit::UiToolkit;
-//use debug_cell::RefCell;
 
-#[cfg(feature = "default")]
-use imgui_toolkit::draw_app;
-
-#[cfg(feature = "javascript")]
-use yew_toolkit::draw_app;
-
-use crate::code_editor::CodeLocation;
-use crate::editor::CommandBuffer;
-use cfg_if::cfg_if;
 use std::sync::{Arc, Mutex};
-
-cfg_if! {
-    if #[cfg(feature = "javascript")] {
-        fn init_debug() {
-            use stdweb::{js,_js_impl,console,__internal_console_unsafe};
-            ::std::panic::set_hook(Box::new(|info| {
-                console!(error, format!("!!! RUST PANIC !!! {:?}", info));
-            }));
-        }
-    } else {
-        fn init_debug() {}
-    }
-}
-
-pub fn run_editor() {
-    init_debug();
-
-    async_executor::with_executor_context(|async_executor| {
-        let app = App::new_rc();
-        draw_app(app, async_executor);
-    })
-}
-
-// TODO: this is a mess, but not as bad as it was before (the part about the builtins)
-fn init_controller(_interpreter: &env::Interpreter) -> Controller {
-    let builtins = builtins::Builtins::load().unwrap();
-
-    // this is commented out because we don't need to save builtins right now. uncomment it when we
-    // need to save new builtins
-    //_save_builtins(&env).unwrap();
-    Controller::new(builtins)
-}
 
 // TODO: builtins loaded twice from disk, once here, once in init_controller.
 pub fn init_interpreter() -> env::Interpreter {
@@ -205,113 +119,4 @@ fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Erro
                                                    env.find_typespec(*ts_id).unwrap().clone())
                                               })
                                               .collect() }.save()
-}
-
-fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionEnvironment) {
-    let loaded_state = save_state::load();
-    let env_genie = EnvGenie::new(env);
-    for code_location in loaded_state.open_code_editors.iter() {
-        match code_location {
-            CodeLocation::Function(id) => {
-                env_genie.get_code_func(*id)
-                         .map(|code_func| command_buffer.load_code_func(code_func.clone()));
-            }
-
-            CodeLocation::Script(_id) => {
-                // lazy, no support for scripts yet
-            }
-            CodeLocation::Test(_id) => {
-                // lazy, no support for tests yet
-            }
-            CodeLocation::JSONHTTPClientURLParams(id) => {
-                env_genie.get_json_http_client(*id)
-                         .map(|client| command_buffer.load_json_http_client(client.clone()));
-            }
-            CodeLocation::JSONHTTPClientURL(id) => {
-                env_genie.get_json_http_client(*id)
-                         .map(|client| command_buffer.load_json_http_client(client.clone()));
-            }
-            CodeLocation::ChatTrigger(id) => {
-                env_genie
-                    .get_chat_trigger(*id)
-                    .map(|chat_trigger| command_buffer.load_chat_trigger(chat_trigger.clone()));
-            }
-        }
-    }
-
-    let window_positions = loaded_state.window_positions;
-    command_buffer.add_controller_command(move |controller| {
-                      controller.load_serialized_window_positions(window_positions);
-                  })
-}
-
-pub struct App {
-    pub interpreter: env::Interpreter,
-    command_buffer: Rc<RefCell<editor::CommandBuffer>>,
-    controller: Controller,
-}
-
-pub fn _load_saved_code_from_disk(controller: &mut Controller, env: &mut ExecutionEnvironment) {
-    let codestring = include_str!("../codesample.json");
-    let the_world: code_loading::TheWorld = code_loading::deserialize(codestring).unwrap();
-    for script in the_world.scripts {
-        controller.load_script(script)
-    }
-    for test in the_world.tests {
-        controller.load_test(test);
-    }
-
-    // TODO: this is duped in irctest.rs
-    for function in the_world.functions {
-        env.add_function_box(function);
-    }
-    for typespec in the_world.typespecs {
-        env.add_typespec_box(typespec);
-    }
-}
-
-impl App {
-    pub fn new() -> Self {
-        let interpreter = init_interpreter();
-        let mut command_buffer = editor::CommandBuffer::new();
-        let controller = init_controller(&interpreter);
-
-        //load_saved_code_from_disk(&mut controller, &mut interpreter.env.borrow_mut());
-        init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut());
-
-        let command_buffer = Rc::new(RefCell::new(command_buffer));
-        Self { interpreter,
-               command_buffer,
-               controller }
-    }
-
-    pub fn new_rc() -> Rc<RefCell<App>> {
-        Rc::new(RefCell::new(Self::new()))
-    }
-
-    pub fn draw<T: UiToolkit>(&mut self, ui_toolkit: &mut T) -> T::DrawResult {
-        let command_buffer = Rc::clone(&self.command_buffer);
-        let env = self.interpreter.env();
-        let env = env.borrow();
-        let env_genie = env_genie::EnvGenie::new(&env);
-        let renderer = editor::Renderer::new(ui_toolkit,
-                                             &self.controller,
-                                             Rc::clone(&command_buffer),
-                                             &env_genie);
-        renderer.render_app()
-    }
-
-    pub fn flush_commands(&mut self, mut async_executor: &mut async_executor::AsyncExecutor) {
-        let mut command_buffer = self.command_buffer.borrow_mut();
-        while command_buffer.has_queued_commands() {
-            //println!("some queued commands, flushing");
-            command_buffer.flush_to_controller(&mut self.controller);
-            command_buffer.flush_to_interpreter(&mut self.interpreter);
-            command_buffer.flush_integrating(&mut self.controller,
-                                             &mut self.interpreter,
-                                             &mut async_executor);
-            code_validation::validate_and_fix(&mut self.interpreter.env().borrow_mut(),
-                                              &mut command_buffer);
-        }
-    }
 }

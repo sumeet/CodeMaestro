@@ -3,11 +3,10 @@ use super::code_editor::CodeGenie;
 use super::code_editor::InsertionPoint;
 use super::code_editor::PLACEHOLDER_ICON;
 use super::code_generation;
-use super::env_genie::EnvGenie;
-use super::lang;
-use super::structs;
+use cs::env_genie::EnvGenie;
+use cs::lang;
+use cs::structs;
 
-use downcast_rs::impl_downcast;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
@@ -237,7 +236,7 @@ impl CodeSearchParams {
 // 3: new string literal
 // 4: placeholder
 
-trait InsertCodeMenuOptionGenerator: objekt::Clone + downcast_rs::Downcast {
+trait InsertCodeMenuOptionGenerator: objekt::Clone {
     fn options(&self,
                search_params: &CodeSearchParams,
                code_genie: &CodeGenie,
@@ -246,7 +245,6 @@ trait InsertCodeMenuOptionGenerator: objekt::Clone + downcast_rs::Downcast {
 }
 
 clone_trait_object!(InsertCodeMenuOptionGenerator);
-impl_downcast!(InsertCodeMenuOptionGenerator);
 
 #[derive(Clone, Debug)]
 pub struct InsertCodeMenuOption {

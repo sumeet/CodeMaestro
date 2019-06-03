@@ -1,6 +1,5 @@
 use super::lang;
 use super::structs;
-use super::async_executor;
 
 use std::borrow::Borrow;
 use std::cell::RefCell;
@@ -24,19 +23,6 @@ macro_rules! await_eval_result {
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
 }
-
-pub fn run<F: FnOnce(lang::Value) + 'static>(interpreter: &mut Interpreter,
-                                             async_executor: &mut async_executor::AsyncExecutor,
-                                             code_node: &lang::CodeNode,
-                                             callback: F) {
-    let fut = interpreter.evaluate(code_node);
-    async_executor.exec(async move {
-        callback(await_eval_result!(fut));
-        let ok : Result<(), ()> = Ok(());
-        ok
-    })
-}
-
 
 impl Interpreter {
     pub fn new() -> Self {
