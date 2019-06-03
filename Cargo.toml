@@ -7,6 +7,11 @@ authors = ["Sumeet Agarwal <sumeet.a@gmail.com>"]
 edition = "2018"
 #default-run = "cs"
 
+[workspace]
+members = [
+  "lang"
+]
+
 [features]
 default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support", "slack",
            "tokio", "tokio-reactor", "tokio-timer", "tokio-executor", "irc", "irc-proto", "tokio-current-thread", "reqwest", "noob",

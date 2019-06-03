@@ -1,0 +1,13 @@
+i'm trying to split the packages into separate crates, because the compile times
+are starting to become unbearable. also this will give the project some
+much-needed structure, because as of late it's starting to feel messy. lots of
+files in the same directory.
+
+list of subcrates:
+
+- lib: lang (just the AST)
+- lib: builtins (includes ChatReply command for now)
+- lib: interpreter (includes env::Interpreter, ExecutionEnvironment and AsyncExecutor)
+- lib: genies (EnvGenie and CodeGenie), because i can't figure out where else to put them
+- bin: editor (includes UiToolkit, renderer, and main binary for launching editor)
+- bin: chatbot (includes chatbot and functions needed for chat)
