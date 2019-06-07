@@ -5,7 +5,7 @@ use std::fmt;
 use std::future::Future;
 use std::iter;
 
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 use stdweb::{_js_impl, js};
 
 use downcast_rs::impl_downcast;
@@ -602,14 +602,14 @@ impl CodeNode {
 
 pub type ID = Uuid;
 
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn new_id() -> ID {
     Uuid::new_v4()
 }
 
 // this is weird. without this, we get an error about RNG not being available in the browser. got
 // this browser uuid implementation utilizing crypto from https://stackoverflow.com/a/2117523/149987
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 pub fn new_id() -> ID {
     let uuid = js! {
         return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(new RegExp("[018]", "g"), c =>

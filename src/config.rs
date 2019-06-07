@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 use url;
 
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 lazy_static! {
     static ref ENV: HashMap<String, String> = {
         use stdweb::{_js_impl, js};
@@ -14,7 +14,7 @@ lazy_static! {
     };
 }
 
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 lazy_static! {
     static ref ENV: HashMap<String, String> = {
         use dotenv::dotenv;

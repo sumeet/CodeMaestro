@@ -1,7 +1,7 @@
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 pub use super::wasm_http_client::*;
 
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 pub use super::native_http_client::*;
 
 use super::http_request;

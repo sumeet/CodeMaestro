@@ -4,7 +4,7 @@ use cfg_if::cfg_if;
 use serde::{Deserialize, Serialize};
 
 cfg_if! {
-    if #[cfg(feature = "javascript")] {
+    if #[cfg(target_arch = "wasm32")] {
         pub use js::*;
     } else {
         pub use native::*;
@@ -30,7 +30,7 @@ pub fn save(window_positions: &WindowPositions, open_code_editors: &[CodeLocatio
                                  open_code_editors })
 }
 
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 mod js {
     use super::{StateDeserialize, StateSerialize};
     use lazy_static::lazy_static;
@@ -59,7 +59,7 @@ mod js {
 
 }
 
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 mod native {
     use crate::save_state::{StateDeserialize, StateSerialize};
     use directories::ProjectDirs;

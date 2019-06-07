@@ -17,21 +17,22 @@ serde_json = "*"
 objekt = "*"
 http = "*"
 
-glium = { version = "0.23", default-features = true, optional = true }
-glutin = { version = "0.19", optional = true }
-imgui = { git = "https://github.com/sumeet/imgui-rs", branch = "master", optional = true }
-imgui-sys = { git = "https://github.com/sumeet/imgui-rs", branch = "master", optional = true }
-imgui-glium-renderer = { git = "https://github.com/sumeet/imgui-rs", branch = "master", optional = true }
-imgui-winit-support = { git = "https://github.com/sumeet/imgui-rs", branch = "master", optional = true }
-tokio-current-thread = {version = "0.1.4", optional = true }
-tokio-reactor = {version = "0.1.7", optional = true }
-tokio-timer = {version = "0.2.10", optional = true}
 gen-iter = {git = "https://github.com/sumeet/gen-iter"}
-directories = {version = "1.0.2", optional = true}
 matches = "0.1.8"
-tokio-executor = {version = "*", optional = true}
 
-[features]
-default = ["glium", "glutin", "imgui", "imgui-sys", "imgui-glium-renderer", "imgui-winit-support",
-           "tokio-current-thread", "tokio-reactor", "tokio-timer", "tokio-executor", "directories"]
-javascript = []
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+glium = { version = "0.23", default-features = true }
+glutin = { version = "0.19" }
+imgui = { git = "https://github.com/sumeet/imgui-rs", branch = "master" }
+imgui-sys = { git = "https://github.com/sumeet/imgui-rs", branch = "master" }
+imgui-glium-renderer = { git = "https://github.com/sumeet/imgui-rs", branch = "master" }
+imgui-winit-support = { git = "https://github.com/sumeet/imgui-rs", branch = "master" }
+tokio-current-thread = {version = "0.1.4" }
+tokio-reactor = {version = "0.1.7" }
+tokio-timer = {version = "0.2.10" }
+directories = {version = "1.0.2" }
+tokio-executor = {version = "*" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+stdweb = { git = "https://github.com/koute/stdweb", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"] }
+yew = { git = "https://github.com/DenisKolodin/yew" }

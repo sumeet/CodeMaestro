@@ -26,7 +26,7 @@ pub mod env_genie;
 pub mod http_request;
 pub mod json_http_client;
 mod result;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 #[macro_use]
 extern crate diesel;
 pub mod chat_trigger;
@@ -35,7 +35,7 @@ pub mod external_func;
 pub mod function;
 #[cfg(feature = "python")]
 pub mod pystuff;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod schema;
 pub mod scripts;
 pub mod tests;
@@ -48,21 +48,21 @@ pub mod pystuff {
     pub use super::fakepystuff::*;
 }
 
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 pub mod jsstuff;
 
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 mod fakejsstuff;
 
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 pub mod jsstuff {
     pub use super::fakejsstuff::*;
 }
 
 pub mod http_client;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 mod native_http_client;
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 mod wasm_http_client;
 pub use env_genie::EnvGenie;
 pub use external_func::resolve_all_futures;

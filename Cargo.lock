@@ -453,7 +453,6 @@ dependencies = [
  "typetag 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.7.1 (git+https://github.com/uuid-rs/uuid?tag=0.7.1)",
- "yew 0.7.0 (git+https://github.com/DenisKolodin/yew)",
 ]
 
 [[package]]
@@ -577,10 +576,12 @@ dependencies = [
  "serde 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.90 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.39 (registry+https://github.com/rust-lang/crates.io-index)",
+ "stdweb 0.4.15 (git+https://github.com/koute/stdweb)",
  "tokio-current-thread 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-executor 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-reactor 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-timer 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
+ "yew 0.7.0 (git+https://github.com/DenisKolodin/yew)",
 ]
 
 [[package]]
@@ -3045,7 +3046,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "yew"
 version = "0.7.0"
-source = "git+https://github.com/DenisKolodin/yew#ad1164f0390ce9f29d7c60b73d0d25e551686771"
+source = "git+https://github.com/DenisKolodin/yew#792a254acdc84b1419f2c2d6219e933ca7081c07"
 dependencies = [
  "anymap 0.12.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "bincode 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",

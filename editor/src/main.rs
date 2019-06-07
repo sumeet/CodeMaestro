@@ -3,6 +3,7 @@
 #![feature(box_patterns)]
 #![feature(fnbox)]
 #![feature(drain_filter)]
+#![recursion_limit = "256"]
 
 // crates
 use cfg_if::cfg_if;
@@ -15,9 +16,9 @@ mod code_generation;
 mod code_validation;
 mod edit_types;
 mod editor;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 mod imgui_support;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 mod imgui_toolkit;
 mod insert_code_menu;
 mod insert_code_menu_renderer;
@@ -29,30 +30,30 @@ mod send_to_server_overlay;
 mod ui_toolkit;
 mod undo;
 mod window_positions;
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 mod yew_toolkit;
 
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 mod tokio_executor;
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 mod async_executor {
     pub use super::tokio_executor::*;
 }
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 mod stdweb_executor;
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 mod async_executor {
     pub use super::stdweb_executor::*;
 }
 
 // uses for this module
-#[cfg(feature = "default")]
+#[cfg(not(target_arch = "wasm32"))]
 use imgui_toolkit::draw_app;
-#[cfg(feature = "javascript")]
+#[cfg(target_arch = "wasm32")]
 use yew_toolkit::draw_app;
 
 cfg_if! {
-    if #[cfg(feature = "javascript")] {
+    if #[cfg(target_arch = "wasm32")] {
         fn init_debug() {
             use stdweb::{js,_js_impl,console,__internal_console_unsafe};
             ::std::panic::set_hook(Box::new(|info| {

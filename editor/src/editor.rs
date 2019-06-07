@@ -64,6 +64,7 @@ impl Keypress {
     }
 }
 
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Key {
     A,
@@ -357,6 +358,7 @@ impl CommandBuffer {
         )
     }
 
+    #[allow(unused)]    // unused in wasm
     pub fn save(&mut self) {
         self.add_integrating_command(move |controller, interpreter, _, _| {
             let theworld = save_world(controller, &interpreter.env().borrow());
@@ -605,7 +607,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_main_menu_bar(&self) -> T::DrawResult {
         self.ui_toolkit.draw_main_menu_bar(&|| {
             self.ui_toolkit.draw_menu("File", &|| {
-                #[cfg(feature = "default")]
+                #[cfg(not(target_arch = "wasm32"))]
                 let cmdb1 = Rc::clone(&self.command_buffer);
                 let cmdb3 = Rc::clone(&self.command_buffer);
                 let cmdb4 = Rc::clone(&self.command_buffer);
@@ -613,7 +615,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let cmdb7 = Rc::clone(&self.command_buffer);
                 let cmdb8 = Rc::clone(&self.command_buffer);
                 self.ui_toolkit.draw_all(vec![
-                    #[cfg(feature = "default")]
+                    #[cfg(not(target_arch = "wasm32"))]
                     self.ui_toolkit.draw_menu_item("Save", move || {
                         cmdb1.borrow_mut().save();
                     }),
@@ -644,7 +646,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.ui_toolkit.draw_menu_item("Add Enum", move || {
                         cmdb4.borrow_mut().load_typespec(enums::Enum::new());
                     }),
-                    #[cfg(feature = "default")]
+                    #[cfg(not(target_arch = "wasm32"))]
                     self.ui_toolkit.draw_menu_item("Exit", || {
                         std::process::exit(0);
                     }),

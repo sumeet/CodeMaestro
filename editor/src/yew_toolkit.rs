@@ -1,6 +1,7 @@
+use super::app::App as CSApp;
 use super::async_executor::AsyncExecutor;
 use super::editor::{Key as AppKey, Keypress};
-use super::{App as CSApp, UiToolkit};
+use super::ui_toolkit::UiToolkit;
 use crate::code_editor_renderer::BLACK_COLOR;
 use crate::ui_toolkit::{ChildRegionHeight, Color, SelectableItem};
 
@@ -1020,6 +1021,8 @@ fn map_key(key: &str) -> Option<AppKey> {
         "b" => Some(AppKey::B),
         "c" => Some(AppKey::C),
         "h" => Some(AppKey::H),
+        "j" => Some(AppKey::J),
+        "k" => Some(AppKey::K),
         "l" => Some(AppKey::L),
         "d" => Some(AppKey::D),
         "w" => Some(AppKey::W),
@@ -1031,6 +1034,8 @@ fn map_key(key: &str) -> Option<AppKey> {
         "tab" => Some(AppKey::Tab),
         "arrowleft" => Some(AppKey::LeftArrow),
         "arrowright" => Some(AppKey::RightArrow),
+        "arrowup" => Some(AppKey::UpArrow),
+        "arrowdown" => Some(AppKey::DownArrow),
         "esc" | "escape" => Some(AppKey::Escape),
         _ => None,
     }
