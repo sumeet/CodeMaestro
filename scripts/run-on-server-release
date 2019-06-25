@@ -6,8 +6,8 @@ set -e
 
 # set up cargo-web
 cargo install --git https://github.com/sumeet/cargo-web cargo-web || echo "cargo-web already installed"
-cargo web build --no-default-features --features=javascript --release --target=wasm32-unknown-unknown --bin cs
+cargo web build --release --target=wasm32-unknown-unknown --package editor
 
 # this var is set by buildpack-run.sh
-cp $CARGO_TARGET_DIR/wasm32-unknown-unknown/release/cs.wasm ./static/cs.wasm
-cp $CARGO_TARGET_DIR/wasm32-unknown-unknown/release/cs.js ./static/cs.js
+cp $CARGO_TARGET_DIR/wasm32-unknown-unknown/release/editor.wasm ./static/editor.wasm
+cp $CARGO_TARGET_DIR/wasm32-unknown-unknown/release/editor.js ./static/editor.js
