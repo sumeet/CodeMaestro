@@ -214,7 +214,7 @@ impl Rect {
 impl<'a> UiToolkit for ImguiToolkit<'a> {
     type DrawResult = ();
 
-    fn scrolled_to_y_if_not_visible(&self, scroll_hash: String, draw_fn: &Fn()) {
+    fn scrolled_to_y_if_not_visible(&self, scroll_hash: String, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
         // TODO: get rid of clone
         let is_first_focus = TkCache::is_new_focus_for_scrolling(scroll_hash.clone());
@@ -232,7 +232,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     // TODO: these should be draw funcs that we execute in here
     fn draw_all(&self, _draw_results: Vec<()>) {}
 
-    fn focused(&self, draw_fn: &Fn()) {
+    fn focused(&self, draw_fn: &dyn Fn()) {
         draw_fn();
         unsafe {
             // HACK: the igIsAnyItemHovered allows me to click buttons while focusing a text field.
@@ -243,7 +243,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn buttonize<F: Fn() + 'static>(&self, draw_fn: &Fn(), onclick: F) {
+    fn buttonize<F: Fn() + 'static>(&self, draw_fn: &dyn Fn(), onclick: F) {
         // HAXXX: disable buttons that were drawn with `draw_button` from displaying as hovered.
         // i think in actually this is very very very messy because what happens if someone clicks
         // an inner button, do we run all the click handlers???
@@ -281,7 +281,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         //        })
     }
 
-    fn draw_statusbar(&self, draw_fn: &Fn()) {
+    fn draw_statusbar(&self, draw_fn: &dyn Fn()) {
         let x_padding = 4.0;
         let y_padding = 5.0;
         let font_size = unsafe { imgui_sys::igGetFontSize() };
@@ -326,7 +326,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .label_text(im_str!("{}", label), im_str!("{}", text))
     }
 
-    fn draw_all_on_same_line(&self, draw_fns: &[&Fn()]) {
+    fn draw_all_on_same_line(&self, draw_fns: &[&dyn Fn()]) {
         if let Some((last_draw_fn, first_draw_fns)) = draw_fns.split_last() {
             for draw_fn in first_draw_fns {
                 draw_fn();
@@ -336,13 +336,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn indent(&self, px: i16, draw_fn: &Fn()) {
+    fn indent(&self, px: i16, draw_fn: &dyn Fn()) {
         unsafe { imgui_sys::igIndent(px as f32) }
         draw_fn();
         unsafe { imgui_sys::igUnindent(px as f32) }
     }
 
-    fn align(&self, lhs: &Fn(), rhss: &[&Fn()]) {
+    fn align(&self, lhs: &dyn Fn(), rhss: &[&dyn Fn()]) {
         if rhss.is_empty() {
             return lhs();
         }
@@ -373,7 +373,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
-                                                      draw_fn: &Fn(),
+                                                      draw_fn: &dyn Fn(),
                                                       handle_keypress: Option<F>)
                                                       -> Self::DrawResult {
         let (display_size_x, display_size_y) = self.ui.imgui().display_size();
@@ -416,7 +416,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     // stolen from https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp#L3944
-    fn draw_top_right_overlay(&self, draw_fn: &Fn()) {
+    fn draw_top_right_overlay(&self, draw_fn: &dyn Fn()) {
         let distance = 10.0;
         let (display_size_x, _) = self.ui.imgui().display_size();
         self.ui
@@ -446,7 +446,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                                     window_name: &str,
                                                                     size: (usize, usize),
                                                                     pos: (isize, isize),
-                                                                    f: &Fn(),
+                                                                    f: &dyn Fn(),
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
                                                                     onwindowchange: H)
@@ -517,9 +517,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     // TODO: actually use this bg color lol
                                                     _bg: Color,
-                                                    draw_fn: &Fn(),
+                                                    draw_fn: &dyn Fn(),
                                                     height: ChildRegionHeight,
-                                                    draw_context_menu: Option<&Fn()>,
+                                                    draw_context_menu: Option<&dyn Fn()>,
                                                     handle_keypress: Option<F>) {
         let height = match height {
             ChildRegionHeight::Percentage(height_percentage) => {
@@ -577,7 +577,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_x_scrollable_list<'b>(&'b self,
-                                  items: impl ExactSizeIterator<Item = (&'b Fn(), bool)>,
+                                  items: impl ExactSizeIterator<Item = (&'b dyn Fn(), bool)>,
                                   lines_height: usize) {
         let height = self.ui.get_text_line_height_with_spacing();
         let first_element_screen_x = Rc::new(RefCell::new(0.));
@@ -587,11 +587,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             return;
         }
         let last_element_index = length - 1;
-        let items: Vec<Box<Fn()>> =
+        let items: Vec<Box<dyn Fn()>> =
             items.enumerate()
                  .map(|(i, (draw_fn, is_focused))| {
                      let first_element_screen_x = Rc::clone(&first_element_screen_x);
-                     let x: Box<Fn()> = Box::new(move || {
+                     let x: Box<dyn Fn()> = Box::new(move || {
                          if i == 0 {
                              first_element_screen_x.replace(self.ui.get_cursor_pos().0);
                          }
@@ -631,7 +631,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             })
     }
 
-    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &Fn(), draw_bottom_bar_fn: &Fn()) {
+    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &dyn Fn(), draw_bottom_bar_fn: &dyn Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
         self.ui
             .child_frame(&self.imlabel(""), (0.0, -frame_height))
@@ -669,7 +669,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         draw_list.add_line(line.0, line.1, color).build();
     }
 
-    fn replace_on_hover(&self, draw_when_not_hovered: &Fn(), draw_when_hovered: &Fn()) {
+    fn replace_on_hover(&self, draw_when_not_hovered: &dyn Fn(), draw_when_hovered: &dyn Fn()) {
         let replace_on_hover_label = self.imlabel("replace_on_hover_label");
         self.ui.group(&|| {
                    if TkCache::is_hovered(replace_on_hover_label.as_ref()) {
@@ -682,7 +682,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         TkCache::set_is_hovered(label.to_owned(), self.ui.is_item_hovered())
     }
 
-    fn draw_box_around(&self, color: [f32; 4], draw_fn: &Fn()) {
+    fn draw_box_around(&self, color: [f32; 4], draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
@@ -693,7 +693,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build();
     }
 
-    fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+    fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
@@ -705,7 +705,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build();
     }
 
-    fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+    fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
@@ -717,7 +717,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build()
     }
 
-    fn draw_left_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+    fn draw_left_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
@@ -729,7 +729,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build()
     }
 
-    fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &Fn()) {
+    fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
@@ -932,11 +932,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_main_menu_bar(&self, draw_menus: &Fn()) {
+    fn draw_main_menu_bar(&self, draw_menus: &dyn Fn()) {
         self.ui.main_menu_bar(draw_menus)
     }
 
-    fn draw_menu(&self, label: &str, draw_menu_items: &Fn()) {
+    fn draw_menu(&self, label: &str, draw_menu_items: &dyn Fn()) {
         self.ui.menu(&self.imlabel(label)).build(draw_menu_items)
     }
 

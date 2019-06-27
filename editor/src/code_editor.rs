@@ -375,7 +375,7 @@ impl CodeGenie {
         &'a self,
         node_id: lang::ID,
         is_inclusive: bool)
-        -> Box<Iterator<Item = &lang::Assignment> + 'a> {
+        -> Box<dyn Iterator<Item = &lang::Assignment> + 'a> {
         let block_expression_id = self.find_expression_inside_block_that_contains(node_id);
         if block_expression_id.is_none() {
             return Box::new(iter::empty());

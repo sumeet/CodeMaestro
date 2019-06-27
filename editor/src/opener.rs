@@ -9,7 +9,7 @@ use matches::matches;
 use std::iter;
 
 lazy_static! {
-    static ref CATEGORIES: Vec<Box<MenuCategory + Send + Sync>> = vec![Box::new(ChatTriggers {}),
+    static ref CATEGORIES: Vec<Box<dyn MenuCategory + Send + Sync>> = vec![Box::new(ChatTriggers {}),
                                                                        Box::new(JSONHTTPClients {}),
                                                                        Box::new(Functions {}),
                                                                        Box::new(Enums {}),
@@ -138,7 +138,7 @@ pub enum MenuItem {
     Heading(&'static str),
     Selectable {
         label: String,
-        when_selected: Box<Fn(&mut CommandBuffer)>,
+        when_selected: Box<dyn Fn(&mut CommandBuffer)>,
         is_selected: bool,
     },
 }
@@ -155,7 +155,7 @@ trait MenuCategory {
     fn label(&self) -> &'static str;
     fn items<'a>(&'a self,
                  options_lister: &'a OptionsLister<'a>)
-                 -> Box<Iterator<Item = MenuItem> + 'a>;
+                 -> Box<dyn Iterator<Item = MenuItem> + 'a>;
 }
 
 struct ChatTriggers;
@@ -167,7 +167,7 @@ impl MenuCategory for ChatTriggers {
 
     fn items<'a>(&'a self,
                  options_lister: &'a OptionsLister<'a>)
-                 -> Box<Iterator<Item = MenuItem> + 'a> {
+                 -> Box<dyn Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_chat_triggers()
             .filter_map(move |ct| {
                 if options_lister.controller.is_builtin(ct.id) {
@@ -196,7 +196,7 @@ impl MenuCategory for Functions {
 
     fn items<'a>(&'a self,
                  options_lister: &'a OptionsLister<'a>)
-                 -> Box<Iterator<Item = MenuItem> + 'a> {
+                 -> Box<dyn Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie
                                .list_code_funcs()
                                .filter_map(move |cf| {
@@ -224,7 +224,7 @@ impl MenuCategory for JSONHTTPClients {
 
     fn items<'a>(&'a self,
                  options_lister: &'a OptionsLister<'a>)
-                 -> Box<Iterator<Item = MenuItem> + 'a> {
+                 -> Box<dyn Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_json_http_clients()
             .filter_map(move |cf| {
                 if options_lister.controller.is_builtin(cf.id()) {
@@ -253,7 +253,7 @@ impl MenuCategory for Enums {
 
     fn items<'a>(&'a self,
                  options_lister: &'a OptionsLister<'a>)
-                 -> Box<Iterator<Item = MenuItem> + 'a> {
+                 -> Box<dyn Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_enums()
             .filter_map(move |eneom| {
                 if options_lister.controller.is_builtin(eneom.id()) {
@@ -282,7 +282,7 @@ impl MenuCategory for Structs {
 
     fn items<'a>(&'a self,
                  options_lister: &'a OptionsLister<'a>)
-                 -> Box<Iterator<Item = MenuItem> + 'a> {
+                 -> Box<dyn Iterator<Item = MenuItem> + 'a> {
         Box::new(options_lister.env_genie.list_structs()
             .filter_map(move |strukt| {
                 if options_lister.controller.is_builtin(strukt.id()) {

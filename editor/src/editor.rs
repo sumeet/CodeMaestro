@@ -235,7 +235,7 @@ impl<'a> Controller {
         self.code_editor_by_id.get(&id)
     }
 
-    fn get_test_result(&self, func: &lang::Function) -> String {
+    fn get_test_result(&self, func: &dyn lang::Function) -> String {
         let test_result = self.test_result_by_func_id.get(&func.id());
         if let Some(test_result) = test_result {
             format!("{:?}", test_result.value)
@@ -305,7 +305,7 @@ pub struct CommandBuffer {
     // this is kind of messy, but i just need this to get saving to work
     integrating_commands: Vec<
         Box<
-            FnBox(
+            dyn FnBox(
                 &mut Controller,
                 &mut env::Interpreter,
                 &mut async_executor::AsyncExecutor,
@@ -313,8 +313,8 @@ pub struct CommandBuffer {
             ),
         >,
     >,
-    controller_commands: Vec<Box<FnBox(&mut Controller)>>,
-    interpreter_commands: Vec<Box<FnBox(&mut env::Interpreter)>>,
+    controller_commands: Vec<Box<dyn FnBox(&mut Controller)>>,
+    interpreter_commands: Vec<Box<dyn FnBox(&mut env::Interpreter)>>,
 }
 
 impl CommandBuffer {
@@ -507,7 +507,7 @@ impl CommandBuffer {
     }
 }
 
-async fn postthecode(theworld: &TheWorld) -> Result<http::Response<String>, Box<std::error::Error>> {
+async fn postthecode(theworld: &TheWorld) -> Result<http::Response<String>, Box<dyn std::error::Error>> {
     let postcodetoken = config::get_or_err("SERVER_POST_TOKEN")?;
     let post_url = config::post_code_url(postcodetoken)?;
     Ok(await!(http_client::post_json(post_url.as_str(), theworld))?)
@@ -536,7 +536,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         }
     }
 
-    pub fn list_open_functions(&self) -> impl Iterator<Item = (&lang::Function, Window)> {
+    pub fn list_open_functions(&self) -> impl Iterator<Item = (&dyn lang::Function, Window)> {
         self.env_genie.all_functions().filter_map(move |func| {
             let wp = self
                 .controller
@@ -546,7 +546,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         })
     }
 
-    pub fn list_open_typespecs(&self) -> impl Iterator<Item = (&lang::TypeSpec, Window)> {
+    pub fn list_open_typespecs(&self) -> impl Iterator<Item = (&dyn lang::TypeSpec, Window)> {
         self.env_genie.typespecs().filter_map(move |ts| {
             let wp = self.controller.window_positions.get_open_window(&ts.id())?;
             Some((ts.as_ref(), wp))
@@ -1761,7 +1761,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         onchange: F,
     ) -> T::DrawResult
     where
-        F: Fn(&Box<lang::TypeSpec>) + 'static,
+        F: Fn(&Box<dyn lang::TypeSpec>) + 'static,
     {
         // TODO: pretty sure we can get rid of the clone and let the borrow live until the end
         // but i don't want to mess around with it right now
@@ -1936,7 +1936,7 @@ fn onwindowchange(
     }
 }
 
-fn format_typespec_select(ts: &Box<lang::TypeSpec>, nesting_level: Option<&[usize]>) -> String {
+fn format_typespec_select(ts: &Box<dyn lang::TypeSpec>, nesting_level: Option<&[usize]>) -> String {
     let indent = match nesting_level {
         Some(nesting_level) => iter::repeat("\t").take(nesting_level.len() + 1).join(""),
         None => "".to_owned(),

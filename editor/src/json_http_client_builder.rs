@@ -107,7 +107,7 @@ fn build_return_type(env_genie: &EnvGenie,
     Some(ReturnTypeBuilder::new(env_genie, &return_type_spec).build())
 }
 
-async fn do_get_request(url: String) -> Result<serde_json::Value, Box<std::error::Error>> {
+async fn do_get_request(url: String) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
     await!(json_http_client::get_json(http_request::get(&url)?))
 }
 

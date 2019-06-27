@@ -16,7 +16,7 @@ use std::collections::HashMap;
 lazy_static! {
     // the order is significant here. it defines which order the options appear in (no weighting
     // system yet)
-    static ref OPTIONS_GENERATORS : Vec<Box<InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
+    static ref OPTIONS_GENERATORS : Vec<Box<dyn InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
         Box::new(InsertFunctionWrappingOptionGenerator {}),
         Box::new(InsertListIndexOfLocal {}),
         Box::new(InsertVariableReferenceOptionGenerator {}),
@@ -264,7 +264,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
         // tuple of function and arg id to fill
-        let functions: &mut Iterator<Item = (lang::ID, &Box<lang::Function>)>;
+        let functions: &mut dyn Iterator<Item = (lang::ID, &Box<dyn lang::Function>)>;
         let mut a;
 
         if let Some(wraps_type) = &search_params.wraps_type {
@@ -312,7 +312,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
                _code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        let mut functions: &mut Iterator<Item = &Box<lang::Function>> =
+        let mut functions: &mut dyn Iterator<Item = &Box<dyn lang::Function>> =
             &mut env_genie.all_functions();
         let mut a;
         let mut b;

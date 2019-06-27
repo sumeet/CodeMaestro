@@ -22,7 +22,7 @@ pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::C
                                                         fields })
 }
 
-pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::CodeNode {
+pub fn new_function_call_with_placeholder_args(func: &dyn lang::Function) -> lang::CodeNode {
     let args = func.takes_args()
                    .into_iter()
                    .map(|arg_def| {
@@ -43,7 +43,7 @@ pub fn new_function_call_with_placeholder_args(func: &lang::Function) -> lang::C
     })
 }
 
-pub fn new_function_call_with_wrapped_arg(func: &lang::Function,
+pub fn new_function_call_with_wrapped_arg(func: &dyn lang::Function,
                                           arg_def_id: lang::ID,
                                           wrapped_node: lang::CodeNode)
                                           -> lang::CodeNode {

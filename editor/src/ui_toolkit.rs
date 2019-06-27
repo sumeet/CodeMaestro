@@ -8,22 +8,22 @@ pub trait UiToolkit {
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static);
     fn draw_code_line_separator(&self, width: f32, height: f32, color: Color) -> Self::DrawResult;
     fn replace_on_hover(&self,
-                        draw_when_not_hovered: &Fn() -> Self::DrawResult,
-                        draw_when_hovered: &Fn() -> Self::DrawResult)
+                        draw_when_not_hovered: &dyn Fn() -> Self::DrawResult,
+                        draw_when_hovered: &dyn Fn() -> Self::DrawResult)
                         -> Self::DrawResult;
     fn draw_spinner(&self) -> Self::DrawResult;
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
     // if there's no `onclose` specified, then the window isn't closable and won't show a close button
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
-                                                      draw_fn: &Fn() -> Self::DrawResult,
+                                                      draw_fn: &dyn Fn() -> Self::DrawResult,
                                                       handle_keypress: Option<F>)
                                                       -> Self::DrawResult;
-    fn draw_top_right_overlay(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self,
                                                                     window_name: &str,
                                                                     size: (usize, usize),
                                                                     pos: (isize, isize),
-                                                                    draw_fn: &Fn() -> Self::DrawResult,
+                                                                    draw_fn: &dyn Fn() -> Self::DrawResult,
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
                                                                     onwindowchange: H)
@@ -31,27 +31,27 @@ pub trait UiToolkit {
         where H: Fn((isize, isize), (usize, usize)) + 'static;
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
-                                                    draw_fn: &Fn() -> Self::DrawResult,
+                                                    draw_fn: &dyn Fn() -> Self::DrawResult,
                                                     height_percentage: ChildRegionHeight,
-                                                    draw_context_menu: Option<&Fn() -> Self::DrawResult>,
+                                                    draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult;
     fn draw_x_scrollable_list<'a>(&'a self,
-                                  items: impl ExactSizeIterator<Item = (&'a Fn()
+                                  items: impl ExactSizeIterator<Item = (&'a dyn Fn()
                                                                    -> Self::DrawResult,
                                                             bool)>,
                                   lines_height: usize)
                                   -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self,
-                                   draw_content_fn: &Fn() -> Self::DrawResult,
-                                   draw_bottom_bar_fn: &Fn() -> Self::DrawResult)
+                                   draw_content_fn: &dyn Fn() -> Self::DrawResult,
+                                   draw_bottom_bar_fn: &dyn Fn() -> Self::DrawResult)
                                    -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_separator(&self) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
     fn buttonize<F: Fn() + 'static>(&self,
-                                    draw_fn: &Fn() -> Self::DrawResult,
+                                    draw_fn: &dyn Fn() -> Self::DrawResult,
                                     onclick: F)
                                     -> Self::DrawResult;
     fn draw_buttony_text(&self, label: &str, color: Color) -> Self::DrawResult;
@@ -112,49 +112,49 @@ pub trait UiToolkit {
                                                        value: bool,
                                                        onchange: F)
                                                        -> Self::DrawResult;
-    fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult;
+    fn draw_all_on_same_line(&self, draw_fns: &[&dyn Fn() -> Self::DrawResult]) -> Self::DrawResult;
     fn draw_box_around(&self,
                        color: [f32; 4],
-                       draw_fn: &Fn() -> Self::DrawResult)
+                       draw_fn: &dyn Fn() -> Self::DrawResult)
                        -> Self::DrawResult;
     fn draw_top_border_inside(&self,
                               color: [f32; 4],
                               thickness: u8,
-                              draw_fn: &Fn() -> Self::DrawResult)
+                              draw_fn: &dyn Fn() -> Self::DrawResult)
                               -> Self::DrawResult;
     fn draw_right_border_inside(&self,
                                 color: [f32; 4],
                                 thickness: u8,
-                                draw_fn: &Fn() -> Self::DrawResult)
+                                draw_fn: &dyn Fn() -> Self::DrawResult)
                                 -> Self::DrawResult;
     fn draw_left_border_inside(&self,
                                color: [f32; 4],
                                thickness: u8,
-                               draw_fn: &Fn() -> Self::DrawResult)
+                               draw_fn: &dyn Fn() -> Self::DrawResult)
                                -> Self::DrawResult;
     fn draw_bottom_border_inside(&self,
                                  color: [f32; 4],
                                  thickness: u8,
-                                 draw_fn: &Fn() -> Self::DrawResult)
+                                 draw_fn: &dyn Fn() -> Self::DrawResult)
                                  -> Self::DrawResult;
-    fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
-    fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_statusbar(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_main_menu_bar(&self, draw_menus: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_menu(&self,
                  label: &str,
-                 draw_menu_items: &Fn() -> Self::DrawResult)
+                 draw_menu_items: &dyn Fn() -> Self::DrawResult)
                  -> Self::DrawResult;
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) -> Self::DrawResult;
     //    fn draw_tree_node(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
     //    fn draw_tree_leaf(&self, label: &str, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
-    fn focused(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
-    fn indent(&self, px: i16, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn focused(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn indent(&self, px: i16, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn align(&self,
-             lhs: &Fn() -> Self::DrawResult,
-             rhs: &[&Fn() -> Self::DrawResult])
+             lhs: &dyn Fn() -> Self::DrawResult,
+             rhs: &[&dyn Fn() -> Self::DrawResult])
              -> Self::DrawResult;
     fn scrolled_to_y_if_not_visible(&self,
                                     scroll_hash: String,
-                                    draw_fn: &Fn() -> Self::DrawResult)
+                                    draw_fn: &dyn Fn() -> Self::DrawResult)
                                     -> Self::DrawResult;
 }
 
