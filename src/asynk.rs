@@ -20,8 +20,8 @@ pub fn backward<I, E>(f: impl NewFuture<Output = Result<I, E>>)
 //    backward::Compat::new(f)
 //}
 
-pub fn forward<I, E>(f: impl OldFuture<Item = I, Error = E> + Unpin)
+pub fn forward<I, E>(f: impl OldFuture<Item = I, Error = E>)
                      -> impl NewFuture<Output = Result<I, E>> {
-    use futures_util::compat::Future01CompatExt;
-    f.compat()
+    use futures_util::compat::Compat01As03;
+    Compat01As03::new(f)
 }

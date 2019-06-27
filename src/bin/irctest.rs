@@ -29,6 +29,7 @@ use diesel::query_dsl::QueryDsl;
 use diesel::prelude::*;
 use std::thread;
 use serde_derive::{Deserialize as Deserializeable, Serialize as Serializeable};
+use futures_util::compat::Stream01CompatExt;
 
 fn main() {
     use std::fs::File;
@@ -222,7 +223,7 @@ async fn new_irc_conn(mut config: Config, chat_thingy: Rc<RefCell<ChatThingy>>) 
 }
 
 async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
-    let mut stream = client.stream();
+    let mut stream = client.stream().compat();
     while let Some(message) = await!(stream.next()) {
         if message.is_err() {
             println!("there was an error: {:?}", message)
@@ -245,9 +246,10 @@ async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatT
 }
 
 async fn new_discord_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
-    let (client, mut stream) = await!(forward(noob::Client::connect(token))).unwrap_or_else(|e| {
+    let (client, stream) = await!(forward(noob::Client::connect(token))).unwrap_or_else(|e| {
         panic!("error connecting to discord: {:?}", e)
     });
+    let mut stream = stream.compat();
     while let Some(event) = await!(stream.next()) {
         match event {
             Ok(noob::Event::MessageCreate(msg)) => {
