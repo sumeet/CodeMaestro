@@ -5,7 +5,7 @@
 #![feature(arbitrary_self_types)]
 #![feature(slice_concat_ext)]
 #![feature(box_patterns)]
-#![feature(await_macro, async_await, futures_api)]
+#![feature(await_macro, async_await)]
 #![feature(slice_patterns)]
 #![feature(drain_filter)]
 #![feature(generators)]

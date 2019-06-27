@@ -1,4 +1,4 @@
-#![feature(await_macro, async_await, futures_api)]
+#![feature(await_macro, async_await)]
 #![feature(generators)]
 #![feature(box_patterns)]
 #![feature(fnbox)]
