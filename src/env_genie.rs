@@ -67,11 +67,11 @@ impl<'a> EnvGenie<'a> {
             .find(|field| field.id == struct_field_id)
     }
 
-    pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
+    pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<dyn lang::TypeSpec>> {
         self.env.find_typespec(id)
     }
 
-    pub fn find_function(&self, id: lang::ID) -> Option<&Box<lang::Function>> {
+    pub fn find_function(&self, id: lang::ID) -> Option<&Box<dyn lang::Function>> {
         self.env.find_function(id)
     }
 
@@ -112,7 +112,7 @@ impl<'a> EnvGenie<'a> {
             .and_then(|ts| ts.downcast_ref::<enums::Enum>())
     }
 
-    pub fn all_functions(&self) -> impl Iterator<Item = &Box<lang::Function>> {
+    pub fn all_functions(&self) -> impl Iterator<Item = &Box<dyn lang::Function>> {
         self.env.list_functions()
     }
 
@@ -164,7 +164,7 @@ impl<'a> EnvGenie<'a> {
             .filter(move |strukt| strukt.name.to_lowercase().contains(str))
     }
 
-    pub fn typespecs(&self) -> impl Iterator<Item = &Box<lang::TypeSpec>> {
+    pub fn typespecs(&self) -> impl Iterator<Item = &Box<dyn lang::TypeSpec>> {
         self.env.list_typespecs()
     }
 
@@ -190,7 +190,7 @@ impl<'a> EnvGenie<'a> {
 }
 
 fn get_args_for_code_block(code_block_id: lang::ID,
-                           function: &lang::Function)
+                           function: &dyn lang::Function)
                            -> impl Iterator<Item = lang::ArgumentDefinition> {
     if let Some(code_func) = function.downcast_ref::<code_function::CodeFunction>() {
         if code_func.code_id() == code_block_id {

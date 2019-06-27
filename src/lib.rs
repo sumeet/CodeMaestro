@@ -89,13 +89,13 @@ fn load_builtins(builtins: builtins::Builtins, env: &mut ExecutionEnvironment) {
 }
 
 // this is only ever used when changing builtins
-fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<std::error::Error>> {
+fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<dyn std::error::Error>> {
     #[allow(unused_imports)]
     use lang::Function;
     #[allow(unused_imports)]
     use std::collections::HashMap;
 
-    let mut functions: Vec<Box<lang::Function>> = vec![];
+    let mut functions: Vec<Box<dyn lang::Function>> = vec![];
     functions.push(Box::new(builtins::Print {}));
     functions.push(Box::new(builtins::Capitalize {}));
     functions.push(Box::new(builtins::HTTPGet {}));

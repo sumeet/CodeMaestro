@@ -15,15 +15,15 @@ use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::sync::{Arc, Mutex};
 
-type Error = Box<std::error::Error>;
+type Error = Box<dyn std::error::Error>;
 
 // TODO: find a better name. til then, we're gonna save the world
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TheWorld {
     pub scripts: Vec<scripts::Script>,
     pub tests: Vec<tests::Test>,
-    pub functions: Vec<Box<lang::Function>>,
-    pub typespecs: Vec<Box<lang::TypeSpec>>,
+    pub functions: Vec<Box<dyn lang::Function>>,
+    pub typespecs: Vec<Box<dyn lang::TypeSpec>>,
 }
 
 // pub fn load(filename: &str) -> Result<CodeNode,Error> {
@@ -56,7 +56,7 @@ pub fn deserialize(str: &str) -> Result<TheWorld, Error> {
                   typespecs })
 }
 
-pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<lang::Function>, Error> {
+pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function>, Error> {
     let typ = value.as_object()
                    .and_then(|obj| obj.get("type"))
                    .and_then(|typ| typ.as_str())
@@ -74,7 +74,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<lang::Function>, E
     })
 }
 
-pub fn deserialize_typespec(value: serde_json::Value) -> Result<Box<lang::TypeSpec>, Error> {
+pub fn deserialize_typespec(value: serde_json::Value) -> Result<Box<dyn lang::TypeSpec>, Error> {
     let typ = value.as_object()
                    .and_then(|obj| obj.get("type"))
                    .and_then(|typ| typ.as_str())

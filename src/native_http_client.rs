@@ -5,7 +5,7 @@ use futures::stream::Stream;
 use super::asynk::forward;
 
 #[allow(dead_code)] // compiler bug warns for this type alias not being used :/
-type Result<T> = std::result::Result<T, Box<std::error::Error>>;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub async fn fetch(request: Request<String>) -> Result<Response<String>> {
     let resp = await!(forward(Client::new()

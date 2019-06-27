@@ -65,7 +65,7 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn returns(&self) -> Type;
 }
 
-impl fmt::Debug for Function {
+impl fmt::Debug for dyn Function {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<Function: {}>", self.id())
     }
@@ -119,7 +119,7 @@ use futures_util::FutureExt;
 use std::collections::BTreeMap;
 use std::pin::Pin;
 
-pub type ValueFuture = Shared<Pin<Box<Future<Output = Value>>>>;
+pub type ValueFuture = Shared<Pin<Box<dyn Future<Output = Value>>>>;
 type StructValues = HashMap<ID, Value>;
 #[derive(Clone, Debug)]
 pub enum Value {
@@ -233,7 +233,7 @@ pub trait TypeSpec: objekt::Clone + downcast_rs::Downcast + Send + Sync {
 clone_trait_object!(TypeSpec);
 impl_downcast!(TypeSpec);
 
-impl fmt::Debug for TypeSpec {
+impl fmt::Debug for dyn TypeSpec {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "<TypeSpec: {}>", self.id())
     }
@@ -456,7 +456,7 @@ impl CodeNode {
         self.children_iter().collect()
     }
 
-    pub fn children_iter<'a>(&'a self) -> Box<Iterator<Item = &'a CodeNode> + 'a> {
+    pub fn children_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CodeNode> + 'a> {
         match self {
             CodeNode::FunctionCall(function_call) => Box::new(
                 iter::once(function_call.function_reference.as_ref())
@@ -500,7 +500,7 @@ impl CodeNode {
         iter::once(self).chain(self.all_children_dfs_iter())
     }
 
-    pub fn all_children_dfs_iter<'a>(&'a self) -> Box<Iterator<Item = &'a CodeNode> + 'a> {
+    pub fn all_children_dfs_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CodeNode> + 'a> {
         Box::new(self.children_iter()
                      .flat_map(|child| iter::once(child).chain(child.all_children_dfs_iter())))
     }

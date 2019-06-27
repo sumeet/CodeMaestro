@@ -18,7 +18,7 @@ pub struct ValueWithEnv<'a> {
 }
 
 #[allow(dead_code)]
-pub fn to_named_args(func: &lang::Function,
+pub fn to_named_args(func: &dyn lang::Function,
                      args: HashMap<lang::ID, lang::Value>) -> impl Iterator<Item=(String, lang::Value)>
 {
     let mut short_name_by_id : HashMap<lang::ID, String> = func.takes_args().into_iter()

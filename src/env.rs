@@ -47,7 +47,7 @@ impl Interpreter {
 
     // TODO: this is insane that we have to clone the code just to evaluate it. this is gonna slow
     // down evaluation so much
-    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> Pin<Box<Future<Output = lang::Value>>> {
+    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> Pin<Box<dyn Future<Output = lang::Value>>> {
         let code_node = code_node.clone();
         match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
@@ -94,7 +94,7 @@ impl Interpreter {
             lang::CodeNode::Placeholder(_) => Box::pin(async { lang::Value::Null }),
             lang::CodeNode::NullLiteral(_) => Box::pin(async { lang::Value::Null }),
             lang::CodeNode::StructLiteral(struct_literal) => {
-                let value_futures : HashMap<lang::ID, Pin<Box<Future<Output = lang::Value>>>> = struct_literal.fields().map(|literal_field| {
+                let value_futures : HashMap<lang::ID, Pin<Box<dyn Future<Output = lang::Value>>>> = struct_literal.fields().map(|literal_field| {
                     (literal_field.struct_field_id, self.evaluate(&literal_field.expr))
                 }).collect();
                 Box::pin(async move {
@@ -241,8 +241,8 @@ pub struct ExecutionEnvironment {
     pub console: String,
     // TODO: lol, this is going to end up being stack frames, or smth like that
     pub locals: HashMap<lang::ID, lang::Value>,
-    pub functions: HashMap<lang::ID, Box<lang::Function + 'static>>,
-    pub typespecs: HashMap<lang::ID, Box<lang::TypeSpec + 'static>>,
+    pub functions: HashMap<lang::ID, Box<dyn lang::Function + 'static>>,
+    pub typespecs: HashMap<lang::ID, Box<dyn lang::TypeSpec + 'static>>,
 }
 
 impl ExecutionEnvironment {
@@ -255,8 +255,8 @@ impl ExecutionEnvironment {
         }
     }
 
-    fn built_in_typespecs() -> HashMap<lang::ID, Box<lang::TypeSpec>> {
-        let mut typespec_by_id : HashMap<lang::ID, Box<lang::TypeSpec>> = HashMap::new();
+    fn built_in_typespecs() -> HashMap<lang::ID, Box<dyn lang::TypeSpec>> {
+        let mut typespec_by_id : HashMap<lang::ID, Box<dyn lang::TypeSpec>> = HashMap::new();
         typespec_by_id.insert(lang::STRING_TYPESPEC.id, Box::new(lang::STRING_TYPESPEC.clone()));
         typespec_by_id.insert(lang::NUMBER_TYPESPEC.id, Box::new(lang::NUMBER_TYPESPEC.clone()));
         typespec_by_id.insert(lang::LIST_TYPESPEC.id, Box::new(lang::LIST_TYPESPEC.clone()));
@@ -269,11 +269,11 @@ impl ExecutionEnvironment {
         self.functions.insert(function.id(), Box::new(function));
     }
 
-    pub fn add_function_box(&mut self, function: Box<lang::Function>) {
+    pub fn add_function_box(&mut self, function: Box<dyn lang::Function>) {
         self.functions.insert(function.id(), function);
     }
 
-    pub fn find_function(&self, id: lang::ID) -> Option<&Box<lang::Function>> {
+    pub fn find_function(&self, id: lang::ID) -> Option<&Box<dyn lang::Function>> {
         self.functions.get(&id)
     }
 
@@ -281,7 +281,7 @@ impl ExecutionEnvironment {
         self.functions.remove(&id).unwrap();
     }
 
-    pub fn list_functions(&self) -> impl Iterator<Item = &Box<lang::Function>> {
+    pub fn list_functions(&self) -> impl Iterator<Item = &Box<dyn lang::Function>> {
         self.functions.iter().map(|(_, func)| func)
     }
 
@@ -289,15 +289,15 @@ impl ExecutionEnvironment {
         self.typespecs.insert(typespec.id(), Box::new(typespec));
     }
 
-    pub fn add_typespec_box(&mut self, typespec: Box<lang::TypeSpec>) {
+    pub fn add_typespec_box(&mut self, typespec: Box<dyn lang::TypeSpec>) {
         self.typespecs.insert(typespec.id(), typespec);
     }
 
-    pub fn list_typespecs(&self) -> impl Iterator<Item = &Box<lang::TypeSpec>> {
+    pub fn list_typespecs(&self) -> impl Iterator<Item = &Box<dyn lang::TypeSpec>> {
         self.typespecs.values()
     }
 
-    pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<lang::TypeSpec>> {
+    pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<dyn lang::TypeSpec>> {
         self.typespecs.get(&id)
     }
 

@@ -25,17 +25,17 @@ lazy_static! {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Builtins {
-    pub funcs: HashMap<lang::ID, Box<lang::Function>>,
-    pub typespecs: HashMap<lang::ID, Box<lang::TypeSpec>>,
+    pub funcs: HashMap<lang::ID, Box<dyn lang::Function>>,
+    pub typespecs: HashMap<lang::ID, Box<dyn lang::TypeSpec>>,
 }
 
 impl Builtins {
-    pub fn load() -> Result<Self, Box<std::error::Error>> {
+    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
         let str = include_str!("../builtins.json");
         Ok(Self::deserialize(str)?)
     }
 
-    pub fn save(&self) -> Result<(),Box<std::error::Error>> {
+    pub fn save(&self) -> Result<(),Box<dyn std::error::Error>> {
         let f = File::create("builtins.json")?;
         Ok(serde_json::to_writer_pretty(f, self)?)
     }
@@ -44,18 +44,18 @@ impl Builtins {
         self.funcs.contains_key(&id) || self.typespecs.contains_key(&id)
     }
 
-    fn deserialize(str: &str) -> Result<Self, Box<std::error::Error>> {
+    fn deserialize(str: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let deserialize : BuiltinsDeserialize = serde_json::from_str(str)?;
         let funcs = deserialize.funcs.into_iter()
             .map(|(_, func_json)| {
                 let func = code_loading::deserialize_fn(func_json)?;
                 Ok((func.id(), func))
-            }).collect::<Result<HashMap<_, _>, Box<std::error::Error>>>();
+            }).collect::<Result<HashMap<_, _>, Box<dyn std::error::Error>>>();
         let typespecs = deserialize.typespecs.into_iter()
             .map(|(_, typespec_json)| {
                 let typespec = code_loading::deserialize_typespec(typespec_json)?;
                 Ok((typespec.id(), typespec))
-            }).collect::<Result<HashMap<_, _>, Box<std::error::Error>>>();
+            }).collect::<Result<HashMap<_, _>, Box<dyn std::error::Error>>>();
         Ok(Self { funcs: funcs?, typespecs: typespecs? })
     }
 }
