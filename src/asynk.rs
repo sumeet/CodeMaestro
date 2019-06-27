@@ -20,9 +20,8 @@ pub fn backward<I, E>(f: impl NewFuture<Output = Result<I, E>>)
 //    backward::Compat::new(f)
 //}
 
-#[allow(dead_code)]
 pub fn forward<I, E>(f: impl OldFuture<Item = I, Error = E> + Unpin)
                      -> impl NewFuture<Output = Result<I, E>> {
-    use tokio_async_await::compat::forward::IntoAwaitable;
-    f.into_awaitable()
+    use futures_util::compat::Future01CompatExt;
+    f.compat()
 }

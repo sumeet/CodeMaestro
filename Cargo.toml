@@ -18,7 +18,7 @@ python = ["pyo3"]
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 hyper = {version = "*"}
 slack = { git = "https://github.com/sumeet/slack-rs", features = ["future"], branch = "master" }
-tokio = {version = "0.1.13", features = ["async-await-preview"] }
+tokio = {version = "0.1.21"}
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 reqwest = {git = "https://github.com/sumeet/reqwest", branch = "master" }
@@ -45,13 +45,11 @@ typetag = "0.1.1"
 failure = "0.1.2"
 uuid = { git = "https://github.com/uuid-rs/uuid", tag = "0.7.1", features = ["serde", "v4", "v5"] }
 lazy_static = "1.1.0"
-itertools = "0.7.8"
+itertools = "*"
 downcast-rs = "1.0.3"
 futures = "0.1"
 take_mut = "0.2.2"
 http = "0.1"
-# need this for the old / new futures compat layer in wasm as well as native
-tokio-async-await = {version = "0.1.4", features = ["async-await-preview"]}
 cfg-if = "0.1"
 url = "1.7.2"
 maplit = "1.0.1"

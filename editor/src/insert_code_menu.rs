@@ -708,7 +708,7 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                     })
                 }))
                        });
-        itertools::Itertools::flatten(optionss).collect()
+        Iterator::flatten(optionss).collect()
     }
 }
 

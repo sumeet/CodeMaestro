@@ -1,4 +1,4 @@
-ARG TOOLCHAIN=nightly
+ARG TOOLCHAIN=nightly-06-08
 FROM ekidd/rust-musl-builder:${TOOLCHAIN} as builder
 
 WORKDIR /home/rust/
@@ -7,8 +7,11 @@ WORKDIR /home/rust/
 # the Cargo files and making a dummy src/main.rs
 COPY Cargo.toml .
 COPY Cargo.lock .
+RUN mkdir -p editor/src
+COPY editor/Cargo.toml ./editor/
+
 RUN echo "fn main() {}" > src/main.rs
-RUN cargo test
+RUN echo "fn main() {}" > editor/src/main.rs
 RUN cargo build --release
 
 # We need to touch our real main.rs file or else docker will use
@@ -17,10 +20,7 @@ COPY . .
 RUN sudo touch src/main.rs
 
 RUN cargo test
-RUN cargo build --release --package cs --bin irctest
-
-# Size optimization
-RUN strip target/x86_64-unknown-linux-musl/release/irctest
+RUN cargo build --release --bin irctest
 
 # Start building the final image
 FROM scratch

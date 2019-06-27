@@ -1,13 +1,12 @@
 #!/bin/bash
 set -e
 
-./target/release/diesel migration run
+cargo install diesel
+diesel migration run
 ./scripts/gen-env.py > ./static/env.js
 
-# set up cargo-web
-cargo install --git https://github.com/sumeet/cargo-web cargo-web || echo "cargo-web already installed"
+cargo install cargo-web || echo "cargo-web already installed"
 cargo web build --release --target=wasm32-unknown-unknown --package editor
 
-# this var is set by buildpack-run.sh
-cp $CARGO_TARGET_DIR/wasm32-unknown-unknown/release/editor.wasm ./static/editor.wasm
-cp $CARGO_TARGET_DIR/wasm32-unknown-unknown/release/editor.js ./static/editor.js
+cp target/wasm32-unknown-unknown/release/editor.wasm ./static/editor.wasm
+cp target/wasm32-unknown-unknown/release/editor.js ./static/editor.js
