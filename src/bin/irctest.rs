@@ -1,4 +1,4 @@
-#![feature(await_macro, async_await, futures_api)]
+#![feature(await_macro, async_await)]
 
 extern crate cs;
 
@@ -94,7 +94,7 @@ fn start_new_interpreter_instance_with_services(instance_id: i32, service_config
     ).unwrap();
     let mut futures = service_configs.iter()
         .map(|service_config| {
-            let b : Box<OldFuture<Item = (), Error = ()>> = Box::new(backward(new_conn(service_config, Rc::clone(&chat_thingy))));
+            let b : Box<dyn OldFuture<Item = (), Error = ()>> = Box::new(backward(new_conn(service_config, Rc::clone(&chat_thingy))));
             b
         }).collect_vec();
     futures.push(Box::new(backward(receive_code(chat_thingy, new_code_receiver))));
@@ -137,7 +137,7 @@ impl GenerateProgramBotUrl {
         Self { instance_id }
     }
 
-    fn generate_url(&self) -> Result<url::Url, Box<std::error::Error>> {
+    fn generate_url(&self) -> Result<url::Url, Box<dyn std::error::Error>> {
         let token = NewCodeIntent::token(self.instance_id)?;
         Ok(config::edit_code_url(&token)?)
     }
@@ -171,7 +171,7 @@ impl ChatThingy {
         }
     }
 
-    pub fn message_received(&self, sender: String, text: String) -> Pin<Box<std::future::Future<Output = ()>>> {
+    pub fn message_received(&self, sender: String, text: String) -> Pin<Box<dyn std::future::Future<Output = ()>>> {
         if text == ".letmeprogramyou" {
             let program_url = GenerateProgramBotUrl::new(self.instance_id).generate_url().unwrap();
             self.reply_buffer.lock().unwrap().push(program_url.to_string());
@@ -278,7 +278,7 @@ async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Re
     };
 
     impl EventHandler for MyHandler {
-        type EventFut = Box<OldFuture<Item = (), Error = ()>>;
+        type EventFut = Box<dyn OldFuture<Item = (), Error = ()>>;
         type OnCloseFut = FutureResult<(), ()>;
         type OnConnectFut = FutureResult<(), ()>;
 
@@ -461,19 +461,19 @@ struct ServiceConfig {
 }
 
 impl ServiceConfig {
-    pub fn discord_token(&self) -> Result<&str, Box<std::error::Error>> {
+    pub fn discord_token(&self) -> Result<&str, Box<dyn std::error::Error>> {
         Ok(self.config.get("token")
             .ok_or("discord token not found in config")?
             .as_str().ok_or("discord token not a string")?)
     }
 
-    pub fn slack_token(&self) -> Result<&str, Box<std::error::Error>> {
+    pub fn slack_token(&self) -> Result<&str, Box<dyn std::error::Error>> {
         Ok(self.config.get("token")
             .ok_or("slack token not found in config")?
             .as_str().ok_or("slack token not a string")?)
     }
 
-    pub fn irc_config(&self) -> Result<Config, Box<std::error::Error>> {
+    pub fn irc_config(&self) -> Result<Config, Box<dyn std::error::Error>> {
        Ok(serde_json::from_value(self.config.clone())?)
     }
 }
@@ -497,7 +497,7 @@ fn insert_new_service_configs(configs: Vec<NewServiceConfig>) -> impl OldFuture<
     })
 }
 
-async fn load_instances() -> Result<HashMap<i32, Vec<ServiceConfig>>, Box<std::error::Error>> {
+async fn load_instances() -> Result<HashMap<i32, Vec<ServiceConfig>>, Box<dyn std::error::Error>> {
     use crate::service_configs::dsl::*;
 
     let all_service_configs = await!(forward(exec_async(|conn| {
@@ -543,7 +543,7 @@ async fn http_server(new_code_sender_by_instance_id: HashMap<i32, mpsc::Unbounde
 }
 
 
-async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error::Error + 'static>>
+async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<dyn std::error::Error + 'static>>
     where for<'de> T: Deserialize<'de>,
 {
     let (parts, body) = req.into_parts();
@@ -554,7 +554,7 @@ async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<std::error
 }
 
 fn http_handler(new_code_sender_by_instance_id: HashMap<i32, mpsc::UnboundedSender<TheWorld>>) ->
-    impl Fn(Request<Body>) -> Box<OldFuture<Item = Response<Body>, Error=hyper::Error>> {
+    impl Fn(Request<Body>) -> Box<dyn OldFuture<Item = Response<Body>, Error=hyper::Error>> {
 
     move |request| {
         let uri = request.uri();
@@ -605,7 +605,7 @@ struct NewCodeIntent {
 }
 
 impl NewCodeIntent {
-    fn token(instance_id: i32) -> Result<String, Box<std::error::Error>> {
+    fn token(instance_id: i32) -> Result<String, Box<dyn std::error::Error>> {
         Ok(Self { instance_id }.encode()?)
     }
 }
@@ -618,11 +618,11 @@ lazy_static! {
 }
 
 impl NewCodeIntent {
-    fn encode(&self) -> Result<String, Box<std::error::Error>> {
+    fn encode(&self) -> Result<String, Box<dyn std::error::Error>> {
         Ok(SIGNING_TOKEN.encode(&serde_json::to_string(self)?)?)
     }
 
-    fn decode(str: &str) -> Result<Self, Box<std::error::Error>> {
+    fn decode(str: &str) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(serde_json::from_str(&SIGNING_TOKEN.decode(str, 0)?)?)
     }
 }
