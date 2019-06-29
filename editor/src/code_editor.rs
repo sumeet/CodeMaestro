@@ -209,7 +209,8 @@ impl CodeEditor {
         let selected_node_id = self.selected_node_id?;
         match self.code_genie.find_parent(selected_node_id)? {
             lang::CodeNode::StructLiteralField(cn) => {
-                self.mark_as_editing(InsertionPoint::StructLiteralField(cn.id));
+                let id = cn.id;
+                self.mark_as_editing(InsertionPoint::StructLiteralField(id));
             }
             lang::CodeNode::Argument(_)
             | lang::CodeNode::Assignment(_)
@@ -968,11 +969,12 @@ impl MutationMaster {
 
                 match insertion_point {
                     InsertionPoint::Before(id) => {
-                        block.expressions.insert(get_insertion_point(id), code_node)
+                        let insertion_point = get_insertion_point(id);
+                        block.expressions.insert(insertion_point, code_node)
                     }
                     InsertionPoint::After(id) => {
-                        block.expressions
-                             .insert(get_insertion_point(id) + 1, code_node)
+                        let insertion_point = get_insertion_point(id);
+                        block.expressions.insert(insertion_point + 1, code_node)
                     }
                     _ => panic!("bad insertion point type for a block: {:?}",
                                 insertion_point),
