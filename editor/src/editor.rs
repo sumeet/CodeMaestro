@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 //use debug_cell::RefCell;
-use std::boxed::FnBox;
 use std::collections::HashMap;
 use std::iter;
 use std::rc::Rc;
@@ -305,7 +304,7 @@ pub struct CommandBuffer {
     // this is kind of messy, but i just need this to get saving to work
     integrating_commands: Vec<
         Box<
-            dyn FnBox(
+            dyn FnOnce(
                 &mut Controller,
                 &mut env::Interpreter,
                 &mut async_executor::AsyncExecutor,
@@ -313,8 +312,8 @@ pub struct CommandBuffer {
             ),
         >,
     >,
-    controller_commands: Vec<Box<dyn FnBox(&mut Controller)>>,
-    interpreter_commands: Vec<Box<dyn FnBox(&mut env::Interpreter)>>,
+    controller_commands: Vec<Box<dyn FnOnce(&mut Controller)>>,
+    interpreter_commands: Vec<Box<dyn FnOnce(&mut env::Interpreter)>>,
 }
 
 impl CommandBuffer {
@@ -474,7 +473,7 @@ impl CommandBuffer {
 
     pub fn flush_to_controller(&mut self, controller: &mut Controller) {
         for command in self.controller_commands.drain(..) {
-            command.call_box((controller,))
+            command(controller)
         }
     }
 
@@ -491,7 +490,7 @@ impl CommandBuffer {
 
     pub fn flush_to_interpreter(&mut self, interpreter: &mut env::Interpreter) {
         for command in self.interpreter_commands.drain(..) {
-            command.call_box((interpreter,))
+            command(interpreter)
         }
     }
 
@@ -502,7 +501,7 @@ impl CommandBuffer {
         async_executor: &mut async_executor::AsyncExecutor,
     ) {
         while let Some(command) = self.integrating_commands.pop() {
-            command.call_box((controller, interpreter, async_executor, self))
+            command(controller, interpreter, async_executor, self)
         }
     }
 }
