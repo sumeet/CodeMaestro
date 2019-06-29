@@ -6,7 +6,7 @@ use std::future::Future;
 use std::iter;
 
 #[cfg(target_arch = "wasm32")]
-use stdweb::{_js_impl, js};
+use stdweb::js;
 
 use downcast_rs::impl_downcast;
 use itertools::Itertools;

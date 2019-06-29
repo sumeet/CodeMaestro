@@ -55,7 +55,7 @@ use yew_toolkit::draw_app;
 cfg_if! {
     if #[cfg(target_arch = "wasm32")] {
         fn init_debug() {
-            use stdweb::{js,_js_impl,console,__internal_console_unsafe};
+            use stdweb::{console};
             ::std::panic::set_hook(Box::new(|info| {
                 console!(error, format!("!!! RUST PANIC !!! {:?}", info));
             }));

@@ -5,7 +5,7 @@ use url;
 #[cfg(target_arch = "wasm32")]
 lazy_static! {
     static ref ENV: HashMap<String, String> = {
-        use stdweb::{_js_impl, js};
+        use stdweb::js;
         let env = js! { return ENV; };
         let env: HashMap<String, _> = env.into_object().expect("ENV isn't a JS object").into();
         env.into_iter()

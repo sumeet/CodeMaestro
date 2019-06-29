@@ -1,6 +1,6 @@
 use stdweb::PromiseFuture;
 use http::{Request,Response};
-use stdweb::{js,_js_impl, js_deserializable, __js_deserializable_serde_boilerplate};
+use stdweb::{js, js_deserializable};
 //use stdweb::unstable::TryFrom;
 use stdweb::unstable::TryInto;
 use std::collections::HashMap;
@@ -9,7 +9,7 @@ use serde_derive::{Serialize,Deserialize};
 // this conflicts with the js_deserializable macro definition if it's called Result, hence the rename
 // to EZResult
 #[allow(dead_code)] // bug in rustc warns for this
-type EZResult<T> = std::result::Result<T, Box<std::error::Error>>;
+type EZResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub async fn fetch(request: Request<String>) -> EZResult<Response<String>> {
     let js_resp = await!(js_fetch(request))?;

@@ -9,7 +9,7 @@ pub fn with_executor_context<F: FnOnce(AsyncExecutor)>(run: F) {
 
 #[derive(Clone)]
 pub struct AsyncExecutor {
-    pub onupdate: Option<Rc<Fn()>>,
+    pub onupdate: Option<Rc<dyn Fn()>>,
 }
 
 impl AsyncExecutor {
@@ -19,7 +19,7 @@ impl AsyncExecutor {
         }
     }
 
-    pub fn setonupdate(&mut self, onupdate: Rc<Fn()>) {
+    pub fn setonupdate(&mut self, onupdate: Rc<dyn Fn()>) {
         self.onupdate = Some(onupdate)
     }
 

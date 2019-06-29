@@ -13,7 +13,7 @@ use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::web::{document, IElement, IEventTarget};
 //use stdweb::{__internal_console_unsafe, console};
-use stdweb::{_js_impl, js};
+use stdweb::js;
 use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::{VList, VNode};
@@ -81,12 +81,12 @@ impl UiToolkit for YewToolkit {
 
     fn scrolled_to_y_if_not_visible(&self,
                                     _scroll_hash: String,
-                                    draw_fn: &Fn() -> Self::DrawResult)
+                                    draw_fn: &dyn Fn() -> Self::DrawResult)
                                     -> Self::DrawResult {
         draw_fn()
     }
 
-    fn draw_top_right_overlay(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
             <div style={ format!("position: absolute; top: 10px; right: 10px; color: white; background-color: {}",self.rgba(WINDOW_BG_COLOR)) }, >
                 {{ draw_fn() }}
@@ -103,7 +103,7 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_x_scrollable_list<'a>(&'a self,
-                                  items: impl ExactSizeIterator<Item = (&'a Fn()
+                                  items: impl ExactSizeIterator<Item = (&'a dyn Fn()
                                                                    -> Self::DrawResult,
                                                             bool)>,
                                   lines_height: usize)
@@ -137,7 +137,7 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
-                                                      draw_fn: &Fn() -> Self::DrawResult,
+                                                      draw_fn: &dyn Fn() -> Self::DrawResult,
                                                       handle_keypress: Option<F>)
                                                       -> Self::DrawResult {
         let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
@@ -252,7 +252,8 @@ impl UiToolkit for YewToolkit {
                                                                     window_name: &str,
                                                                     _size: (usize, usize),
                                                                     pos: (isize, isize),
-                                                                    f: &Fn() -> Self::DrawResult,
+                                                                    f: &dyn Fn()
+                                                                            -> Self::DrawResult,
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
                                                                     _onwindowchange: H)
@@ -335,8 +336,8 @@ impl UiToolkit for YewToolkit {
     }
 
     fn replace_on_hover(&self,
-                        draw_when_not_hovered: &Fn() -> Self::DrawResult,
-                        draw_when_hovered: &Fn() -> Self::DrawResult)
+                        draw_when_not_hovered: &dyn Fn() -> Self::DrawResult,
+                        draw_when_hovered: &dyn Fn() -> Self::DrawResult)
                         -> Self::DrawResult {
         let not_hovered_id = self.incr_last_drawn_element_id();
         let hovered_id = self.incr_last_drawn_element_id();
@@ -359,9 +360,9 @@ impl UiToolkit for YewToolkit {
     // TODO: clean up bc code is duped between here and draw_window
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
-                                                    draw_fn: &Fn() -> Self::DrawResult,
+                                                    draw_fn: &dyn Fn() -> Self::DrawResult,
                                                     height: ChildRegionHeight,
-                                                    draw_context_menu: Option<&Fn() -> Self::DrawResult>,
+                                                    draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult {
         // TODO: this is super duped from draw_window, clean this up already!!!! :((((
@@ -438,8 +439,8 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_layout_with_bottom_bar(&self,
-                                   draw_content_fn: &Fn() -> Self::DrawResult,
-                                   draw_bottom_bar_fn: &Fn() -> Self::DrawResult)
+                                   draw_content_fn: &dyn Fn() -> Self::DrawResult,
+                                   draw_bottom_bar_fn: &dyn Fn() -> Self::DrawResult)
                                    -> Self::DrawResult {
         // TODO: this only renders the bottom bar directly under the content. the bottom bar needs
         // to be fixed at the bottom
@@ -460,7 +461,7 @@ impl UiToolkit for YewToolkit {
     }
 
     fn buttonize<F: Fn() + 'static>(&self,
-                                    draw_fn: &Fn() -> Self::DrawResult,
+                                    draw_fn: &dyn Fn() -> Self::DrawResult,
                                     onclick: F)
                                     -> Self::DrawResult {
         html! {
@@ -508,7 +509,9 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_all_on_same_line(&self, draw_fns: &[&Fn() -> Self::DrawResult]) -> Self::DrawResult {
+    fn draw_all_on_same_line(&self,
+                             draw_fns: &[&dyn Fn() -> Self::DrawResult])
+                             -> Self::DrawResult {
         html! {
             <div id={ self.incr_last_drawn_element_id().to_string() },
                  style={"display: flex;"}, >
@@ -546,7 +549,7 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn focused(&self, draw_fn: &Fn() -> Html<Model>) -> Self::DrawResult {
+    fn focused(&self, draw_fn: &dyn Fn() -> Html<Model>) -> Self::DrawResult {
         let html = draw_fn();
         self.focus_last_drawn_element();
         html
@@ -555,7 +558,7 @@ impl UiToolkit for YewToolkit {
     // we're using droppy (https://github.com/OutlawPlz/droppy/) to help us render the dropdown.
     // TODO: the menu doesn't render correctly, and also doesn't go away when we select one of the
     // menu items
-    fn draw_main_menu_bar(&self, draw_menus: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_main_menu_bar(&self, draw_menus: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         self.renderer_state.borrow().add_run_after_render(move || {
                                         js! {
                                             var el = document.querySelector(".dropdown-menu");
@@ -582,7 +585,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_menu(&self,
                  label: &str,
-                 draw_menu_items: &Fn() -> Self::DrawResult)
+                 draw_menu_items: &dyn Fn() -> Self::DrawResult)
                  -> Self::DrawResult {
         // TODO: implement this for realsies
         html! {
@@ -616,7 +619,7 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_statusbar(&self, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_statusbar(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
             <div style="position: fixed; line-height: 1; width: 100%; bottom: 0; left: 0;",>
                 {{ draw_fn() }}
@@ -777,7 +780,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_box_around(&self,
                        color: [f32; 4],
-                       draw_fn: &Fn() -> Self::DrawResult)
+                       draw_fn: &dyn Fn() -> Self::DrawResult)
                        -> Self::DrawResult {
         // pointer-events stuff is to allow children to respond to click handlers
         // see https://stackoverflow.com/questions/3680429/click-through-div-to-underlying-elements
@@ -797,7 +800,7 @@ impl UiToolkit for YewToolkit {
     fn draw_top_border_inside(&self,
                               color: [f32; 4],
                               thickness: u8,
-                              draw_fn: &Fn() -> Self::DrawResult)
+                              draw_fn: &dyn Fn() -> Self::DrawResult)
                               -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
@@ -815,7 +818,7 @@ impl UiToolkit for YewToolkit {
     fn draw_right_border_inside(&self,
                                 color: [f32; 4],
                                 thickness: u8,
-                                draw_fn: &Fn() -> Self::DrawResult)
+                                draw_fn: &dyn Fn() -> Self::DrawResult)
                                 -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
@@ -833,7 +836,7 @@ impl UiToolkit for YewToolkit {
     fn draw_left_border_inside(&self,
                                color: [f32; 4],
                                thickness: u8,
-                               draw_fn: &Fn() -> Self::DrawResult)
+                               draw_fn: &dyn Fn() -> Self::DrawResult)
                                -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
@@ -851,7 +854,7 @@ impl UiToolkit for YewToolkit {
     fn draw_bottom_border_inside(&self,
                                  color: [f32; 4],
                                  thickness: u8,
-                                 draw_fn: &Fn() -> Self::DrawResult)
+                                 draw_fn: &dyn Fn() -> Self::DrawResult)
                                  -> Self::DrawResult {
         html! {
             <div class={"overlay-wrapper"}, >
@@ -866,7 +869,7 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn indent(&self, px: i16, draw_fn: &Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn indent(&self, px: i16, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
             <div style=format!("margin-left: {}px", px), >
                 { draw_fn() }
@@ -875,8 +878,8 @@ impl UiToolkit for YewToolkit {
     }
 
     fn align(&self,
-             lhs: &Fn() -> Self::DrawResult,
-             rhs: &[&Fn() -> Self::DrawResult])
+             lhs: &dyn Fn() -> Self::DrawResult,
+             rhs: &[&dyn Fn() -> Self::DrawResult])
              -> Self::DrawResult {
         html! {
             <div>
@@ -942,14 +945,14 @@ impl YewToolkit {
 }
 
 pub struct RendererState {
-    pub global_key_handler: Rc<RefCell<Box<Fn(Keypress) + 'static>>>,
+    pub global_key_handler: Rc<RefCell<Box<dyn Fn(Keypress) + 'static>>>,
     pub yew_app: Rc<RefCell<html::Scope<Model>>>,
-    pub funcs_to_run_after_render: Rc<RefCell<Vec<Box<Fn()>>>>,
+    pub funcs_to_run_after_render: Rc<RefCell<Vec<Box<dyn Fn()>>>>,
 }
 
 impl RendererState {
     pub fn new(yew_app: html::Scope<Model>,
-               funcs_to_run_after_render: Rc<RefCell<Vec<Box<Fn()>>>>)
+               funcs_to_run_after_render: Rc<RefCell<Vec<Box<dyn Fn()>>>>)
                -> Self {
         Self { global_key_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
                yew_app: Rc::new(RefCell::new(yew_app)),
@@ -1048,7 +1051,7 @@ fn was_shift_key_pressed(key: &str) -> bool {
 pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     yew::initialize();
 
-    let funcs_to_run_after_render: Rc<RefCell<Vec<Box<Fn()>>>> = Rc::new(RefCell::new(vec![]));
+    let funcs_to_run_after_render: Rc<RefCell<Vec<Box<dyn Fn()>>>> = Rc::new(RefCell::new(vec![]));
 
     // dirty hacks to focus something
     js! {
@@ -1147,7 +1150,7 @@ fn symbolize_text(text: &str) -> Html<Model> {
 
 fn is_in_symbol_range(c: char) -> bool {
     match c as u32 {
-        0xf000...0xf72f => true,
+        0xf000..=0xf72f => true,
         _ => false,
     }
 }
