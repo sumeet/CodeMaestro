@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+docker build -t dokku/cs:latest .
+docker save dokku/cs:latest | bzip2 | ssh sumeet.me "bzip2 -cd | docker load"
+ssh dokku@sumeet.me tags:deploy cs latest

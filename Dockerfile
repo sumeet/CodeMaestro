@@ -20,6 +20,7 @@ COPY editor/Cargo.toml ./editor/
 RUN echo "fn main() {}" > src/main.rs
 RUN echo "fn main() {}" > editor/src/main.rs
 RUN cargo build --target=x86_64-unknown-linux-musl --release
+RUN cargo web build --target=wasm32-unknown-unknown --package editor --release
 
 # We need to touch our real main.rs file or else docker will use
 # the cached one.
@@ -31,6 +32,8 @@ RUN touch src/main.rs
 
 # build the server binary (irc bot + webserver)
 RUN cargo build --release -vv --target=x86_64-unknown-linux-musl --bin irctest
+RUN cargo build --release -vv --target=x86_64-unknown-linux-musl --bin gen_js_env
+RUN cargo build --release -vv --target=x86_64-unknown-linux-musl --bin run_multi
 
 # build da wasm editor
 RUN cargo web build --release --target=wasm32-unknown-unknown --package editor
@@ -39,10 +42,13 @@ RUN cp /workdir/target/wasm32-unknown-unknown/release/editor.js /workdir/static/
 
 # Start building the final image
 FROM scratch
-WORKDIR /home/rust/
+WORKDIR /
 COPY --from=0 /root/.cargo/bin/diesel .
 COPY --from=0 /workdir/target/x86_64-unknown-linux-musl/release/irctest .
-COPY --from=0 /workdir/migrations .
-COPY --from=0 /workdir/static .
+COPY --from=0 /workdir/target/x86_64-unknown-linux-musl/release/gen_js_env .
+COPY --from=0 /workdir/target/x86_64-unknown-linux-musl/release/run_multi .
+COPY --from=0 /workdir/migrations ./migrations
+COPY --from=0 /workdir/static ./static
+COPY --from=0 /etc/ssl /etc/ssl
 
-ENTRYPOINT ["./irctest"]
+ENTRYPOINT ["./run_multi", "./gen_js_env ./static/env.js", "./diesel migration run", "./irctest"]
