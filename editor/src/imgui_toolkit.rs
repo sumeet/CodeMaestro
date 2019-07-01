@@ -522,7 +522,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                     draw_context_menu: Option<&dyn Fn()>,
                                                     handle_keypress: Option<F>) {
         let height = match height {
-            ChildRegionHeight::Percentage(height_percentage) => {
+            ChildRegionHeight::ExpandFill(height_percentage) => {
                 height_percentage * unsafe { imgui_sys::igGetWindowHeight() }
             }
             ChildRegionHeight::Pixels(pixels) => pixels as f32,
@@ -631,7 +631,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             })
     }
 
-    fn draw_layout_with_bottom_bar(&self, draw_content_fn: &dyn Fn(), draw_bottom_bar_fn: &dyn Fn()) {
+    fn draw_layout_with_bottom_bar(&self,
+                                   draw_content_fn: &dyn Fn(),
+                                   draw_bottom_bar_fn: &dyn Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
         self.ui
             .child_frame(&self.imlabel(""), (0.0, -frame_height))

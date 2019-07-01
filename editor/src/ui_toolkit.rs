@@ -32,7 +32,7 @@ pub trait UiToolkit {
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
                                                     draw_fn: &dyn Fn() -> Self::DrawResult,
-                                                    height_percentage: ChildRegionHeight,
+                                                    height: ChildRegionHeight,
                                                     draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult;
@@ -112,7 +112,8 @@ pub trait UiToolkit {
                                                        value: bool,
                                                        onchange: F)
                                                        -> Self::DrawResult;
-    fn draw_all_on_same_line(&self, draw_fns: &[&dyn Fn() -> Self::DrawResult]) -> Self::DrawResult;
+    fn draw_all_on_same_line(&self, draw_fns: &[&dyn Fn() -> Self::DrawResult])
+                             -> Self::DrawResult;
     fn draw_box_around(&self,
                        color: [f32; 4],
                        draw_fn: &dyn Fn() -> Self::DrawResult)
@@ -169,6 +170,6 @@ pub enum SelectableItem<T: 'static> {
 
 #[derive(Copy, Clone)]
 pub enum ChildRegionHeight {
-    Percentage(f32),
+    ExpandFill { min_height: f32 },
     Pixels(usize),
 }

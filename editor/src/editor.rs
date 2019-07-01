@@ -802,7 +802,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             (window.x, window.y),
             &|| {
                 self.ui_toolkit
-                    .draw_layout_with_bottom_bar(&|| self.render_code(script.id(), 1.), &|| {
+                    .draw_layout_with_bottom_bar(&|| self.render_code(script.id()), &|| {
                         self.render_run_button(script.code())
                     })
             },
@@ -849,7 +849,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         || {},
                     ),
                     self.render_arguments_selector(code_func),
-                    self.render_code(code_func.code().id(), 0.4),
+                    self.render_code(code_func.code().id()),
                     self.render_return_type_selector(code_func),
                     self.ui_toolkit.draw_separator(),
                     self.render_general_function_menu(code_func),
@@ -1063,7 +1063,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         &|| {},
                     ),
                     self.ui_toolkit.draw_text("Local variable: Message"),
-                    self.render_code(chat_trigger.code.id, 0.9),
+                    self.render_code(chat_trigger.code.id),
                 ])
             },
             None::<fn(Keypress)>,
@@ -1126,9 +1126,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         || {},
                     ),
                     self.ui_toolkit.draw_text("Base URL:"),
-                    self.render_code(client.gen_url.id, 0.15),
+                    self.render_code(client.gen_url.id),
                     self.ui_toolkit.draw_text("URL params:"),
-                    self.render_code(client.gen_url_params.id, 0.3),
+                    self.render_code(client.gen_url_params.id),
                     self.render_arguments_selector(client),
                     self.ui_toolkit.draw_text(&format!(
                         "Current return type: {}",
@@ -1674,7 +1674,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 },
                 || {},
             ),
-            self.render_code(test.code_id(), 0.3),
+            self.render_code(test.code_id()),
         ])
     }
 
@@ -1910,7 +1910,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     //        None::<fn()>)
     //    }
 
-    fn render_code(&self, code_id: lang::ID, height_percentage: f32) -> T::DrawResult {
+    fn render_code(&self, code_id: lang::ID) -> T::DrawResult {
         let code_editor = self.controller.get_editor(code_id).unwrap();
         CodeEditorRenderer::new(
             self.ui_toolkit,
@@ -1918,7 +1918,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             Rc::clone(&self.command_buffer),
             self.env_genie,
         )
-        .render(height_percentage)
+        .render()
     }
 }
 

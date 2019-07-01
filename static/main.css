@@ -68,6 +68,11 @@
 .window-content {
     padding: 0.2em;
     overflow: auto;
+    height: 100%;
+}
+
+.window-content > * {
+    height: 100%;
 }
 
 .overlay-wrapper {

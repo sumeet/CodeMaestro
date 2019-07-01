@@ -183,7 +183,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult {
         html! {
-            <div>
+            <div style="display: flex; flex-direction: column;",>
                 { for draw_results.into_iter() }
             </div>
         }
@@ -380,21 +380,21 @@ impl UiToolkit for YewToolkit {
         let context_menu = draw_context_menu.map(|draw_context_menu| draw_context_menu());
         let is_context_menu = context_menu.is_some();
 
-        let height_css = match height {
-            ChildRegionHeight::Percentage(height_percentage) => {
-                format!("height: calc({}%)", height_percentage * 100.)
+        let (container_css, height_css) = match height {
+            ChildRegionHeight::ExpandFill { min_height } => {
+                ("flex: 1;", format!("min-height: {}px; height: 100%;", min_height))
             }
-            ChildRegionHeight::Pixels(px) => format!("max-height: {}px", px),
+            ChildRegionHeight::Pixels(px) => ("", format!("height: {}px;", px)),
         };
 
         // TODO: border color is hardcoded, ripped from imgui
         html! {
-            <div>
+            <div style={ container_css },>
                 <div id={ &context_menu_id }, class="context_menu", style="display: none;",>
                     { context_menu.unwrap_or_else(|| VNode::from(VList::new())) }
                 </div>
 
-                <div style={ format!("border: 1px solid #6a6a6a; min-height: 100px; {}; white-space: nowrap; background-color: {}; overflow: auto;", height_css, self.rgba(bg)) },
+                <div style={ format!("border: 1px solid #6a6a6a; white-space: nowrap; background-color: {}; overflow: auto; {}", self.rgba(bg), height_css) },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     oncontextmenu=|e| {

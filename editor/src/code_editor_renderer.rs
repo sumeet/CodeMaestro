@@ -58,13 +58,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                env_genie }
     }
 
-    pub fn render(&self, height_percentage: f32) -> T::DrawResult {
+    pub fn render(&self) -> T::DrawResult {
         let code = self.code_editor.get_code();
         let cmd_buffer1 = Rc::clone(&self.command_buffer);
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_child_region(TEXT_ENTRY_BG_COLOR,
                                           &|| self.render_code(code),
-                                          ChildRegionHeight::Percentage(height_percentage),
+                                          ChildRegionHeight::ExpandFill { min_height: 100. },
                                           Some(&move || {
                                               let cmd_buffer1 = Rc::clone(&cmd_buffer1);
                                               self.ui_toolkit.draw_menu_item("Insert code", move || {
@@ -111,7 +111,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         }
     }
 
-    fn draw_selected(&self, scroll_hash: String, draw: &dyn Fn() -> T::DrawResult) -> T::DrawResult {
+    fn draw_selected(&self,
+                     scroll_hash: String,
+                     draw: &dyn Fn() -> T::DrawResult)
+                     -> T::DrawResult {
         self.ui_toolkit
             .scrolled_to_y_if_not_visible(scroll_hash, &|| {
                 self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
@@ -319,7 +322,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         drawn
     }
 
-    fn draw_nested_borders_around(&self, draw_element_fn: &dyn Fn() -> T::DrawResult) -> T::DrawResult {
+    fn draw_nested_borders_around(&self,
+                                  draw_element_fn: &dyn Fn() -> T::DrawResult)
+                                  -> T::DrawResult {
         let nesting_level = *self.arg_nesting_level.borrow();
         if nesting_level == 0 {
             return draw_element_fn();
@@ -666,13 +671,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let rhs = self.render_function_call_arguments(function_call.function_reference()
                                                                    .function_id,
                                                       function_call.args());
-        let rhs: Vec<Box<dyn Fn() -> T::DrawResult>> = rhs.iter()
-                                                      .map(|cl| {
-                                                          let b: Box<dyn Fn() -> T::DrawResult> =
-                                                              Box::new(move || cl(&self));
-                                                          b
-                                                      })
-                                                      .collect_vec();
+        let rhs: Vec<Box<dyn Fn() -> T::DrawResult>> =
+            rhs.iter()
+               .map(|cl| {
+                   let b: Box<dyn Fn() -> T::DrawResult> = Box::new(move || cl(&self));
+                   b
+               })
+               .collect_vec();
 
         self.ui_toolkit.align(
                               &|| {
@@ -709,10 +714,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             })
     }
 
-    fn render_args_for_found_function(&self,
-                                      function: &dyn lang::Function,
-                                      args: Vec<&lang::Argument>)
-                                      -> Vec<Box<dyn Fn(&CodeEditorRenderer<T>) -> T::DrawResult>> {
+    fn render_args_for_found_function(
+        &self,
+        function: &dyn lang::Function,
+        args: Vec<&lang::Argument>)
+        -> Vec<Box<dyn Fn(&CodeEditorRenderer<T>) -> T::DrawResult>> {
         let provided_arg_by_definition_id: HashMap<lang::ID, lang::Argument> =
             args.into_iter()
                 .map(|arg| (arg.argument_definition_id, arg.clone()))
@@ -743,10 +749,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                          &|| {})
     }
 
-    fn render_function_call_arguments(&self,
-                                      function_id: lang::ID,
-                                      args: Vec<&lang::Argument>)
-                                      -> Vec<Box<dyn Fn(&CodeEditorRenderer<T>) -> T::DrawResult>> {
+    fn render_function_call_arguments(
+        &self,
+        function_id: lang::ID,
+        args: Vec<&lang::Argument>)
+        -> Vec<Box<dyn Fn(&CodeEditorRenderer<T>) -> T::DrawResult>> {
         let function = self.env_genie
                            .find_function(function_id)
                            .map(|func| func.clone());
@@ -791,10 +798,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         ])
     }
 
-    fn render_struct_literal_fields(&self,
-                                    strukt: &'a structs::Struct,
-                                    fields: impl Iterator<Item = &'a lang::StructLiteralField>)
-                                    -> Vec<Box<dyn Fn(&CodeEditorRenderer<T>) -> T::DrawResult>> {
+    fn render_struct_literal_fields(
+        &self,
+        strukt: &'a structs::Struct,
+        fields: impl Iterator<Item = &'a lang::StructLiteralField>)
+        -> Vec<Box<dyn Fn(&CodeEditorRenderer<T>) -> T::DrawResult>> {
         // TODO: should this map just go inside the struct????
         let struct_field_by_id = strukt.field_by_id();
 
@@ -827,13 +835,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             return self.render_struct_identifier(&strukt);
         }
         let rhs = self.render_struct_literal_fields(&strukt, struct_literal.fields());
-        let rhs: Vec<Box<dyn Fn() -> T::DrawResult>> = rhs.into_iter()
-                                                      .map(|draw_fn| {
-                                                          let b: Box<dyn Fn() -> T::DrawResult> =
-                                                              Box::new(move || draw_fn(&self));
-                                                          b
-                                                      })
-                                                      .collect_vec();
+        let rhs: Vec<Box<dyn Fn() -> T::DrawResult>> =
+            rhs.into_iter()
+               .map(|draw_fn| {
+                   let b: Box<dyn Fn() -> T::DrawResult> = Box::new(move || draw_fn(&self));
+                   b
+               })
+               .collect_vec();
         self.ui_toolkit.align(
                               &|| {
                                   self.set_selected_on_click(
