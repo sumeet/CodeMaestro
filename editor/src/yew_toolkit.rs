@@ -345,9 +345,9 @@ impl UiToolkit for YewToolkit {
         // tags, and not reshow them when new stuff comes on the screen, and so we've gotta use replaceonhoverhack
         // tags instead. gonna define replaceonhoverhack to be display: block in the css file
         html! {
-            <replaceonhoverhack onmouseover=|_| { hide(not_hovered_id) ; show(hovered_id); Msg::DontRedraw },
+            <replaceonhoverhack style="max-width: fit-content;", onmouseover=|_| { hide(not_hovered_id) ; show(hovered_id); Msg::DontRedraw },
                 onmouseout=|_| { hide(hovered_id) ; show(not_hovered_id); Msg::DontRedraw }, >
-                <replaceonhoverhack id={not_hovered_id.to_string()}, >
+                <replaceonhoverhack style="max-width: fit-content;", id={not_hovered_id.to_string()}, >
                     { draw_when_not_hovered() }
                 </replaceonhoverhack>
                 <replaceonhoverhack id={hovered_id.to_string()}, style="display: none;", >
