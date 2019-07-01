@@ -119,7 +119,7 @@
 
 /* see yew_toolkit.rs */
 replaceonhoverhack {
-    display: inline-block;
+    display: block;
 }
 
 /* this is for right click menus */
