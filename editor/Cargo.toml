@@ -23,10 +23,10 @@ matches = "0.1.8"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 glium = { version = "0.23", default-features = true }
 glutin = { version = "0.19" }
-imgui = { git = "https://github.com/sumeet/imgui-rs", branch = "master" }
-imgui-sys = { git = "https://github.com/sumeet/imgui-rs", branch = "master" }
-imgui-glium-renderer = { git = "https://github.com/sumeet/imgui-rs", branch = "master" }
-imgui-winit-support = { git = "https://github.com/sumeet/imgui-rs", branch = "master" }
+imgui = "0.0.23"
+imgui-sys = "*"
+imgui-glium-renderer = "*"
+imgui-winit-support = "*"
 tokio-current-thread = {version = "0.1.4" }
 tokio-reactor = {version = "0.1.7" }
 tokio-timer = {version = "0.2.10" }
