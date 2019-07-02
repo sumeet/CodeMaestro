@@ -522,8 +522,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                     draw_context_menu: Option<&dyn Fn()>,
                                                     handle_keypress: Option<F>) {
         let height = match height {
-            ChildRegionHeight::ExpandFill(height_percentage) => {
-                height_percentage * unsafe { imgui_sys::igGetWindowHeight() }
+            ChildRegionHeight::ExpandFill { .. } => {
+                // TODO: use imgui stack layout once it's in (https://github.com/ocornut/imgui/pull/846)
+                0.9 * unsafe { imgui_sys::igGetWindowHeight() }
             }
             ChildRegionHeight::Pixels(pixels) => pixels as f32,
         };
