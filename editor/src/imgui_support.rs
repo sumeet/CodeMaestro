@@ -48,14 +48,15 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     // keep this in sync with the WINDOW_BG_COLOR defined in yew_toolkit.rs
     style.colors[ImGuiCol::WindowBg as usize] = (0.375, 0.375, 0.375, 1.0).into();
 
-    println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);
-    println!("bordershadow: {:?}",
-             style.colors[ImGuiCol::BorderShadow as usize]);
-    println!("childbg: {:?}", style.colors[ImGuiCol::WindowBg as usize]);
-    println!("buttonhovered: {:?}",
-             style.colors[ImGuiCol::ButtonHovered as usize]);
-    println!("buttonactive: {:?}",
-             style.colors[ImGuiCol::ButtonActive as usize]);
+    // debug code to print colors
+    //    println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);
+    //    println!("bordershadow: {:?}",
+    //             style.colors[ImGuiCol::BorderShadow as usize]);
+    //    println!("childbg: {:?}", style.colors[ImGuiCol::WindowBg as usize]);
+    //    println!("buttonhovered: {:?}",
+    //             style.colors[ImGuiCol::ButtonHovered as usize]);
+    //    println!("buttonactive: {:?}",
+    //             style.colors[ImGuiCol::ButtonActive as usize]);
 
     // merge mode off for the first entry, should be on for the rest of them
     // TODO: also i think you have to add the fonts in such a way that the more specific ranges are
