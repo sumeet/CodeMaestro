@@ -36,10 +36,13 @@ pub const PX_PER_INDENTATION_LEVEL: i16 = 20;
 
 pub struct CodeEditorRenderer<'a, T> {
     ui_toolkit: &'a T,
-    arg_nesting_level: Rc<RefCell<u32>>,
+    arg_nesting_level: RefCell<u32>,
     code_editor: &'a code_editor::CodeEditor,
     command_buffer: Rc<RefCell<PerEditorCommandBuffer>>,
     env_genie: &'a EnvGenie<'a>,
+    // this is used for rendering code... if we're in menu rendering mode then don't go into edit
+    // mode and clicks also shouldn't do anything. surely a cleaner way to do this but whatever RN
+    is_rendering_menu: RefCell<bool>,
 }
 
 // ok stupid but all the methods on this take &self instead of &mut self because the ImGui closures
@@ -54,8 +57,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         Self { ui_toolkit,
                code_editor,
                command_buffer: Rc::new(RefCell::new(command_buffer)),
-               arg_nesting_level: Rc::new(RefCell::new(0)),
-               env_genie }
+               arg_nesting_level: RefCell::new(0),
+               env_genie,
+               is_rendering_menu: RefCell::new(false) }
     }
 
     pub fn render(&self) -> T::DrawResult {
@@ -140,7 +144,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // TODO: do we really need this clone?
         let menu = self.code_editor.insert_code_menu.as_ref().unwrap().clone();
 
-        self.ui_toolkit.draw_all(vec![
+        self.is_rendering_menu.replace(true);
+
+        let drawn = self.ui_toolkit.draw_all(vec![
             self.ui_toolkit.focused(&|| {
                 let cmdb_1 = Rc::clone(&self.command_buffer);
                 let cmdb_2 = Rc::clone(&self.command_buffer);
@@ -177,26 +183,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 )
             }),
             self.render_without_nesting(&|| self.render_insertion_options(&menu)),
-        ])
+        ]);
+        self.is_rendering_menu.replace(false);
+        drawn
     }
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
         let options = menu.list_options(&self.code_editor.code_genie, self.env_genie);
-        //        let render_insertion_options: Vec<(Box<Fn() -> T::DrawResult>, bool)> =
-        //            options.iter()
-        //                   .map(|option| {
-        //                       let c: Box<Fn() -> T::DrawResult> = Box::new(move || {
-        //                           self.render_insertion_option(option, menu.insertion_point)
-        //                       });
-        //                       (c, option.is_selected)
-        //                   })
-        //                   .collect();
-        //        let render_insertion_options =
-        //            render_insertion_options.iter()
-        //                                    .map(|(box_fn, is_selected)| (box_fn.as_ref(), *is_selected));
-        //        self.ui_toolkit
-        //            .draw_x_scrollable_list(render_insertion_options, 1);
-
         self.ui_toolkit.draw_child_region(BLACK_COLOR,
                                           &move || {
                                               let options =
@@ -1102,6 +1095,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                              draw_fn: &dyn Fn() -> T::DrawResult,
                              code_node_id: lang::ID)
                              -> T::DrawResult {
+        if *self.is_rendering_menu.borrow() {
+            return draw_fn();
+        }
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.buttonize(draw_fn, move || {
                            cmd_buffer.borrow_mut()

@@ -9,11 +9,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use itertools::Itertools;
+//use stdweb::{console};
+use stdweb::js;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::web::{document, IElement, IEventTarget};
-//use stdweb::{__internal_console_unsafe, console};
-use stdweb::js;
 use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::{VList, VNode};
