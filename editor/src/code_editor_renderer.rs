@@ -10,6 +10,7 @@ use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::UiToolkit;
 use crate::editor::Keypress;
+use crate::insert_code_menu::InsertCodeMenuOptionsGroup;
 use crate::ui_toolkit::ChildRegionHeight;
 use cs::env_genie::EnvGenie;
 use cs::lang;
@@ -189,21 +190,36 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
-        let options = menu.list_options(&self.code_editor.code_genie, self.env_genie);
+        let options_groups = menu.grouped_options(&self.code_editor.code_genie, self.env_genie);
         self.ui_toolkit.draw_child_region(BLACK_COLOR,
                                           &move || {
-                                              let options =
-                                                  options.iter().enumerate()
-                                                      .map(|(index, option)| self.render_insertion_option(index, option, menu.insertion_point)).collect();
-                                              self.ui_toolkit.draw_all(options)
+                                              self.ui_toolkit.draw_all(
+                                                  options_groups.iter().map(|group| {
+                                                      self.render_insertion_options_group(group, menu.insertion_point)
+                                                  }).collect()
+                                              )
                                           },
                                           ChildRegionHeight::Pixels(150),
                                           None::<&dyn Fn() -> T::DrawResult>,
                                           None::<fn(Keypress)>)
     }
 
+    fn render_insertion_options_group(&self,
+                                      group: &InsertCodeMenuOptionsGroup,
+                                      insertion_point: InsertionPoint)
+                                      -> T::DrawResult {
+        let group_heading = self.ui_toolkit.draw_text(group.group_name);
+        let options = group.options.iter().enumerate()
+            .map(|(index, option)| {
+                let scroll_hash = self.insertion_option_menu_hash(index, &group.group_name, &insertion_point);
+                self.render_insertion_option(scroll_hash, option, insertion_point)
+            });
+        self.ui_toolkit
+            .draw_all(std::iter::once(group_heading).chain(options).collect())
+    }
+
     fn render_insertion_option(&self,
-                               index: usize,
+                               scroll_hash: String,
                                option: &'a InsertCodeMenuOption,
                                insertion_point: InsertionPoint)
                                -> T::DrawResult {
@@ -225,15 +241,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         };
 
         if is_selected {
-            self.draw_selected(self.insertion_option_menu_hash(index, &insertion_point),
-                               &draw)
+            self.draw_selected(scroll_hash, &draw)
         } else {
             draw()
         }
     }
 
-    fn insertion_option_menu_hash(&self, index: usize, insertion_point: &InsertionPoint) -> String {
-        format!("{}:{:?}", index, insertion_point)
+    fn insertion_option_menu_hash(&self,
+                                  index: usize,
+                                  group_name: &str,
+                                  insertion_point: &InsertionPoint)
+                                  -> String {
+        format!("{}:{}:{:?}", index, group_name, insertion_point)
     }
 
     fn render_list_literal(&self,
