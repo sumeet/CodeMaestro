@@ -98,7 +98,6 @@ fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<dyn std::error::
     let mut functions: Vec<Box<dyn lang::Function>> = vec![];
     functions.push(Box::new(builtins::Print {}));
     functions.push(Box::new(builtins::Capitalize {}));
-    functions.push(Box::new(builtins::HTTPGet {}));
     functions.push(Box::new(builtins::JoinString {}));
     functions.push(Box::new(builtins::ChatReply::new(Arc::new(Mutex::new(vec![])))));
 

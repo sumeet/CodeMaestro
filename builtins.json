@@ -6,9 +6,6 @@
     "86ae2a51-5538-436f-b48e-3aa6c873b189": {
       "type": "Capitalize"
     },
-    "7a5952b5-f814-40a7-b555-e01ac6eb2d69": {
-      "type": "HTTPGet"
-    },
     "024247f6-3202-4acc-8d9a-b80a427cda3c": {
       "type": "JoinString"
     },

@@ -64,7 +64,6 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function
     Ok(match typ {
         "ChatReply" => Box::new(builtins::ChatReply::new(Arc::new(Mutex::new(vec![])))),
         "Capitalize" => Box::new(builtins::Capitalize {}),
-        "HTTPGet" => Box::new(builtins::HTTPGet {}),
         "JoinString" => Box::new(builtins::JoinString {}),
         "Print" => Box::new(builtins::Print {}),
         "JSONHTTPClient" => Box::new(serde_json::from_value::<JSONHTTPClient>(value)?),
