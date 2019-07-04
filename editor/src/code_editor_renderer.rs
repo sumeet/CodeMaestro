@@ -35,6 +35,11 @@ pub const PURPLE_COLOR: Color = [0.486, 0.353, 0.952, 1.0];
 pub const TEXT_ENTRY_BG_COLOR: Color = [0.396, 0.396, 0.396, 1.0];
 pub const PX_PER_INDENTATION_LEVEL: i16 = 20;
 
+fn transparency(mut color: Color, p: f32) -> Color {
+    color[3] = p;
+    color
+}
+
 pub struct CodeEditorRenderer<'a, T> {
     ui_toolkit: &'a T,
     arg_nesting_level: RefCell<u32>,
@@ -191,7 +196,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
         let options_groups = menu.grouped_options(&self.code_editor.code_genie, self.env_genie);
-        self.ui_toolkit.draw_child_region(BLACK_COLOR,
+        self.ui_toolkit.draw_child_region(transparency(BLACK_COLOR, 0.5),
                                           &move || {
                                               self.ui_toolkit.draw_all(
                                                   options_groups.iter().map(|group| {
@@ -199,7 +204,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                   }).collect()
                                               )
                                           },
-                                          ChildRegionHeight::Pixels(150),
+                                          ChildRegionHeight::Pixels(300),
                                           None::<&dyn Fn() -> T::DrawResult>,
                                           None::<fn(Keypress)>)
     }
@@ -208,7 +213,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                       group: &InsertCodeMenuOptionsGroup,
                                       insertion_point: InsertionPoint)
                                       -> T::DrawResult {
-        let group_heading = self.ui_toolkit.draw_text(group.group_name);
+        let group_heading = self.ui_toolkit
+                                .draw_full_width_heading(BLACK_COLOR, group.group_name);
         let options = group.options.iter().enumerate()
             .map(|(index, option)| {
                 let scroll_hash = self.insertion_option_menu_hash(index, &group.group_name, &insertion_point);

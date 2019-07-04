@@ -29,10 +29,11 @@ lazy_static! {
     ];
 }
 
-const FUNCTION_CALL_GROUP: &str = "Function calls";
+const FUNCTION_CALL_GROUP: &str = "Call function";
 const LOCALS_GROUP: &str = "Local variables";
 const LITERALS_GROUP: &str = "Literal values";
 const CONTROL_FLOW_GROUP: &str = "Control flow";
+const ASSIGN_VARIABLE_GROUP: &str = "New local variable";
 
 pub struct InsertCodeMenu {
     input_str: String,
@@ -700,9 +701,14 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
                          .to_string()
         };
 
+        // don't show this option when there's no variable name typed in!
+        if variable_name.is_empty() {
+            return vec![];
+        }
+
         vec![InsertCodeMenuOption {
             label: format!("{} =", variable_name),
-            group_name: CONTROL_FLOW_GROUP,
+            group_name: ASSIGN_VARIABLE_GROUP,
             is_selected: false,
             new_node: code_generation::new_assignment(
                 variable_name.clone(),

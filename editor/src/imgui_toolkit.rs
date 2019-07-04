@@ -321,6 +321,38 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                              &|| self.draw_button(text, TRANSPARENT_COLOR, &|| {}))
     }
 
+    fn draw_full_width_heading(&self, bgcolor: Color, text: &str) {
+        // copy and paste of draw_buttony_text lol
+        let style = self.ui.imgui().style();
+        let padding = style.frame_padding;
+
+        let full_width = unsafe { imgui_sys::igGetContentRegionAvailWidth() };
+
+        let original_cursor_pos = self.ui.get_cursor_pos();
+        let label = im_str!("{}", text);
+        let text_size = self.ui.calc_text_size(&label, false, 0.);
+        let total_size = (full_width, text_size.y + (padding.y * 2.));
+
+        let draw_cursor_pos = self.ui.get_cursor_screen_pos();
+        let end_of_button_bg_rect =
+            (draw_cursor_pos.0 + total_size.0, draw_cursor_pos.1 + total_size.1);
+        self.ui
+            .get_window_draw_list()
+            .add_rect(draw_cursor_pos, end_of_button_bg_rect, bgcolor)
+            .filled(true)
+            .build();
+
+        let draw_cursor_pos = self.ui.get_cursor_screen_pos();
+        let buttony_text_start_cursor_pos =
+            (draw_cursor_pos.0 + padding.x, draw_cursor_pos.1 + padding.y);
+        let draw_list = self.ui.get_window_draw_list();
+        let text_color = style.colors[ImGuiCol::Text as usize];
+        draw_list.add_text(buttony_text_start_cursor_pos, text_color, label);
+        self.ui.set_cursor_pos(original_cursor_pos);
+
+        self.ui.invisible_button(&self.imlabel(""), total_size);
+    }
+
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {
         self.ui
             .label_text(im_str!("{}", label), im_str!("{}", text))
@@ -515,8 +547,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
-                                                    // TODO: actually use this bg color lol
-                                                    _bg: Color,
+                                                    bg: Color,
                                                     draw_fn: &dyn Fn(),
                                                     height: ChildRegionHeight,
                                                     draw_context_menu: Option<&dyn Fn()>,
@@ -541,40 +572,46 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             default_bg
         };
 
-        self.ui.with_color_var(ImGuiCol::Border, color, &|| {
-                   self.ui
-                       .child_frame(&child_frame_id, (0., height))
-                       .show_borders(true)
-                       .scrollbar_horizontal(true)
-                       .build(&|| {
-                           draw_fn();
-                           if let Some(keypress) = self.keypress {
-                               if self.ui.is_child_window_focused() {
-                                   if let Some(ref handle_keypress) = handle_keypress {
-                                       handle_keypress(keypress)
-                                   }
-                               }
-                           }
+        self.ui.with_color_vars(
+                                &[
+            (ImGuiCol::Border, color),
+            (ImGuiCol::ChildBg, (bg[0], bg[1], bg[2], bg[3])),
+        ],
+                                &|| {
+                                    self.ui
+                    .child_frame(&child_frame_id, (0., height))
+                    .show_borders(true)
+                    .scrollbar_horizontal(true)
+                    .build(&|| {
+                        draw_fn();
+                        if let Some(keypress) = self.keypress {
+                            if self.ui.is_child_window_focused() {
+                                if let Some(ref handle_keypress) = handle_keypress {
+                                    handle_keypress(keypress)
+                                }
+                            }
+                        }
 
-                           TkCache::set_is_focused(child_frame_id.as_ref(),
-                                                   self.ui.is_child_window_focused());
+                        TkCache::set_is_focused(child_frame_id.as_ref(),
+                                                self.ui.is_child_window_focused());
 
-                           if let Some(draw_context_menu) = draw_context_menu {
-                               let label = self.imlabel("draw_context_menu");
-                               if unsafe {
-                                   let mouse_button = 1;
-                                   imgui_sys::igBeginPopupContextWindow(label.as_ptr(),
-                                                                        mouse_button,
-                                                                        false)
-                               } {
-                                   draw_context_menu();
-                                   unsafe {
-                                       imgui_sys::igEndPopup();
-                                   }
-                               }
-                           }
-                       });
-               });
+                        if let Some(draw_context_menu) = draw_context_menu {
+                            let label = self.imlabel("draw_context_menu");
+                            if unsafe {
+                                let mouse_button = 1;
+                                imgui_sys::igBeginPopupContextWindow(label.as_ptr(),
+                                                                     mouse_button,
+                                                                     false)
+                            } {
+                                draw_context_menu();
+                                unsafe {
+                                    imgui_sys::igEndPopup();
+                                }
+                            }
+                        }
+                    });
+                                },
+        );
     }
 
     fn draw_x_scrollable_list<'b>(&'b self,

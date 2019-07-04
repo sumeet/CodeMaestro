@@ -2,7 +2,7 @@ use cs::lang;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-const INITIAL_WINDOW_SIZE: (usize, usize) = (400, 500);
+const INITIAL_WINDOW_SIZE: (usize, usize) = (600, 600);
 
 #[derive(Deserialize, Serialize)]
 pub struct WindowPositions {

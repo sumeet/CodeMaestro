@@ -48,6 +48,7 @@ pub trait UiToolkit {
                                    -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_separator(&self) -> Self::DrawResult;
+    fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
     fn buttonize<F: Fn() + 'static>(&self,
