@@ -29,7 +29,7 @@ lazy_static! {
     ];
 }
 
-const FUNCTION_CALL_GROUP: &str = "Call function";
+const FUNCTION_CALL_GROUP: &str = "Functions";
 const LOCALS_GROUP: &str = "Local variables";
 const LITERALS_GROUP: &str = "Literal values";
 const CONTROL_FLOW_GROUP: &str = "Control flow";
