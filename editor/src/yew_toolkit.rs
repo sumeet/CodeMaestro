@@ -250,7 +250,7 @@ impl UiToolkit for YewToolkit {
     // TODO: wasm needs to call back into the app and tell it the window positions
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self,
                                                                     window_name: &str,
-                                                                    _size: (usize, usize),
+                                                                    size: (usize, usize),
                                                                     pos: (isize, isize),
                                                                     f: &dyn Fn()
                                                                             -> Self::DrawResult,
@@ -270,7 +270,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}", pos.0, pos.1, self.rgba(WINDOW_BG_COLOR)) },
+           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, self.rgba(WINDOW_BG_COLOR), size.0, size.1) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {

@@ -2,7 +2,7 @@ use cs::lang;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-const INITIAL_WINDOW_SIZE: (usize, usize) = (600, 600);
+const INITIAL_WINDOW_SIZE: (usize, usize) = (550, 650);
 
 #[derive(Deserialize, Serialize)]
 pub struct WindowPositions {
@@ -37,8 +37,12 @@ impl WindowPositions {
         win.y = pos.1;
     }
 
+    // TODO: i don't think this is used except for getting the first window pos
     fn get_next_window_position(&self) -> (usize, usize) {
-        (25, 50)
+        // go under the title bar
+        // TODO: something else should handle going under the title bar... this should just start
+        // at 0, 0 pry
+        (5, 30)
     }
 
     pub fn get_open_window(&self, id: &lang::ID) -> Option<Window> {
