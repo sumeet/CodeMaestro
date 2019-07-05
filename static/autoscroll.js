@@ -7,6 +7,7 @@ new MutationObserver(function() {
     }
 }).observe(window.document.documentElement, {childList: true, subtree: true});
 
+// badboy from https://gist.github.com/jocki84/6ffafd003387179a988e/
 if (!Element.prototype.scrollIntoViewIfNeeded) {
     Element.prototype.scrollIntoViewIfNeeded = function (centerIfNeeded) {
         "use strict";

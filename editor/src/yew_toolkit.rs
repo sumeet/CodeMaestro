@@ -556,7 +556,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult {
         html! {
-            <div style=format!("width: 100%; padding: 0.1em 0.35em; background-color: {}", self.rgba(bgcolor)),>
+            <div style=format!("width: 100%; box-sizing: border-box; padding: 0.1em 0.35em; background-color: {}", self.rgba(bgcolor)),>
                 { text }
             </div>
         }
