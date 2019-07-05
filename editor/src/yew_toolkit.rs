@@ -549,6 +549,14 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult {
+        html! {
+            <div style=format!("width: 100%; padding: 0.1em 0.35em; background-color: {}", self.rgba(bgcolor)),>
+                { text }
+            </div>
+        }
+    }
+
     fn focused(&self, draw_fn: &dyn Fn() -> Html<Model>) -> Self::DrawResult {
         let html = draw_fn();
         self.focus_last_drawn_element();
