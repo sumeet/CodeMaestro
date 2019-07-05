@@ -79,11 +79,16 @@ struct YewToolkit {
 impl UiToolkit for YewToolkit {
     type DrawResult = Html<Model>;
 
+    // see autoscroll.js
     fn scrolled_to_y_if_not_visible(&self,
                                     _scroll_hash: String,
                                     draw_fn: &dyn Fn() -> Self::DrawResult)
                                     -> Self::DrawResult {
-        draw_fn()
+        html! {
+            <div class="scroll-into-view",>
+                {{ draw_fn() }}
+            </div>
+        }
     }
 
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
