@@ -308,6 +308,13 @@ impl Type {
 }
 
 impl CodeNode {
+    pub fn as_function_reference(&self) -> &FunctionReference {
+        match self {
+            CodeNode::FunctionReference(ref fr) => fr,
+            _ => panic!("not a function reference"),
+        }
+    }
+
     pub fn into_list_literal(&self) -> &ListLiteral {
         match self {
             CodeNode::ListLiteral(ref list_literal) => list_literal,

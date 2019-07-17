@@ -17,6 +17,7 @@
     "b6566a28-8257-46a9-aa29-39d9add25173": {
       "type": "Struct",
       "name": "HTTP Form param",
+      "description": "Key-value pair for making HTTP requests",
       "id": "b6566a28-8257-46a9-aa29-39d9add25173",
       "symbol": "",
       "fields": [
@@ -62,6 +63,7 @@
     "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83": {
       "type": "Struct",
       "name": "Chat Message",
+      "description": "Incoming message",
       "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
       "symbol": "",
       "fields": [
@@ -94,6 +96,7 @@
     "31d96c85-5966-4866-a90a-e6db3707b140": {
       "type": "Struct",
       "name": "HTTP Response",
+      "description": "",
       "id": "31d96c85-5966-4866-a90a-e6db3707b140",
       "symbol": "",
       "fields": [

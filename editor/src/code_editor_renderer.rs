@@ -11,7 +11,7 @@ use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::UiToolkit;
 use crate::editor::Keypress;
 use crate::insert_code_menu::InsertCodeMenuOptionsGroup;
-use crate::ui_toolkit::ChildRegionHeight;
+use crate::ui_toolkit::{ChildRegionHeight, Column};
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::CodeNode;
@@ -224,33 +224,47 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             .draw_all(std::iter::once(group_heading).chain(options).collect())
     }
 
-    fn render_insertion_option(&self,
+    fn render_insertion_option(&'a self,
                                scroll_hash: String,
                                option: &'a InsertCodeMenuOption,
                                insertion_point: InsertionPoint)
                                -> T::DrawResult {
         let is_selected = option.is_selected;
+
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let new_code_node = option.new_node.clone();
-        let draw = move || {
-            let cmdb = cmd_buffer.clone();
-            let new_code_node = new_code_node.clone();
+        let cmdb = cmd_buffer.clone();
+        let new_code_node = new_code_node.clone();
 
-            self.ui_toolkit
-                .buttonize(&|| self.render_code(&option.new_node), move || {
-                    let ncn = new_code_node.clone();
-                    cmdb.borrow_mut().add_editor_command(move |editor| {
-                                         editor.hide_insert_code_menu();
-                                         editor.insert_code(ncn.clone(), insertion_point);
-                                     });
-                })
-        };
-
-        if is_selected {
-            self.draw_selected(scroll_hash, &draw)
-        } else {
-            draw()
-        }
+        self.ui_toolkit.buttonize(&|| {
+                                      let draw_new_node = || {
+                                          if is_selected {
+                                              self.draw_selected(scroll_hash.to_owned(), &|| {
+                                                      self.render_code(&option.new_node)
+                                                  })
+                                          } else {
+                                              self.render_code(&option.new_node)
+                                          }
+                                      };
+                                      if let Some(help_text) = self.help_text(&option.new_node) {
+                                          self.ui_toolkit
+                                              .draw_in_columns(&[Column::new(0.75, &draw_new_node),
+                                                                 Column::new(0.25, &|| {
+                                                                     self.ui_toolkit
+                                                                         .draw_text(&help_text)
+                                                                 })])
+                                      } else {
+                                          draw_new_node()
+                                      }
+                                  },
+                                  move || {
+                                      let ncn = new_code_node.clone();
+                                      cmdb.borrow_mut().add_editor_command(move |editor| {
+                                                           editor.hide_insert_code_menu();
+                                                           editor.insert_code(ncn.clone(),
+                                                                              insertion_point);
+                                                       });
+                                  })
     }
 
     fn insertion_option_menu_hash(&self,
@@ -369,6 +383,28 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn is_editing(&self, code_node_id: lang::ID) -> bool {
         self.is_selected(code_node_id) && self.code_editor.editing
+    }
+
+    fn help_text(&self, code_node: &CodeNode) -> Option<String> {
+        match code_node {
+            CodeNode::FunctionCall(_) => None,
+            CodeNode::FunctionReference(_) => None,
+            CodeNode::Argument(_) => None,
+            CodeNode::StringLiteral(_) => Some("Plain text".to_string()),
+            CodeNode::NullLiteral(_) => Some("Null".to_string()),
+            CodeNode::Assignment(_) => Some("Make a new variable".to_string()),
+            CodeNode::Block(_) => None,
+            CodeNode::VariableReference(_) => None,
+            CodeNode::Placeholder(_) => None,
+            CodeNode::StructLiteral(_) => None,
+            CodeNode::StructLiteralField(_) => None,
+            CodeNode::Conditional(_) => None,
+            CodeNode::Match(_) => None,
+            CodeNode::ListLiteral(_) => None,
+            CodeNode::StructFieldGet(_) => None,
+            CodeNode::NumberLiteral(_) => None,
+            CodeNode::ListIndex(_) => None,
+        }
     }
 
     fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {

@@ -1,7 +1,6 @@
 use super::code_editor::get_type_from_list;
 use super::code_editor::CodeGenie;
 use super::code_editor::InsertionPoint;
-use super::code_editor::PLACEHOLDER_ICON;
 use super::code_generation;
 use cs::env_genie::EnvGenie;
 use cs::lang;
@@ -273,7 +272,6 @@ pub struct InsertCodeMenuOptionsGroup {
 
 #[derive(Clone, Debug)]
 pub struct InsertCodeMenuOption {
-    pub label: String,
     pub new_node: lang::CodeNode,
     pub is_selected: bool,
     pub group_name: &'static str,
@@ -318,7 +316,6 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
 
         functions.map(|(arg_def_id, func)| {
                      InsertCodeMenuOption {
-                label: func.name().to_string(),
                 new_node: code_generation::new_function_call_with_wrapped_arg(func.as_ref(),
                                                                               arg_def_id,
                                                                               wrapped_node.clone()),
@@ -357,7 +354,6 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
 
         functions.map(|func| {
                      InsertCodeMenuOption {
-                label: func.name().to_string(),
                 new_node: code_generation::new_function_call_with_placeholder_args(func.as_ref()),
                 is_selected: false,
                 group_name: FUNCTION_CALL_GROUP,
@@ -425,8 +421,7 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
         variables.into_iter()
                  .map(|variable| {
                      let id = variable.locals_id;
-                     InsertCodeMenuOption { label: variable.name,
-                                            new_node: code_generation::new_variable_reference(id),
+                     InsertCodeMenuOption { new_node: code_generation::new_variable_reference(id),
                                             is_selected: false,
                                             group_name: LOCALS_GROUP }
                  })
@@ -496,7 +491,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     options.push(self.number_literal_option(number));
                 }
             } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
-                options.push(self.list_literal_option(env_genie, &return_type));
+                options.push(self.list_literal_option(&return_type));
             } else if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
                 options.push(self.strukt_option(strukt));
             }
@@ -512,7 +507,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                     .find_types_matching(&list_search_query)
                     .map(|t| {
                         let list_type = lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![t]);
-                        self.list_literal_option(env_genie, &list_type)
+                        self.list_literal_option(&list_type)
                     });
                 options.extend(matching_list_type_options)
             }
@@ -542,29 +537,25 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
 
 impl InsertLiteralOptionGenerator {
     fn string_literal_option(&self, input_str: String) -> InsertCodeMenuOption {
-        InsertCodeMenuOption { label: format!("\u{f10d}{}\u{f10e}", input_str),
-                               is_selected: false,
+        InsertCodeMenuOption { is_selected: false,
                                group_name: LITERALS_GROUP,
                                new_node: code_generation::new_string_literal(input_str) }
     }
 
     fn number_literal_option(&self, number: i128) -> InsertCodeMenuOption {
-        InsertCodeMenuOption { label: number.to_string(),
-                               is_selected: false,
+        InsertCodeMenuOption { is_selected: false,
                                group_name: LITERALS_GROUP,
                                new_node: code_generation::new_number_literal(number) }
     }
 
     fn null_literal_option(&self) -> InsertCodeMenuOption {
-        InsertCodeMenuOption { label: lang::NULL_TYPESPEC.symbol.clone(),
-                               is_selected: false,
+        InsertCodeMenuOption { is_selected: false,
                                group_name: LITERALS_GROUP,
                                new_node: code_generation::new_null_literal() }
     }
 
     fn strukt_option(&self, strukt: &structs::Struct) -> InsertCodeMenuOption {
-        InsertCodeMenuOption { label: format!("{} {}", strukt.symbol, strukt.name),
-                               is_selected: false,
+        InsertCodeMenuOption { is_selected: false,
                                group_name: LITERALS_GROUP,
                                new_node:
                                    code_generation::new_struct_literal_with_placeholders(strukt) }
@@ -574,22 +565,15 @@ impl InsertLiteralOptionGenerator {
                           input_str: String,
                           return_type: &lang::Type)
                           -> InsertCodeMenuOption {
-        InsertCodeMenuOption { label: format!("{} {}", PLACEHOLDER_ICON, input_str),
-                               group_name: LITERALS_GROUP,
+        InsertCodeMenuOption { group_name: LITERALS_GROUP,
                                is_selected: false,
                                new_node: code_generation::new_placeholder(input_str,
                                                                           return_type.clone()) }
     }
 
-    fn list_literal_option(&self,
-                           env_genie: &EnvGenie,
-                           list_literal_type: &lang::Type)
-                           -> InsertCodeMenuOption {
-        let symbol = env_genie.get_symbol_for_type(list_literal_type);
+    fn list_literal_option(&self, list_literal_type: &lang::Type) -> InsertCodeMenuOption {
         let element_type = &list_literal_type.params[0];
-        let ts = env_genie.find_typespec(element_type.typespec_id).unwrap();
         InsertCodeMenuOption {
-            label: format!("{}: {}", symbol, ts.readable_name()),
             group_name: LITERALS_GROUP,
             is_selected: false,
             new_node: lang::CodeNode::ListLiteral(lang::ListLiteral {
@@ -620,7 +604,6 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
             options.push(
                 InsertCodeMenuOption {
                     group_name: CONTROL_FLOW_GROUP,
-                    label: "If".to_string(),
                     is_selected: false,
                     new_node: code_generation::new_conditional(&search_params.return_type)
                 }
@@ -670,7 +653,6 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
 
                 Some(InsertCodeMenuOption {
                     group_name: CONTROL_FLOW_GROUP,
-                    label: format!("Match {}", assignment.name),
                     is_selected: false,
                     new_node: code_generation::new_match(eneom,
                                                          &guessed_type,
@@ -707,7 +689,6 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
         }
 
         vec![InsertCodeMenuOption {
-            label: format!("{} =", variable_name),
             group_name: ASSIGN_VARIABLE_GROUP,
             is_selected: false,
             new_node: code_generation::new_assignment(
@@ -747,7 +728,6 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                         }
                     }
                     Some(InsertCodeMenuOption {
-                        label: dotted_name,
                         group_name: LOCALS_GROUP,
                         new_node: code_generation::new_struct_field_get(
                             code_generation::new_variable_reference(variable.locals_id),
@@ -784,8 +764,6 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                 }
                 Some(InsertCodeMenuOption {
                     // TODO: can we add fonts to support these symbols?
-                    //label: format!("{}⟦…⟧", variable.name),
-                    label: format!("{}[\u{f292}]", variable.name),
                     group_name: LOCALS_GROUP,
                     new_node: code_generation::new_list_index(code_generation::new_variable_reference(
                         variable.locals_id)),

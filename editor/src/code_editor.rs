@@ -19,8 +19,6 @@ use cs::lang;
 use cs::lang::CodeNode;
 use cs::scripts;
 
-pub const PLACEHOLDER_ICON: &str = "\u{F071}";
-
 pub struct CodeEditor {
     pub code_genie: CodeGenie,
     pub editing: bool,
@@ -110,6 +108,7 @@ impl CodeEditor {
                 self.select_current_line();
             }
             (_, Key::Tab, false, false) => {
+                println!("selecting next");
                 self.insert_code_menu
                     .as_mut()
                     .map(|menu| menu.select_next());

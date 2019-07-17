@@ -48,6 +48,8 @@ pub trait UiToolkit {
                                    -> Self::DrawResult;
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_separator(&self) -> Self::DrawResult;
+    fn draw_in_columns<'a>(&self, draw_fns: &[Column<'a, Self>]) -> Self::DrawResult;
+    fn draw_wrapped_text(&self, text: &str) -> Self::DrawResult;
     fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
@@ -173,4 +175,18 @@ pub enum SelectableItem<T: 'static> {
 pub enum ChildRegionHeight {
     ExpandFill { min_height: f32 },
     Pixels(usize),
+}
+
+pub type DrawFnRef<'a, T> = &'a dyn Fn() -> <T as UiToolkit>::DrawResult;
+
+pub struct Column<'a, T: UiToolkit + ?Sized> {
+    pub draw_fn: DrawFnRef<'a, T>,
+    pub percentage: f32,
+}
+
+impl<'a, T: UiToolkit> Column<'a, T> {
+    pub fn new(percentage: f32, draw_fn: DrawFnRef<'a, T>) -> Self {
+        Self { draw_fn,
+               percentage }
+    }
 }

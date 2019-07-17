@@ -3,6 +3,8 @@
 #![feature(box_patterns)]
 #![feature(fnbox)]
 #![feature(drain_filter)]
+#![feature(associated_type_defaults)]
+#![feature(try_blocks)]
 #![recursion_limit = "256"]
 
 // crates
