@@ -4,35 +4,13 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "cargo run --package=editor",
             "type": "shell",
-            "label": "cargo rr",
-            "command": "cargo",
-            "args": [
-                "rr"
-            ],
+            "command": "cargo run --package=editor",
             "group": {
                 "kind": "build",
                 "isDefault": true
             }
-        },
-        {
-            "type": "shell",
-            "label": "cargo rjs",
-            "command": "cargo",
-            "args": [
-                "rjs"
-            ]
-        },
-        {
-            "type": "cargo",
-            "label": "cargo build",
-            "command": "cargo",
-            "args": [
-                "build"
-            ],
-            "problemMatcher": [
-                "$rustc"
-            ]
         }
     ]
 }
