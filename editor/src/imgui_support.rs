@@ -22,8 +22,11 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
 
     let mut events_loop = glutin::EventsLoop::new();
     let context = glutin::ContextBuilder::new().with_vsync(true);
+    let icon =
+        glutin::Icon::from_rgba(include_bytes!("../winicon.bin").to_vec(), 128, 128).unwrap();
     let builder =
         glutin::WindowBuilder::new().with_title(title)
+                                    .with_window_icon(Some(icon))
                                     .with_dimensions(glutin::dpi::LogicalSize::new(1024f64,
                                                                                    768f64));
     let display = Display::new(builder, context, &events_loop).unwrap();
