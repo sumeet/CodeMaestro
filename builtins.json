@@ -42,6 +42,7 @@
     "ffd15538-175e-4f60-8acd-c24222ddd664": {
       "type": "Enum",
       "name": "Result",
+      "description": "Represents either a successful operation or a failure",
       "id": "ffd15538-175e-4f60-8acd-c24222ddd664",
       "symbol": "",
       "variants": [

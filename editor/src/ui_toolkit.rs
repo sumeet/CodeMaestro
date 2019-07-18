@@ -49,7 +49,7 @@ pub trait UiToolkit {
     fn draw_empty_line(&self) -> Self::DrawResult;
     fn draw_separator(&self) -> Self::DrawResult;
     fn draw_in_columns<'a>(&self, draw_fns: &[Column<'a, Self>]) -> Self::DrawResult;
-    fn draw_wrapped_text(&self, text: &str) -> Self::DrawResult;
+    fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult;
     fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
@@ -185,7 +185,7 @@ pub struct Column<'a, T: UiToolkit + ?Sized> {
 }
 
 impl<'a, T: UiToolkit> Column<'a, T> {
-    pub fn new(percentage: f32, draw_fn: DrawFnRef<'a, T>) -> Self {
+    pub fn _new(percentage: f32, draw_fn: DrawFnRef<'a, T>) -> Self {
         Self { draw_fn,
                percentage }
     }

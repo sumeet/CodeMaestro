@@ -51,6 +51,10 @@ impl lang::TypeSpec for Struct {
         &self.name
     }
 
+    fn description(&self) -> &str {
+        &self.description
+    }
+
     fn id(&self) -> lang::ID {
         self.id
     }

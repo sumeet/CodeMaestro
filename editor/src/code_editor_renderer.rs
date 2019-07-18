@@ -11,7 +11,7 @@ use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::UiToolkit;
 use crate::editor::Keypress;
 use crate::insert_code_menu::InsertCodeMenuOptionsGroup;
-use crate::ui_toolkit::{ChildRegionHeight, Column};
+use crate::ui_toolkit::ChildRegionHeight;
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::CodeNode;
@@ -236,7 +236,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let cmdb = cmd_buffer.clone();
         let new_code_node = new_code_node.clone();
 
-        self.ui_toolkit.buttonize(&|| {
+        self.ui_toolkit.buttonize(
+                                  &|| {
                                       let draw_new_node = || {
                                           if is_selected {
                                               self.draw_selected(scroll_hash.to_owned(), &|| {
@@ -247,12 +248,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                           }
                                       };
                                       if let Some(help_text) = self.help_text(&option.new_node) {
-                                          self.ui_toolkit
-                                              .draw_in_columns(&[Column::new(0.75, &draw_new_node),
-                                                                 Column::new(0.25, &|| {
-                                                                     self.ui_toolkit
-                                                                         .draw_text(&help_text)
-                                                                 })])
+                                          self.ui_toolkit.draw_all_on_same_line(&[
+                    &draw_new_node,
+                    &|| self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
+                ])
                                       } else {
                                           draw_new_node()
                                       }
@@ -264,7 +263,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                            editor.insert_code(ncn.clone(),
                                                                               insertion_point);
                                                        });
-                                  })
+                                  },
+        )
     }
 
     fn insertion_option_menu_hash(&self,
@@ -394,13 +394,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::NullLiteral(_) => Some("Null".to_string()),
             CodeNode::Assignment(_) => Some("Make a new variable".to_string()),
             CodeNode::Block(_) => None,
-            CodeNode::VariableReference(_) => None,
+            CodeNode::VariableReference(vr) => {
+                let (_name, typ) = self.lookup_variable_name_and_type(vr)?;
+                let typespec = self.env_genie.find_typespec(typ.typespec_id)?;
+                Some(typespec.description().to_string())
+            }
             CodeNode::Placeholder(_) => None,
             CodeNode::StructLiteral(_) => None,
             CodeNode::StructLiteralField(_) => None,
             CodeNode::Conditional(_) => None,
             CodeNode::Match(_) => None,
             CodeNode::ListLiteral(_) => None,
+            // TODO: struct field get documented here next
             CodeNode::StructFieldGet(_) => None,
             CodeNode::NumberLiteral(_) => None,
             CodeNode::ListIndex(_) => None,
@@ -618,6 +623,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             })
     }
 
+    // should we move this into the genie?
     fn lookup_variable_name_and_type(&self,
                                      variable_reference: &lang::VariableReference)
                                      -> Option<(String, lang::Type)> {

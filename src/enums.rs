@@ -1,36 +1,42 @@
-use serde_derive::{Serialize,Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
-use super::lang::TypeSpec;
 use super::lang;
+use super::lang::TypeSpec;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Enum {
     pub name: String,
+    pub description: String,
     pub id: lang::ID,
     pub symbol: String,
-    pub variants: Vec<EnumVariant>
+    pub variants: Vec<EnumVariant>,
 }
 
 impl Enum {
     pub fn new() -> Self {
-        Self {
-            name: "New Enum".to_string(),
-            id: lang::new_id(),
-            symbol: "\u{f103}".to_string(),
-            variants: vec![],
-        }
+        Self { name: "New Enum".to_string(),
+               description: "".to_string(),
+               id: lang::new_id(),
+               symbol: "\u{f103}".to_string(),
+               variants: vec![] }
     }
 
-    pub fn variant_types<'a>(&'a self, params: &'a [lang::Type]) -> Vec<(&'a EnumVariant, &'a lang::Type)> {
+    pub fn variant_types<'a>(&'a self,
+                             params: &'a [lang::Type])
+                             -> Vec<(&'a EnumVariant, &'a lang::Type)> {
         if params.len() != self.num_params() {
             panic!("# of variant types doesn't match")
         }
         let mut params = params.iter();
-        self.variants.iter().map(|variant| {
-            let typ = variant.variant_type.as_ref()
-                .unwrap_or_else(|| params.next().unwrap());
-            (variant, typ)
-        }).collect()
+        self.variants
+            .iter()
+            .map(|variant| {
+                let typ = variant.variant_type
+                                 .as_ref()
+                                 .unwrap_or_else(|| params.next().unwrap());
+                (variant, typ)
+            })
+            .collect()
     }
 }
 
@@ -38,6 +44,10 @@ impl Enum {
 impl lang::TypeSpec for Enum {
     fn readable_name(&self) -> &str {
         &self.name
+    }
+
+    fn description(&self) -> &str {
+        &self.description
     }
 
     fn id(&self) -> lang::ID {
@@ -49,7 +59,10 @@ impl lang::TypeSpec for Enum {
     }
 
     fn num_params(&self) -> usize {
-        self.variants.iter().filter(|v| v.is_parameterized()).count()
+        self.variants
+            .iter()
+            .filter(|v| v.is_parameterized())
+            .count()
     }
 }
 
@@ -63,7 +76,9 @@ pub struct EnumVariant {
 
 impl EnumVariant {
     pub fn new(name: String, variant_type: Option<lang::Type>) -> Self {
-        Self { id: lang::new_id(), name, variant_type }
+        Self { id: lang::new_id(),
+               name,
+               variant_type }
     }
 
     pub fn is_parameterized(&self) -> bool {

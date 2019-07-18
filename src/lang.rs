@@ -20,36 +20,42 @@ use super::env;
 lazy_static! {
     pub static ref NULL_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Null".to_string(),
+        description: "Represents nothing".into(),
         id: uuid::Uuid::parse_str(&"daa07233-b887-4512-b06e-d6a53d415213").unwrap(),
         symbol: "\u{f192}".to_string(),
         num_params: 0,
     };
     pub static ref BOOLEAN_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Boolean".to_string(),
+        description: "Either true or false".into(),
         id: uuid::Uuid::parse_str(&"d00d688f-0c9e-43af-a19f-ab02e46b4c2c").unwrap(),
         symbol: "\u{f6af}".to_string(),
         num_params: 0,
     };
     pub static ref STRING_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "String".to_string(),
+        description: "Plain text".into(),
         id: uuid::Uuid::parse_str("e0e8271e-5f94-4d00-bad9-46a2ce4d6568").unwrap(),
         symbol: "\u{f10d}".to_string(),
         num_params: 0,
     };
     pub static ref NUMBER_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Number".to_string(),
+        description: "A numerical value. For example: 1, 2, -1, 10384, 42, etc.".into(),
         id: uuid::Uuid::parse_str("6dbe9096-4ff5-42f1-b2ff-36eacc3ced59").unwrap(),
         symbol: "\u{f292}".to_string(),
         num_params: 0,
     };
     pub static ref LIST_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "List".to_string(),
+        description: "A collection of one or more items".into(),
         id: uuid::Uuid::parse_str("4c726a5e-d9c2-481b-bbe8-ca5319176aad").unwrap(),
         symbol: "\u{f03a}".to_string(),
         num_params: 1,
     };
     pub static ref ERROR_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Error".to_string(),
+        description: "Means there was an error".into(),
         id: uuid::Uuid::parse_str("a6ad92ed-1b21-44fe-9ad0-e08326acd6f6").unwrap(),
         symbol: "\u{f06a}".to_string(),
         num_params: 0,
@@ -214,6 +220,7 @@ impl Value {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct BuiltInTypeSpec {
     pub readable_name: String,
+    pub description: String,
     pub id: ID,
     pub symbol: String,
     pub num_params: usize,
@@ -222,6 +229,7 @@ pub struct BuiltInTypeSpec {
 #[typetag::serde(tag = "type")]
 pub trait TypeSpec: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn readable_name(&self) -> &str;
+    fn description(&self) -> &str;
     fn id(&self) -> ID;
     fn symbol(&self) -> &str;
     fn num_params(&self) -> usize;
@@ -243,6 +251,10 @@ impl fmt::Debug for dyn TypeSpec {
 impl TypeSpec for BuiltInTypeSpec {
     fn readable_name(&self) -> &str {
         &self.readable_name
+    }
+
+    fn description(&self) -> &str {
+        &self.description
     }
 
     fn id(&self) -> ID {

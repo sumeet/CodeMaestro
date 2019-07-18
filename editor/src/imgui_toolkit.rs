@@ -21,9 +21,12 @@ pub const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (400.0, 500.0);
+// from http://jkorpela.fi/chars/spaces.html, used for indentation
+const SPACE: &'static str = "\u{3000}";
 
 lazy_static! {
     static ref TK_CACHE: Arc<Mutex<TkCache>> = Arc::new(Mutex::new(TkCache::new()));
+    static ref SPACE_IMSTR: ImString = im_str! { "{}", SPACE }.clone();
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -246,8 +249,25 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.columns(1, &self.imlabel("columnsend"), false)
     }
 
-    fn draw_wrapped_text(&self, text: &str) {
-        self.ui.with_text_wrap_pos(0., &|| self.ui.text(text))
+    fn draw_wrapped_text(&self, color: Color, text: &str) {
+        let style = self.ui.imgui().style();
+        let padding = style.frame_padding;
+        let x_padding = padding.x;
+
+        let current_cursor_pos = self.ui.get_cursor_pos();
+
+        let x_pos_to_indent_first_line = current_cursor_pos.0 + x_padding;
+
+        let width_of_one_space = self.ui.calc_text_size(&SPACE_IMSTR, false, 0.).x;
+        let number_of_spaces_to_prepad = (x_pos_to_indent_first_line / width_of_one_space).floor();
+        let text = SPACE.repeat(number_of_spaces_to_prepad as usize) + text;
+
+        self.ui
+            .set_cursor_pos((x_padding * 2., current_cursor_pos.1 + padding.y * 2.));
+        self.ui.with_text_wrap_pos(0., &|| {
+                   self.ui
+                       .with_color_var(ImGuiCol::Text, color, &|| self.ui.text(&text))
+               })
     }
 
     fn scrolled_to_y_if_not_visible(&self, scroll_hash: String, draw_fn: &dyn Fn()) {
