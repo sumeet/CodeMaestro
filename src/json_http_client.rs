@@ -25,6 +25,7 @@ pub struct JSONHTTPClient {
     pub name: String,
     // hardcoded to GET for now
 //    pub method: http::Method,
+    pub description: String,
     pub gen_url_params: lang::Block,
     pub args: Vec<lang::ArgumentDefinition>,
     pub return_type: lang::Type,
@@ -56,6 +57,10 @@ impl lang::Function for JSONHTTPClient {
         &self.name
     }
 
+    fn description(&self) -> &str {
+        &self.description
+    }
+
     fn id(&self) -> lang::ID {
         self.id
     }
@@ -82,6 +87,7 @@ impl JSONHTTPClient {
             id: lang::new_id(),
             url: "https://httpbin.org/get".to_string(),
             name: "JSON HTTP Get Client".to_string(),
+            description: "".to_string(),
             gen_url: lang::Block::new(),
             gen_url_params: lang::Block::new(),
             args: vec![],

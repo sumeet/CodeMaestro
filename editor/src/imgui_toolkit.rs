@@ -7,7 +7,7 @@ use itertools::Itertools;
 
 use crate::code_editor_renderer::{BLUE_COLOR, PURPLE_COLOR};
 use crate::imgui_support::{BUTTON_ACTIVE_COLOR, BUTTON_HOVERED_COLOR};
-use crate::ui_toolkit::{ChildRegionHeight, Column};
+use crate::ui_toolkit::ChildRegionHeight;
 use imgui::*;
 use lazy_static::lazy_static;
 use std::cell::RefCell;

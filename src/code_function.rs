@@ -1,16 +1,17 @@
-use super::lang;
+use super::env;
 use super::external_func;
 use super::function;
-use super::env;
+use super::lang;
 
 use std::collections::HashMap;
 
-use serde_derive::{Serialize,Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct CodeFunction {
     id: lang::ID,
     pub name: String,
+    pub description: String,
     args: Vec<lang::ArgumentDefinition>,
     return_type: lang::Type,
     pub block: lang::Block,
@@ -18,13 +19,12 @@ pub struct CodeFunction {
 
 impl CodeFunction {
     pub fn new() -> Self {
-        Self {
-            id: lang::new_id(),
-            name: "New function".to_string(),
-            block: lang::Block::new(),
-            args: vec![],
-            return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
-        }
+        Self { id: lang::new_id(),
+               name: "New function".to_string(),
+               description: "".into(),
+               block: lang::Block::new(),
+               args: vec![],
+               return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC) }
     }
 
     pub fn code_id(&self) -> lang::ID {
@@ -54,7 +54,10 @@ impl function::SettableArgs for CodeFunction {
 
 #[typetag::serde]
 impl lang::Function for CodeFunction {
-    fn call(&self, mut interpreter: env::Interpreter, args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self,
+            mut interpreter: env::Interpreter,
+            args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
         // XXX: shouldn't the caller do this???? duped with ChatTrigger
         for (id, value) in args {
             interpreter.env.borrow_mut().set_local_variable(id, value);
@@ -64,6 +67,10 @@ impl lang::Function for CodeFunction {
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn description(&self) -> &str {
+        &self.description
     }
 
     fn id(&self) -> lang::ID {

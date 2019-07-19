@@ -108,7 +108,6 @@ impl CodeEditor {
                 self.select_current_line();
             }
             (_, Key::Tab, false, false) => {
-                println!("selecting next");
                 self.insert_code_menu
                     .as_mut()
                     .map(|menu| menu.select_next());

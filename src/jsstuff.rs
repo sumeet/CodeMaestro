@@ -193,6 +193,12 @@ impl lang::Function for JSFunc {
         &self.name
     }
 
+    // TODO: i'm implementing code descriptions, but i currently don't give a shit about JSFuncs,
+    // so...
+    fn description(&self) -> &str {
+        "I don't care about this"
+    }
+
     fn id(&self) -> lang::ID {
         self.id
     }

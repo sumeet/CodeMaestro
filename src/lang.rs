@@ -66,6 +66,7 @@ lazy_static! {
 pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn call(&self, interpreter: env::Interpreter, args: HashMap<ID, Value>) -> Value;
     fn name(&self) -> &str;
+    fn description(&self) -> &str;
     fn id(&self) -> ID;
     fn takes_args(&self) -> Vec<ArgumentDefinition>;
     fn returns(&self) -> Type;

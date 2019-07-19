@@ -1,27 +1,35 @@
 use std::collections::HashMap;
 
-use serde_derive::{Serialize,Deserialize};
+use serde_derive::{Deserialize, Serialize};
 
-use super::lang;
 use super::env;
 use super::external_func;
 use super::function;
+use super::lang;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JSFunc {
     pub eval: String,
     pub return_type: lang::Type,
     pub name: String,
+    pub description: String,
     pub id: lang::ID,
 }
 
 #[typetag::serde]
 impl lang::Function for JSFunc {
-    fn call(&self, _interpreter: env::Interpreter, _args: HashMap<lang::ID, lang::Value>) -> lang::Value {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            _args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
         lang::Value::Null
     }
 
     fn name(&self) -> &str {
+        "Not implemented"
+    }
+
+    fn description(&self) -> &str {
         "Not implemented"
     }
 
@@ -38,10 +46,8 @@ impl lang::Function for JSFunc {
     }
 }
 
-
 impl external_func::ModifyableFunc for JSFunc {
-    fn set_return_type(&mut self, _return_type: lang::Type) {
-    }
+    fn set_return_type(&mut self, _return_type: lang::Type) {}
 }
 
 impl function::SettableArgs for JSFunc {

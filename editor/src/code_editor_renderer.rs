@@ -229,45 +229,37 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                option: &'a InsertCodeMenuOption,
                                insertion_point: InsertionPoint)
                                -> T::DrawResult {
-        let is_selected = option.is_selected;
-
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let new_code_node = option.new_node.clone();
-        let cmdb = cmd_buffer.clone();
-        let new_code_node = new_code_node.clone();
 
-        self.ui_toolkit.buttonize(
-                                  &|| {
-                                      let draw_new_node = || {
-                                          if is_selected {
-                                              self.draw_selected(scroll_hash.to_owned(), &|| {
-                                                      self.render_code(&option.new_node)
-                                                  })
-                                          } else {
-                                              self.render_code(&option.new_node)
-                                          }
-                                      };
-                                      match &self.help_text(&option.new_node) {
+        let draw = move || {
+            let new_code_node = new_code_node.clone();
+            let cmdb = cmd_buffer.clone();
+            self.ui_toolkit.buttonize(
+                                      &|| match &self.help_text(&option.new_node) {
                                           Some(help_text) if !help_text.is_empty() => {
                                               self.ui_toolkit.draw_all(vec![
-                                                  draw_new_node(),
-                                                  self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
-                                              ])
+                    self.render_code(&option.new_node),
+                    self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
+                ])
                                           }
-                                          _ => {
-                                              draw_new_node()
-                                          }
-                                      }
-                                  },
-                                  move || {
-                                      let ncn = new_code_node.clone();
-                                      cmdb.borrow_mut().add_editor_command(move |editor| {
-                                                           editor.hide_insert_code_menu();
-                                                           editor.insert_code(ncn.clone(),
-                                                                              insertion_point);
-                                                       });
-                                  },
-        )
+                                          _ => self.render_code(&option.new_node),
+                                      },
+                                      move || {
+                                          let ncn = new_code_node.clone();
+                                          cmdb.borrow_mut().add_editor_command(move |editor| {
+                                                               editor.hide_insert_code_menu();
+                                                               editor.insert_code(ncn.clone(),
+                                                                                  insertion_point);
+                                                           });
+                                      },
+            )
+        };
+        if option.is_selected {
+            self.draw_selected(scroll_hash, &draw)
+        } else {
+            draw()
+        }
     }
 
     fn insertion_option_menu_hash(&self,
@@ -390,7 +382,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn help_text(&self, code_node: &CodeNode) -> Option<String> {
         match code_node {
-            CodeNode::FunctionCall(_) => None,
+            CodeNode::FunctionCall(function_call) => {
+                let function = self.env_genie
+                                   .find_function(function_call.function_reference().function_id)?;
+                Some(function.description().to_string())
+            }
             CodeNode::FunctionReference(_) => None,
             CodeNode::Argument(_) => None,
             CodeNode::StringLiteral(_) => Some(lang::STRING_TYPESPEC.description.clone()),

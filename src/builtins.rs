@@ -119,6 +119,10 @@ impl lang::Function for Print {
         "Debug"
     }
 
+    fn description(&self) -> &str {
+        "Print output to the debug console for debugging only"
+    }
+
     fn id(&self) -> lang::ID {
         uuid::Uuid::parse_str("b5c18d63-f9a0-4f08-8ee7-e35b3db9122d").unwrap()
     }
@@ -155,6 +159,10 @@ impl lang::Function for Capitalize {
 
     fn name(&self) -> &str {
         "Capitalize"
+    }
+
+    fn description(&self) -> &str {
+        "Capitalize every character in text"
     }
 
     fn id(&self) -> lang::ID {
@@ -231,6 +239,10 @@ impl lang::Function for ChatReply {
         "Reply"
     }
 
+    fn description(&self) -> &str {
+        "Send a message back to where the trigger was initiated from. If initiated from a private message or a chat room, it'll go there."
+    }
+
     fn id(&self) -> lang::ID {
         uuid::Uuid::parse_str("36052afd-cf12-4146-bbc7-f9df04148b73").unwrap()
     }
@@ -270,6 +282,10 @@ impl lang::Function for JoinString {
 
     fn name(&self) -> &str {
         "Join"
+    }
+
+    fn description(&self) -> &str {
+        "Combine multiple texts into a single one"
     }
 
     fn id(&self) -> lang::ID {
