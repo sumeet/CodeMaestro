@@ -399,7 +399,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 Some(typespec.description().to_string())
             }
             CodeNode::Placeholder(_) => None,
-            CodeNode::StructLiteral(_) => None,
+            CodeNode::StructLiteral(struct_literal) => {
+                let ts = self.env_genie.find_typespec(struct_literal.struct_id)?;
+                Some(ts.description().into())
+            }
             CodeNode::StructLiteralField(_) => None,
             CodeNode::Conditional(_) => None,
             CodeNode::Match(_) => None,

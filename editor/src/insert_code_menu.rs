@@ -10,6 +10,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
 
+use cs::chat_trigger::ChatTrigger;
 use std::collections::HashMap;
 
 lazy_static! {
@@ -30,7 +31,7 @@ lazy_static! {
 
 const FUNCTION_CALL_GROUP: &str = "Functions";
 const LOCALS_GROUP: &str = "Local variables";
-const LITERALS_GROUP: &str = "Literal values";
+const LITERALS_GROUP: &str = "Create new value";
 const CONTROL_FLOW_GROUP: &str = "Control flow";
 const ASSIGN_VARIABLE_GROUP: &str = "New local variable";
 
@@ -287,24 +288,20 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
                code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        // tuple of function and arg id to fill
-        let functions: &mut dyn Iterator<Item = (lang::ID, &Box<dyn lang::Function>)>;
-        let mut a;
-
-        if let Some(wraps_type) = &search_params.wraps_type {
-            a = env_genie.all_functions()
-                         .filter(|f| search_params.search_matches_identifier(&f.name()))
-                         .filter_map(move |f| {
-                             let takes_args = f.takes_args();
-                             let first_matching_arg =
-                                 takes_args.iter()
-                                           .find(|arg| arg.arg_type.matches(wraps_type))?;
-                             Some((first_matching_arg.id, f))
-                         });
-            functions = &mut a;
-        } else {
+        let wraps_type = search_params.wraps_type.as_ref();
+        if wraps_type.is_none() {
             return vec![];
         }
+        let wraps_type = wraps_type.unwrap();
+        let found_functions = find_functions_ignoring_wraps_type(env_genie, search_params);
+        let found_functions =
+            found_functions.filter_map(move |f| {
+                               let takes_args = f.takes_args();
+                               let first_matching_arg =
+                                   takes_args.iter()
+                                             .find(|arg| arg.arg_type.matches(wraps_type))?;
+                               Some((first_matching_arg.id, f))
+                           });
 
         let wrapped_node = match &search_params.insertion_point {
             InsertionPoint::Wrap(wrapped_node_id) => {
@@ -314,17 +311,44 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
             _ => panic!("we should've only gotten here and had a wrapped insertion point"),
         };
 
-        functions.map(|(arg_def_id, func)| {
-                     InsertCodeMenuOption {
-                new_node: code_generation::new_function_call_with_wrapped_arg(func.as_ref(),
+        found_functions.map(|(arg_def_id, func)| {
+                           InsertCodeMenuOption {
+                new_node: code_generation::new_function_call_with_wrapped_arg(func,
                                                                               arg_def_id,
                                                                               wrapped_node.clone()),
                 is_selected: false,
                 group_name: FUNCTION_CALL_GROUP,
             }
-                 })
-                 .collect()
+                       })
+                       .collect()
     }
+}
+
+fn find_functions_ignoring_wraps_type<'a>(
+    env_genie: &'a EnvGenie,
+    search_params: &'a CodeSearchParams)
+    -> impl Iterator<Item = &'a (dyn lang::Function + 'static)> + 'a {
+    let input_str = search_params.lowercased_trimmed_search_str();
+    let return_type = search_params.return_type.as_ref();
+    env_genie.all_functions()
+             .filter(move |func| {
+                 if input_str.is_empty() {
+                     true
+                 } else {
+                     search_params.search_matches_identifier(&func.name())
+                 }
+             })
+             .filter(move |func| {
+                 if return_type.is_none() {
+                     true
+                 } else {
+                     func.returns().matches(return_type.unwrap())
+                 }
+             })
+             // filter out ChatTriggers... we don't want them to show up in autocomplete and possibly
+             // TODO don't even want them to be functions
+             .filter(|f| f.downcast_ref::<ChatTrigger>().is_none())
+             .map(|func| func.as_ref())
 }
 
 #[derive(Clone)]
@@ -336,30 +360,15 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
                _code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        let mut functions: &mut dyn Iterator<Item = &Box<dyn lang::Function>> =
-            &mut env_genie.all_functions();
-        let mut a;
-        let mut b;
-
-        let input_str = search_params.lowercased_trimmed_search_str();
-        if !input_str.is_empty() {
-            a = functions.filter(|f| search_params.search_matches_identifier(&f.name()));
-            functions = &mut a;
-        }
-
-        if let Some(return_type) = &search_params.return_type {
-            b = functions.filter(move |f| f.returns().matches(return_type));
-            functions = &mut b;
-        }
-
-        functions.map(|func| {
-                     InsertCodeMenuOption {
-                new_node: code_generation::new_function_call_with_placeholder_args(func.as_ref()),
-                is_selected: false,
-                group_name: FUNCTION_CALL_GROUP,
-            }
-                 })
-                 .collect()
+        let funcs = find_functions_ignoring_wraps_type(env_genie, search_params);
+        funcs.map(|func| {
+                 InsertCodeMenuOption {
+                    new_node: code_generation::new_function_call_with_placeholder_args(func),
+                    is_selected: false,
+                    group_name: FUNCTION_CALL_GROUP,
+                }
+             })
+             .collect()
     }
 }
 
