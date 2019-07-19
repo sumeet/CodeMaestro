@@ -217,37 +217,37 @@ impl Rect {
 impl<'a> UiToolkit for ImguiToolkit<'a> {
     type DrawResult = ();
 
-    fn draw_in_columns(&self, columns: &[Column<Self>]) {
-        if columns.len() <= 1 {
-            for column in columns {
-                (column.draw_fn)();
-            }
-            return;
-        }
-
-        let total_width = unsafe { imgui_sys::igGetContentRegionAvailWidth() };
-        self.ui
-            .columns(columns.len() as i32, &self.imlabel("columns"), false);
-        columns.split_last().map(|(last_column, starting_columns)| {
-                                for column in starting_columns {
-                                    unsafe {
-                                        imgui_sys::igSetColumnWidth(-1,
-                                                                    column.percentage * total_width)
-                                    };
-                                    (column.draw_fn)();
-                                    self.ui.next_column();
-                                }
-                                unsafe {
-                                    imgui_sys::igSetColumnWidth(-1,
-                                                                last_column.percentage
-                                                                * total_width)
-                                };
-                                (last_column.draw_fn)();
-                            });
-
-        // set back to a single column
-        self.ui.columns(1, &self.imlabel("columnsend"), false)
-    }
+    //    fn draw_in_columns(&self, columns: &[Column<Self>]) {
+    //        if columns.len() <= 1 {
+    //            for column in columns {
+    //                (column.draw_fn)();
+    //            }
+    //            return;
+    //        }
+    //
+    //        let total_width = unsafe { imgui_sys::igGetContentRegionAvailWidth() };
+    //        self.ui
+    //            .columns(columns.len() as i32, &self.imlabel("columns"), false);
+    //        columns.split_last().map(|(last_column, starting_columns)| {
+    //                                for column in starting_columns {
+    //                                    unsafe {
+    //                                        imgui_sys::igSetColumnWidth(-1,
+    //                                                                    column.percentage * total_width)
+    //                                    };
+    //                                    (column.draw_fn)();
+    //                                    self.ui.next_column();
+    //                                }
+    //                                unsafe {
+    //                                    imgui_sys::igSetColumnWidth(-1,
+    //                                                                last_column.percentage
+    //                                                                * total_width)
+    //                                };
+    //                                (last_column.draw_fn)();
+    //                            });
+    //
+    //        // set back to a single column
+    //        self.ui.columns(1, &self.imlabel("columnsend"), false)
+    //    }
 
     fn draw_wrapped_text(&self, color: Color, text: &str) {
         let style = self.ui.imgui().style();

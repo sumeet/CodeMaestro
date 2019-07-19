@@ -548,9 +548,18 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_text(&self, text: &str) -> Self::DrawResult {
+        // forgot why we needed to do this, whoops, should've written a comment
         let text = text.replace(" ", " ");
         html! {
             <span>{ symbolize_text(&text) }</span>
+        }
+    }
+
+    fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult {
+        html! {
+            <div style=format!("white-space: pre-wrap; word-wrap: break-word; color: {};", self.rgba(color)),>
+                { symbolize_text(&text) }
+            </div>
         }
     }
 
