@@ -247,13 +247,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                               self.render_code(&option.new_node)
                                           }
                                       };
-                                      if let Some(help_text) = self.help_text(&option.new_node) {
-                                          self.ui_toolkit.draw_all_on_same_line(&[
-                    &draw_new_node,
-                    &|| self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
-                ])
-                                      } else {
-                                          draw_new_node()
+                                      match &self.help_text(&option.new_node) {
+                                          Some(help_text) if !help_text.is_empty() => {
+                                              self.ui_toolkit.draw_all(vec![
+                                                  draw_new_node(),
+                                                  self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
+                                              ])
+                                          }
+                                          _ => {
+                                              draw_new_node()
+                                          }
                                       }
                                   },
                                   move || {
@@ -390,8 +393,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::FunctionCall(_) => None,
             CodeNode::FunctionReference(_) => None,
             CodeNode::Argument(_) => None,
-            CodeNode::StringLiteral(_) => Some("Plain text".to_string()),
-            CodeNode::NullLiteral(_) => Some("Null".to_string()),
+            CodeNode::StringLiteral(_) => Some(lang::STRING_TYPESPEC.description.clone()),
+            CodeNode::NullLiteral(_) => Some(lang::NULL_TYPESPEC.description.clone()),
             CodeNode::Assignment(_) => Some("Make a new variable".to_string()),
             CodeNode::Block(_) => None,
             CodeNode::VariableReference(vr) => {
@@ -405,8 +408,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::Conditional(_) => None,
             CodeNode::Match(_) => None,
             CodeNode::ListLiteral(_) => None,
-            // TODO: struct field get documented here next
-            CodeNode::StructFieldGet(_) => None,
+            CodeNode::StructFieldGet(sfg) => {
+                let struct_field = self.env_genie.find_struct_field(sfg.struct_field_id)?;
+                Some(struct_field.description.clone())
+            }
             CodeNode::NumberLiteral(_) => None,
             CodeNode::ListIndex(_) => None,
         }

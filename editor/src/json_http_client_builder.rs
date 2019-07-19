@@ -220,7 +220,8 @@ impl<'a> ReturnTypeBuilder<'a> {
                 let struct_fields = map.iter().map(|(key, returntypespec)| {
                     let result = ReturnTypeBuilder::new(self.env_genie, returntypespec).build();
                     structs_to_be_added.extend(result.structs_to_be_added);
-                    structs::StructField::new(key.clone(), result.typ)
+                    structs::StructField::new(key.clone(),
+                                              "Auto derived by JSON inspector".into(), result.typ)
                 }).collect_vec();
                 let typespec_id = self.find_existing_struct_matching(&struct_fields)
                     .map(|strukt| strukt.id)

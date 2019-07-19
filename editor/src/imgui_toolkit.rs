@@ -263,7 +263,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let text = SPACE.repeat(number_of_spaces_to_prepad as usize) + text;
 
         self.ui
-            .set_cursor_pos((x_padding * 2., current_cursor_pos.1 + padding.y * 2.));
+            .set_cursor_pos((x_padding * 2., current_cursor_pos.1));
+        //unsafe { imgui_sys::igAlignTextToFramePadding() };
+
         self.ui.with_text_wrap_pos(0., &|| {
                    self.ui
                        .with_color_var(ImGuiCol::Text, color, &|| self.ui.text(&text))

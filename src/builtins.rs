@@ -116,7 +116,7 @@ impl lang::Function for Print {
     }
 
     fn name(&self) -> &str {
-        "Print"
+        "Debug"
     }
 
     fn id(&self) -> lang::ID {
@@ -128,7 +128,7 @@ impl lang::Function for Print {
             lang::ArgumentDefinition::new_with_id(
                 uuid::Uuid::parse_str("feff08f0-7319-4b47-964e-1f470eca81df").unwrap(),
                 lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "String to print".to_string()
+                "Text".to_string()
             )
         ]
     }

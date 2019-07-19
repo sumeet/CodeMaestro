@@ -34,12 +34,14 @@ impl Struct {
 pub struct StructField {
     pub id: lang::ID,
     pub name: String,
+    pub description: String,
     pub field_type: lang::Type,
 }
 
 impl StructField {
-    pub fn new(name: String, field_type: lang::Type) -> Self {
+    pub fn new(name: String, description: String, field_type: lang::Type) -> Self {
         Self { id: lang::new_id(),
+               description,
                name,
                field_type }
     }

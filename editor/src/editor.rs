@@ -1463,6 +1463,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     let mut newstrukt = strukt1.clone();
                     newstrukt.fields.push(structs::StructField::new(
                         format!("field{}", newstrukt.fields.len()),
+                        "".into(),
                         lang::Type::from_spec(&*lang::STRING_TYPESPEC),
                     ));
                     cont1.borrow_mut().load_typespec(newstrukt);
