@@ -3,7 +3,7 @@ use super::async_executor::AsyncExecutor;
 use super::editor::{Key as AppKey, Keypress};
 use super::ui_toolkit::UiToolkit;
 use crate::code_editor_renderer::BLACK_COLOR;
-use crate::ui_toolkit::{ChildRegionHeight, Color, SelectableItem};
+use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -561,6 +561,12 @@ impl UiToolkit for YewToolkit {
                 { symbolize_text(&text) }
             </div>
         }
+    }
+
+    // TODO: apparently this isn't needed in HTML, it happens automatically... though we needed it
+    // in imgui
+    fn draw_taking_up_full_width(&self, draw_fn: DrawFnRef<Self>) -> Self::DrawResult {
+        draw_fn()
     }
 
     fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult {
