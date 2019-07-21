@@ -238,16 +238,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             self.ui_toolkit.buttonize(
                                       &|| {
                                           self.ui_toolkit.draw_taking_up_full_width(&|| {
-                                          match &self.help_text(&option.new_node) {
-                                              Some(help_text) if !help_text.is_empty() => {
-                                                  self.ui_toolkit.draw_all(vec![
-                        self.render_code(&option.new_node),
-                        self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
-                    ])
-                                              }
-                                              _ => self.render_code(&option.new_node),
-                                          }
-                                      })
+                      match &self.help_text(&option.new_node) {
+                          Some(help_text) if !help_text.is_empty() => {
+                              self.ui_toolkit.draw_all(vec![
+                                    self.render_code(&option.new_node),
+                                    self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
+                              ])
+                          }
+                          _ => self.render_code(&option.new_node),
+                      }
+                  })
                                       },
                                       move || {
                                           let ncn = new_code_node.clone();
