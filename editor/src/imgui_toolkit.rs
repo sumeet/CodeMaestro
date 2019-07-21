@@ -7,7 +7,7 @@ use itertools::Itertools;
 
 use crate::code_editor_renderer::{BLUE_COLOR, PURPLE_COLOR};
 use crate::imgui_support::{BUTTON_ACTIVE_COLOR, BUTTON_HOVERED_COLOR};
-use crate::ui_toolkit::ChildRegionHeight;
+use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use imgui::*;
 use lazy_static::lazy_static;
 use std::cell::RefCell;
@@ -377,6 +377,20 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .with_color_vars(&[(ImGuiCol::ButtonHovered, TRANSPARENT_COLOR),
                                (ImGuiCol::ButtonActive, TRANSPARENT_COLOR)],
                              &|| self.draw_button(text, TRANSPARENT_COLOR, &|| {}))
+    }
+
+    fn draw_taking_up_full_width(&self, draw_fn: DrawFnRef<Self>) {
+        let style = self.ui.imgui().style();
+        let frame_padding = style.frame_padding;
+
+        let orig_cursor_pos = self.ui.get_cursor_pos();
+        self.ui.group(draw_fn);
+        self.ui.set_cursor_pos(orig_cursor_pos);
+
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let width = unsafe { imgui_sys::igGetContentRegionMax_nonUDT2().x } - frame_padding.x * 2.;
+        self.ui.dummy((width, max.y - min.y))
     }
 
     fn draw_full_width_heading(&self, bgcolor: Color, text: &str) {

@@ -50,6 +50,7 @@ pub trait UiToolkit {
     fn draw_separator(&self) -> Self::DrawResult;
     //fn draw_in_columns<'a>(&self, draw_fns: &[Column<'a, Self>]) -> Self::DrawResult;
     fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult;
+    fn draw_taking_up_full_width(&self, draw_fn: DrawFnRef<Self>) -> Self::DrawResult;
     fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
@@ -177,7 +178,7 @@ pub enum ChildRegionHeight {
     Pixels(usize),
 }
 
-//pub type DrawFnRef<'a, T> = &'a dyn Fn() -> <T as UiToolkit>::DrawResult;
+pub type DrawFnRef<'a, T> = &'a dyn Fn() -> <T as UiToolkit>::DrawResult;
 
 //pub struct Column<'a, T: UiToolkit + ?Sized> {
 //    pub draw_fn: DrawFnRef<'a, T>,
