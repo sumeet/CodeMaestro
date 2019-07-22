@@ -186,10 +186,12 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult {
+    fn draw_all(&self, draw_fns: &[DrawFnRef<Self>]) -> Self::DrawResult {
         html! {
             <div style="display: flex; flex-direction: column;",>
-                { for draw_results.into_iter() }
+                { for draw_fns.into_iter().map(|draw_fn| html! {
+                    { draw_fn() }
+                })}
             </div>
         }
     }

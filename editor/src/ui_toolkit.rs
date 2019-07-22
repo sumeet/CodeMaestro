@@ -12,7 +12,10 @@ pub trait UiToolkit {
                         draw_when_hovered: &dyn Fn() -> Self::DrawResult)
                         -> Self::DrawResult;
     fn draw_spinner(&self) -> Self::DrawResult;
-    fn draw_all(&self, draw_results: Vec<Self::DrawResult>) -> Self::DrawResult;
+    //    fn draw_iter(&self, i: impl Iterator<Item = DrawFn<Self>>) -> Self::DrawResult {
+    //        self.draw_all(&[])
+    //    }
+    fn draw_all(&self, draw_fns: &[DrawFnRef<Self>]) -> Self::DrawResult;
     // if there's no `onclose` specified, then the window isn't closable and won't show a close button
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
                                                       draw_fn: &dyn Fn() -> Self::DrawResult,
@@ -116,8 +119,7 @@ pub trait UiToolkit {
                                                        value: bool,
                                                        onchange: F)
                                                        -> Self::DrawResult;
-    fn draw_all_on_same_line(&self, draw_fns: &[&dyn Fn() -> Self::DrawResult])
-                             -> Self::DrawResult;
+    fn draw_all_on_same_line(&self, draw_fns: &[DrawFnRef<Self>]) -> Self::DrawResult;
     fn draw_box_around(&self,
                        color: [f32; 4],
                        draw_fn: &dyn Fn() -> Self::DrawResult)
@@ -179,6 +181,23 @@ pub enum ChildRegionHeight {
 }
 
 pub type DrawFnRef<'a, T> = &'a dyn Fn() -> <T as UiToolkit>::DrawResult;
+
+#[macro_export]
+macro_rules! draw_all_iter {
+    // creates a new scope so the variable doesn't leak out
+    ($t:ident::$ui_toolkit:expr, $iterator:expr) => {{
+        use itertools::Itertools;
+        let __boxeds = $iterator.map(|f| {
+                                    let b: Box<dyn Fn() -> $t::DrawResult> =
+                                        std::boxed::Box::new(f);
+                                    b
+                                })
+                                .collect_vec();
+        $ui_toolkit.draw_all(&__boxeds.iter()
+                                      .map(|boxed_draw_fn| boxed_draw_fn.as_ref())
+                                      .collect_vec())
+    }};
+}
 
 //pub struct Column<'a, T: UiToolkit + ?Sized> {
 //    pub draw_fn: DrawFnRef<'a, T>,

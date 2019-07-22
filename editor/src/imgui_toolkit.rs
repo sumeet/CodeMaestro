@@ -287,8 +287,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    // TODO: these should be draw funcs that we execute in here
-    fn draw_all(&self, _draw_results: Vec<()>) {}
+    fn draw_all(&self, draw_fns: &[DrawFnRef<Self>]) {
+        draw_fns.iter().for_each(|draw_fn| draw_fn())
+    }
 
     fn focused(&self, draw_fn: &dyn Fn()) {
         draw_fn();

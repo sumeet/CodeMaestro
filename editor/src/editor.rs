@@ -7,6 +7,7 @@ use std::rc::Rc;
 use itertools::Itertools;
 use http;
 
+use crate::draw_all_iter;
 use super::async_executor;
 use cs::env::Interpreter;
 use cs::await_eval_result;
@@ -561,20 +562,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     controller.handle_global_keypress(keypress)
                 })
         });
-        self.ui_toolkit.draw_all(vec![
-            self.render_main_menu_bar(),
-            self.render_scripts(),
-            //self.render_console_window(),
-            self.render_edit_code_funcs(),
-            self.render_edit_pyfuncs(),
-            self.render_edit_jsfuncs(),
-            self.render_edit_structs(),
-            self.render_edit_enums(),
-            self.render_json_http_client_builders(),
-            self.render_chat_triggers(),
-            self.render_status_bar(),
-            self.render_opener(),
-            self.render_send_to_server_overlay(),
+        self.ui_toolkit.draw_all(&[
+            &|| self.render_main_menu_bar(),
+            &|| self.render_scripts(),
+            //&|| self.render_console_window(),
+            &|| self.render_edit_code_funcs(),
+            &|| self.render_edit_pyfuncs(),
+            &|| self.render_edit_jsfuncs(),
+            &|| self.render_edit_structs(),
+            &|| self.render_edit_enums(),
+            &|| self.render_json_http_client_builders(),
+            &|| self.render_chat_triggers(),
+            &|| self.render_status_bar(),
+            &|| self.render_opener(),
+            &|| self.render_send_to_server_overlay(),
         ])
     }
 
@@ -582,11 +583,14 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_top_right_overlay(&|| {
             let cmd_buffer = Rc::clone(&self.command_buffer);
 
-            self.ui_toolkit.draw_all(vec![
-                self.ui_toolkit.draw_button("Add code to the server", GREY_COLOR, move || {
-                    cmd_buffer.borrow_mut().save_to_net()
-                }),
-                match &self.controller.send_to_server_overlay.borrow().status {
+            self.ui_toolkit.draw_all(&[
+                &move || {
+                    let cmd_buffer = Rc::clone(&cmd_buffer);
+                    self.ui_toolkit.draw_button("Add code to the server", GREY_COLOR, move || {
+                        cmd_buffer.borrow_mut().save_to_net()
+                    })
+                },
+                &|| match &self.controller.send_to_server_overlay.borrow().status {
                     SendToServerOverlayStatus::Ready => self.ui_toolkit.draw_text("Ready"),
                     SendToServerOverlayStatus::Error(e) => {
                         self.ui_toolkit.draw_text(&format!(" There was an error \n{}", e))
@@ -606,47 +610,58 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_main_menu_bar(&self) -> T::DrawResult {
         self.ui_toolkit.draw_main_menu_bar(&|| {
             self.ui_toolkit.draw_menu("File", &|| {
-                #[cfg(not(target_arch = "wasm32"))]
-                let cmdb1 = Rc::clone(&self.command_buffer);
-                let cmdb3 = Rc::clone(&self.command_buffer);
-                let cmdb4 = Rc::clone(&self.command_buffer);
-                let cmdb5 = Rc::clone(&self.command_buffer);
-                let cmdb7 = Rc::clone(&self.command_buffer);
-                let cmdb8 = Rc::clone(&self.command_buffer);
-                self.ui_toolkit.draw_all(vec![
+                self.ui_toolkit.draw_all(&[
                     #[cfg(not(target_arch = "wasm32"))]
-                    self.ui_toolkit.draw_menu_item("Save", move || {
-                        cmdb1.borrow_mut().save();
-                    }),
-                    self.ui_toolkit
-                        .draw_menu_item("Add new chat trigger", move || {
-                            cmdb8.borrow_mut().load_chat_trigger(ChatTrigger::new());
-                        }),
-                    self.ui_toolkit
-                        .draw_menu_item("Add new JSON HTTP client", move || {
-                            cmdb7
-                                .borrow_mut()
-                                .load_json_http_client(JSONHTTPClient::new());
-                        }),
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_menu_item("Save", move || {
+                            cmd_buffer.borrow_mut().save();
+                        })
+                    },
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit
+                            .draw_menu_item("Add new chat trigger", move || {
+                                cmd_buffer.borrow_mut().load_chat_trigger(ChatTrigger::new());
+                            })
+                    },
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit
+                            .draw_menu_item("Add new JSON HTTP client", move || {
+                                cmd_buffer
+                                    .borrow_mut()
+                                    .load_json_http_client(JSONHTTPClient::new());
+                            })
+                    },
                     // disable scripts for now while we sprint to chat bot functionality
                     //                        self.ui_toolkit.draw_menu_item("Add new script", move || {
                     //                            cmdb6.borrow_mut().add_controller_command(|controller| {
                     //                                controller.load_script(scripts::Script::new());
                     //                            });
                     //                        }),
-                    self.ui_toolkit.draw_menu_item("Add new function", move || {
-                        cmdb5
-                            .borrow_mut()
-                            .load_code_func(code_function::CodeFunction::new());
-                    }),
-                    self.ui_toolkit.draw_menu_item("Add Struct", move || {
-                        cmdb3.borrow_mut().load_typespec(structs::Struct::new());
-                    }),
-                    self.ui_toolkit.draw_menu_item("Add Enum", move || {
-                        cmdb4.borrow_mut().load_typespec(enums::Enum::new());
-                    }),
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_menu_item("Add new function", move || {
+                            cmd_buffer
+                                .borrow_mut()
+                                .load_code_func(code_function::CodeFunction::new());
+                        })
+                    },
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_menu_item("Add Struct", move || {
+                            cmd_buffer.borrow_mut().load_typespec(structs::Struct::new());
+                        })
+                    },
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_menu_item("Add Enum", move || {
+                            cmd_buffer.borrow_mut().load_typespec(enums::Enum::new());
+                        })
+                    },
                     #[cfg(not(target_arch = "wasm32"))]
-                    self.ui_toolkit.draw_menu_item("Exit", || {
+                    &|| self.ui_toolkit.draw_menu_item("Exit", || {
                         std::process::exit(0);
                     }),
                 ])
@@ -656,7 +671,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_opener(&self) -> T::DrawResult {
         if self.controller.opener.is_none() {
-            return self.ui_toolkit.draw_all(vec![]);
+            return self.ui_toolkit.draw_all(&[]);
         }
 
         let cmd_buffer4 = Rc::clone(&self.command_buffer);
@@ -664,31 +679,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let opener = self.controller.opener.as_ref().unwrap();
         self.ui_toolkit.draw_centered_popup(
             &|| {
-                let options_lister = opener.list_options(self.controller, self.env_genie);
-                let menu_items = options_lister.list().collect_vec();
-
-                let mut selectable_items = vec![];
-                for menu_item in menu_items {
-                    selectable_items.push(match menu_item {
-                        MenuItem::Heading(heading) => SelectableItem::GroupHeader(heading),
-                        MenuItem::Selectable {
-                            ref label,
-                            is_selected,
-                            ..
-                        } => {
-                            let label = label.clone();
-                            SelectableItem::Selectable {
-                                item: menu_item,
-                                label,
-                                is_selected,
-                            }
-                        }
-                    });
-                }
-
-                let cmd_buffer3 = Rc::clone(&self.command_buffer);
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.focused(&|| {
+                self.ui_toolkit.draw_all(&[
+                    &|| self.ui_toolkit.focused(&|| {
                         let cmd_buffer1 = Rc::clone(&self.command_buffer);
                         let cmd_buffer2 = Rc::clone(&self.command_buffer);
 
@@ -729,17 +721,41 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             },
                         )
                     }),
-                    self.ui_toolkit
-                        .draw_selectables2(selectable_items, move |menu_item| {
-                            if let MenuItem::Selectable { when_selected, .. } = menu_item {
-                                cmd_buffer3
-                                    .borrow_mut()
-                                    .add_controller_command(|controller| {
-                                        controller.close_opener();
-                                    });
-                                when_selected(&mut cmd_buffer3.borrow_mut())
-                            }
-                        }),
+                    &move || {
+                        let options_lister = opener.list_options(self.controller, self.env_genie);
+                        let menu_items = options_lister.list().collect_vec();
+
+                        let mut selectable_items = vec![];
+                        for menu_item in menu_items {
+                            selectable_items.push(match menu_item {
+                                MenuItem::Heading(heading) => SelectableItem::GroupHeader(heading),
+                                MenuItem::Selectable {
+                                    ref label,
+                                    is_selected,
+                                    ..
+                                } => {
+                                    let label = label.clone();
+                                    SelectableItem::Selectable {
+                                        item: menu_item,
+                                        label,
+                                        is_selected,
+                                    }
+                                }
+                            });
+                        }
+                        let cmd_buffer3 = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit
+                            .draw_selectables2(selectable_items, move |menu_item| {
+                                if let MenuItem::Selectable { when_selected, .. } = menu_item {
+                                    cmd_buffer3
+                                        .borrow_mut()
+                                        .add_controller_command(|controller| {
+                                            controller.close_opener();
+                                        });
+                                    when_selected(&mut cmd_buffer3.borrow_mut())
+                                }
+                            })
+                    },
                 ])
             },
             Some(move |keypress| {
@@ -766,14 +782,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_code_funcs(&self) -> T::DrawResult {
-        let code_funcs = self.list_open_functions().filter_map(|(func, window)| {
-            Some((func.downcast_ref::<code_function::CodeFunction>()?, window))
-        });
-        self.ui_toolkit.draw_all(
-            code_funcs
-                .map(|(f, window)| self.render_edit_code_func(f, &window))
-                .collect(),
-        )
+        let draw_fns =
+            self.list_open_functions().filter_map(|(func, window)| {
+                Some((func.downcast_ref::<code_function::CodeFunction>()?, window))
+            }).map(move |(f, window)| {
+                move || self.render_edit_code_func(f, &window)
+            });
+        draw_all_iter!(T::self.ui_toolkit, draw_fns)
     }
 
     fn render_scripts(&self) -> T::DrawResult {
@@ -788,10 +803,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 )
             });
 
-        self.ui_toolkit.draw_all(
+        draw_all_iter!(T::self.ui_toolkit,
             open_scripts
-                .map(|(script, window)| self.render_script(script, &window))
-                .collect(),
+                .map(|(script, window)| move || self.render_script(script, &window))
         )
     }
 
@@ -834,25 +848,26 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             window.size,
             window.pos(),
             &|| {
-                let cont1 = Rc::clone(&self.command_buffer);
-                let code_func1 = code_func.clone();
-
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Function name",
-                        code_func.name(),
-                        move |newvalue| {
-                            let mut code_func1 = code_func1.clone();
-                            code_func1.name = newvalue.to_string();
-                            cont1.borrow_mut().load_function(code_func1);
-                        },
-                        || {},
-                    ),
-                    self.render_arguments_selector(code_func),
-                    self.render_code(code_func.code().id()),
-                    self.render_return_type_selector(code_func),
-                    self.ui_toolkit.draw_separator(),
-                    self.render_general_function_menu(code_func),
+                self.ui_toolkit.draw_all(&[
+                    &|| {
+                        let cont1 = Rc::clone(&self.command_buffer);
+                        let code_func1 = code_func.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Function name",
+                            code_func.name(),
+                            move |newvalue| {
+                                let mut code_func1 = code_func1.clone();
+                                code_func1.name = newvalue.to_string();
+                                cont1.borrow_mut().load_function(code_func1);
+                            },
+                            || {},
+                        )
+                    },
+                    &|| self.render_arguments_selector(code_func),
+                    &|| self.render_code(code_func.code().id()),
+                    &|| self.render_return_type_selector(code_func),
+                    &|| self.ui_toolkit.draw_separator(),
+                    &|| self.render_general_function_menu(code_func),
                 ])
             },
             None::<fn(Keypress)>,
@@ -871,11 +886,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let pyfuncs = self
             .list_open_functions()
             .filter_map(|(func, window)| Some((func.downcast_ref::<pystuff::PyFunc>()?, window)));
-        self.ui_toolkit.draw_all(
-            pyfuncs
-                .map(|(f, window)| self.render_edit_pyfunc(f, &window))
-                .collect(),
-        )
+        draw_all_iter!(T::self.ui_toolkit,
+                       pyfuncs
+                          .map(|(f, window)| move || self.render_edit_pyfunc(f, &window)))
     }
 
     fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc, window: &Window) -> T::DrawResult {
@@ -884,49 +897,54 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             window.size,
             window.pos(),
             &|| {
-                let cont1 = Rc::clone(&self.command_buffer);
-                let pyfunc1 = pyfunc.clone();
-                let cont2 = Rc::clone(&self.command_buffer);
-                let pyfunc2 = pyfunc.clone();
-                let cont3 = Rc::clone(&self.command_buffer);
-                let pyfunc3 = pyfunc.clone();
-
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Function name",
-                        pyfunc.name(),
-                        move |newvalue| {
-                            let mut pyfunc1 = pyfunc1.clone();
-                            pyfunc1.name = newvalue.to_string();
-                            cont1.borrow_mut().load_function(pyfunc1);
-                        },
-                        || {},
-                    ),
-                    self.render_arguments_selector(pyfunc),
-                    self.ui_toolkit.draw_multiline_text_input_with_label(
-                        // TODO: add help text here
-                        "Prelude",
-                        &pyfunc.prelude,
-                        move |newvalue| {
-                            let mut pyfunc2 = pyfunc2.clone();
-                            pyfunc2.prelude = newvalue.to_string();
-                            cont2.borrow_mut().load_function(pyfunc2);
-                        },
-                    ),
-                    self.ui_toolkit.draw_multiline_text_input_with_label(
-                        "Code",
-                        &pyfunc.eval,
-                        move |newvalue| {
-                            let mut pyfunc3 = pyfunc3.clone();
-                            pyfunc3.eval = newvalue.to_string();
-                            cont3.borrow_mut().load_function(pyfunc3);
-                        },
-                    ),
-                    self.render_return_type_selector(pyfunc),
-                    self.ui_toolkit.draw_separator(),
-                    self.render_old_test_section(pyfunc.clone()),
-                    self.ui_toolkit.draw_separator(),
-                    self.render_general_function_menu(pyfunc),
+                self.ui_toolkit.draw_all(&[
+                    &|| {
+                        let cont1 = Rc::clone(&self.command_buffer);
+                        let pyfunc1 = pyfunc.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Function name",
+                            pyfunc.name(),
+                            move |newvalue| {
+                                let mut pyfunc1 = pyfunc1.clone();
+                                pyfunc1.name = newvalue.to_string();
+                                cont1.borrow_mut().load_function(pyfunc1);
+                            },
+                            || {},
+                        )
+                    },
+                    &|| self.render_arguments_selector(pyfunc),
+                    &|| {
+                        let cont2 = Rc::clone(&self.command_buffer);
+                        let pyfunc2 = pyfunc.clone();
+                        self.ui_toolkit.draw_multiline_text_input_with_label(
+                            // TODO: add help text here
+                            "Prelude",
+                            &pyfunc.prelude,
+                            move |newvalue| {
+                                let mut pyfunc2 = pyfunc2.clone();
+                                pyfunc2.prelude = newvalue.to_string();
+                                cont2.borrow_mut().load_function(pyfunc2);
+                            },
+                        )
+                    },
+                    &|| {
+                        let cont3 = Rc::clone(&self.command_buffer);
+                        let pyfunc3 = pyfunc.clone();
+                        self.ui_toolkit.draw_multiline_text_input_with_label(
+                            "Code",
+                            &pyfunc.eval,
+                            move |newvalue| {
+                                let mut pyfunc3 = pyfunc3.clone();
+                                pyfunc3.eval = newvalue.to_string();
+                                cont3.borrow_mut().load_function(pyfunc3);
+                            },
+                        )
+                    },
+                    &|| self.render_return_type_selector(pyfunc),
+                    &|| self.ui_toolkit.draw_separator(),
+                    &|| self.render_old_test_section(pyfunc.clone()),
+                    &|| self.ui_toolkit.draw_separator(),
+                    &|| self.render_general_function_menu(pyfunc),
                 ])
             },
             None::<fn(Keypress)>,
@@ -939,11 +957,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let jsfuncs = self
             .list_open_functions()
             .filter_map(|(func, window)| Some((func.downcast_ref::<jsstuff::JSFunc>()?, window)));
-        self.ui_toolkit.draw_all(
+        draw_all_iter!(T::self.ui_toolkit,
             jsfuncs
-                .map(|(f, window)| self.render_edit_jsfunc(f, &window))
-                .collect(),
-        )
+                .map(|(f, window)| move || self.render_edit_jsfunc(f, &window)))
     }
 
     fn render_edit_jsfunc(&self, jsfunc: &jsstuff::JSFunc, window: &Window) -> T::DrawResult {
@@ -952,37 +968,41 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             window.size,
             window.pos(),
             &|| {
-                let cont1 = Rc::clone(&self.command_buffer);
-                let jsfunc1 = jsfunc.clone();
-                let cont3 = Rc::clone(&self.command_buffer);
-                let jsfunc3 = jsfunc.clone();
 
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Function name",
-                        jsfunc.name(),
-                        move |newvalue| {
-                            let mut jsfunc1 = jsfunc1.clone();
-                            jsfunc1.name = newvalue.to_string();
-                            cont1.borrow_mut().load_function(jsfunc1);
-                        },
-                        || {},
-                    ),
-                    self.render_arguments_selector(jsfunc),
-                    self.ui_toolkit.draw_multiline_text_input_with_label(
-                        "Code",
-                        &jsfunc.eval,
-                        move |newvalue| {
-                            let mut jsfunc3 = jsfunc3.clone();
-                            jsfunc3.eval = newvalue.to_string();
-                            cont3.borrow_mut().load_function(jsfunc3);
-                        },
-                    ),
-                    self.render_return_type_selector(jsfunc),
-                    self.ui_toolkit.draw_separator(),
-                    self.render_old_test_section(jsfunc.clone()),
-                    self.ui_toolkit.draw_separator(),
-                    self.render_general_function_menu(jsfunc),
+                self.ui_toolkit.draw_all(&[
+                    &|| {
+                        let cont1 = Rc::clone(&self.command_buffer);
+                        let jsfunc1 = jsfunc.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Function name",
+                            jsfunc.name(),
+                            move |newvalue| {
+                                let mut jsfunc1 = jsfunc1.clone();
+                                jsfunc1.name = newvalue.to_string();
+                                cont1.borrow_mut().load_function(jsfunc1);
+                            },
+                            || {},
+                        )
+                    },
+                    &|| self.render_arguments_selector(jsfunc),
+                    &|| {
+                        let cont3 = Rc::clone(&self.command_buffer);
+                        let jsfunc3 = jsfunc.clone();
+                        self.ui_toolkit.draw_multiline_text_input_with_label(
+                            "Code",
+                            &jsfunc.eval,
+                            move |newvalue| {
+                                let mut jsfunc3 = jsfunc3.clone();
+                                jsfunc3.eval = newvalue.to_string();
+                                cont3.borrow_mut().load_function(jsfunc3);
+                            },
+                        )
+                    },
+                    &|| self.render_return_type_selector(jsfunc),
+                    &|| self.ui_toolkit.draw_separator(),
+                    &|| self.render_old_test_section(jsfunc.clone()),
+                    &|| self.ui_toolkit.draw_separator(),
+                    &|| self.render_general_function_menu(jsfunc),
                 ])
             },
             None::<fn(Keypress)>,
@@ -995,33 +1015,25 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let structs = self
             .list_open_typespecs()
             .filter_map(|(ts, window)| Some((ts.downcast_ref::<structs::Struct>()?, window)));
-        self.ui_toolkit.draw_all(
-            structs
-                .map(|(s, window)| self.render_edit_struct(s, &window))
-                .collect(),
-        )
+        draw_all_iter!(T::self.ui_toolkit,
+            structs.map(|(s, window)| move || self.render_edit_struct(s, &window)))
     }
 
     fn render_edit_enums(&self) -> T::DrawResult {
         let enums = self
             .list_open_typespecs()
             .filter_map(|(ts, window)| Some((ts.downcast_ref::<enums::Enum>()?, window)));
-        self.ui_toolkit.draw_all(
+        draw_all_iter!(T::self.ui_toolkit,
             enums
-                .map(|(e, window)| self.render_edit_enum(e, &window))
-                .collect(),
-        )
+                .map(|(e, window)| move || self.render_edit_enum(e, &window)))
     }
 
     fn render_chat_triggers(&self) -> T::DrawResult {
         let triggers = self
             .list_open_functions()
             .filter_map(|(func, window)| Some((func.downcast_ref::<ChatTrigger>()?, window)));
-        self.ui_toolkit.draw_all(
-            triggers
-                .map(|(trigger, window)| self.render_chat_trigger(trigger, &window))
-                .collect(),
-        )
+        draw_all_iter!(T::self.ui_toolkit,
+            triggers.map(|(trigger, window)| move || self.render_chat_trigger(trigger, &window)))
     }
 
     fn render_chat_trigger(&self, chat_trigger: &ChatTrigger, window: &Window) -> T::DrawResult {
@@ -1032,37 +1044,40 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             window.size,
             window.pos(),
             &|| {
-                let cmd_buffer1 = Rc::clone(&self.command_buffer);
-                let cmd_buffer2 = Rc::clone(&self.command_buffer);
-
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Trigger name",
-                        &chat_trigger.name,
-                        move |newvalue| {
-                            let newvalue = newvalue.to_string();
-                            cmd_buffer1
-                                .borrow_mut()
-                                .change_chat_trigger(chat_trigger_id, move |mut ct| {
-                                    ct.name = newvalue.to_string()
-                                })
-                        },
-                        &|| {},
-                    ),
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Prefix",
-                        &chat_trigger.prefix,
-                        move |newvalue| {
-                            let newvalue = newvalue.to_string();
-                            cmd_buffer2
-                                .borrow_mut()
-                                .change_chat_trigger(chat_trigger_id, move |mut ct| {
-                                    ct.prefix = newvalue.to_string()
-                                })
-                        },
-                        &|| {},
-                    ),
-                    self.render_code(chat_trigger.code.id),
+                self.ui_toolkit.draw_all(&[
+                    &|| {
+                        let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Trigger name",
+                            &chat_trigger.name,
+                            move |newvalue| {
+                                let newvalue = newvalue.to_string();
+                                cmd_buffer1
+                                    .borrow_mut()
+                                    .change_chat_trigger(chat_trigger_id, move |mut ct| {
+                                        ct.name = newvalue.to_string()
+                                    })
+                            },
+                            &|| {},
+                        )
+                    },
+                    &|| {
+                        let cmd_buffer2 = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Prefix",
+                            &chat_trigger.prefix,
+                            move |newvalue| {
+                                let newvalue = newvalue.to_string();
+                                cmd_buffer2
+                                    .borrow_mut()
+                                    .change_chat_trigger(chat_trigger_id, move |mut ct| {
+                                        ct.prefix = newvalue.to_string()
+                                    })
+                            },
+                            &|| {},
+                        )
+                    },
+                    &|| self.render_code(chat_trigger.code.id),
                 ])
             },
             None::<fn(Keypress)>,
@@ -1079,10 +1094,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_json_http_client_builders(&self) -> T::DrawResult {
         let builders = self.controller.list_json_http_client_builders();
-        self.ui_toolkit.draw_all(
+        draw_all_iter!(T::self.ui_toolkit,
             builders
-                .map(|(builder, window)| self.render_json_http_client_builder(builder, &window))
-                .collect(),
+                .map(|(builder, window)| move || self.render_json_http_client_builder(builder, &window))
         )
     }
 
@@ -1102,77 +1116,83 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     .env_genie
                     .get_json_http_client(builder.json_http_client_id)
                     .unwrap();
-                let client1 = client.clone();
                 let client_id = client.id();
-                let builder1 = builder.clone();
-                let cmd_buffer1 = Rc::clone(&self.command_buffer);
-                let cmd_buffer3 = Rc::clone(&self.command_buffer);
-                let cmd_buffer4 = Rc::clone(&self.command_buffer);
-                let cmd_buffer5 = Rc::clone(&self.command_buffer);
 
                 let current_return_type_name =
                     self.env_genie.get_name_for_type(&client.returns()).unwrap();
 
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Name",
-                        client.name(),
-                        move |newvalue| {
-                            let mut client = client1.clone();
-                            client.name = newvalue.to_string();
-                            cmd_buffer1.borrow_mut().load_function(client);
-                        },
-                        || {},
-                    ),
-                    self.ui_toolkit.draw_text("Base URL:"),
-                    self.render_code(client.gen_url.id),
-                    self.ui_toolkit.draw_text("URL params:"),
-                    self.render_code(client.gen_url_params.id),
-                    self.render_arguments_selector(client),
-                    self.ui_toolkit.draw_text(&format!(
+                self.ui_toolkit.draw_all(&[
+                    &|| {
+                        let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                        let client1 = client.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Name",
+                            client.name(),
+                            move |newvalue| {
+                                let mut client = client1.clone();
+                                client.name = newvalue.to_string();
+                                cmd_buffer1.borrow_mut().load_function(client);
+                            },
+                            || {},
+                        )
+                    },
+                    &|| self.ui_toolkit.draw_text("Base URL:"),
+                    &|| self.render_code(client.gen_url.id),
+                    &|| self.ui_toolkit.draw_text("URL params:"),
+                    &|| self.render_code(client.gen_url_params.id),
+                    &|| self.render_arguments_selector(client),
+                    &|| self.ui_toolkit.draw_text(&format!(
                         "Current return type: {}",
                         current_return_type_name
                     )),
-                    self.ui_toolkit.draw_separator(),
-                    self.ui_toolkit
+                    &|| self.ui_toolkit.draw_separator(),
+                    &|| self.ui_toolkit
                         .draw_text("Return type generator and test section"),
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Test URL",
-                        &builder.test_url,
-                        move |newvalue| {
-                            let builder1 = builder1.clone();
-                            let newvalue = newvalue.to_string();
-                            cmd_buffer3
-                                .borrow_mut()
-                                .add_controller_command(move |cont| {
-                                    let mut builder = builder1.clone();
-                                    builder.test_url = newvalue;
-                                    cont.load_json_http_client_builder(builder);
-                                })
-                        },
-                        || {},
-                    ),
-                    self.ui_toolkit
-                        .draw_button("Run test", GREY_COLOR, move || {
-                            let cmd_buffer5 = Rc::clone(&cmd_buffer5);
-                            cmd_buffer4.borrow_mut().add_integrating_command(
-                                move |cont, _interp, async_executor, _| {
-                                    let builder =
-                                        cont.get_json_http_client_builder(client_id).unwrap();
-                                    builder.run_test(async_executor, move |newbuilder| {
-                                        cmd_buffer5.borrow_mut().add_controller_command(
-                                            move |cont| {
-                                                cont.load_json_http_client_builder(newbuilder);
-                                            },
-                                        )
+                    &|| {
+                        let cmd_buffer3 = Rc::clone(&self.command_buffer);
+                        let builder1 = builder.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Test URL",
+                            &builder.test_url,
+                            move |newvalue| {
+                                let builder1 = builder1.clone();
+                                let newvalue = newvalue.to_string();
+                                cmd_buffer3
+                                    .borrow_mut()
+                                    .add_controller_command(move |cont| {
+                                        let mut builder = builder1.clone();
+                                        builder.test_url = newvalue;
+                                        cont.load_json_http_client_builder(builder);
                                     })
-                                },
-                            )
-                        }),
-                    self.render_test_request_results(builder),
-                    self.render_json_return_type_selector(builder),
-                    self.ui_toolkit.draw_separator(),
-                    self.render_general_function_menu(client),
+                            },
+                            || {},
+                        )
+                    },
+                    &|| {
+                        let cmd_buffer4 = Rc::clone(&self.command_buffer);
+                        let cmd_buffer5 = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit
+                            .draw_button("Run test", GREY_COLOR, move || {
+                                let cmd_buffer5 = Rc::clone(&cmd_buffer5);
+                                cmd_buffer4.borrow_mut().add_integrating_command(
+                                    move |cont, _interp, async_executor, _| {
+                                        let builder =
+                                            cont.get_json_http_client_builder(client_id).unwrap();
+                                        builder.run_test(async_executor, move |newbuilder| {
+                                            cmd_buffer5.borrow_mut().add_controller_command(
+                                                move |cont| {
+                                                    cont.load_json_http_client_builder(newbuilder);
+                                                },
+                                            )
+                                        })
+                                    },
+                                )
+                            })
+                    },
+                    &|| self.render_test_request_results(builder),
+                    &|| self.render_json_return_type_selector(builder),
+                    &|| self.ui_toolkit.draw_separator(),
+                    &|| self.render_general_function_menu(client),
                 ])
             },
             None::<fn(Keypress)>,
@@ -1201,34 +1221,36 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     .unwrap();
                 new_struct_for_return_type.name.clone()
             };
-            let cmd_buffer = Rc::clone(&self.command_buffer);
             let client_id = builder.json_http_client_id;
-            self.ui_toolkit.draw_all(vec![
-                self.ui_toolkit
+            self.ui_toolkit.draw_all(&[
+                &|| self.ui_toolkit
                     .draw_text(&format!("Return type: {}", type_description)),
-                self.ui_toolkit
-                    .draw_button("Apply return type", GREY_COLOR, move || {
-                        cmd_buffer.borrow_mut().add_integrating_command(
-                            move |cont, interp, _, _| {
-                                let mut env = interp.env.borrow_mut();
-                                let mut json_http_client = {
-                                    let env_genie = env_genie::EnvGenie::new(&env);
-                                    env_genie.get_json_http_client(client_id).unwrap().clone()
-                                };
+                &|| {
+                    let cmd_buffer = Rc::clone(&self.command_buffer);
+                    self.ui_toolkit
+                        .draw_button("Apply return type", GREY_COLOR, move || {
+                            cmd_buffer.borrow_mut().add_integrating_command(
+                                move |cont, interp, _, _| {
+                                    let mut env = interp.env.borrow_mut();
+                                    let mut json_http_client = {
+                                        let env_genie = env_genie::EnvGenie::new(&env);
+                                        env_genie.get_json_http_client(client_id).unwrap().clone()
+                                    };
 
-                                let builder = cont.get_json_http_client_builder(client_id).unwrap();
-                                let return_type_candidate =
-                                    builder.return_type_candidate.clone().unwrap();
-                                for strukt in return_type_candidate.structs_to_be_added {
-                                    env.add_typespec(strukt);
-                                }
-                                json_http_client.return_type = return_type_candidate.typ;
-                                env.add_function(json_http_client);
-                            },
-                        )
-                    }),
-                self.ui_toolkit.draw_text("Structs to be added:"),
-                self.ui_toolkit
+                                    let builder = cont.get_json_http_client_builder(client_id).unwrap();
+                                    let return_type_candidate =
+                                        builder.return_type_candidate.clone().unwrap();
+                                    for strukt in return_type_candidate.structs_to_be_added {
+                                        env.add_typespec(strukt);
+                                    }
+                                    json_http_client.return_type = return_type_candidate.typ;
+                                    env.add_function(json_http_client);
+                                },
+                            )
+                        })
+                },
+                &|| self.ui_toolkit.draw_text("Structs to be added:"),
+                &|| self.ui_toolkit
                     .draw_text(&format!("{:#?}", return_type_candidate.structs_to_be_added)),
             ])
         } else {
@@ -1242,7 +1264,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 self.render_parsed_doc(builder, builder.test_run_parsed_doc.as_ref().unwrap())
             }
             Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
-            None => self.ui_toolkit.draw_all(vec![]),
+            None => self.ui_toolkit.draw_all(&[]),
         }
     }
 
@@ -1263,33 +1285,30 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             }
             Null { .. } => self.ui_toolkit.draw_text("Null"),
             List { value, .. } => {
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text("["),
-                    self.ui_toolkit.indent(10, &|| {
+                self.ui_toolkit.draw_all(&[
+                    &|| self.ui_toolkit.draw_text("["),
+                    &|| self.ui_toolkit.indent(10, &|| {
                         // TODO: show the rest under a collapsible thingie
                         self.render_parsed_doc(builder, &value[0])
                     }),
-                    self.ui_toolkit.draw_text("]"),
+                    &|| self.ui_toolkit.draw_text("]"),
                 ])
             }
             Map { value: map, .. } => {
-                let drawn = vec![
-                    self.ui_toolkit.draw_text("{"),
-                    self.ui_toolkit.indent(10, &|| {
-                        self.ui_toolkit.draw_all(
+                self.ui_toolkit.draw_all(&[
+                    &|| self.ui_toolkit.draw_text("{"),
+                    &|| self.ui_toolkit.indent(10, &|| {
+                        draw_all_iter!(T::self.ui_toolkit,
                             map.iter()
                                 .map(|(key, value)| {
-                                    self.ui_toolkit.align(
+                                    move || self.ui_toolkit.align(
                                         &|| self.ui_toolkit.draw_text(&format!("{}:", key)),
                                         &[&|| self.render_parsed_doc(builder, value)],
                                     )
-                                })
-                                .collect(),
-                        )
+                                }))
                     }),
-                    self.ui_toolkit.draw_text("}"),
-                ];
-                self.ui_toolkit.draw_all(drawn)
+                    &|| self.ui_toolkit.draw_text("}"),
+                ])
             }
             // TODO: maybe one day we'll want to try and put these kinds of things into json::Value
             // containers, and just let you grab at it like in a normal programming language. for
@@ -1366,34 +1385,37 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             window.size,
             window.pos(),
             &|| {
-                let cont1 = Rc::clone(&self.command_buffer);
-                let strukt1 = strukt.clone();
-                let cont2 = Rc::clone(&self.command_buffer);
-                let strukt2 = strukt.clone();
-
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Structure name",
-                        &strukt.name,
-                        move |newvalue| {
-                            let mut strukt = strukt1.clone();
-                            strukt.name = newvalue.to_string();
-                            cont1.borrow_mut().load_typespec(strukt);
-                        },
-                        &|| {},
-                    ),
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Symbol",
-                        &strukt.symbol,
-                        move |newvalue| {
-                            let mut strukt = strukt2.clone();
-                            strukt.symbol = newvalue.to_string();
-                            cont2.borrow_mut().load_typespec(strukt);
-                        },
-                        &|| {},
-                    ),
-                    self.render_struct_fields_selector(strukt),
-                    self.render_general_struct_menu(strukt),
+                self.ui_toolkit.draw_all(&[
+                    &|| {
+                        let cont1 = Rc::clone(&self.command_buffer);
+                        let strukt1 = strukt.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Structure name",
+                            &strukt.name,
+                            move |newvalue| {
+                                let mut strukt = strukt1.clone();
+                                strukt.name = newvalue.to_string();
+                                cont1.borrow_mut().load_typespec(strukt);
+                            },
+                            &|| {},
+                        )
+                    },
+                    &|| {
+                        let cont2 = Rc::clone(&self.command_buffer);
+                        let strukt2 = strukt.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Symbol",
+                            &strukt.symbol,
+                            move |newvalue| {
+                                let mut strukt = strukt2.clone();
+                                strukt.symbol = newvalue.to_string();
+                                cont2.borrow_mut().load_typespec(strukt);
+                            },
+                            &|| {},
+                        )
+                    },
+                    &|| self.render_struct_fields_selector(strukt),
+                    &|| self.render_general_struct_menu(strukt),
                 ])
             },
             None::<fn(Keypress)>,
@@ -1414,68 +1436,50 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_struct_fields_selector(&self, strukt: &structs::Struct) -> T::DrawResult {
         let fields = &strukt.fields;
 
-        let mut to_draw = vec![self
-            .ui_toolkit
-            .draw_text_with_label(&format!("Has {} field(s)", fields.len()), "Fields")];
-
-        for (current_field_index, field) in fields.iter().enumerate() {
-            let strukt1 = strukt.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(self.ui_toolkit.draw_text_input_with_label(
-                "Name",
-                &field.name,
-                move |newvalue| {
-                    let mut newstrukt = strukt1.clone();
-                    let mut newfield = &mut newstrukt.fields[current_field_index];
-                    newfield.name = newvalue.to_string();
-                    cont1.borrow_mut().load_typespec(newstrukt)
-                },
-                &|| {},
-            ));
-
-            let strukt1 = strukt.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(self.render_type_change_combo(
-                "Type",
-                &field.field_type,
-                move |newtype| {
-                    let mut newstrukt = strukt1.clone();
-                    let mut newfield = &mut newstrukt.fields[current_field_index];
-                    newfield.field_type = newtype;
-                    cont1.borrow_mut().load_typespec(newstrukt)
-                },
-            ));
-
-            let strukt1 = strukt.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
-                let mut newstrukt = strukt1.clone();
-                newstrukt.fields.remove(current_field_index);
-                cont1.borrow_mut().load_typespec(newstrukt)
-            }));
-        }
-
-        let strukt1 = strukt.clone();
-        let cont1 = Rc::clone(&self.command_buffer);
-        to_draw.push(
-            self.ui_toolkit
-                .draw_button("Add another field", GREY_COLOR, move || {
-                    let mut newstrukt = strukt1.clone();
-                    newstrukt.fields.push(structs::StructField::new(
-                        format!("field{}", newstrukt.fields.len()),
-                        "".into(),
-                        lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                    ));
-                    cont1.borrow_mut().load_typespec(newstrukt);
-                }),
-        );
-
-        self.ui_toolkit.draw_all(to_draw)
+        self.ui_toolkit.draw_all(&[
+           &|| self.ui_toolkit
+                .draw_text_with_label(&format!("Has {} field(s)", fields.len()), "Fields"),
+           &|| {
+               draw_all_iter!(T::self.ui_toolkit,
+                   fields.iter().enumerate().map(|(current_field_index, field)| {
+                     move || {
+                       let strukt1 = strukt.clone();
+                       let cont1 = Rc::clone(&self.command_buffer);
+                       self.ui_toolkit.draw_text_input_with_label(
+                          "Name",
+                          &field.name,
+                          move |newvalue| {
+                              let mut newstrukt = strukt1.clone();
+                              let mut newfield = &mut newstrukt.fields[current_field_index];
+                              newfield.name = newvalue.to_string();
+                              cont1.borrow_mut().load_typespec(newstrukt)
+                          },
+                          &|| {},
+                       )
+                     }
+                   })
+               )
+           },
+           &|| {
+               let strukt1 = strukt.clone();
+               let cont1 = Rc::clone(&self.command_buffer);
+               self.ui_toolkit
+                   .draw_button("Add another field", GREY_COLOR, move || {
+                       let mut newstrukt = strukt1.clone();
+                       newstrukt.fields.push(structs::StructField::new(
+                           format!("field{}", newstrukt.fields.len()),
+                           "".into(),
+                           lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                       ));
+                       cont1.borrow_mut().load_typespec(newstrukt);
+                   })
+           }
+        ])
     }
 
     // TODO: a way to delete the struct :)
     fn render_general_struct_menu(&self, _strukt: &structs::Struct) -> T::DrawResult {
-        self.ui_toolkit.draw_all(vec![])
+        self.ui_toolkit.draw_all(&[])
     }
 
     fn render_edit_enum(&self, eneom: &enums::Enum, window: &Window) -> T::DrawResult {
@@ -1486,33 +1490,37 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             window.size,
             window.pos(),
             &|| {
-                let cont1 = Rc::clone(&self.command_buffer);
-                let eneom1 = eneom.clone();
-                let cont2 = Rc::clone(&self.command_buffer);
-                let eneom2 = eneom.clone();
-
-                self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Enum name",
-                        &eneom.name,
-                        move |newvalue| {
-                            let mut eneom = eneom1.clone();
-                            eneom.name = newvalue.to_string();
-                            cont1.borrow_mut().load_typespec(eneom);
-                        },
-                        &|| {},
-                    ),
-                    self.ui_toolkit.draw_text_input_with_label(
-                        "Symbol",
-                        &eneom.symbol,
-                        move |newvalue| {
-                            let mut eneom = eneom2.clone();
-                            eneom.symbol = newvalue.to_string();
-                            cont2.borrow_mut().load_typespec(eneom);
-                        },
-                        &|| {},
-                    ),
-                    self.render_enum_variants_selector(eneom),
+                self.ui_toolkit.draw_all(&[
+                    &|| {
+                        let cont1 = Rc::clone(&self.command_buffer);
+                        let eneom1 = eneom.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Enum name",
+                            &eneom.name,
+                            move |newvalue| {
+                                let mut eneom = eneom1.clone();
+                                eneom.name = newvalue.to_string();
+                                cont1.borrow_mut().load_typespec(eneom);
+                            },
+                            &|| {},
+                        )
+                    },
+                    &|| {
+                        let cont2 = Rc::clone(&self.command_buffer);
+                        let eneom2 = eneom.clone();
+                        self.ui_toolkit.draw_text_input_with_label(
+                            "Symbol",
+                            &eneom.symbol,
+                            move |newvalue| {
+                                let mut eneom = eneom2.clone();
+                                eneom.symbol = newvalue.to_string();
+                                cont2.borrow_mut().load_typespec(eneom);
+                            },
+                            &|| {},
+                        )
+                    },
+                    &|| self.render_enum_variants_selector(eneom),
+                    // TODO: why is this commented out? lol
                     //                    self.render_general_struct_menu(eneom),
                 ])
             },
@@ -1531,150 +1539,175 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_enum_variants_selector(&self, eneom: &enums::Enum) -> T::DrawResult {
         let variants = &eneom.variants;
 
-        let mut to_draw = vec![self
-            .ui_toolkit
-            .draw_text_with_label(&format!("Has {} variant(s)", variants.len()), "Variants")];
-
-        for (current_variant_index, variant) in variants.iter().enumerate() {
-            let eneom1 = eneom.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(self.ui_toolkit.draw_text_input_with_label(
-                "Name",
-                &variant.name,
-                move |newvalue| {
-                    let mut neweneom = eneom1.clone();
-                    let mut newvariant = &mut neweneom.variants[current_variant_index];
-                    newvariant.name = newvalue.to_string();
-                    cont1.borrow_mut().load_typespec(neweneom)
-                },
-                &|| {},
-            ));
-
-            // TODO: add this checkbox logic to other types?
-            let eneom1 = eneom.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(self.ui_toolkit.draw_checkbox_with_label(
-                "Parameterized type?",
-                variant.is_parameterized(),
-                move |is_parameterized| {
-                    let mut neweneom = eneom1.clone();
-                    let mut newvariant = &mut neweneom.variants[current_variant_index];
-                    if is_parameterized {
-                        newvariant.variant_type = None;
-                    } else {
-                        newvariant.variant_type =
-                            Some(lang::Type::from_spec(&*lang::STRING_TYPESPEC));
-                    }
-                    cont1.borrow_mut().load_typespec(neweneom)
-                },
-            ));
-            if !variant.is_parameterized() {
-                let eneom1 = eneom.clone();
-                let cont1 = Rc::clone(&self.command_buffer);
-                to_draw.push(self.render_type_change_combo(
-                    "Type",
-                    variant.variant_type.as_ref().unwrap(),
-                    move |newtype| {
-                        let mut neweneom = eneom1.clone();
-                        let mut newvariant = &mut neweneom.variants[current_variant_index];
-                        newvariant.variant_type = Some(newtype);
-                        cont1.borrow_mut().load_typespec(neweneom)
-                    },
-                ));
+        self.ui_toolkit.draw_all(&[
+            &|| self
+                .ui_toolkit
+                .draw_text_with_label(&format!("Has {} variant(s)", variants.len()), "Variants"),
+            &|| {
+                draw_all_iter!(T::self.ui_toolkit,
+                   variants.iter().enumerate().map(|(current_variant_index, variant)| {
+                       move || self.ui_toolkit.draw_all(&[
+                            &|| {
+                                let eneom1 = eneom.clone();
+                                let cont1 = Rc::clone(&self.command_buffer);
+                                self.ui_toolkit.draw_text_input_with_label(
+                                    "Name",
+                                    &variant.name,
+                                    move |newvalue| {
+                                        let mut neweneom = eneom1.clone();
+                                        let mut newvariant = &mut neweneom.variants[current_variant_index];
+                                        newvariant.name = newvalue.to_string();
+                                        cont1.borrow_mut().load_typespec(neweneom)
+                                    },
+                                    &|| {},
+                                )
+                            },
+                            // TODO: add this checkbox logic to other types?
+                            &|| {
+                                let eneom1 = eneom.clone();
+                                let cont1 = Rc::clone(&self.command_buffer);
+                                self.ui_toolkit.draw_checkbox_with_label(
+                                    "Parameterized type?",
+                                    variant.is_parameterized(),
+                                    move |is_parameterized| {
+                                        let mut neweneom = eneom1.clone();
+                                        let mut newvariant = &mut neweneom.variants[current_variant_index];
+                                        if is_parameterized {
+                                            newvariant.variant_type = None;
+                                        } else {
+                                            newvariant.variant_type =
+                                                Some(lang::Type::from_spec(&*lang::STRING_TYPESPEC));
+                                        }
+                                        cont1.borrow_mut().load_typespec(neweneom)
+                                    },
+                                )
+                            },
+                            &|| {
+                                if !variant.is_parameterized() {
+                                    self.ui_toolkit.draw_all(&[])
+                                } else {
+                                    let eneom1 = eneom.clone();
+                                    let cont1 = Rc::clone(&self.command_buffer);
+                                    self.render_type_change_combo(
+                                        "Type",
+                                        variant.variant_type.as_ref().unwrap(),
+                                        move |newtype| {
+                                            let mut neweneom = eneom1.clone();
+                                            let mut newvariant = &mut neweneom.variants[current_variant_index];
+                                            newvariant.variant_type = Some(newtype);
+                                            cont1.borrow_mut().load_typespec(neweneom)
+                                        },
+                                    )
+                                }
+                            },
+                            &|| {
+                                let eneom1 = eneom.clone();
+                                let cont1 = Rc::clone(&self.command_buffer);
+                                self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
+                                    let mut neweneom = eneom1.clone();
+                                    neweneom.variants.remove(current_variant_index);
+                                    cont1.borrow_mut().load_typespec(neweneom)
+                                })
+                            },
+                            &|| {
+                                let eneom1 = eneom.clone();
+                                let cont1 = Rc::clone(&self.command_buffer);
+                                self.ui_toolkit
+                                    .draw_button("Add another variant", GREY_COLOR, move || {
+                                        let mut neweneom = eneom1.clone();
+                                        neweneom.variants.push(enums::EnumVariant::new(
+                                            format!("variant{}", neweneom.variants.len()),
+                                            None,
+                                        ));
+                                        cont1.borrow_mut().load_typespec(neweneom);
+                                    })
+                            }
+                       ])
+                   })
+                )
             }
-
-            let eneom1 = eneom.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
-                let mut neweneom = eneom1.clone();
-                neweneom.variants.remove(current_variant_index);
-                cont1.borrow_mut().load_typespec(neweneom)
-            }));
-        }
-
-        let eneom1 = eneom.clone();
-        let cont1 = Rc::clone(&self.command_buffer);
-        to_draw.push(
-            self.ui_toolkit
-                .draw_button("Add another variant", GREY_COLOR, move || {
-                    let mut neweneom = eneom1.clone();
-                    neweneom.variants.push(enums::EnumVariant::new(
-                        format!("variant{}", neweneom.variants.len()),
-                        None,
-                    ));
-                    cont1.borrow_mut().load_typespec(neweneom);
-                }),
-        );
-
-        self.ui_toolkit.draw_all(to_draw)
+        ])
     }
 
     fn render_general_function_menu<F: lang::Function>(&self, func: &F) -> T::DrawResult {
-        let cont1 = Rc::clone(&self.command_buffer);
-        let func_id = func.id();
-        self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
-                cont1.borrow_mut().remove_function(func_id);
-            }),
-            self.render_test_section(func),
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                let cont1 = Rc::clone(&self.command_buffer);
+                let func_id = func.id();
+                self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
+                    cont1.borrow_mut().remove_function(func_id);
+                })
+            },
+            &|| self.render_test_section(func),
         ])
     }
 
     fn render_test_section<F: lang::Function>(&self, func: &F) -> T::DrawResult {
         let subject = tests::TestSubject::Function(func.id());
         let tests = self.controller.list_tests(subject).collect_vec();
-        let cmd_buffer = Rc::clone(&self.command_buffer);
-        let cmd_buffer2 = Rc::clone(&self.command_buffer);
         let selected_test_id = self.controller.selected_test_id(subject);
-        let mut to_draw = vec![
-            self.ui_toolkit.draw_text("Tests:"),
-            self.ui_toolkit.draw_selectables(
-                move |item| Some(item.id) == selected_test_id,
-                |t| &t.name,
-                &tests,
-                move |test| {
-                    let id = test.id;
-                    cmd_buffer2
-                        .borrow_mut()
-                        .add_controller_command(move |cont| {
-                            cont.mark_test_selected(subject, id);
+
+        self.ui_toolkit.draw_all(&[
+            &|| self.ui_toolkit.draw_text("Tests:"),
+            &|| {
+                let cmd_buffer2 = Rc::clone(&self.command_buffer);
+                self.ui_toolkit.draw_selectables(
+                    move |item| Some(item.id) == selected_test_id,
+                    |t| &t.name,
+                    &tests,
+                    move |test| {
+                        let id = test.id;
+                        cmd_buffer2
+                            .borrow_mut()
+                            .add_controller_command(move |cont| {
+                                cont.mark_test_selected(subject, id);
+                            })
+                    },
+                )
+            },
+            &|| {
+                let cmd_buffer = Rc::clone(&self.command_buffer);
+                self.ui_toolkit
+                    .draw_button("Add a test", GREY_COLOR, move || {
+                        cmd_buffer.borrow_mut().add_controller_command(move |cont| {
+                            cont.load_test(tests::Test::new(subject))
                         })
-                },
-            ),
-            self.ui_toolkit
-                .draw_button("Add a test", GREY_COLOR, move || {
-                    cmd_buffer.borrow_mut().add_controller_command(move |cont| {
-                        cont.load_test(tests::Test::new(subject))
                     })
-                }),
-        ];
-        if let Some(selected_test_id) = selected_test_id {
-            to_draw.push(self.render_test_details(selected_test_id));
-        }
-        self.ui_toolkit.draw_all(to_draw)
+
+            },
+            &|| {
+                if let Some(selected_test_id) = selected_test_id {
+                    self.render_test_details(selected_test_id)
+                } else {
+                    self.ui_toolkit.draw_all(&[])
+                }
+            }
+        ])
     }
 
     fn render_test_details(&self, test_id: lang::ID) -> T::DrawResult {
         // just assume it exists because if someone called this, that test had to have existed
         let test = self.controller.get_test(test_id).unwrap();
 
-        let cmd_buffer1 = Rc::clone(&self.command_buffer);
-        let test1 = test.clone();
 
-        self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit.draw_text_input_with_label(
-                "Test name",
-                &test.name,
-                move |newname| {
-                    let mut test = test1.clone();
-                    test.name = newname.to_string();
-                    cmd_buffer1
-                        .borrow_mut()
-                        .add_controller_command(move |cont| cont.load_test(test))
-                },
-                || {},
-            ),
-            self.render_code(test.code_id()),
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                let test1 = test.clone();
+                self.ui_toolkit.draw_text_input_with_label(
+                    "Test name",
+                    &test.name,
+                    move |newname| {
+                        let mut test = test1.clone();
+                        test.name = newname.to_string();
+                        cmd_buffer1
+                            .borrow_mut()
+                            .add_controller_command(move |cont| cont.load_test(test))
+                    },
+                    || {},
+                )
+            },
+            &|| self.render_code(test.code_id()),
         ])
     }
 
@@ -1683,73 +1716,78 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         func: &F,
     ) -> T::DrawResult {
         let args = func.takes_args();
-
-        let mut to_draw = vec![self
-            .ui_toolkit
-            .draw_text_with_label(&format!("Takes {} argument(s)", args.len()), "Arguments")];
-
-        for (current_arg_index, arg) in args.iter().enumerate() {
-            let func1 = func.clone();
-            let args1 = args.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(self.ui_toolkit.draw_text_input_with_label(
-                "Name",
-                &arg.short_name,
-                move |newvalue| {
-                    let mut newfunc = func1.clone();
-                    let mut newargs = args1.clone();
-                    let mut newarg = &mut newargs[current_arg_index];
-                    newarg.short_name = newvalue.to_string();
-                    newfunc.set_args(newargs);
-                    cont1.borrow_mut().load_function(newfunc)
-                },
-                &|| {},
-            ));
-
-            let func1 = func.clone();
-            let args1 = args.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(
-                self.render_type_change_combo("Type", &arg.arg_type, move |newtype| {
-                    let mut newfunc = func1.clone();
-                    let mut newargs = args1.clone();
-                    let mut newarg = &mut newargs[current_arg_index];
-                    newarg.arg_type = newtype;
-                    newfunc.set_args(newargs);
-                    cont1.borrow_mut().load_function(newfunc)
-                }),
-            );
-
-            let func1 = func.clone();
-            let args1 = args.clone();
-            let cont1 = Rc::clone(&self.command_buffer);
-            to_draw.push(self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
-                let mut newfunc = func1.clone();
-                let mut newargs = args1.clone();
-                newargs.remove(current_arg_index);
-                newfunc.set_args(newargs);
-                cont1.borrow_mut().load_function(newfunc)
-            }));
-        }
-
-        let func1 = func.clone();
-        let args1 = args.clone();
-        let cont1 = Rc::clone(&self.command_buffer);
-        to_draw.push(
-            self.ui_toolkit
-                .draw_button("Add another argument", GREY_COLOR, move || {
-                    let mut args = args1.clone();
-                    let mut func = func1.clone();
-                    args.push(lang::ArgumentDefinition::new(
-                        lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                        format!("arg{}", args.len()),
-                    ));
-                    func.set_args(args);
-                    cont1.borrow_mut().load_function(func);
-                }),
-        );
-
-        self.ui_toolkit.draw_all(to_draw)
+        self.ui_toolkit.draw_all(&[
+            &|| self
+                .ui_toolkit
+                .draw_text_with_label(&format!("Takes {} argument(s)", args.len()), "Arguments"),
+            &|| {
+                draw_all_iter!(T::self.ui_toolkit,
+                   args.iter().enumerate().map(|(current_arg_index, arg)| {
+                       move || self.ui_toolkit.draw_all(&[
+                         &|| {
+                            let func1 = func.clone();
+                            let args1 = func.takes_args();
+                            let cont1 = Rc::clone(&self.command_buffer);
+                            self.ui_toolkit.draw_text_input_with_label(
+                                "Name",
+                                &arg.short_name,
+                                move |newvalue| {
+                                    let mut newfunc = func1.clone();
+                                    let mut newargs = args1.clone();
+                                    let mut newarg = &mut newargs[current_arg_index];
+                                    newarg.short_name = newvalue.to_string();
+                                    newfunc.set_args(newargs);
+                                    cont1.borrow_mut().load_function(newfunc)
+                                },
+                                &|| {},
+                            )
+                         },
+                         &|| {
+                            let func1 = func.clone();
+                            let args1 = func.takes_args();
+                            let cont1 = Rc::clone(&self.command_buffer);
+                            self.render_type_change_combo("Type", &arg.arg_type, move |newtype| {
+                                let mut newfunc = func1.clone();
+                                let mut newargs = args1.clone();
+                                let mut newarg = &mut newargs[current_arg_index];
+                                newarg.arg_type = newtype;
+                                newfunc.set_args(newargs);
+                                cont1.borrow_mut().load_function(newfunc)
+                            })
+                         },
+                         &|| {
+                            let func1 = func.clone();
+                            let args1 = func.takes_args();
+                            let cont1 = Rc::clone(&self.command_buffer);
+                            self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
+                                let mut newfunc = func1.clone();
+                                let mut newargs = args1.clone();
+                                newargs.remove(current_arg_index);
+                                newfunc.set_args(newargs);
+                                cont1.borrow_mut().load_function(newfunc)
+                            })
+                         },
+                       ])
+                   })
+                )
+            },
+            &|| {
+                let func1 = func.clone();
+                let args1 = args.clone();
+                let cont1 = Rc::clone(&self.command_buffer);
+                self.ui_toolkit
+                    .draw_button("Add another argument", GREY_COLOR, move || {
+                        let mut args = args1.clone();
+                        let mut func = func1.clone();
+                        args.push(lang::ArgumentDefinition::new(
+                            lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                            format!("arg{}", args.len()),
+                        ));
+                        func.set_args(args);
+                        cont1.borrow_mut().load_function(func);
+                    })
+            }
+        ])
     }
 
     fn render_typespec_selector_with_label<F>(
@@ -1793,16 +1831,21 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     where
         F: Fn(lang::Type) + 'static,
     {
-        let type1 = typ.clone();
         let onchange = Rc::new(onchange);
-        let onchange2 = Rc::clone(&onchange);
-        self.ui_toolkit.draw_all(vec![
-            self.render_typespec_selector_with_label(label, typ.typespec_id, None, move |new_ts| {
-                let mut newtype = type1.clone();
-                edit_types::set_typespec(&mut newtype, new_ts, &[]);
-                onchange(newtype)
-            }),
-            self.render_type_params_change_combo(typ, onchange2, &[]),
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                let onchange = Rc::clone(&onchange);
+                let type1 = typ.clone();
+                self.render_typespec_selector_with_label(label, typ.typespec_id, None, move |new_ts| {
+                    let mut newtype = type1.clone();
+                    edit_types::set_typespec(&mut newtype, new_ts, &[]);
+                    onchange(newtype)
+                })
+            },
+            &|| {
+                let onchange2 = Rc::clone(&onchange);
+                self.render_type_params_change_combo(typ, onchange2, &[])
+            },
         ])
     }
 
@@ -1821,32 +1864,38 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             type_to_change = &mut type_to_change.params[*param_index]
         }
 
-        let mut drawn = vec![];
-        for (i, param) in type_to_change.params.iter().enumerate() {
-            let mut new_nesting_level = nesting_level.to_owned();
-            new_nesting_level.push(i);
-
-            let onchange = Rc::clone(&onchange);
-            let onchange2 = Rc::clone(&onchange);
-            let nnl = new_nesting_level.clone();
-            let root_type1 = root_type.clone();
-            drawn.push(self.render_typespec_selector_with_label(
-                "",
-                param.typespec_id,
-                Some(nesting_level),
-                move |new_ts| {
-                    let mut newtype = root_type1.clone();
-                    edit_types::set_typespec(&mut newtype, new_ts, &nnl);
-                    onchange(newtype)
-                },
-            ));
-            drawn.push(self.render_type_params_change_combo(
-                root_type,
-                onchange2,
-                &new_nesting_level,
-            ));
-        }
-        self.ui_toolkit.draw_all(drawn)
+        draw_all_iter!(T::self.ui_toolkit,
+            type_to_change.params.iter().enumerate().map(|(i, param)| {
+                let onchange = Rc::clone(&onchange);
+                move || {
+                    let mut new_nesting_level = nesting_level.to_owned();
+                    new_nesting_level.push(i);
+                    self.ui_toolkit.draw_all(&[
+                        &|| {
+                            let onchange = Rc::clone(&onchange);
+                            let nnl = new_nesting_level.clone();
+                            let root_type1 = root_type.clone();
+                            self.render_typespec_selector_with_label(
+                                "",
+                                param.typespec_id,
+                                Some(nesting_level),
+                                move |new_ts| {
+                                    let mut newtype = root_type1.clone();
+                                    edit_types::set_typespec(&mut newtype, new_ts, &nnl);
+                                    onchange(newtype)
+                                })
+                        },
+                        &|| {
+                            let onchange2 = Rc::clone(&onchange);
+                            self.render_type_params_change_combo(
+                                root_type,
+                                onchange2,
+                                &new_nesting_level)
+                        },
+                    ])
+                }
+            })
+        )
     }
 
     fn render_return_type_selector<F: external_func::ModifyableFunc + std::clone::Clone>(
@@ -1859,7 +1908,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let cont = Rc::clone(&self.command_buffer);
         let pyfunc2 = func.clone();
 
-        self.ui_toolkit.draw_all(vec![self.render_type_change_combo(
+        self.render_type_change_combo(
             "Return type",
             &return_type,
             move |newtype| {
@@ -1867,18 +1916,22 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 newfunc.set_return_type(newtype);
                 cont.borrow_mut().load_function(newfunc)
             },
-        )])
+        )
     }
 
     fn render_old_test_section<F: lang::Function>(&self, func: F) -> T::DrawResult {
         let test_result = self.controller.get_test_result(&func);
-        let cont = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit
+        let func = Rc::new(func);
+        self.ui_toolkit.draw_all(&[
+            &|| self.ui_toolkit
                 .draw_text(&format!("Test result: {}", test_result)),
-            self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
-                run_test(&cont, &func);
-            }),
+            &|| {
+                let func = func.clone();
+                let cont = Rc::clone(&self.command_buffer);
+                self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
+                    run_test(&cont, func.as_ref());
+                })
+            },
         ])
     }
 

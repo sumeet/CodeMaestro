@@ -9,6 +9,7 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::UiToolkit;
+use crate::draw_all_iter;
 use crate::editor::Keypress;
 use crate::insert_code_menu::InsertCodeMenuOptionsGroup;
 use crate::ui_toolkit::ChildRegionHeight;
@@ -103,15 +104,23 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                              code_node: &CodeNode,
                                                              draw: &dyn Fn() -> T::DrawResult)
                                                              -> T::DrawResult {
-        let mut drawn: Vec<T::DrawResult> = vec![];
-        if self.is_insertion_pointer_immediately_before(code_node.id()) {
-            drawn.push(self.render_insert_code_node())
-        }
-        drawn.push(draw());
-        if self.is_insertion_pointer_immediately_after(code_node.id()) {
-            drawn.push(self.render_insert_code_node())
-        }
-        self.ui_toolkit.draw_all(drawn)
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                if self.is_insertion_pointer_immediately_before(code_node.id()) {
+                    self.render_insert_code_node()
+                } else {
+                    self.ui_toolkit.draw_all(&[])
+                }
+            },
+            draw,
+            &|| {
+                if self.is_insertion_pointer_immediately_after(code_node.id()) {
+                    self.render_insert_code_node()
+                } else {
+                    self.ui_toolkit.draw_all(&[])
+                }
+            },
+        ])
     }
 
     fn is_insertion_pointer_immediately_after(&self, id: lang::ID) -> bool {
@@ -152,15 +161,17 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         self.is_rendering_menu.replace(true);
 
-        let drawn = self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit.focused(&|| {
-                let cmdb_1 = Rc::clone(&self.command_buffer);
-                let cmdb_2 = Rc::clone(&self.command_buffer);
-                let insertion_point = menu.insertion_point.clone();
-                let new_code_node =
-                    menu.selected_option_code(&self.code_editor.code_genie, self.env_genie);
+        let drawn = self.ui_toolkit.draw_all(&[
+            &|| {
+                self.ui_toolkit.focused(&|| {
+                                   let cmdb_1 = Rc::clone(&self.command_buffer);
+                                   let cmdb_2 = Rc::clone(&self.command_buffer);
+                                   let insertion_point = menu.insertion_point.clone();
+                                   let new_code_node = menu.selected_option_code(&self.code_editor
+                                                                                      .code_genie,
+                                                                                 self.env_genie);
 
-                self.draw_text_input(
+                                   self.draw_text_input(
                                      menu.input_str(),
                                      move |input| {
                                          let input = input.to_string();
@@ -187,8 +198,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                          }
                                      },
                 )
-            }),
-            self.render_without_nesting(&|| self.render_insertion_options(&menu)),
+                               })
+            },
+            &|| self.render_without_nesting(&|| self.render_insertion_options(&menu)),
         ]);
         self.is_rendering_menu.replace(false);
         drawn
@@ -198,10 +210,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let options_groups = menu.grouped_options(&self.code_editor.code_genie, self.env_genie);
         self.ui_toolkit.draw_child_region(transparency(BLACK_COLOR, 0.5),
                                           &move || {
-                                              self.ui_toolkit.draw_all(
+                                              draw_all_iter!(T::self.ui_toolkit,
                                                   options_groups.iter().map(|group| {
-                                                      self.render_insertion_options_group(group, menu.insertion_point)
-                                                  }).collect()
+                                                      move || self.render_insertion_options_group(group, menu.insertion_point)
+                                                  })
                                               )
                                           },
                                           ChildRegionHeight::Pixels(300),
@@ -213,15 +225,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                       group: &InsertCodeMenuOptionsGroup,
                                       insertion_point: InsertionPoint)
                                       -> T::DrawResult {
-        let group_heading = self.ui_toolkit
-                                .draw_full_width_heading(BLACK_COLOR, group.group_name);
-        let options = group.options.iter().enumerate()
-            .map(|(index, option)| {
-                let scroll_hash = self.insertion_option_menu_hash(index, &group.group_name, &insertion_point);
-                self.render_insertion_option(scroll_hash, option, insertion_point)
-            });
-        self.ui_toolkit
-            .draw_all(std::iter::once(group_heading).chain(options).collect())
+        self.ui_toolkit.draw_all(&[
+            &|| self.ui_toolkit.draw_full_width_heading(BLACK_COLOR, group.group_name),
+            &|| draw_all_iter!(T::self.ui_toolkit,
+                group.options.iter().enumerate()
+                .map(|(index, option)| {
+                    move || {
+                        let scroll_hash = self.insertion_option_menu_hash(index, &group.group_name, &insertion_point);
+                        self.render_insertion_option(scroll_hash, option, insertion_point)
+                    }}))
+        ])
     }
 
     fn render_insertion_option(&'a self,
@@ -240,9 +253,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                           self.ui_toolkit.draw_taking_up_full_width(&|| {
                       match &self.help_text(&option.new_node) {
                           Some(help_text) if !help_text.is_empty() => {
-                              self.ui_toolkit.draw_all(vec![
-                                    self.render_code(&option.new_node),
-                                    self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
+                              self.ui_toolkit.draw_all(&[
+                                    &|| self.render_code(&option.new_node),
+                                    &|| self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
                               ])
                           }
                           _ => self.render_code(&option.new_node),
@@ -670,38 +683,51 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     // the is_insertion_point_before_or_after stuff
     fn render_block(&self, block: &lang::Block) -> T::DrawResult {
         // TODO: i think i could move the is_insertion_point_before_or_after crapola to here
-        let should_display_hover_insertion_points = self.insertion_point().is_none();
+        let not_inserting_code = self.insertion_point().is_none();
 
-        let mut to_draw = match self.code_editor.insertion_point() {
-            Some(InsertionPoint::BeginningOfBlock(block_id)) if block.id == block_id => {
-                vec![self.render_insert_code_node()]
-            }
-            _ => vec![],
-        };
-        if block.expressions.is_empty() {
-            return if should_display_hover_insertion_points {
-                // THE NULL STATE
-                self.render_add_code_here_button(InsertionPoint::BeginningOfBlock(block.id))
-            } else {
-                self.ui_toolkit.draw_all(to_draw)
-            };
-        }
-
-        let first_code_id = block.expressions.first().unwrap().id();
-        if should_display_hover_insertion_points {
-            to_draw.push(self.render_add_code_here_line(InsertionPoint::Before(first_code_id)));
-        }
-        to_draw.extend(block.expressions.iter().map(|code| {
-                   if should_display_hover_insertion_points {
-                       self.ui_toolkit.draw_all(vec![
-                    self.render_code(code),
-                    self.render_add_code_here_line(InsertionPoint::After(code.id())),
-                ])
-                   } else {
-                       self.render_code(code)
-                   }
-               }));
-        self.ui_toolkit.draw_all(to_draw)
+        self.ui_toolkit.draw_all(&[
+            &|| match self.code_editor.insertion_point() {
+                Some(InsertionPoint::BeginningOfBlock(block_id)) if block.id == block_id => {
+                    self.render_insert_code_node()
+                }
+                _ => self.ui_toolkit.draw_all(&[]),
+            },
+            &|| {
+                if block.expressions.is_empty() {
+                    if not_inserting_code {
+                        // THE NULL STATE
+                        self.render_add_code_here_button(InsertionPoint::BeginningOfBlock(block.id))
+                    } else {
+                        self.ui_toolkit.draw_all(&[])
+                    }
+                } else {
+                    self.ui_toolkit.draw_all(&[
+                        &|| if not_inserting_code {
+                            let first_code_id = block.expressions.first().unwrap().id();
+                            self.render_add_code_here_line(InsertionPoint::Before(first_code_id))
+                        } else {
+                            self.ui_toolkit.draw_all(&[])
+                        },
+                        &|| {
+                            draw_all_iter!(T::self.ui_toolkit,
+                               block.expressions.iter().map(|code| {
+                                   move || {
+                                       if not_inserting_code {
+                                           self.ui_toolkit.draw_all(&[
+                                                &|| self.render_code(code),
+                                                &|| self.render_add_code_here_line(InsertionPoint::After(code.id())),
+                                           ])
+                                       } else {
+                                           self.render_code(code)
+                                       }
+                                   }
+                               })
+                           )
+                        },
+                    ])
+                }
+            },
+        ])
     }
 
     fn render_add_code_here_line(&self, insertion_point: InsertionPoint) -> T::DrawResult {
@@ -836,7 +862,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         &self,
         _args: Vec<&lang::Argument>)
         -> Vec<Box<dyn Fn(&CodeEditorRenderer<T>) -> T::DrawResult>> {
-        vec![Box::new(|s: &CodeEditorRenderer<T>| s.ui_toolkit.draw_all(vec![]))]
+        vec![Box::new(|s: &CodeEditorRenderer<T>| s.ui_toolkit.draw_all(&[]))]
     }
 
     fn render_struct_literal_field(&self,
@@ -963,52 +989,73 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
-        self.ui_toolkit.draw_all(vec![
-            self.ui_toolkit
-                .draw_all_on_same_line(&[&|| self.draw_button("If", GREY_COLOR, &|| {}), &|| {
-                    self.render_code(&conditional.condition)
-                }]),
-            self.render_indented(&|| self.render_code(&conditional.true_branch)),
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                            self.draw_button("If",
+                                                                             GREY_COLOR,
+                                                                             &|| {})
+                                                        },
+                                                        &|| {
+                                                            self.render_code(&conditional.condition)
+                                                        }])
+            },
+            &|| self.render_indented(&|| self.render_code(&conditional.true_branch)),
         ])
     }
 
     fn render_match(&self, mach: &lang::Match) -> T::DrawResult {
-        let mut drawn = vec![
-            self.ui_toolkit.draw_all_on_same_line(&[
-                &|| { self.draw_button("Match", GREY_COLOR, &||{}) },
-                &|| { self.render_code(&mach.match_expression) },
-            ])];
-
-        let type_and_enum_by_variant_id = self.code_editor
-                                              .code_genie
-                                              .match_variant_by_variant_id(mach, self.env_genie);
-
-        drawn.extend(
-                     mach.branch_by_variant_id
-                         .iter()
-                         .map(|(variant_id, branch)| {
-                             let match_variant =
-                                 type_and_enum_by_variant_id.get(variant_id).unwrap();
-                             self.render_indented(&|| {
-                                     self.ui_toolkit.draw_all(vec![
-                    self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| {
-                            let type_symbol =
-                                self.env_genie.get_symbol_for_type(&match_variant.typ);
-                            self.ui_toolkit
-                                .draw_button(&type_symbol, BLACK_COLOR, &|| {})
-                        },
-                        &|| {
-                            self.ui_toolkit
-                                .draw_button(&match_variant.enum_variant.name, PURPLE_COLOR, &|| {})
-                        },
-                    ]),
-                    self.render_indented(&|| self.render_code(branch)),
-                ])
-                                 })
-                         }),
-        );
-        self.ui_toolkit.draw_all(drawn)
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                            self.draw_button("Match",
+                                                                             GREY_COLOR,
+                                                                             &|| {})
+                                                        },
+                                                        &|| {
+                                                            self.render_code(&mach.match_expression)
+                                                        }])
+            },
+            &|| {
+                let type_and_enum_by_variant_id =
+                    self.code_editor
+                        .code_genie
+                        .match_variant_by_variant_id(mach, self.env_genie);
+                draw_all_iter!(
+                               T::self.ui_toolkit,
+                               mach.branch_by_variant_id
+                                   .iter()
+                                   .map(|(variant_id, branch)| {
+                                       let match_variant =
+                                           type_and_enum_by_variant_id.get(variant_id).unwrap();
+                                       move || {
+                                           self.render_indented(&|| {
+                                                   self.ui_toolkit.draw_all(&[
+                                &|| {
+                                    self.ui_toolkit.draw_all_on_same_line(&[
+                                        &|| {
+                                            let type_symbol =
+                                                self.env_genie
+                                                    .get_symbol_for_type(&match_variant.typ);
+                                            self.ui_toolkit
+                                                .draw_button(&type_symbol, BLACK_COLOR, &|| {})
+                                        },
+                                        &|| {
+                                            self.ui_toolkit
+                                                .draw_button(&match_variant.enum_variant.name,
+                                                             PURPLE_COLOR,
+                                                             &|| {})
+                                        },
+                                    ])
+                                },
+                                &|| self.render_indented(&|| self.render_code(branch)),
+                            ])
+                                               })
+                                       }
+                                   })
+                )
+            },
+        ])
     }
 
     fn render_indented(&self, draw_fn: &dyn Fn() -> T::DrawResult) -> T::DrawResult {
