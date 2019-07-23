@@ -9,7 +9,12 @@ pub trait UiToolkit {
     type DrawResult;
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static);
-    fn draw_code_line_separator(&self, width: f32, height: f32, color: Color) -> Self::DrawResult;
+    fn draw_code_line_separator(&self,
+                                plus_char: char,
+                                width: f32,
+                                height: f32,
+                                color: Color)
+                                -> Self::DrawResult;
     fn replace_on_hover(&self,
                         draw_when_not_hovered: &dyn Fn() -> Self::DrawResult,
                         draw_when_hovered: &dyn Fn() -> Self::DrawResult)

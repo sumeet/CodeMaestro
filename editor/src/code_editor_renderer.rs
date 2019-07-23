@@ -734,7 +734,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.replace_on_hover(&|| {
                                              self.ui_toolkit
                                                  // HAX: 70 is the size of the Insert Code button lol
-                                                 .draw_code_line_separator(70., 2., SEPARATOR_COLOR)
+                                                 .draw_code_line_separator('\u{f0fe}',
+                                                                           70.,
+                                                                           2.,
+                                                                           SEPARATOR_COLOR)
                                          },
                                          &|| self.render_add_code_here_button(insertion_point))
     }

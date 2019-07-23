@@ -761,25 +761,30 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     // HAX: this is awfully specific to have in a UI toolkit library... whatever
-    fn draw_code_line_separator(&self, width: f32, height: f32, color: [f32; 4]) {
+    fn draw_code_line_separator(&self, plus_char: char, width: f32, height: f32, color: [f32; 4]) {
         self.ui
             .invisible_button(&self.imlabel("code_line_separator"), (width, height));
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
 
-        let center_of_circle = (min.x, (min.y + max.y) / 2.);
-        let radius = (max.y - min.y) / 2.;
+        let draw_list = self.ui.get_window_draw_list();
 
-        let mut line = (center_of_circle, (max.x, center_of_circle.1));
+        let center_of_line = (min.x, (min.y + max.y) / 2.);
+        let mut line = (center_of_line, (max.x, center_of_line.1));
         // idk why exactly, but these -0.5s get the line to match up nicely with the circle
         (line.0).1 -= 0.5;
         (line.1).1 -= 0.5;
-
-        let draw_list = self.ui.get_window_draw_list();
-        draw_list.add_circle(center_of_circle, radius, color)
-                 .filled(true)
-                 .build();
         draw_list.add_line(line.0, line.1, color).build();
+
+        let mut buf = [0; 4];
+        let plus_char = plus_char.encode_utf8(&mut buf);
+
+        // draw the text second so it draws over the line
+        let text_size = self.ui.calc_text_size(im_str!("{}", plus_char), false, 0.);
+        let where_to_put_symbol_y = center_of_line.1 - ((text_size.y / 2.) - 1.5);
+        let textpos = (center_of_line.0, where_to_put_symbol_y);
+
+        draw_list.add_text(textpos, color, plus_char);
     }
 
     fn replace_on_hover(&self, draw_when_not_hovered: &dyn Fn(), draw_when_hovered: &dyn Fn()) {

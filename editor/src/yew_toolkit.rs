@@ -328,13 +328,17 @@ impl UiToolkit for YewToolkit {
     }
 
     // TODO: implement these
-    fn draw_code_line_separator(&self, width: f32, height: f32, color: Color) -> Self::DrawResult {
+    fn draw_code_line_separator(&self,
+                                plus_char: char,
+                                width: f32,
+                                height: f32,
+                                color: Color)
+                                -> Self::DrawResult {
         let line_offset = height / 2.;
-        let circle_diameter = height * 2.;
         html! {
-            <div style={ format!("margin-top: 3px; margin-bottom: 3px; display: flex; width: {}px; height: {}px;", width, height)}, >
-                <div style={ format!("background-color: {}; height: {}px; width: {}px; clip-path: circle();", rgba(color), circle_diameter, circle_diameter) },>
-                    {" "}
+            <div style={ format!("position: relative; margin-top: 3px; margin-bottom: 4px; display: flex; width: {}px; height: {}px;", width, height)}, >
+                <div style={ format!("color: {}; margin-top: -8px; z-index: 1;", rgba(color)) },>
+                    { symbolize_text(&format!("{}", plus_char)) }
                 </div>
 
                 <div style={ format!("margin-top: {}px; background-color: {}; height: 1px; width: {}px;", line_offset, rgba(color), width) }, >
