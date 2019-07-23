@@ -5,8 +5,6 @@ use glium::glutin::WindowEvent::*;
 use imgui::{FontGlyphRange, ImFontConfig, ImGui, ImGuiCol, Ui};
 use std::time::Instant;
 
-// pulled out from imgui classic theme, style.colors[ImGuiCol::ButtonHovered]
-pub static BUTTON_HOVERED_COLOR: (f32, f32, f32, f32) = (0.4, 0.48, 0.71, 0.6);
 // pulled out from imgui classic theme, style.colors[ImGuiCol::ButtonActive]
 // and modified a little bit, sorry for the mess
 pub static BUTTON_ACTIVE_COLOR: (f32, f32, f32, f32) = (0.46, 0.54, 0.8, 0.6);

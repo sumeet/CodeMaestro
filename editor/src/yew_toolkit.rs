@@ -3,7 +3,9 @@ use super::async_executor::AsyncExecutor;
 use super::editor::{Key as AppKey, Keypress};
 use super::ui_toolkit::UiToolkit;
 use crate::code_editor_renderer::BLACK_COLOR;
-use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
+use crate::ui_toolkit::{
+    ChildRegionHeight, Color, DrawFnRef, SelectableItem, BUTTON_HOVERED_COLOR,
+};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -93,7 +95,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         html! {
-            <div style={ format!("position: absolute; top: 10px; right: 10px; color: white; background-color: {}",self.rgba(WINDOW_BG_COLOR)) }, >
+            <div style={ format!("position: absolute; top: 10px; right: 10px; color: white; background-color: {}",rgba(WINDOW_BG_COLOR)) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -153,7 +155,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", self.rgba(WINDOW_BG_COLOR)) },
+            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(WINDOW_BG_COLOR)) },
                  id={ self.incr_last_drawn_element_id().to_string() },
                  tabindex=0,
                  onkeypress=|e| {
@@ -277,7 +279,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, self.rgba(WINDOW_BG_COLOR), size.0, size.1) },
+           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(WINDOW_BG_COLOR), size.0, size.1) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {
@@ -306,7 +308,7 @@ impl UiToolkit for YewToolkit {
                     }
                 }, >
 
-                <h4 class="window-title", style={ format!("background-color: {}; color: white", self.rgba(WINDOW_TITLE_BG_COLOR)) },>
+                <h4 class="window-title", style={ format!("background-color: {}; color: white", rgba(WINDOW_TITLE_BG_COLOR)) },>
                     { if let Some(onclose) = onclose {
                         html! {
                             <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
@@ -331,11 +333,11 @@ impl UiToolkit for YewToolkit {
         let circle_diameter = height * 2.;
         html! {
             <div style={ format!("margin-top: 3px; margin-bottom: 3px; display: flex; width: {}px; height: {}px;", width, height)}, >
-                <div style={ format!("background-color: {}; height: {}px; width: {}px; clip-path: circle();", self.rgba(color), circle_diameter, circle_diameter) },>
+                <div style={ format!("background-color: {}; height: {}px; width: {}px; clip-path: circle();", rgba(color), circle_diameter, circle_diameter) },>
                     {" "}
                 </div>
 
-                <div style={ format!("margin-top: {}px; background-color: {}; height: 1px; width: {}px;", line_offset, self.rgba(color), width) }, >
+                <div style={ format!("margin-top: {}px; background-color: {}; height: 1px; width: {}px;", line_offset, rgba(color), width) }, >
                     {" "}
                 </div>
             </div>
@@ -401,7 +403,7 @@ impl UiToolkit for YewToolkit {
                     { context_menu.unwrap_or_else(|| VNode::from(VList::new())) }
                 </div>
 
-                <div style={ format!("border: 1px solid #6a6a6a; white-space: nowrap; background-color: {}; overflow: auto; {}", self.rgba(bg), height_css) },
+                <div style={ format!("border: 1px solid #6a6a6a; white-space: nowrap; background-color: {}; overflow: auto; {}", rgba(bg), height_css) },
                     id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     oncontextmenu=|e| {
@@ -472,7 +474,12 @@ impl UiToolkit for YewToolkit {
                                     onclick: F)
                                     -> Self::DrawResult {
         html! {
-            <div onclick=|_| { onclick(); Msg::Redraw }, >
+            <div style="position: relative;", onclick=|_| { onclick(); Msg::Redraw }, >
+                <div class="buttonized-hover-overlay",
+                    // buttonized-hover-overlay:hover is opacity: 100%; in main.css
+                     style=format!("opacity: 0; top: 0; bottom: 0; right: 0; left: 0; position: absolute; background-color: {}", rgba(BUTTON_HOVERED_COLOR)),>
+                    {" "}
+                </div>
                 { draw_fn() }
             </div>
         }
@@ -481,7 +488,7 @@ impl UiToolkit for YewToolkit {
     fn draw_buttony_text(&self, label: &str, color: [f32; 4]) -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
-                style=format!("color: white; background-color: {}; display: block; border: none; outline: none; max-width: fit-content;", self.rgba(color)), >
+                style=format!("color: white; background-color: {}; display: block; border: none; outline: none; max-width: fit-content;", rgba(color)), >
                 { symbolize_text(label) }
             </button>
         }
@@ -503,7 +510,7 @@ impl UiToolkit for YewToolkit {
                                             -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
-                 style=format!("display: block; font-size: 75%; color: white; background-color: {}; border: none; outline: none;", self.rgba(color)),
+                 style=format!("display: block; font-size: 75%; color: white; background-color: {}; border: none; outline: none;", rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { label }
             </button>
@@ -559,7 +566,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult {
         html! {
-            <div style=format!("white-space: pre-wrap; word-wrap: break-word; color: {};", self.rgba(color)),>
+            <div style=format!("white-space: pre-wrap; word-wrap: break-word; color: {};", rgba(color)),>
                 { symbolize_text(&text) }
             </div>
         }
@@ -573,7 +580,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult {
         html! {
-            <div style=format!("width: 100%; box-sizing: border-box; padding: 0.1em 0.35em; background-color: {}", self.rgba(bgcolor)),>
+            <div style=format!("width: 100%; box-sizing: border-box; padding: 0.1em 0.35em; background-color: {}", rgba(bgcolor)),>
                 { text }
             </div>
         }
@@ -820,7 +827,7 @@ impl UiToolkit for YewToolkit {
                      { draw_fn() }
                  </div>
                  <div class={"overlay"},
-                      style={ format!("pointer-events: none; top: 0px; left: 0px; height: 100%; background-color: {}", self.rgba(color)) }, >
+                      style={ format!("pointer-events: none; top: 0px; left: 0px; height: 100%; background-color: {};", rgba(color)) }, >
                       {" "}
                  </div>
              </div>
@@ -838,7 +845,7 @@ impl UiToolkit for YewToolkit {
                      { draw_fn() }
                  </div>
                  <div class={"overlay"},
-                      style={ format!("height: {}px; background-color: {}", thickness, self.rgba(color)) }, >
+                      style={ format!("height: {}px; background-color: {}", thickness, rgba(color)) }, >
                       {" "}
                  </div>
              </div>
@@ -856,7 +863,7 @@ impl UiToolkit for YewToolkit {
                      { draw_fn() }
                  </div>
                  <div class={"overlay-bottom-right"},
-                      style={ format!("height: 100%; width: {}px; background-color: {}", thickness, self.rgba(color)) }, >
+                      style={ format!("height: 100%; width: {}px; background-color: {}", thickness, rgba(color)) }, >
                       {" "}
                  </div>
              </div>
@@ -874,7 +881,7 @@ impl UiToolkit for YewToolkit {
                      { draw_fn() }
                  </div>
                  <div class={"overlay"},
-                      style={ format!("height: 100%; width: {}px; background-color: {}", thickness, self.rgba(color)) }, >
+                      style={ format!("height: 100%; width: {}px; background-color: {}", thickness, rgba(color)) }, >
                       {" "}
                  </div>
              </div>
@@ -892,7 +899,7 @@ impl UiToolkit for YewToolkit {
                      { draw_fn() }
                  </div>
                  <div class={"overlay-bottom-right"},
-                      style={ format!("width: 100%; height: {}px; background-color: {}", thickness, self.rgba(color)) }, >
+                      style={ format!("width: 100%; height: {}px; background-color: {}", thickness, rgba(color)) }, >
                       {" "}
                  </div>
              </div>
@@ -942,14 +949,6 @@ impl YewToolkit {
     fn focus_last_drawn_element(&self) {
         self.focused_element_id
             .replace(self.get_last_drawn_element_id());
-    }
-
-    fn rgba(&self, color: [f32; 4]) -> String {
-        format!("rgba({}, {}, {}, {})",
-                color[0] * 255.0,
-                color[1] * 255.0,
-                color[2] * 255.0,
-                color[3])
     }
 
     fn incr_last_drawn_element_id(&self) -> u32 {
@@ -1118,6 +1117,10 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
         });
     }
 
+    // add css styles referencing code that we wouldn't be able to access from .css files
+    //    add_style_string(&format!(".buttonized {{ background-color: {}; }}",
+    //                              rgba(BUTTON_HOVERED_COLOR)));
+
     let yew_app = App::<Model>::new().mount_to_body();
     let renderer_state =
         Rc::new(RefCell::new(RendererState::new(yew_app, funcs_to_run_after_render)));
@@ -1201,4 +1204,20 @@ fn hide(id: u32) {
             el.style.display = "none";
         }
     }
+}
+
+// from https://stackoverflow.com/a/15506705/149987, adapted to stdweb
+// don't need it right now but might need it later
+//fn add_style_string(css_str: &str) {
+//    let node = document().create_element("style").unwrap();
+//    node.set_attribute("innerHTML", css_str).unwrap();
+//    document().body().unwrap().append_child(&node);
+//}
+
+fn rgba(color: [f32; 4]) -> String {
+    format!("rgba({}, {}, {}, {})",
+            color[0] * 255.0,
+            color[1] * 255.0,
+            color[2] * 255.0,
+            color[3])
 }

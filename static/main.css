@@ -133,3 +133,8 @@ replaceonhoverhack {
 .context_menu {
     position: fixed;
 }
+
+/* see YewToolkit.buttonized() */
+.buttonized-hover-overlay:hover {
+    opacity: 100 !important;
+}

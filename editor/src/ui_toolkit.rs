@@ -2,6 +2,9 @@
 pub use super::editor::Color;
 use super::editor::Keypress;
 
+// pulled out from imgui classic theme, style.colors[ImGuiCol::ButtonHovered]
+pub static BUTTON_HOVERED_COLOR: Color = [0.4, 0.48, 0.71, 0.6];
+
 pub trait UiToolkit {
     type DrawResult;
 
