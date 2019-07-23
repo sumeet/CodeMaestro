@@ -58,6 +58,12 @@
     width: 50%;
     display: flex;
     flex-direction: column;
+    z-index: -2;
+}
+
+.window:focus {
+    /* it's -2 when there's no focus */
+    z-index: -1;
 }
 
 .window-title {

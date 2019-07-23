@@ -481,7 +481,7 @@ impl UiToolkit for YewToolkit {
     fn draw_buttony_text(&self, label: &str, color: [f32; 4]) -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
-                style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", self.rgba(color)), >
+                style=format!("color: white; background-color: {}; display: block; border: none; outline: none; max-width: fit-content;", self.rgba(color)), >
                 { symbolize_text(label) }
             </button>
         }
@@ -625,7 +625,7 @@ impl UiToolkit for YewToolkit {
                 </div>
 
                 <ul class="main-menu-dropdown",
-                    style="padding: 0.25em 1em; z-index: 99; margin: 0; margin-top: 0.25em; background: black; width: fit-content; opacity: 0.85;", >
+                    style="padding: 0.25em 1em; position: absolute; z-index: 99 !important; margin: 0; margin-top: 0.25em; background: black; width: fit-content; opacity: 0.85;", >
                     {{ draw_menu_items() }}
                 </ul>
             </div>
