@@ -24,9 +24,9 @@ matches = "0.1.8"
 glium = { version = "0.23", default-features = true }
 glutin = { version = "0.19" }
 imgui = "0.0.23"
-imgui-sys = "*"
-imgui-glium-renderer = "*"
-imgui-winit-support = "*"
+imgui-sys = "0.0.23"
+imgui-glium-renderer = "0.0.23"
+imgui-winit-support = "0.0.23"
 tokio-current-thread = {version = "0.1.4" }
 tokio-reactor = {version = "0.1.7" }
 tokio-timer = {version = "0.2.10" }
