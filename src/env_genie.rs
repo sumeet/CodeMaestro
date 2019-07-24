@@ -67,6 +67,14 @@ impl<'a> EnvGenie<'a> {
             .find(|field| field.id == struct_field_id)
     }
 
+    pub fn find_struct_and_field(&self,
+                                 struct_field_id: lang::ID)
+                                 -> Option<(&structs::Struct, &structs::StructField)> {
+        self.list_structs()
+            .flat_map(|strukt| strukt.fields.iter().map(move |field| (strukt, field)))
+            .find(|(_strukt, field)| field.id == struct_field_id)
+    }
+
     pub fn find_typespec(&self, id: lang::ID) -> Option<&Box<dyn lang::TypeSpec>> {
         self.env.find_typespec(id)
     }

@@ -394,7 +394,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.dummy((width, max.y - min.y))
     }
 
-    fn draw_full_width_heading(&self, bgcolor: Color, text: &str) {
+    fn draw_full_width_heading(&self, bgcolor: Color, inner_padding: (f32, f32), text: &str) {
         // copy and paste of draw_buttony_text lol
         let style = self.ui.imgui().style();
         let padding = style.frame_padding;
@@ -404,7 +404,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let original_cursor_pos = self.ui.get_cursor_pos();
         let label = im_str!("{}", text);
         let text_size = self.ui.calc_text_size(&label, false, 0.);
-        let total_size = (full_width, text_size.y + (padding.y * 2.));
+        let total_size = (full_width, text_size.y + (padding.y * 2.) + (inner_padding.1 * 2.));
 
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
         let end_of_button_bg_rect =
@@ -416,14 +416,31 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build();
 
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
-        let buttony_text_start_cursor_pos =
-            (draw_cursor_pos.0 + padding.x, draw_cursor_pos.1 + padding.y);
+
+        let buttony_text_start_cursor_pos = (draw_cursor_pos.0 + padding.x + inner_padding.0,
+                                             draw_cursor_pos.1 + padding.y + inner_padding.1);
+
         let draw_list = self.ui.get_window_draw_list();
         let text_color = style.colors[ImGuiCol::Text as usize];
         draw_list.add_text(buttony_text_start_cursor_pos, text_color, label);
         self.ui.set_cursor_pos(original_cursor_pos);
 
         self.ui.invisible_button(&self.imlabel(""), total_size);
+    }
+
+    fn draw_with_margin(&self, margin: (f32, f32), draw_fn: DrawFnRef<Self>) {
+        let orig_cursor_pos = self.ui.get_cursor_pos();
+
+        let mut starting_point_for_cursor = orig_cursor_pos;
+        starting_point_for_cursor.0 += margin.0 / 2.;
+        starting_point_for_cursor.1 += margin.1 / 2.;
+        self.ui.set_cursor_pos(starting_point_for_cursor);
+        self.ui.group(draw_fn);
+        let drawn_rect_size = self.ui.get_item_rect_size();
+
+        self.ui.set_cursor_pos(orig_cursor_pos);
+        self.ui
+            .dummy((drawn_rect_size.0 + margin.0, drawn_rect_size.1 + margin.1))
     }
 
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {

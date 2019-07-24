@@ -156,8 +156,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_insert_code_node(&self) -> T::DrawResult {
-        // TODO: do we really need this clone?
-        let menu = self.code_editor.insert_code_menu.as_ref().unwrap().clone();
+        let menu = self.code_editor.insert_code_menu.as_ref().unwrap();
 
         self.is_rendering_menu.replace(true);
 
@@ -210,15 +209,85 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let options_groups = menu.grouped_options(&self.code_editor.code_genie, self.env_genie);
         self.ui_toolkit.draw_child_region(transparency(BLACK_COLOR, 0.5),
                                           &move || {
-                                              draw_all_iter!(T::self.ui_toolkit,
-                                                  options_groups.iter().map(|group| {
-                                                      move || self.render_insertion_options_group(group, menu.insertion_point)
-                                                  })
-                                              )
+                                              self.ui_toolkit.draw_all(&[
+                                                  &|| self.render_insertion_header(menu),
+                                                  &|| draw_all_iter!(T::self.ui_toolkit,
+                                                      options_groups.iter().map(|group| {
+                                                          move || self.render_insertion_options_group(group, menu.insertion_point)
+                                                      })
+                                                  )
+                                              ])
                                           },
                                           ChildRegionHeight::Pixels(300),
                                           None::<&dyn Fn() -> T::DrawResult>,
                                           None::<fn(Keypress)>)
+    }
+
+    fn render_insertion_header(&self, menu: &InsertCodeMenu) -> T::DrawResult {
+        // TODO: show the type of the thing being inserted
+        // show hints: like if you want a list of something, type list
+        // or if the type is number, then tell the user they can start typing numbers
+        // or even better, maybe have clickable numbers? idk how that would work tho
+        self.ui_toolkit.draw_with_margin((5., 10.), &|| {
+                           match menu.insertion_point {
+                               InsertionPoint::BeginningOfBlock(_)
+                               | InsertionPoint::Before(_)
+                               | InsertionPoint::After(_) => {
+                                   self.ui_toolkit.draw_text("Inserting new code")
+                               }
+                               InsertionPoint::StructLiteralField(struct_literal_field_id) => {
+                                   let struct_literal_field =
+                                       self.code_editor
+                                           .code_genie
+                                           .find_node(struct_literal_field_id)
+                                           .unwrap();
+                                   let struct_literal_field =
+                                       struct_literal_field.into_struct_literal_field().unwrap();
+                                   let (strukt, struct_field) =
+                                       self.env_genie
+                                           .find_struct_and_field(struct_literal_field.struct_field_id)
+                                           .unwrap();
+                                   self.ui_toolkit.draw_all_on_same_line(&[
+                                       &|| self.ui_toolkit.draw_text("Inserting value in struct"),
+                                       &|| self.render_struct_identifier(strukt),
+                                       &|| self.ui_toolkit.draw_text("for"),
+                                       &|| self.render_struct_literal_field_label(struct_field),
+                                   ])
+                               }
+                               InsertionPoint::Editing(edited_code_node_id) => {
+                                   // TODO: we should probably show the old value in here, lul
+                                   // TODO: ok, maybe later, because right now we don't even show the menu here
+                                   let code_node = self.code_editor.code_genie.find_node(edited_code_node_id).unwrap();
+                                   self.ui_toolkit.draw_all_on_same_line(&[
+                                       &|| self.ui_toolkit.draw_text("Editing value for"),
+                                       &|| self.render_code(code_node)
+                                   ])
+                               },
+                               InsertionPoint::ListLiteralElement { list_literal_id, pos } => {
+                                   let code_node = self.code_editor.code_genie.find_node(list_literal_id).unwrap();
+                                   self.ui_toolkit.draw_all_on_same_line(&[
+                                       &|| self.ui_toolkit.draw_text("Inserting into list"),
+                                       &|| self.render_list_literal_label(code_node),
+                                       &|| self.ui_toolkit.draw_text("at position"),
+                                       &|| self.render_list_literal_position(pos),
+                                   ])
+                               },
+                               InsertionPoint::Replace(code_node_being_replaced_id) => {
+                                   let code_node_being_replaced = self.code_editor.code_genie.find_node(code_node_being_replaced_id).unwrap();
+                                   self.ui_toolkit.draw_all_on_same_line(&[
+                                       &|| self.ui_toolkit.draw_text("Replacing"),
+                                       &|| self.render_code(code_node_being_replaced),
+                                   ])
+                               },
+                               InsertionPoint::Wrap(code_node_being_wrapped_id) => {
+                                   let code_node_being_wrapped = self.code_editor.code_genie.find_node(code_node_being_wrapped_id).unwrap();
+                                   self.ui_toolkit.draw_all_on_same_line(&[
+                                       &|| self.ui_toolkit.draw_text("Wrapping"),
+                                       &|| self.render_code(code_node_being_wrapped),
+                                   ])
+                               },
+                           }
+                       })
     }
 
     fn render_insertion_options_group(&self,
@@ -226,7 +295,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                       insertion_point: InsertionPoint)
                                       -> T::DrawResult {
         self.ui_toolkit.draw_all(&[
-            &|| self.ui_toolkit.draw_full_width_heading(BLACK_COLOR, group.group_name),
+            &|| self.ui_toolkit.draw_full_width_heading(BLACK_COLOR, (5., 5.), group.group_name),
             &|| draw_all_iter!(T::self.ui_toolkit,
                 group.options.iter().enumerate()
                 .map(|(index, option)| {
@@ -287,23 +356,28 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         format!("{}:{}:{:?}", index, group_name, insertion_point)
     }
 
-    fn render_list_literal(&self,
-                           list_literal: &lang::ListLiteral,
-                           code_node: &lang::CodeNode)
-                           -> T::DrawResult {
+    fn render_list_literal_label(&self, code_node: &CodeNode) -> T::DrawResult {
         let t = self.code_editor
                     .code_genie
                     .guess_type(code_node, self.env_genie);
-
         // TODO: we can use smth better to express the nesting than ascii art, like our nesting scheme
         //       with the black lines (can actually make that generic so we can swap it with something
         //       else
         let type_symbol = self.env_genie.get_symbol_for_type(&t);
+        self.ui_toolkit.draw_buttony_text(&type_symbol, BLUE_COLOR)
+    }
+
+    fn render_list_literal_position(&self, pos: usize) -> T::DrawResult {
+        self.ui_toolkit
+            .draw_buttony_text(&pos.to_string(), BLACK_COLOR)
+    }
+
+    fn render_list_literal(&self,
+                           list_literal: &lang::ListLiteral,
+                           code_node: &lang::CodeNode)
+                           -> T::DrawResult {
         let lhs = &|| {
-            self.set_selected_on_click(&|| {
-                                           self.ui_toolkit
-                                               .draw_buttony_text(&type_symbol, BLUE_COLOR)
-                                       },
+            self.set_selected_on_click(&|| self.render_list_literal_label(code_node),
                                        list_literal.id)
         };
 
@@ -324,10 +398,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let mut i = 0;
         while i <= list_literal.elements.len() {
             if insert_pos.map_or(false, |insert_pos| insert_pos == i) {
-                let position_string = position_label.to_string();
                 rhs.push(Box::new(move || {
                        self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| self.ui_toolkit.draw_buttony_text(&position_string, BLACK_COLOR),
+                        &|| self.render_list_literal_position(position_label),
                         &|| self.render_nested(&|| self.render_insert_code_node()),
                     ])
                    }));
@@ -337,9 +410,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             list_literal.elements.get(i).map(|el| {
                                             rhs.push(Box::new(move || {
                                                    self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| {
-                            self.ui_toolkit.draw_buttony_text(&position_label.to_string(), BLACK_COLOR)
-                        },
+                        &|| self.render_list_literal_position(position_label),
                         &|| self.render_nested(&|| self.render_code(el)),
                     ])
                                                }));
@@ -434,7 +505,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
-        if self.is_editing(code_node.id()) {
+        // TODO: lots of is_rendering_menu_atm() checks... how can we clean it up?
+        if self.is_editing(code_node.id()) && !self.is_rendering_menu_atm() {
             return self.draw_inline_editor(code_node);
         }
         let draw = || {
@@ -478,7 +550,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         match self.insertion_point() {
             Some(InsertionPoint::Replace(id)) | Some(InsertionPoint::Wrap(id))
-                if { id == code_node.id() } =>
+                if { id == code_node.id() && !self.is_rendering_menu_atm() } =>
             {
                 return self.render_insert_code_node()
             }
@@ -868,19 +940,20 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         vec![Box::new(|s: &CodeEditorRenderer<T>| s.ui_toolkit.draw_all(&[]))]
     }
 
+    fn render_struct_literal_field_label(&self, field: &structs::StructField) -> T::DrawResult {
+        let field_text = format!("{} {}",
+                                 self.env_genie.get_symbol_for_type(&field.field_type),
+                                 field.name);
+        self.ui_toolkit.draw_buttony_text(&field_text, BLACK_COLOR)
+    }
+
     fn render_struct_literal_field(&self,
                                    field: &structs::StructField,
                                    literal_field: &lang::StructLiteralField)
                                    -> T::DrawResult {
-        let field_text = format!("{} {}",
-                                 self.env_genie.get_symbol_for_type(&field.field_type),
-                                 field.name);
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
-                self.set_selected_on_click(&|| {
-                                               self.ui_toolkit
-                                                   .draw_buttony_text(&field_text, BLACK_COLOR)
-                                           },
+                self.set_selected_on_click(&|| self.render_struct_literal_field_label(field),
                                            literal_field.id)
             },
             &|| {
@@ -1216,11 +1289,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         Some(self.code_editor.insert_code_menu.as_ref()?.insertion_point)
     }
 
+    fn is_rendering_menu_atm(&self) -> bool {
+        *self.is_rendering_menu.borrow()
+    }
+
     fn set_selected_on_click(&self,
                              draw_fn: &dyn Fn() -> T::DrawResult,
                              code_node_id: lang::ID)
                              -> T::DrawResult {
-        if *self.is_rendering_menu.borrow() {
+        if self.is_rendering_menu_atm() {
             return draw_fn();
         }
         let cmd_buffer = Rc::clone(&self.command_buffer);

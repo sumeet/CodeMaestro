@@ -62,8 +62,13 @@ pub trait UiToolkit {
     //fn draw_in_columns<'a>(&self, draw_fns: &[Column<'a, Self>]) -> Self::DrawResult;
     fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult;
     fn draw_taking_up_full_width(&self, draw_fn: DrawFnRef<Self>) -> Self::DrawResult;
-    fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult;
+    fn draw_full_width_heading(&self,
+                               bgcolor: Color,
+                               inner_padding: (f32, f32),
+                               text: &str)
+                               -> Self::DrawResult;
     fn draw_text(&self, text: &str) -> Self::DrawResult;
+    fn draw_with_margin(&self, padding: (f32, f32), draw_fn: DrawFnRef<Self>) -> Self::DrawResult;
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult;
     fn buttonize<F: Fn() + 'static>(&self,
                                     draw_fn: &dyn Fn() -> Self::DrawResult,

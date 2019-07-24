@@ -582,10 +582,24 @@ impl UiToolkit for YewToolkit {
         draw_fn()
     }
 
-    fn draw_full_width_heading(&self, bgcolor: Color, text: &str) -> Self::DrawResult {
+    fn draw_full_width_heading(&self,
+                               bgcolor: Color,
+                               inner_padding: (f32, f32),
+                               text: &str)
+                               -> Self::DrawResult {
         html! {
             <div style=format!("width: 100%; box-sizing: border-box; padding: 0.1em 0.35em; background-color: {}", rgba(bgcolor)),>
-                { text }
+                <div style=format!("padding: {}px {}px", inner_padding.1 / 2., inner_padding.0 / 2.),>
+                    { text }
+                </div>
+            </div>
+        }
+    }
+
+    fn draw_with_margin(&self, margin: (f32, f32), draw_fn: DrawFnRef<Self>) -> Self::DrawResult {
+        html! {
+            <div style=format!("margin: {}px {}px", margin.1 / 2., margin.0 / 2.),>
+                { draw_fn() }
             </div>
         }
     }

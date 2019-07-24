@@ -884,9 +884,7 @@ impl MutationMaster {
             }
             InsertionPoint::Replace(node_id_to_replace)
             | InsertionPoint::Wrap(node_id_to_replace) => {
-                let node_to_replace = genie.find_node(node_id_to_replace).unwrap();
-                dbg!(node_to_replace);
-                self.replace_node(dbg!(node_to_insert), node_id_to_replace, genie)
+                self.replace_node(node_to_insert, node_id_to_replace, genie)
             }
             // TODO: perhaps we should have edits go through this codepath as well!
             InsertionPoint::Editing(_) => panic!("this is currently unused"),
