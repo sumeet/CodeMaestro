@@ -64,9 +64,7 @@ cfg_if! {
             }));
         }
     } else {
-        fn init_debug() {
-            color_backtrace::install();
-        }
+        fn init_debug() {}
     }
 }
 

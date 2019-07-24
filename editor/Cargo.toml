@@ -32,7 +32,6 @@ tokio-reactor = {version = "0.1.7" }
 tokio-timer = {version = "0.2.10" }
 directories = {version = "1.0.2" }
 tokio-executor = {version = "*" }
-color-backtrace = { version = "0.2" }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 stdweb = { git = "https://github.com/koute/stdweb", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"] }
