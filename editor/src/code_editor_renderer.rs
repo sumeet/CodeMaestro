@@ -199,6 +199,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 )
                                })
             },
+            // TODO: actually put this on the next line... would have to do this at the root block,
+            // hmmm..
             &|| self.render_without_nesting(&|| self.render_insertion_options(&menu)),
         ]);
         self.is_rendering_menu.replace(false);
@@ -206,16 +208,23 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
+        let transparent_black = transparency(BLACK_COLOR, 0.5);
         let options_groups = menu.grouped_options(&self.code_editor.code_genie, self.env_genie);
-        self.ui_toolkit.draw_child_region(transparency(BLACK_COLOR, 0.5),
+        self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
+                           self.ui_toolkit.draw_with_bgcolor(transparent_black, &|| {
+                                              self.ui_toolkit.draw_taking_up_full_width(&|| {
+                                                                 self.render_insertion_header(menu)
+                                                             })
+                                          })
+                       });
+        self.ui_toolkit.draw_child_region(transparent_black,
                                           &move || {
                                               self.ui_toolkit.draw_all(&[
-                                                  &|| self.render_insertion_header(menu),
                                                   &|| draw_all_iter!(T::self.ui_toolkit,
                                                       options_groups.iter().map(|group| {
                                                           move || self.render_insertion_options_group(group, menu.insertion_point)
                                                       })
-                                                  )
+                                                  ),
                                               ])
                                           },
                                           ChildRegionHeight::Pixels(300),

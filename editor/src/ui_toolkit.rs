@@ -62,6 +62,8 @@ pub trait UiToolkit {
     //fn draw_in_columns<'a>(&self, draw_fns: &[Column<'a, Self>]) -> Self::DrawResult;
     fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult;
     fn draw_taking_up_full_width(&self, draw_fn: DrawFnRef<Self>) -> Self::DrawResult;
+    fn draw_with_bgcolor(&self, bgcolor: Color, draw_fn: DrawFnRef<Self>) -> Self::DrawResult;
+    fn draw_with_no_spacing_afterwards(&self, draw_fn: DrawFnRef<Self>) -> Self::DrawResult;
     fn draw_full_width_heading(&self,
                                bgcolor: Color,
                                inner_padding: (f32, f32),

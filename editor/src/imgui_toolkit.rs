@@ -394,6 +394,42 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.dummy((width, max.y - min.y))
     }
 
+    fn draw_with_bgcolor(&self, bgcolor: Color, draw_fn: DrawFnRef<Self>) {
+        // haxxx: draw twice:
+        // first to get the bounding box, then draw over it with the bgcolor, and then
+        // draw over it again
+        let orig_cursor_pos = self.ui.get_cursor_pos();
+
+        self.ui.group(draw_fn);
+
+        let style = self.ui.imgui().style();
+        let mut blankoutbgcolor = style.colors[ImGuiCol::FrameBg as usize];
+        // if framebg color is transparent, then make it opaque
+        blankoutbgcolor.w = 1.;
+
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        // without the scope here we get a crash for loading drawlist twice, idk what the deal is
+        // tbh
+        {
+            let drawlist = self.ui.get_window_draw_list();
+            drawlist.add_rect(min, max, blankoutbgcolor)
+                    .filled(true)
+                    .build();
+            drawlist.add_rect(min, max, bgcolor).filled(true).build();
+        }
+
+        self.ui.set_cursor_pos(orig_cursor_pos);
+        draw_fn();
+    }
+
+    fn draw_with_no_spacing_afterwards(&self, draw_fn: DrawFnRef<Self>) {
+        self.ui.group(draw_fn);
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        self.ui.set_cursor_screen_pos((min.x, max.y));
+    }
+
     fn draw_full_width_heading(&self, bgcolor: Color, inner_padding: (f32, f32), text: &str) {
         // copy and paste of draw_buttony_text lol
         let style = self.ui.imgui().style();
