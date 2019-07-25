@@ -209,27 +209,31 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
         let transparent_black = transparency(BLACK_COLOR, 0.5);
-        let options_groups = menu.grouped_options(&self.code_editor.code_genie, self.env_genie);
-        self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
-                           self.ui_toolkit.draw_with_bgcolor(transparent_black, &|| {
-                                              self.ui_toolkit.draw_taking_up_full_width(&|| {
-                                                                 self.render_insertion_header(menu)
-                                                             })
-                                          })
-                       });
-        self.ui_toolkit.draw_child_region(transparent_black,
-                                          &move || {
-                                              self.ui_toolkit.draw_all(&[
-                                                  &|| draw_all_iter!(T::self.ui_toolkit,
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
+                    self.ui_toolkit.draw_with_bgcolor(transparent_black, &|| {
+                        self.ui_toolkit.draw_taking_up_full_width(&|| {
+                            self.render_insertion_header(menu)
+                        })
+                    })
+                })
+            },
+            &|| {
+                self.ui_toolkit.draw_child_region(transparent_black,
+                                                  &|| {
+                                                      let options_groups = menu.grouped_options(&self.code_editor.code_genie, self.env_genie);
+                                                          draw_all_iter!(T::self.ui_toolkit,
                                                       options_groups.iter().map(|group| {
                                                           move || self.render_insertion_options_group(group, menu.insertion_point)
                                                       })
-                                                  ),
-                                              ])
-                                          },
-                                          ChildRegionHeight::Pixels(300),
-                                          None::<&dyn Fn() -> T::DrawResult>,
-                                          None::<fn(Keypress)>)
+                                                  )
+                                                  },
+                                                  ChildRegionHeight::Pixels(300),
+                                                  None::<&dyn Fn() -> T::DrawResult>,
+                                                  None::<fn(Keypress)>)
+            }
+        ])
     }
 
     fn render_insertion_header(&self, menu: &InsertCodeMenu) -> T::DrawResult {

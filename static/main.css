@@ -1,3 +1,10 @@
+/* TODO: this is kind of a temp thing...
+ * the real fix will be to fix spacing to match imgui's :(
+ */
+body {
+  zoom: 115%;
+}
+
 /* font ranges cribbed from imgui:
  * https://github.com/ocornut/imgui/blob/master/imgui_draw.cpp
  */

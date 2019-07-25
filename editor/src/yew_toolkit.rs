@@ -955,6 +955,19 @@ impl UiToolkit for YewToolkit {
             .borrow()
             .set_global_keydown_handler(handle_keypress);
     }
+
+    fn draw_with_bgcolor(&self, bgcolor: Color, draw_fn: DrawFnRef<Self>) -> Self::DrawResult {
+        html! {
+            <div style=format!("background-color: {};", rgba(bgcolor)),>
+                { draw_fn() }
+            </div>
+        }
+    }
+
+    fn draw_with_no_spacing_afterwards(&self, draw_fn: DrawFnRef<Self>) -> Self::DrawResult {
+        // i think we automatically do this
+        draw_fn()
+    }
 }
 
 impl YewToolkit {
