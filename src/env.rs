@@ -139,7 +139,7 @@ impl Interpreter {
                 let match_id = mach.id;
                 Box::pin(async move {
                     let (variant_id, value) = await_eval_result!(match_exp_fut).into_enum().unwrap();
-                    env.borrow_mut().set_local_variable(lang::Match::variable_id(match_id, variant_id),
+                    env.borrow_mut().set_local_variable(lang::Match::make_variable_id(match_id, variant_id),
                                                         value);
                     await_eval_result!(branch_by_variant_id.remove(&variant_id).unwrap())
                 })

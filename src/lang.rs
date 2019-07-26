@@ -778,9 +778,13 @@ pub struct Match {
 }
 
 impl Match {
-    pub fn variable_id(match_id: ID, variant_id: ID) -> ID {
+    pub fn make_variable_id(match_id: ID, variant_id: ID) -> ID {
         uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID,
                            [match_id, variant_id].iter().join(":").as_bytes())
+    }
+
+    pub fn variable_id(&self, variant_id: ID) -> ID {
+        Self::make_variable_id(self.id, variant_id)
     }
 }
 

@@ -50,6 +50,7 @@ pub struct CodeEditorRenderer<'a, T> {
     // this is used for rendering code... if we're in menu rendering mode then don't go into edit
     // mode and clicks also shouldn't do anything. surely a cleaner way to do this but whatever RN
     is_rendering_menu: RefCell<bool>,
+    render_menu_when_next_possible: RefCell<bool>,
 }
 
 // ok stupid but all the methods on this take &self instead of &mut self because the ImGui closures
@@ -66,7 +67,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                command_buffer: Rc::new(RefCell::new(command_buffer)),
                arg_nesting_level: RefCell::new(0),
                env_genie,
-               is_rendering_menu: RefCell::new(false) }
+               is_rendering_menu: RefCell::new(false),
+               render_menu_when_next_possible: RefCell::new(false) }
     }
 
     pub fn render(&self) -> T::DrawResult {
@@ -158,51 +160,64 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_insert_code_node(&self) -> T::DrawResult {
         let menu = self.code_editor.insert_code_menu.as_ref().unwrap();
 
+        // this only renders the field for entering text inline where the insertion happens.
+        //
+        // we'll actually render the menu after we finish rendering the current block expression
+        self.render_menu_when_next_possible.replace(true);
+        self.ui_toolkit.focused(&|| {
+                           let cmdb_1 = Rc::clone(&self.command_buffer);
+                           let cmdb_2 = Rc::clone(&self.command_buffer);
+                           let insertion_point = menu.insertion_point.clone();
+                           let new_code_node = menu.selected_option_code(&self.code_editor
+                                                                              .code_genie,
+                                                                         self.env_genie);
+
+                           self.draw_text_input(
+                                                menu.input_str(),
+                                                move |input| {
+                                                    let input = input.to_string();
+                                                    cmdb_1.borrow_mut()
+                                                          .add_editor_command(move |editor| {
+                                                              editor.insert_code_menu
+                                                                    .as_mut()
+                                                                    .map(|menu| {
+                                                                        menu.set_search_str(&input);
+                                                                    });
+                                                          })
+                                                },
+                                                move || {
+                                                    let mut cmdb = cmdb_2.borrow_mut();
+                                                    if let Some(ref new_code_node) = new_code_node {
+                                                        let new_code_node = new_code_node.clone();
+                                                        cmdb.add_editor_command(move |editor| {
+                            editor.hide_insert_code_menu();
+                            editor.insert_code(new_code_node.clone(),
+                                               insertion_point);
+                        });
+                                                    } else {
+                                                        cmdb.add_editor_command(|editor| {
+                                                                editor.undo();
+                                                                editor.hide_insert_code_menu();
+                                                            });
+                                                    }
+                                                },
+            )
+                       })
+    }
+
+    fn render_code_insertion_menu_here_if_it_was_requested(&self) -> T::DrawResult {
+        let should_render_menu = self.render_menu_when_next_possible.replace(false);
+        if should_render_menu {
+            self.render_code_insertion_menu()
+        } else {
+            self.ui_toolkit.draw_all(&[])
+        }
+    }
+
+    fn render_code_insertion_menu(&self) -> T::DrawResult {
         self.is_rendering_menu.replace(true);
-
-        let drawn = self.ui_toolkit.draw_all(&[
-            &|| {
-                self.ui_toolkit.focused(&|| {
-                                   let cmdb_1 = Rc::clone(&self.command_buffer);
-                                   let cmdb_2 = Rc::clone(&self.command_buffer);
-                                   let insertion_point = menu.insertion_point.clone();
-                                   let new_code_node = menu.selected_option_code(&self.code_editor
-                                                                                      .code_genie,
-                                                                                 self.env_genie);
-
-                                   self.draw_text_input(
-                                     menu.input_str(),
-                                     move |input| {
-                                         let input = input.to_string();
-                                         cmdb_1.borrow_mut().add_editor_command(move |editor| {
-                            editor.insert_code_menu.as_mut().map(|menu| {
-                                menu.set_search_str(&input);
-                            });
-                        })
-                                     },
-                                     move || {
-                                         let mut cmdb = cmdb_2.borrow_mut();
-                                         if let Some(ref new_code_node) = new_code_node {
-                                             let new_code_node = new_code_node.clone();
-                                             cmdb.add_editor_command(move |editor| {
-                                                     editor.hide_insert_code_menu();
-                                                     editor.insert_code(new_code_node.clone(),
-                                                                        insertion_point);
-                                                 });
-                                         } else {
-                                             cmdb.add_editor_command(|editor| {
-                                                     editor.undo();
-                                                     editor.hide_insert_code_menu();
-                                                 });
-                                         }
-                                     },
-                )
-                               })
-            },
-            // TODO: actually put this on the next line... would have to do this at the root block,
-            // hmmm..
-            &|| self.render_without_nesting(&|| self.render_insertion_options(&menu)),
-        ]);
+        let menu = self.code_editor.insert_code_menu.as_ref().unwrap();
+        let drawn = self.render_without_nesting(&|| self.render_insertion_options(&menu));
         self.is_rendering_menu.replace(false);
         drawn
     }
@@ -752,16 +767,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // variables can also refer to enum variants
         self.code_editor
             .code_genie
-            .find_enum_variant_preceding_by_assignment_id(variable_reference.id,
-                                                          variable_reference.assignment_id,
-                                                          self.env_genie)
-            .map(|match_variant| {
-                (match_variant.enum_variant.name,
-                 self.code_editor
-                     .code_genie
-                     .guess_type(&lang::CodeNode::VariableReference(variable_reference.clone()),
-                                 self.env_genie))
-            })
+            .find_enum_variant_by_assignment_id(variable_reference.assignment_id, self.env_genie)
+            .map(|match_variant| (match_variant.enum_variant.name, match_variant.typ))
     }
 
     // TODO: combine the insertion point stuff with the insertion point stuff elsewhere, mainly
@@ -783,7 +790,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         // THE NULL STATE
                         self.render_add_code_here_button(InsertionPoint::BeginningOfBlock(block.id))
                     } else {
-                        self.ui_toolkit.draw_all(&[])
+                        self.ui_toolkit.draw_all(&[&|| self.render_code_insertion_menu_here_if_it_was_requested()])
                     }
                 } else {
                     self.ui_toolkit.draw_all(&[
@@ -803,7 +810,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                 &|| self.render_add_code_here_line(InsertionPoint::After(code.id())),
                                            ])
                                        } else {
-                                           self.render_code(code)
+                                           self.ui_toolkit.draw_all(&[
+                                              &|| self.render_code_insertion_menu_here_if_it_was_requested(),
+                                              &|| self.render_code(code),
+                                              &|| self.render_code_insertion_menu_here_if_it_was_requested(),
+                                           ])
                                        }
                                    }
                                })
@@ -1153,8 +1164,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_string_literal(&self, string_literal: &lang::StringLiteral) -> T::DrawResult {
         self.set_selected_on_click(&|| {
-                                       self.ui_toolkit
-                                           .draw_buttony_text(&format!("\u{F10D} {} \u{F10E}",
+                                       self.draw_buttony_text(&format!("\u{F10D} {} \u{F10E}",
                                                                        string_literal.value),
                                                               CLEAR_COLOR)
                                    },
@@ -1262,6 +1272,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 self.ui_toolkit
                     .draw_button(label, color, move || onclick_rc.borrow()())
             })
+    }
+
+    fn draw_buttony_text(&self, label: &str, color: Color) -> T::DrawResult {
+        self.draw_nested_borders_around(&|| self.ui_toolkit.draw_buttony_text(label, color))
     }
 
     #[allow(dead_code)]

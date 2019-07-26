@@ -580,8 +580,12 @@ impl CodeGenie {
                                                  node_id: lang::ID,
                                                  env_genie: &'a EnvGenie)
                                                  -> impl Iterator<Item = MatchVariant> + 'a {
-        let mut prev = self.find_node(node_id).unwrap();
+        let prev = self.find_node(node_id);
         GenIter(move || {
+            if prev.is_none() {
+                return;
+            }
+            let mut prev = prev.unwrap();
             for node in self.all_parents_of(node_id) {
                 if let lang::CodeNode::Match(mach) = node {
                     for (variant_id, branch) in mach.branch_by_variant_id.iter() {
@@ -606,6 +610,27 @@ impl CodeGenie {
             .find(|match_variant| match_variant.assignment_id() == assignment_id)
     }
 
+    pub fn find_enum_variant_by_assignment_id(&self,
+                                              assignment_id: lang::ID,
+                                              env_genie: &EnvGenie)
+                                              -> Option<MatchVariant> {
+        self.code
+            .all_children_dfs_iter()
+            .filter_map(|code_node| {
+                if let lang::CodeNode::Match(mach) = code_node {
+                    for (variant_id, _branch) in mach.branch_by_variant_id.iter() {
+                        if mach.variable_id(*variant_id) == assignment_id {
+                            let mut type_and_enum_by_variant_id =
+                                self.match_variant_by_variant_id(mach, env_genie);
+                            return Some(type_and_enum_by_variant_id.remove(variant_id).unwrap());
+                        }
+                    }
+                }
+                None
+            })
+            .next()
+    }
+
     pub fn is_block_expression(&self, node_id: lang::ID) -> bool {
         if let Some(CodeNode::Block(_)) = self.find_parent(node_id) {
             true
@@ -623,7 +648,7 @@ pub struct MatchVariant {
 
 impl MatchVariant {
     pub fn assignment_id(&self) -> lang::ID {
-        lang::Match::variable_id(self.match_id, self.enum_variant.id)
+        lang::Match::make_variable_id(self.match_id, self.enum_variant.id)
     }
 }
 
