@@ -95,25 +95,46 @@ impl InsertCodeMenu {
                                 code_genie: &CodeGenie,
                                 env_genie: &EnvGenie)
                                 -> Option<lang::CodeNode> {
-        let all_options = self.list_options(code_genie, env_genie);
-        if all_options.is_empty() {
-            return None;
-        }
+        let options_groups = self.grouped_options(code_genie, env_genie);
+        let mut all_options = options_groups.into_iter()
+                                            .flat_map(|og| og.options)
+                                            .collect::<Vec<_>>();
         let selected_index = self.selected_index(all_options.len());
-        Some(all_options.get(selected_index)?.new_node.clone())
+        if all_options.len() >= selected_index + 1 {
+            Some(all_options.swap_remove(selected_index).new_node)
+        } else {
+            None
+        }
     }
 
     pub fn grouped_options<'a>(&'a self,
                                code_genie: &'a CodeGenie,
                                env_genie: &'a EnvGenie)
                                -> Vec<InsertCodeMenuOptionsGroup> {
-        self.list_options(code_genie, env_genie)
-            .into_iter()
-            .group_by(|o| o.group_name)
-            .into_iter()
-            .map(|(group_name, options)| InsertCodeMenuOptionsGroup { group_name,
-                                                                      options: options.collect() })
-            .collect()
+        let all_options = self.list_options(code_genie, env_genie);
+
+        let selected_index = self.selected_index(all_options.len());
+
+        let mut options_groups = vec![];
+        let mut num_options_seen = 0;
+        for (group_name, options) in all_options.into_iter()
+                                                .group_by(|o| o.group_name)
+                                                .into_iter()
+        {
+            let mut options = options.collect::<Vec<_>>();
+            // TODO: sorting should actually be decided by weights... but this will at least
+            // keep the sorting order stable so the menu doesn't flicker
+            options.sort_by_key(|o| o.sort_key.clone());
+            if selected_index >= num_options_seen
+               && selected_index - num_options_seen <= options.len() - 1
+            {
+                options[selected_index - num_options_seen].is_selected = true;
+            }
+            num_options_seen += options.len();
+            options_groups.push(InsertCodeMenuOptionsGroup { group_name,
+                                                             options });
+        }
+        options_groups
     }
 
     // TODO: i think the selected option index can get out of sync with this generated list, leading
@@ -125,20 +146,11 @@ impl InsertCodeMenu {
                         env_genie: &EnvGenie)
                         -> Vec<InsertCodeMenuOption> {
         let search_params = self.search_params(code_genie, env_genie);
-        let mut all_options: Vec<InsertCodeMenuOption> =
-            OPTIONS_GENERATORS.iter()
-                              .flat_map(|generator| {
-                                  generator.options(&search_params, code_genie, env_genie)
-                              })
-                              .collect();
-        if all_options.is_empty() {
-            return all_options;
-        }
-        let selected_index = self.selected_index(all_options.len());
-        all_options.get_mut(selected_index)
-                   .as_mut()
-                   .map(|mut option| option.is_selected = true);
-        all_options
+        OPTIONS_GENERATORS.iter()
+                          .flat_map(|generator| {
+                              generator.options(&search_params, code_genie, env_genie)
+                          })
+                          .collect()
     }
 
     fn search_params(&self, code_genie: &CodeGenie, env_genie: &EnvGenie) -> CodeSearchParams {
@@ -273,6 +285,8 @@ pub struct InsertCodeMenuOptionsGroup {
 
 #[derive(Clone, Debug)]
 pub struct InsertCodeMenuOption {
+    // TEST
+    pub sort_key: String,
     pub new_node: lang::CodeNode,
     pub is_selected: bool,
     pub group_name: &'static str,
@@ -318,6 +332,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
                                                                               wrapped_node.clone()),
                 is_selected: false,
                 group_name: FUNCTION_CALL_GROUP,
+                               sort_key: func.id().to_string(),
             }
                        })
                        .collect()
@@ -366,6 +381,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
                     new_node: code_generation::new_function_call_with_placeholder_args(func),
                     is_selected: false,
                     group_name: FUNCTION_CALL_GROUP,
+                     sort_key: func.id().to_string(),
                 }
              })
              .collect()
@@ -431,6 +447,7 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
                  .map(|variable| {
                      let id = variable.locals_id;
                      InsertCodeMenuOption { new_node: code_generation::new_variable_reference(id),
+                                            sort_key: id.to_string(),
                                             is_selected: false,
                                             group_name: LOCALS_GROUP }
                  })
@@ -547,24 +564,29 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
 impl InsertLiteralOptionGenerator {
     fn string_literal_option(&self, input_str: String) -> InsertCodeMenuOption {
         InsertCodeMenuOption { is_selected: false,
+                               sort_key: format!("stringliteral{}", input_str),
                                group_name: LITERALS_GROUP,
                                new_node: code_generation::new_string_literal(input_str) }
     }
 
     fn number_literal_option(&self, number: i128) -> InsertCodeMenuOption {
         InsertCodeMenuOption { is_selected: false,
+                               sort_key: format!("numliteral{}", number),
                                group_name: LITERALS_GROUP,
                                new_node: code_generation::new_number_literal(number) }
     }
 
     fn null_literal_option(&self) -> InsertCodeMenuOption {
         InsertCodeMenuOption { is_selected: false,
+                               // want this stupid thing to show up last
+                               sort_key: "zzzznullliteral".to_string(),
                                group_name: LITERALS_GROUP,
                                new_node: code_generation::new_null_literal() }
     }
 
     fn strukt_option(&self, strukt: &structs::Struct) -> InsertCodeMenuOption {
         InsertCodeMenuOption { is_selected: false,
+                               sort_key: format!("structliteral{}", strukt.id),
                                group_name: LITERALS_GROUP,
                                new_node:
                                    code_generation::new_struct_literal_with_placeholders(strukt) }
@@ -575,6 +597,7 @@ impl InsertLiteralOptionGenerator {
                           return_type: &lang::Type)
                           -> InsertCodeMenuOption {
         InsertCodeMenuOption { group_name: LITERALS_GROUP,
+                               sort_key: format!("placeholder{}", input_str),
                                is_selected: false,
                                new_node: code_generation::new_placeholder(input_str,
                                                                           return_type.clone()) }
@@ -585,6 +608,7 @@ impl InsertLiteralOptionGenerator {
         InsertCodeMenuOption {
             group_name: LITERALS_GROUP,
             is_selected: false,
+            sort_key: format!("listliteral{}", element_type.id()),
             new_node: lang::CodeNode::ListLiteral(lang::ListLiteral {
                 id: lang::new_id(),
                 element_type: element_type.clone(),
@@ -612,6 +636,7 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
         if "if".contains(&search_str) || "conditional".contains(&search_str) {
             options.push(
                 InsertCodeMenuOption {
+                    sort_key: "conditional".to_string(),
                     group_name: CONTROL_FLOW_GROUP,
                     is_selected: false,
                     new_node: code_generation::new_conditional(&search_params.return_type)
@@ -661,6 +686,7 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
                 let eneom = env_genie.find_enum(guessed_type.typespec_id)?;
 
                 Some(InsertCodeMenuOption {
+                    sort_key: format!("match{}", eneom.id),
                     group_name: CONTROL_FLOW_GROUP,
                     is_selected: false,
                     new_node: code_generation::new_match(eneom,
@@ -699,6 +725,7 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
 
         vec![InsertCodeMenuOption {
             group_name: ASSIGN_VARIABLE_GROUP,
+            sort_key: format!("newvariable{}", variable_name),
             is_selected: false,
             new_node: code_generation::new_assignment(
                 variable_name.clone(),
@@ -738,6 +765,7 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                     }
                     Some(InsertCodeMenuOption {
                         group_name: LOCALS_GROUP,
+                        sort_key: format!("structfieldget{}", struct_field.id),
                         new_node: code_generation::new_struct_field_get(
                             code_generation::new_variable_reference(variable.locals_id),
                             struct_field.id,
@@ -774,6 +802,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                 Some(InsertCodeMenuOption {
                     // TODO: can we add fonts to support these symbols?
                     group_name: LOCALS_GROUP,
+                    sort_key: format!("listindex{}", variable.locals_id),
                     new_node: code_generation::new_list_index(code_generation::new_variable_reference(
                         variable.locals_id)),
                     is_selected: false
