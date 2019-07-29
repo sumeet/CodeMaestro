@@ -73,7 +73,7 @@
         {
           "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
           "name": "argument text",
-          "description": "The text after the trigger. For example, in .weather san francisco, this would be the \"san francisco\" part",
+          "description": "The text after the trigger. For example, if we were triggered by \".weather san francisco\", this would be the \"san francisco\" part",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []

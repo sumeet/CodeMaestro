@@ -20,7 +20,7 @@ use super::env;
 lazy_static! {
     pub static ref NULL_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Null".to_string(),
-        description: "Represents nothing".into(),
+        description: "Null: Represents nothing".into(),
         id: uuid::Uuid::parse_str(&"daa07233-b887-4512-b06e-d6a53d415213").unwrap(),
         symbol: "\u{f192}".to_string(),
         num_params: 0,

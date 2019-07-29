@@ -153,7 +153,7 @@ impl InsertCodeMenu {
                           .collect()
     }
 
-    fn search_params(&self, code_genie: &CodeGenie, env_genie: &EnvGenie) -> CodeSearchParams {
+    pub fn search_params(&self, code_genie: &CodeGenie, env_genie: &EnvGenie) -> CodeSearchParams {
         match self.insertion_point {
             // TODO: if it's the last line of a function, we might wanna use the function's type...
             // but that could be too limiting
@@ -224,9 +224,9 @@ impl InsertCodeMenu {
 
 #[derive(Clone, Debug)]
 // TODO: pretty sure these could all be references....
-struct CodeSearchParams {
-    return_type: Option<lang::Type>,
-    wraps_type: Option<lang::Type>,
+pub struct CodeSearchParams {
+    pub return_type: Option<lang::Type>,
+    pub wraps_type: Option<lang::Type>,
     input_str: String,
     insertion_point: InsertionPoint,
 }
@@ -292,6 +292,16 @@ pub struct InsertCodeMenuOption {
     pub group_name: &'static str,
 }
 
+fn find_wrapped_node<'a>(code_genie: &'a CodeGenie,
+                         code_search_params: &CodeSearchParams)
+                         -> &'a lang::CodeNode {
+    match code_search_params.insertion_point {
+        InsertionPoint::Wrap(wrapped_node_id) => code_genie.find_node(wrapped_node_id)
+                                                           .expect("couldn't find wrapped node id"),
+        _ => panic!("we should've only gotten here and had a wrapped insertion point"),
+    }
+}
+
 // TODO: it's a mostly copy + paste of InsertFunctionOptionGenerator, can clean it up
 #[derive(Clone)]
 struct InsertFunctionWrappingOptionGenerator {}
@@ -317,13 +327,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
                                Some((first_matching_arg.id, f))
                            });
 
-        let wrapped_node = match &search_params.insertion_point {
-            InsertionPoint::Wrap(wrapped_node_id) => {
-                code_genie.find_node(*wrapped_node_id)
-                          .expect("couldn't find wrapped node id")
-            }
-            _ => panic!("we should've only gotten here and had a wrapped insertion point"),
-        };
+        let wrapped_node = find_wrapped_node(code_genie, search_params);
 
         found_functions.map(|(arg_def_id, func)| {
                            InsertCodeMenuOption {
@@ -375,6 +379,9 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
                _code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
+        if search_params.wraps_type.is_some() {
+            return vec![];
+        }
         let funcs = find_functions_ignoring_wraps_type(env_genie, search_params);
         funcs.map(|func| {
                  InsertCodeMenuOption {
@@ -424,6 +431,11 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
                code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
+        // variables don't take arguments and can't wrap anything
+        if search_params.wraps_type.is_some() {
+            return vec![];
+        }
+
         let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = find_all_locals_preceding(
             search_params.insertion_point, code_genie, env_genie)
             .group_by(|variable| variable.typ.id())
@@ -505,28 +517,20 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                _code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
+        // TODO: struct literals are eligible to wrap if return type and wrap type matches one of
+        // the fields... but any other literal probably can't wrap anything
+        if search_params.wraps_type.is_some() {
+            return vec![];
+        }
+
         let mut options = vec![];
         let input_str = &search_params.input_str;
         if let Some(ref return_type) = search_params.return_type {
-            if return_type.matches_spec(&lang::STRING_TYPESPEC) {
-                options.push(self.string_literal_option(input_str.clone()));
-            } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
-                options.push(self.null_literal_option());
-            } else if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
-                if let Some(number) = search_params.parse_number_input() {
-                    options.push(self.number_literal_option(number));
-                }
-            } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
-                options.push(self.list_literal_option(&return_type));
-            } else if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
-                options.push(self.strukt_option(strukt));
-            }
-
-            // design decision made here: all placeholders have types. therefore, it is now
-            // required for a placeholder node to have a type, meaning we need to know what the
-            // type of a placeholder is to create it. under current conditions that's ok, but i
-            // think we can make this less restrictive in the future if we need to
-            options.push(self.placeholder_option(input_str.clone(), return_type));
+            self.generate_options_for_return_type(search_params,
+                                                  env_genie,
+                                                  &mut options,
+                                                  input_str,
+                                                  &return_type);
         } else {
             if let Some(list_search_query) = search_params.search_prefix("list") {
                 let matching_list_type_options = env_genie
@@ -547,15 +551,24 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
                          .map(|strukt| self.strukt_option(strukt));
             options.extend(matching_struct_options);
 
-            if search_params.search_matches_identifier("null") {
-                options.push(self.null_literal_option())
-            }
+            // wanna just show all literal options all the time because we want users to be able to
+            // discover everything they can do from the menu
+
+            // TODO: wanna boost up null if there's null anywhere
+            // if search_params.search_matches_identifier("null") {
+            options.push(self.null_literal_option());
+            // }
+
             if let Some(number) = search_params.parse_number_input() {
-                options.push(self.number_literal_option(number))
+                options.push(self.number_literal_option(number));
+            } else if input_str.is_empty() {
+                options.push(self.number_literal_option(0));
             }
-            if !input_str.is_empty() {
-                options.push(self.string_literal_option(input_str.clone()));
-            }
+
+            // TODO: maybe boost string literal if there is something entered?
+            //            if !input_str.is_empty() {
+            options.push(self.string_literal_option(input_str.clone()));
+            //            }
         }
         options
     }
@@ -627,21 +640,24 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
                code_genie: &CodeGenie,
                _env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        let mut options = vec![];
         if !should_insert_block_expression(search_params.insertion_point, code_genie) {
-            return options;
+            return vec![];
         }
 
+        if let Some(wraps_type) = search_params.wraps_type.as_ref() {
+            // if wrapping a boolean, then we should suggest creating a conditional.
+            if wraps_type.matches_spec(&*lang::BOOLEAN_TYPESPEC) {
+                return vec![Self::generate_option(search_params)];
+            // otherwise we shouldn't pop up in the suggestions
+            } else {
+                return vec![];
+            }
+        }
+
+        let mut options = vec![];
         let search_str = search_params.lowercased_trimmed_search_str();
         if "if".contains(&search_str) || "conditional".contains(&search_str) {
-            options.push(
-                InsertCodeMenuOption {
-                    sort_key: "conditional".to_string(),
-                    group_name: CONTROL_FLOW_GROUP,
-                    is_selected: false,
-                    new_node: code_generation::new_conditional(&search_params.return_type)
-                }
-            )
+            options.push(Self::generate_option(search_params))
         }
         options
     }
@@ -661,6 +677,14 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
             return vec![];
         }
 
+        if let Some(wraps_type) = search_params.wraps_type.as_ref() {
+            return self.new_option_if_enum(env_genie, wraps_type, || {
+                           find_wrapped_node(code_genie, search_params).clone()
+                       })
+                       .into_iter()
+                       .collect();
+        }
+
         // pretty sure we want to show matches regardless of whether or not the user typed match...
         //let search_str = search_params.lowercased_trimmed_search_str();
         //
@@ -672,28 +696,44 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         let (insertion_id, is_search_inclusive) =
             assignment_search_position(search_params.insertion_point);
         code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
-            .into_iter()
-            .filter_map(|assignment| {
-                // TODO: also add a method similar to search_matches_identifier for search_prefix
-                // searches
-                if let Some(var_name_to_match) = search_params.search_prefix("match") {
-                    if !assignment.name.to_lowercase().contains(var_name_to_match.as_str()) {
-                        return None
-                    }
-                }
+                  .into_iter()
+                  .filter_map(|assignment| {
+                      // TODO: also add a method similar to search_matches_identifier for search_prefix
+                      // searches
+                      if let Some(var_name_to_match) = search_params.search_prefix("match") {
+                          if !assignment.name
+                                        .to_lowercase()
+                                        .contains(var_name_to_match.as_str())
+                          {
+                              return None;
+                          }
+                      }
 
-                let guessed_type = code_genie.guess_type(&lang::CodeNode::Assignment(assignment.clone()), env_genie);
-                let eneom = env_genie.find_enum(guessed_type.typespec_id)?;
+                      let guessed_type =
+                          code_genie.guess_type(&lang::CodeNode::Assignment(assignment.clone()),
+                                                env_genie);
+                      self.new_option_if_enum(env_genie, &guessed_type, || {
+                              code_generation::new_variable_reference(assignment.id)
+                          })
+                  })
+                  .collect()
+    }
+}
 
-                Some(InsertCodeMenuOption {
-                    sort_key: format!("match{}", eneom.id),
-                    group_name: CONTROL_FLOW_GROUP,
-                    is_selected: false,
-                    new_node: code_generation::new_match(eneom,
-                                                         &guessed_type,
-                                                         code_generation::new_variable_reference(assignment.id))
-                })
-            }).collect()
+impl InsertMatchOptionGenerator {
+    fn new_option_if_enum(&self,
+                          env_genie: &EnvGenie,
+                          typ: &lang::Type,
+                          match_expr: impl FnOnce() -> lang::CodeNode)
+                          -> Option<InsertCodeMenuOption> {
+        let eneom = env_genie.find_enum(typ.typespec_id)?;
+
+        Some(InsertCodeMenuOption { sort_key: format!("match{}", eneom.id),
+                                    group_name: CONTROL_FLOW_GROUP,
+                                    is_selected: false,
+                                    new_node: code_generation::new_match(eneom,
+                                                                         typ,
+                                                                         match_expr()) })
     }
 }
 
@@ -745,6 +785,12 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
+        // struct field gets are just variables and don't take args or anything, so we can't wrap
+        // anything here
+        if search_params.wraps_type.is_some() {
+            return vec![];
+        }
+
         let optionss = find_all_locals_preceding(search_params.insertion_point,
                                                  code_genie,
                                                  env_genie).filter_map(|variable| {
@@ -827,5 +873,43 @@ pub fn should_insert_block_expression(insertion_point: InsertionPoint,
         InsertionPoint::StructLiteralField(_)
         | InsertionPoint::Editing(_)
         | InsertionPoint::ListLiteralElement { .. } => false,
+    }
+}
+
+impl InsertLiteralOptionGenerator {
+    fn generate_options_for_return_type(&self,
+                                        search_params: &CodeSearchParams,
+                                        env_genie: &EnvGenie,
+                                        options: &mut Vec<InsertCodeMenuOption>,
+                                        input_str: &String,
+                                        return_type: &lang::Type) {
+        if return_type.matches_spec(&lang::STRING_TYPESPEC) {
+            options.push(self.string_literal_option(input_str.clone()));
+        } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
+            options.push(self.null_literal_option());
+        } else if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
+            if let Some(number) = search_params.parse_number_input() {
+                options.push(self.number_literal_option(number));
+            }
+        } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
+            options.push(self.list_literal_option(&return_type));
+        } else if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
+            options.push(self.strukt_option(strukt));
+        }
+        // design decision made here: all placeholders have types. therefore, it is now
+        // required for a placeholder node to have a type, meaning we need to know what the
+        // type of a placeholder is to create it. under current conditions that's ok, but i
+        // think we can make this less restrictive in the future if we need to
+        options.push(self.placeholder_option(input_str.clone(), return_type));
+    }
+}
+
+impl InsertConditionalOptionGenerator {
+    fn generate_option(search_params: &CodeSearchParams) -> InsertCodeMenuOption {
+        InsertCodeMenuOption { sort_key: "conditional".to_string(),
+                               group_name: CONTROL_FLOW_GROUP,
+                               is_selected: false,
+                               new_node:
+                                   code_generation::new_conditional(&search_params.return_type) }
     }
 }

@@ -1,18 +1,3 @@
-- WASM: code subview doesn't take up all the remaining space. this is hard to do in html :((((
-
-- split the project into separate crates so it can compile faster
-
-- better looking autocomplete menu, is able to show wrap operation correctly
-
-- clicking node selects it
-
-- probably need a hover system. so that if smth is hovered, we can light up its
-  children. for example, hovering over a function reference, and we would need
-  to make the entire function call, including the arguments be highlighted with
-  a hover effect. for the above example, in the meantime, we'll just skip this...
-
-- argument access looks like a single button instead of two buttons
-
 - hovering changes color of buttons in html
 
 - implement function call rendering in code, there's enough groundwork to
@@ -21,3 +6,11 @@ implement it now
 - many functions need their argument names hidden, esp when there's only one argument. for instance Print, or Reply, or Capitalize.
 
 - some functions need their argument names visible, even if there's only one argument. for example, `Reverse geocode` which takes a location
+
+- wrap operation fixing:
+  x local variables are constant... they can't wrap anything
+  x regular function menu shouldn't show anything, we have a special wrapped function generator
+  x control flow: only wrap if boolean
+  x control flow: only wrap if result
+  x struct literal: only wrap if one of the field types matches
+  x other literals cannot wrap anything

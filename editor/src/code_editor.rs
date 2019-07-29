@@ -107,12 +107,12 @@ impl CodeEditor {
             (false, Key::V, true, false) => {
                 self.select_current_line();
             }
-            (_, Key::Tab, false, false) => {
+            (_, Key::Tab, false, false) | (_, Key::DownArrow, _, _) => {
                 self.insert_code_menu
                     .as_mut()
                     .map(|menu| menu.select_next());
             }
-            (_, Key::Tab, true, false) => {
+            (_, Key::Tab, true, false) | (_, Key::UpArrow, _, _) => {
                 self.insert_code_menu
                     .as_mut()
                     .map(|menu| menu.select_prev());

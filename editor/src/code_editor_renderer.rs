@@ -11,7 +11,7 @@ use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::UiToolkit;
 use crate::draw_all_iter;
 use crate::editor::Keypress;
-use crate::insert_code_menu::InsertCodeMenuOptionsGroup;
+use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
 use crate::ui_toolkit::ChildRegionHeight;
 use cs::env_genie::EnvGenie;
 use cs::lang;
@@ -222,8 +222,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         drawn
     }
 
+    // TODO: this could be a constant but i'm lazy rn
+    fn transparent_black(&self) -> Color {
+        transparency(BLACK_COLOR, 0.5)
+    }
+
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
-        let transparent_black = transparency(BLACK_COLOR, 0.5);
+        let transparent_black = self.transparent_black();
         self.ui_toolkit.draw_all(&[
             &|| {
                 self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
@@ -256,66 +261,128 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // show hints: like if you want a list of something, type list
         // or if the type is number, then tell the user they can start typing numbers
         // or even better, maybe have clickable numbers? idk how that would work tho
-        self.ui_toolkit.draw_with_margin((5., 10.), &|| {
-                           match menu.insertion_point {
-                               InsertionPoint::BeginningOfBlock(_)
-                               | InsertionPoint::Before(_)
-                               | InsertionPoint::After(_) => {
-                                   self.ui_toolkit.draw_text("Inserting new code")
-                               }
-                               InsertionPoint::StructLiteralField(struct_literal_field_id) => {
-                                   let struct_literal_field =
-                                       self.code_editor
-                                           .code_genie
-                                           .find_node(struct_literal_field_id)
-                                           .unwrap();
-                                   let struct_literal_field =
-                                       struct_literal_field.into_struct_literal_field().unwrap();
-                                   let (strukt, struct_field) =
-                                       self.env_genie
-                                           .find_struct_and_field(struct_literal_field.struct_field_id)
-                                           .unwrap();
-                                   self.ui_toolkit.draw_all_on_same_line(&[
-                                       &|| self.ui_toolkit.draw_text("Inserting value in struct"),
-                                       &|| self.render_struct_identifier(strukt),
-                                       &|| self.ui_toolkit.draw_text("for"),
-                                       &|| self.render_struct_literal_field_label(struct_field),
-                                   ])
-                               }
-                               InsertionPoint::Editing(edited_code_node_id) => {
-                                   // TODO: we should probably show the old value in here, lul
-                                   // TODO: ok, maybe later, because right now we don't even show the menu here
-                                   let code_node = self.code_editor.code_genie.find_node(edited_code_node_id).unwrap();
-                                   self.ui_toolkit.draw_all_on_same_line(&[
-                                       &|| self.ui_toolkit.draw_text("Editing value for"),
-                                       &|| self.render_code(code_node)
-                                   ])
-                               },
-                               InsertionPoint::ListLiteralElement { list_literal_id, pos } => {
-                                   let code_node = self.code_editor.code_genie.find_node(list_literal_id).unwrap();
-                                   self.ui_toolkit.draw_all_on_same_line(&[
-                                       &|| self.ui_toolkit.draw_text("Inserting into list"),
-                                       &|| self.render_list_literal_label(code_node),
-                                       &|| self.ui_toolkit.draw_text("at position"),
-                                       &|| self.render_list_literal_position(pos),
-                                   ])
-                               },
-                               InsertionPoint::Replace(code_node_being_replaced_id) => {
-                                   let code_node_being_replaced = self.code_editor.code_genie.find_node(code_node_being_replaced_id).unwrap();
-                                   self.ui_toolkit.draw_all_on_same_line(&[
-                                       &|| self.ui_toolkit.draw_text("Replacing"),
-                                       &|| self.render_code(code_node_being_replaced),
-                                   ])
-                               },
-                               InsertionPoint::Wrap(code_node_being_wrapped_id) => {
-                                   let code_node_being_wrapped = self.code_editor.code_genie.find_node(code_node_being_wrapped_id).unwrap();
-                                   self.ui_toolkit.draw_all_on_same_line(&[
-                                       &|| self.ui_toolkit.draw_text("Wrapping"),
-                                       &|| self.render_code(code_node_being_wrapped),
-                                   ])
-                               },
-                           }
-                       })
+        let search_params = menu.search_params(&self.code_editor.code_genie, self.env_genie);
+        //        self.ui_toolkit.draw_with_margin((0., 0.), &|| {
+        self.ui_toolkit
+            .draw_with_bgcolor(transparency(BLACK_COLOR, 0.68), &|| {
+                self.ui_toolkit.draw_taking_up_full_width(&|| {
+                                   self.ui_toolkit
+                    .draw_all(&[&|| self.render_insertion_point_header(menu.insertion_point),
+                        &|| self.render_insertion_type_information(&search_params),
+                        &|| self.render_wraps_type_information(&search_params)])
+                               })
+            })
+        //                       })
+    }
+
+    fn render_insertion_type_information(&self, search_params: &CodeSearchParams) -> T::DrawResult {
+        let typ = search_params.return_type.as_ref();
+        if let Some(typ) = typ {
+            self.ui_toolkit
+                .draw_all_on_same_line(&[&|| self.ui_toolkit.draw_text("Showing options resulting in type"), &|| {
+                                           let type_name =
+                                               self.env_genie.get_name_for_type(typ).unwrap();
+                                           self.render_name_with_type_definition(&type_name,
+                                                                                 BLACK_COLOR,
+                                                                                 typ)
+                                       }])
+        } else {
+            self.ui_toolkit.draw_all(&[])
+        }
+    }
+
+    fn render_wraps_type_information(&self, search_params: &CodeSearchParams) -> T::DrawResult {
+        if let Some(wraps_type) = search_params.wraps_type.as_ref() {
+            self.ui_toolkit
+                .draw_all_on_same_line(&[&|| self.ui_toolkit.draw_text("Showing options accepting input type"), &|| {
+                    let type_name =
+                        self.env_genie.get_name_for_type(wraps_type).unwrap();
+                    self.render_name_with_type_definition(&type_name,
+                                                          BLACK_COLOR,
+                                                          wraps_type)
+                }])
+        } else {
+            self.ui_toolkit.draw_all(&[])
+        }
+    }
+
+    fn render_insertion_point_header(&self, insertion_point: InsertionPoint) -> T::DrawResult {
+        match insertion_point {
+            InsertionPoint::BeginningOfBlock(_)
+            | InsertionPoint::Before(_)
+            | InsertionPoint::After(_) => self.draw_operation_label("New code insert"),
+            InsertionPoint::StructLiteralField(struct_literal_field_id) => {
+                let struct_literal_field = self.code_editor
+                                               .code_genie
+                                               .find_node(struct_literal_field_id)
+                                               .unwrap();
+                let struct_literal_field =
+                    struct_literal_field.into_struct_literal_field().unwrap();
+                let (strukt, struct_field) =
+                    self.env_genie
+                        .find_struct_and_field(struct_literal_field.struct_field_id)
+                        .unwrap();
+                self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.draw_operation_label("Struct field insertion"),
+                    &|| self.render_struct_identifier(strukt),
+                    &|| self.ui_toolkit.draw_text("for"),
+                    &|| self.render_struct_literal_field_label(struct_field),
+                ])
+            }
+            InsertionPoint::Editing(edited_code_node_id) => {
+                // TODO: we should probably show the old value in here, lul
+                // TODO: ok, maybe later, because right now we don't even show the menu here
+                let code_node = self.code_editor
+                                    .code_genie
+                                    .find_node(edited_code_node_id)
+                                    .unwrap();
+                self.ui_toolkit
+                    .draw_all_on_same_line(&[&|| self.draw_operation_label("Edit"), &|| {
+                                               self.render_code(code_node)
+                                           }])
+            }
+            InsertionPoint::ListLiteralElement { list_literal_id,
+                                                 pos, } => {
+                let code_node = self.code_editor
+                                    .code_genie
+                                    .find_node(list_literal_id)
+                                    .unwrap();
+                self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.draw_operation_label("Insertion into list"),
+                    &|| self.render_list_literal_label(code_node),
+                    &|| self.ui_toolkit.draw_text("at position"),
+                    &|| self.render_list_literal_position(pos),
+                ])
+            }
+            InsertionPoint::Replace(code_node_being_replaced_id) => {
+                let code_node_being_replaced = self.code_editor
+                                                   .code_genie
+                                                   .find_node(code_node_being_replaced_id)
+                                                   .unwrap();
+                self.ui_toolkit
+                    .draw_all_on_same_line(&[
+                        &|| self.draw_operation_label("Replace operation"),
+                        &|| self.ui_toolkit.draw_text("replacing"),
+                        &|| self.render_code(code_node_being_replaced),
+                    ])
+            }
+            InsertionPoint::Wrap(code_node_being_wrapped_id) => {
+                let code_node_being_wrapped = self.code_editor
+                                                  .code_genie
+                                                  .find_node(code_node_being_wrapped_id)
+                                                  .unwrap();
+                self.ui_toolkit
+                    .draw_all_on_same_line(&[
+                        &|| self.draw_operation_label("Wrap operation"),
+                        &|| self.ui_toolkit.draw_text("around"),
+                        &|| self.render_code(code_node_being_wrapped)
+                    ])
+            }
+        }
+    }
+
+    fn draw_operation_label(&self, text: &str) -> T::DrawResult {
+        self.ui_toolkit.draw_buttony_text(text, BLUE_COLOR)
     }
 
     fn render_insertion_options_group(&self,
@@ -323,15 +390,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                       insertion_point: InsertionPoint)
                                       -> T::DrawResult {
         self.ui_toolkit.draw_all(&[
-            &|| self.ui_toolkit.draw_full_width_heading(BLACK_COLOR, (5., 5.), group.group_name),
-            &|| draw_all_iter!(T::self.ui_toolkit,
+        &|| self.ui_toolkit.draw_full_width_heading(BLACK_COLOR, (5., 5.), group.group_name),
+        &|| draw_all_iter!(T::self.ui_toolkit,
                 group.options.iter().enumerate()
                 .map(|(index, option)| {
                     move || {
                         let scroll_hash = self.insertion_option_menu_hash(index, &group.group_name, &insertion_point);
                         self.render_insertion_option(scroll_hash, option, insertion_point)
                     }}))
-        ])
+    ])
     }
 
     fn render_insertion_option(&'a self,
@@ -520,14 +587,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 Some(ts.description().into())
             }
             CodeNode::StructLiteralField(_) => None,
-            CodeNode::Conditional(_) => None,
-            CodeNode::Match(_) => None,
+            CodeNode::Conditional(_) => Some("Insert an if-statement".into()),
+            CodeNode::Match(_) => {
+                Some("Handle enumerations that have multiple possible values".into())
+            }
             CodeNode::ListLiteral(_) => None,
             CodeNode::StructFieldGet(sfg) => {
                 let struct_field = self.env_genie.find_struct_field(sfg.struct_field_id)?;
                 Some(struct_field.description.clone())
             }
-            CodeNode::NumberLiteral(_) => None,
+            CodeNode::NumberLiteral(_) => Some(lang::NUMBER_TYPESPEC.description.clone()),
             CodeNode::ListIndex(_) => None,
         }
     }

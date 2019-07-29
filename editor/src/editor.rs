@@ -762,11 +762,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 cmd_buffer4
                     .borrow_mut()
                     .add_controller_command(move |controller| match keypress {
+                        Keypress { key: Key::DownArrow, .. } |
                         Keypress {
                             key: Key::Tab,
                             ctrl: false,
                             shift: false,
                         } => controller.opener_select_next(),
+                        Keypress { key: Key::UpArrow, .. } |
                         Keypress {
                             key: Key::Tab,
                             ctrl: false,
