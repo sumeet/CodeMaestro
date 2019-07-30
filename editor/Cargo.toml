@@ -20,7 +20,7 @@ http = "*"
 gen-iter = {git = "https://github.com/sumeet/gen-iter"}
 matches = "0.1.8"
 # we're probably already depending on rand somewhere else, let's just use whatever
-rand = "*"
+rand = {version = "0.7.0", features = ["stdweb"]}
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 glium = { version = "0.23", default-features = true }

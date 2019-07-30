@@ -3,7 +3,8 @@ use cs::builtins;
 use cs::chat_trigger::ChatTrigger;
 use cs::lang;
 use lazy_static::lazy_static;
-use rand::seq::sample_slice;
+use rand::rngs::OsRng;
+use rand::seq::SliceRandom;
 
 lazy_static! {
     static ref VERBS: Vec<&'static str> = { include_str!("../verbs.txt").lines().collect() };
@@ -24,5 +25,5 @@ pub fn example_chat_trigger() -> ChatTrigger {
 }
 
 fn verb_me() -> &'static str {
-    sample_slice(&mut rand::thread_rng(), &VERBS, 1)[0]
+    VERBS.choose(&mut OsRng).unwrap()
 }
