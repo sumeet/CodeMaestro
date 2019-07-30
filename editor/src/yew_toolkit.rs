@@ -190,7 +190,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_all(&self, draw_fns: &[DrawFnRef<Self>]) -> Self::DrawResult {
         html! {
-            <div style="display: flex; flex-direction: column;",>
+            <div class="all-drawn", style="display: flex; flex-direction: column;",>
                 { for draw_fns.into_iter().map(|draw_fn| html! {
                     { draw_fn() }
                 })}
@@ -337,7 +337,7 @@ impl UiToolkit for YewToolkit {
         let line_offset = height / 2.;
         html! {
             <div style={ format!("position: relative; margin-top: 3px; margin-bottom: 4px; display: flex; width: {}px; height: {}px;", width, height)}, >
-                <div style={ format!("color: {}; margin-top: -8px; z-index: 1;", rgba(color)) },>
+                <div style={ format!("color: {}; margin-top: -7.5px; z-index: 1;", rgba(color)) },>
                     { symbolize_text(&format!("{}", plus_char)) }
                 </div>
 
@@ -394,10 +394,12 @@ impl UiToolkit for YewToolkit {
         let is_context_menu = context_menu.is_some();
 
         let (container_css, height_css) = match height {
+            // child regions don't have any vertical space before them... mirroring imgui
             ChildRegionHeight::ExpandFill { min_height } => {
-                ("flex: 1;", format!("min-height: {}px; height: 100%;", min_height))
+                ("flex: 1; margin-top: 0px;",
+                 format!("min-height: {}px; height: 100%;", min_height))
             }
-            ChildRegionHeight::Pixels(px) => ("", format!("height: {}px;", px)),
+            ChildRegionHeight::Pixels(px) => ("margin-top: 0px;", format!("height: {}px;", px)),
         };
 
         // TODO: border color is hardcoded, ripped from imgui
@@ -570,7 +572,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult {
         html! {
-            <div style=format!("white-space: pre-wrap; word-wrap: break-word; color: {};", rgba(color)),>
+            <div style=format!("padding: 0.1em; white-space: pre-wrap; word-wrap: break-word; color: {};", rgba(color)),>
                 { symbolize_text(&text) }
             </div>
         }

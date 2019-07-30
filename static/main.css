@@ -154,3 +154,7 @@ replaceonhoverhack {
 .buttonized-hover-overlay:hover {
     opacity: 100 !important;
 }
+
+.all-drawn > * + .all-drawn > * {
+    margin-top: 0.1em;
+}
