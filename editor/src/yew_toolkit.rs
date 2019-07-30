@@ -358,9 +358,9 @@ impl UiToolkit for YewToolkit {
         // tags, and not reshow them when new stuff comes on the screen, and so we've gotta use replaceonhoverhack
         // tags instead. gonna define replaceonhoverhack to be display: block in the css file
         html! {
-            <replaceonhoverhack style="max-width: fit-content;", onmouseover=|_| { hide(not_hovered_id) ; show(hovered_id); Msg::DontRedraw },
+            <replaceonhoverhack class="fit-content", onmouseover=|_| { hide(not_hovered_id) ; show(hovered_id); Msg::DontRedraw },
                 onmouseout=|_| { hide(hovered_id) ; show(not_hovered_id); Msg::DontRedraw }, >
-                <replaceonhoverhack style="max-width: fit-content;", id={not_hovered_id.to_string()}, >
+                <replaceonhoverhack class="fit-content", id={not_hovered_id.to_string()}, >
                     { draw_when_not_hovered() }
                 </replaceonhoverhack>
                 <replaceonhoverhack id={hovered_id.to_string()}, style="display: none;", >
@@ -494,7 +494,8 @@ impl UiToolkit for YewToolkit {
     fn draw_buttony_text(&self, label: &str, color: [f32; 4]) -> Self::DrawResult {
         html! {
             <button id={ self.incr_last_drawn_element_id().to_string() },
-                style=format!("color: white; background-color: {}; display: block; border: none; outline: none; max-width: fit-content;", rgba(color)), >
+                class="fit-content",
+                style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", rgba(color)), >
                 { symbolize_text(label) }
             </button>
         }
@@ -651,8 +652,8 @@ impl UiToolkit for YewToolkit {
                     {label}
                 </div>
 
-                <ul class="main-menu-dropdown",
-                    style="padding: 0.25em 1em; position: absolute; z-index: 99 !important; margin: 0; margin-top: 0.25em; background: black; width: fit-content; opacity: 0.85;", >
+                <ul class="main-menu-dropdown fit-content",
+                    style="padding: 0.25em 1em; position: absolute; z-index: 99 !important; margin: 0; margin-top: 0.25em; background: black; opacity: 0.85;", >
                     {{ draw_menu_items() }}
                 </ul>
             </div>

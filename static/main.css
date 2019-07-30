@@ -144,6 +144,12 @@ replaceonhoverhack {
     display: block;
 }
 
+.fit-content {
+    max-width: -moz-fit-content;
+    max-width: fit-content;
+    white-space: nowrap;
+}
+
 /* this is for right click menus */
 .context_menu {
     z-index: 9999;
