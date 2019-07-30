@@ -581,7 +581,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 let typespec = self.env_genie.find_typespec(typ.typespec_id)?;
                 Some(typespec.description().to_string())
             }
-            CodeNode::Placeholder(_) => None,
+            CodeNode::Placeholder(_) => {
+                Some("A placeholder. Use this when you don't know what you want yet, or nothing else fits. The program won't actually run if a placeholder is present.".into())
+            },
             CodeNode::StructLiteral(struct_literal) => {
                 let ts = self.env_genie.find_typespec(struct_literal.struct_id)?;
                 Some(ts.description().into())
@@ -591,7 +593,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::Match(_) => {
                 Some("Handle enumerations that have multiple possible values".into())
             }
-            CodeNode::ListLiteral(_) => None,
+            CodeNode::ListLiteral(list_literal) => {
+                let type_name = self.env_genie.get_name_for_type(&list_literal.element_type)
+                    .expect("wtf we couldn't find the type?");
+                Some(format!("A new list of {}", type_name))
+            },
             CodeNode::StructFieldGet(sfg) => {
                 let struct_field = self.env_genie.find_struct_field(sfg.struct_field_id)?;
                 Some(struct_field.description.clone())

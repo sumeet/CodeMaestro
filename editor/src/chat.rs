@@ -10,17 +10,17 @@ lazy_static! {
 }
 
 pub fn example_chat_trigger() -> ChatTrigger {
-    let arg = lang::CodeNode::Argument(lang::Argument { id: Default::default(),
+    let arg = lang::CodeNode::Argument(lang::Argument { id: lang::new_id(),
                                               argument_definition_id:
                                                   *builtins::CHAT_REPLY_MESSAGE_ARG_ID,
                                               expr:
                                                   Box::new(new_string_literal("Hi there!".into())) });
-    ChatTrigger { id: Default::default(),
+    ChatTrigger { id: lang::new_id(),
                   prefix: format!(".{}", verb_me()),
                   code: lang::Block { expressions:
                                           vec![new_function_call(*builtins::CHAT_REPLY_FUNC_ID,
                                                                  vec![arg])],
-                                      id: Default::default() } }
+                                      id: lang::new_id() } }
 }
 
 fn verb_me() -> &'static str {
