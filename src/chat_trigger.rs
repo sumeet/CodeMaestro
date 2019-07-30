@@ -20,7 +20,6 @@ lazy_static! {
 pub struct ChatTrigger {
     pub id: lang::ID,
     pub prefix: String,
-    pub name: String,
     pub code: lang::Block,
 }
 
@@ -28,7 +27,6 @@ impl ChatTrigger {
     pub fn new() -> Self {
         Self { id: lang::new_id(),
                prefix: "".to_string(),
-               name: "New chat trigger".to_string(),
                code: lang::Block::new() }
     }
 
@@ -79,7 +77,7 @@ impl lang::Function for ChatTrigger {
     }
 
     fn name(&self) -> &str {
-        &self.name
+        &self.prefix
     }
 
     fn description(&self) -> &str {

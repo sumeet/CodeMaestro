@@ -22,6 +22,17 @@ pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::C
                                                         fields })
 }
 
+pub fn new_function_call(func_id: lang::ID, args: Vec<lang::CodeNode>) -> lang::CodeNode {
+    lang::CodeNode::FunctionCall(lang::FunctionCall {
+        id: lang::new_id(),
+        function_reference: Box::new(lang::CodeNode::FunctionReference(lang::FunctionReference {
+            id: lang::new_id(),
+            function_id: func_id,
+        })),
+        args,
+    })
+}
+
 pub fn new_function_call_with_placeholder_args(func: &dyn lang::Function) -> lang::CodeNode {
     let args = func.takes_args()
                    .into_iter()
@@ -33,14 +44,7 @@ pub fn new_function_call_with_placeholder_args(func: &dyn lang::Function) -> lan
             })
                    })
                    .collect();
-    lang::CodeNode::FunctionCall(lang::FunctionCall {
-        id: lang::new_id(),
-        function_reference: Box::new(lang::CodeNode::FunctionReference(lang::FunctionReference {
-            id: lang::new_id(),
-            function_id: func.id(),
-        })),
-        args: args,
-    })
+    new_function_call(func.id(), args)
 }
 
 pub fn new_function_call_with_wrapped_arg(func: &dyn lang::Function,

@@ -9,11 +9,12 @@ use matches::matches;
 use std::iter;
 
 lazy_static! {
-    static ref CATEGORIES: Vec<Box<dyn MenuCategory + Send + Sync>> = vec![Box::new(ChatTriggers {}),
-                                                                       Box::new(JSONHTTPClients {}),
-                                                                       Box::new(Functions {}),
-                                                                       Box::new(Enums {}),
-                                                                       Box::new(Structs {}),];
+    static ref CATEGORIES: Vec<Box<dyn MenuCategory + Send + Sync>> =
+        vec![Box::new(ChatTriggers {}),
+             Box::new(JSONHTTPClients {}),
+             Box::new(Functions {}),
+             Box::new(Enums {}),
+             Box::new(Structs {}),];
 }
 
 pub struct Opener {
@@ -177,7 +178,7 @@ impl MenuCategory for ChatTriggers {
                 // ID instead of the whole trigger
                 let ct2 = ct.clone();
                 Some(MenuItem::selectable(
-                    ct.name.clone(),
+                    ct.prefix.clone(),
                     move |command_buffer| {
                         let ct2 = ct2.clone();
                         command_buffer.load_chat_trigger(ct2)

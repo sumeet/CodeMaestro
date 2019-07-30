@@ -24,6 +24,10 @@ lazy_static! {
         uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap();
     pub static ref MESSAGE_STRUCT_ID: uuid::Uuid =
         uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap();
+    pub static ref CHAT_REPLY_FUNC_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("36052afd-cf12-4146-bbc7-f9df04148b73").unwrap();
+    pub static ref CHAT_REPLY_MESSAGE_ARG_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("95bbed9a-6757-43c5-8e74-b15862e300c8").unwrap();
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -244,16 +248,13 @@ impl lang::Function for ChatReply {
     }
 
     fn id(&self) -> lang::ID {
-        uuid::Uuid::parse_str("36052afd-cf12-4146-bbc7-f9df04148b73").unwrap()
+        *CHAT_REPLY_FUNC_ID
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("95bbed9a-6757-43c5-8e74-b15862e300c8").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "Message".to_string()),
-        ]
+        vec![lang::ArgumentDefinition::new_with_id(*CHAT_REPLY_MESSAGE_ARG_ID,
+                                                   lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                                                   "Message".to_string()),]
     }
 
     fn returns(&self) -> lang::Type {

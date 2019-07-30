@@ -45,6 +45,7 @@ use crate::opener::Opener;
 use crate::window_positions::Window;
 use crate::send_to_server_overlay::{SendToServerOverlay,SendToServerOverlayStatus};
 use cs::code_loading::TheWorld;
+use crate::chat::example_chat_trigger;
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
@@ -622,7 +623,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         let cmd_buffer = Rc::clone(&self.command_buffer);
                         self.ui_toolkit
                             .draw_menu_item("Add new chat trigger", move || {
-                                cmd_buffer.borrow_mut().load_chat_trigger(ChatTrigger::new());
+                                cmd_buffer.borrow_mut().load_chat_trigger(example_chat_trigger());
                             })
                     },
                     &|| {
@@ -1048,25 +1049,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {
                 self.ui_toolkit.draw_all(&[
                     &|| {
-                        let cmd_buffer1 = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit.draw_text_input_with_label(
-                            "Trigger name",
-                            &chat_trigger.name,
-                            move |newvalue| {
-                                let newvalue = newvalue.to_string();
-                                cmd_buffer1
-                                    .borrow_mut()
-                                    .change_chat_trigger(chat_trigger_id, move |mut ct| {
-                                        ct.name = newvalue.to_string()
-                                    })
-                            },
-                            &|| {},
-                        )
-                    },
-                    &|| {
                         let cmd_buffer2 = Rc::clone(&self.command_buffer);
                         self.ui_toolkit.draw_text_input_with_label(
-                            "Prefix",
+                            "Bot command",
                             &chat_trigger.prefix,
                             move |newvalue| {
                                 let newvalue = newvalue.to_string();
