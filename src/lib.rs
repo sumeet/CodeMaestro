@@ -29,7 +29,7 @@ mod result;
 #[cfg(not(target_arch = "wasm32"))]
 #[macro_use]
 extern crate diesel;
-pub mod chat_trigger;
+pub mod chat_program;
 pub mod code_function;
 pub mod external_func;
 pub mod function;

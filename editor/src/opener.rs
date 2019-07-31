@@ -10,7 +10,7 @@ use std::iter;
 
 lazy_static! {
     static ref CATEGORIES: Vec<Box<dyn MenuCategory + Send + Sync>> =
-        vec![Box::new(ChatTriggers {}),
+        vec![Box::new(ChatPrograms {}),
              Box::new(JSONHTTPClients {}),
              Box::new(Functions {}),
              Box::new(Enums {}),
@@ -159,29 +159,29 @@ trait MenuCategory {
                  -> Box<dyn Iterator<Item = MenuItem> + 'a>;
 }
 
-struct ChatTriggers;
+struct ChatPrograms;
 
-impl MenuCategory for ChatTriggers {
+impl MenuCategory for ChatPrograms {
     fn label(&self) -> &'static str {
-        "Chat triggers"
+        "Chat programs"
     }
 
     fn items<'a>(&'a self,
                  options_lister: &'a OptionsLister<'a>)
                  -> Box<dyn Iterator<Item = MenuItem> + 'a> {
-        Box::new(options_lister.env_genie.list_chat_triggers()
+        Box::new(options_lister.env_genie.list_chat_programs()
             .filter_map(move |ct| {
                 if options_lister.controller.is_builtin(ct.id) {
                     return None
                 }
-                // TODO: we could avoid this clone by having load_chat_trigger take the
+                // TODO: we could avoid this clone by having load_chat_program take the
                 // ID instead of the whole trigger
                 let ct2 = ct.clone();
                 Some(MenuItem::selectable(
                     ct.prefix.clone(),
                     move |command_buffer| {
                         let ct2 = ct2.clone();
-                        command_buffer.load_chat_trigger(ct2)
+                        command_buffer.load_chat_program(ct2)
                     }
                 ))
             }))
@@ -204,7 +204,7 @@ impl MenuCategory for Functions {
                                    if options_lister.controller.is_builtin(cf.id()) {
                                        return None;
                                    }
-                                   // TODO: we could avoid this clone by having load_chat_trigger take the
+                                   // TODO: we could avoid this clone by having load_chat_program take the
                                    // ID instead of the whole trigger
                                    let cf2 = cf.clone();
                                    Some(MenuItem::selectable(cf.name.clone(),
@@ -231,7 +231,7 @@ impl MenuCategory for JSONHTTPClients {
                 if options_lister.controller.is_builtin(cf.id()) {
                     return None
                 }
-                // TODO: we could avoid this clone by having load_chat_trigger take the
+                // TODO: we could avoid this clone by having load_chat_program take the
                 // ID instead of the whole trigger
                 let cf2 = cf.clone();
                 Some(MenuItem::selectable(
@@ -260,7 +260,7 @@ impl MenuCategory for Enums {
                 if options_lister.controller.is_builtin(eneom.id()) {
                     return None
                 }
-                // TODO: we could avoid this clone by having load_chat_trigger take the
+                // TODO: we could avoid this clone by having load_chat_program take the
                 // ID instead of the whole trigger
                 let eneom2 = eneom.clone();
                 Some(MenuItem::selectable(
@@ -289,7 +289,7 @@ impl MenuCategory for Structs {
                 if options_lister.controller.is_builtin(strukt.id()) {
                     return None
                 }
-                // TODO: we could avoid this clone by having load_chat_trigger take the
+                // TODO: we could avoid this clone by having load_chat_program take the
                 // ID instead of the whole trigger
                 let strukt2 = strukt.clone();
                 Some(MenuItem::selectable(

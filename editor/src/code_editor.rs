@@ -35,7 +35,7 @@ pub enum CodeLocation {
     Test(lang::ID),
     JSONHTTPClientURLParams(lang::ID),
     JSONHTTPClientURL(lang::ID),
-    ChatTrigger(lang::ID),
+    ChatProgram(lang::ID),
 }
 
 impl CodeEditor {
@@ -1273,11 +1273,11 @@ pub fn update_code_in_env(location: CodeLocation,
             client.gen_url = code.into_block().unwrap().clone();
             env.add_function(client);
         }
-        CodeLocation::ChatTrigger(chat_trigger_id) => {
+        CodeLocation::ChatProgram(chat_program_id) => {
             let env_genie = EnvGenie::new(&env);
-            let mut chat_trigger = env_genie.get_chat_trigger(chat_trigger_id).unwrap().clone();
-            chat_trigger.code = code.into_block().unwrap().clone();
-            env.add_function(chat_trigger);
+            let mut chat_program = env_genie.get_chat_program(chat_program_id).unwrap().clone();
+            chat_program.code = code.into_block().unwrap().clone();
+            env.add_function(chat_program);
         }
     }
 }

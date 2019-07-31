@@ -131,10 +131,10 @@ impl<'a> Validator<'a> {
                 json_http_client.gen_url = block;
                 self.cmd_buffer.load_json_http_client(json_http_client)
             }
-            CodeLocation::ChatTrigger(id) => {
-                let mut chat_trigger = self.env_genie.get_chat_trigger(id).unwrap().clone();
-                chat_trigger.code = block;
-                self.cmd_buffer.load_chat_trigger(chat_trigger)
+            CodeLocation::ChatProgram(id) => {
+                let mut chat_program = self.env_genie.get_chat_program(id).unwrap().clone();
+                chat_program.code = block;
+                self.cmd_buffer.load_chat_program(chat_program)
             }
         }
     }
@@ -186,7 +186,7 @@ impl<'a> ProblemFinder<'a> {
             CodeLocation::JSONHTTPClientURL(_) => {
                 Some(lang::Type::from_spec(&*lang::STRING_TYPESPEC))
             }
-            CodeLocation::ChatTrigger(_) | CodeLocation::Script(_) | CodeLocation::Test(_) => None,
+            CodeLocation::ChatProgram(_) | CodeLocation::Script(_) | CodeLocation::Test(_) => None,
         }
     }
 

@@ -5,7 +5,7 @@ use super::lang;
 use super::scripts;
 use super::tests;
 
-use crate::chat_trigger::ChatTrigger;
+use crate::chat_program::ChatProgram;
 use crate::code_function::CodeFunction;
 use crate::enums::Enum;
 use crate::json_http_client::JSONHTTPClient;
@@ -67,7 +67,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function
         "JoinString" => Box::new(builtins::JoinString {}),
         "Print" => Box::new(builtins::Print {}),
         "JSONHTTPClient" => Box::new(serde_json::from_value::<JSONHTTPClient>(value)?),
-        "ChatTrigger" => Box::new(serde_json::from_value::<ChatTrigger>(value)?),
+        "ChatProgram" => Box::new(serde_json::from_value::<ChatProgram>(value)?),
         "CodeFunction" => Box::new(serde_json::from_value::<CodeFunction>(value)?),
         _ => panic!(format!("don't know how to load builtin func type {}", typ)),
     })

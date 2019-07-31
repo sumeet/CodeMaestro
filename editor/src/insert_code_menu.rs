@@ -10,7 +10,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
 
-use cs::chat_trigger::ChatTrigger;
+use cs::chat_program::ChatProgram;
 use std::collections::HashMap;
 
 lazy_static! {
@@ -364,9 +364,9 @@ fn find_functions_ignoring_wraps_type<'a>(
                      func.returns().matches(return_type.unwrap())
                  }
              })
-             // filter out ChatTriggers... we don't want them to show up in autocomplete and possibly
+             // filter out ChatPrograms... we don't want them to show up in autocomplete and possibly
              // TODO don't even want them to be functions
-             .filter(|f| f.downcast_ref::<ChatTrigger>().is_none())
+             .filter(|f| f.downcast_ref::<ChatProgram>().is_none())
              .map(|func| func.as_ref())
 }
 

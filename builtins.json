@@ -66,14 +66,14 @@
     "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83": {
       "type": "Struct",
       "name": "Chat Message",
-      "description": "The incoming message that activated this trigger",
+      "description": "The incoming message that activated this program",
       "id": "cc430c68-1eba-4dd7-a3a8-0ee8e202ee83",
       "symbol": "",
       "fields": [
         {
           "id": "d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2",
           "name": "argument text",
-          "description": "The text after the trigger. For example, if we were triggered by \".weather san francisco\", this would be the \"san francisco\" part",
+          "description": "The text after the command name. For example, if we were triggered by \".weather san francisco\", this would be the \"san francisco\" part",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []
@@ -90,8 +90,8 @@
         },
         {
           "id": "9a8d9059-a729-4660-b440-8ee7c411e70a",
-          "name": "full text (including trigger)",
-          "description": "",
+          "name": "full text, including command name",
+          "description": "The full text of the message that triggered this message. In the example, \".weather san francisco\", this would be \".weather san francisco\".",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
             "params": []

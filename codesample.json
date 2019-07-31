@@ -82,7 +82,7 @@
       }
     },
     {
-      "type": "ChatTrigger",
+      "type": "ChatProgram",
       "id": "4526cde2-fc36-43a5-ad09-d2ade6359422",
       "prefix": ".wz",
       "name": "weather (us units)",
@@ -730,7 +730,7 @@
       }
     },
     {
-      "type": "ChatTrigger",
+      "type": "ChatProgram",
       "id": "684a2a6c-8390-4233-8a43-d8e9306e5e37",
       "prefix": ".hello",
       "name": "Hello world",
@@ -919,7 +919,7 @@
       }
     },
     {
-      "type": "ChatTrigger",
+      "type": "ChatProgram",
       "id": "850ea191-50e6-4338-a274-c562b0adda78",
       "prefix": ".wzc",
       "name": "weather celcius",

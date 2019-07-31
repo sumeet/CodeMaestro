@@ -1,4 +1,4 @@
-use super::chat_trigger::ChatTrigger;
+use super::chat_program::ChatProgram;
 use super::code_function;
 use super::enums;
 use super::env;
@@ -95,10 +95,10 @@ impl<'a> EnvGenie<'a> {
             .and_then(|f| f.downcast_ref::<JSONHTTPClient>())
     }
 
-    pub fn get_chat_trigger(&self, id: lang::ID) -> Option<&ChatTrigger> {
+    pub fn get_chat_program(&self, id: lang::ID) -> Option<&ChatProgram> {
         self.env
             .find_function(id)
-            .and_then(|f| f.downcast_ref::<ChatTrigger>())
+            .and_then(|f| f.downcast_ref::<ChatProgram>())
     }
 
     pub fn find_struct(&self, id: lang::ID) -> Option<&structs::Struct> {
@@ -141,9 +141,9 @@ impl<'a> EnvGenie<'a> {
             .filter_map(|f| f.downcast_ref::<JSONHTTPClient>())
     }
 
-    pub fn list_chat_triggers(&self) -> impl Iterator<Item = &ChatTrigger> {
+    pub fn list_chat_programs(&self) -> impl Iterator<Item = &ChatProgram> {
         self.all_functions()
-            .filter_map(|f| f.downcast_ref::<ChatTrigger>())
+            .filter_map(|f| f.downcast_ref::<ChatProgram>())
     }
 
     pub fn list_pyfuncs(&self) -> impl Iterator<Item = &pystuff::PyFunc> {
@@ -210,9 +210,9 @@ fn get_args_for_code_block(code_block_id: lang::ID,
         } else if json_http_client.gen_url.id == code_block_id {
             return json_http_client.takes_args().into_iter();
         }
-    } else if let Some(chat_trigger) = function.downcast_ref::<ChatTrigger>() {
-        if chat_trigger.code.id == code_block_id {
-            return chat_trigger.takes_args().into_iter();
+    } else if let Some(chat_program) = function.downcast_ref::<ChatProgram>() {
+        if chat_program.code.id == code_block_id {
+            return chat_program.takes_args().into_iter();
         }
     }
     vec![].into_iter()

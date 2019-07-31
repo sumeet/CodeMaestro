@@ -244,7 +244,7 @@ impl lang::Function for ChatReply {
     }
 
     fn description(&self) -> &str {
-        "Send a message back to where the trigger was initiated from. If initiated from a private message or a chat room, it'll go there."
+        "Send a message back to where this program was initiated from. If initiated from a private message or a chat room, it'll go there."
     }
 
     fn id(&self) -> lang::ID {

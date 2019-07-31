@@ -104,10 +104,10 @@ fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionE
                 env_genie.get_json_http_client(*id)
                          .map(|client| command_buffer.load_json_http_client(client.clone()));
             }
-            CodeLocation::ChatTrigger(id) => {
+            CodeLocation::ChatProgram(id) => {
                 env_genie
-                    .get_chat_trigger(*id)
-                    .map(|chat_trigger| command_buffer.load_chat_trigger(chat_trigger.clone()));
+                    .get_chat_program(*id)
+                    .map(|chat_program| command_buffer.load_chat_program(chat_program.clone()));
             }
         }
     }

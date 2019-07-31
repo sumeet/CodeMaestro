@@ -181,7 +181,7 @@ impl ChatThingy {
         let triggers = {
             let env = self.interp.env.borrow();
             let env_genie = EnvGenie::new(&env);
-            env_genie.list_chat_triggers().cloned().collect_vec()
+            env_genie.list_chat_programs().cloned().collect_vec()
         };
 
         let triggered_values = triggers.iter()

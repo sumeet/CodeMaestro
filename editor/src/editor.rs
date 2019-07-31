@@ -13,7 +13,7 @@ use cs::env::Interpreter;
 use cs::await_eval_result;
 use cs::config;
 use cs::builtins;
-use cs::chat_trigger::ChatTrigger;
+use cs::chat_program::ChatProgram;
 use super::code_editor;
 use super::code_editor_renderer::CodeEditorRenderer;
 use cs::code_function;
@@ -45,7 +45,7 @@ use crate::opener::Opener;
 use crate::window_positions::Window;
 use crate::send_to_server_overlay::{SendToServerOverlay,SendToServerOverlayStatus};
 use cs::code_loading::TheWorld;
-use crate::chat::example_chat_trigger;
+use crate::chat::example_chat_program;
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
@@ -378,30 +378,30 @@ impl CommandBuffer {
         })
     }
 
-    pub fn change_chat_trigger(
+    pub fn change_chat_program(
         &mut self,
-        chat_trigger_id: lang::ID,
-        change: impl Fn(&mut ChatTrigger) + 'static,
+        chat_program_id: lang::ID,
+        change: impl Fn(&mut ChatProgram) + 'static,
     ) {
         self.add_integrating_command(move |_controller, interpreter, _, _| {
             let mut env = interpreter.env.borrow_mut();
             let env_genie = env_genie::EnvGenie::new(&env);
-            let mut chat_trigger = env_genie.get_chat_trigger(chat_trigger_id).unwrap().clone();
-            change(&mut chat_trigger);
-            env.add_function(chat_trigger);
+            let mut chat_program = env_genie.get_chat_program(chat_program_id).unwrap().clone();
+            change(&mut chat_program);
+            env.add_function(chat_program);
         })
     }
 
-    pub fn load_chat_trigger(&mut self, chat_trigger: ChatTrigger) {
+    pub fn load_chat_program(&mut self, chat_program: ChatProgram) {
         self.add_integrating_command(move |controller, interpreter, _, _| {
             let mut env = interpreter.env.borrow_mut();
             controller.load_code(
-                lang::CodeNode::Block(chat_trigger.code.clone()),
-                code_editor::CodeLocation::ChatTrigger(chat_trigger.id()),
+                lang::CodeNode::Block(chat_program.code.clone()),
+                code_editor::CodeLocation::ChatProgram(chat_program.id()),
             );
             // TODO: move some of this impl into opener to cut down on code dupe???
-            controller.open_window(chat_trigger.id());
-            env.add_function(chat_trigger);
+            controller.open_window(chat_program.id());
+            env.add_function(chat_program);
         })
     }
 
@@ -573,7 +573,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| self.render_edit_structs(),
             &|| self.render_edit_enums(),
             &|| self.render_json_http_client_builders(),
-            &|| self.render_chat_triggers(),
+            &|| self.render_chat_programs(),
             &|| self.render_status_bar(),
             &|| self.render_opener(),
             &|| self.render_send_to_server_overlay(),
@@ -622,8 +622,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     &|| {
                         let cmd_buffer = Rc::clone(&self.command_buffer);
                         self.ui_toolkit
-                            .draw_menu_item("Add new chat trigger", move || {
-                                cmd_buffer.borrow_mut().load_chat_trigger(example_chat_trigger());
+                            .draw_menu_item("Add new chat program", move || {
+                                cmd_buffer.borrow_mut().load_chat_program(example_chat_program());
                             })
                     },
                     &|| {
@@ -1031,19 +1031,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 .map(|(e, window)| move || self.render_edit_enum(e, &window)))
     }
 
-    fn render_chat_triggers(&self) -> T::DrawResult {
+    fn render_chat_programs(&self) -> T::DrawResult {
         let triggers = self
             .list_open_functions()
-            .filter_map(|(func, window)| Some((func.downcast_ref::<ChatTrigger>()?, window)));
+            .filter_map(|(func, window)| Some((func.downcast_ref::<ChatProgram>()?, window)));
         draw_all_iter!(T::self.ui_toolkit,
-            triggers.map(|(trigger, window)| move || self.render_chat_trigger(trigger, &window)))
+            triggers.map(|(trigger, window)| move || self.render_chat_program(trigger, &window)))
     }
 
-    fn render_chat_trigger(&self, chat_trigger: &ChatTrigger, window: &Window) -> T::DrawResult {
-        let chat_trigger_id = chat_trigger.id;
+    fn render_chat_program(&self, chat_program: &ChatProgram, window: &Window) -> T::DrawResult {
+        let chat_program_id = chat_program.id;
         let cmd_buffer3 = Rc::clone(&self.command_buffer);
         self.ui_toolkit.draw_window(
-            &format!("Edit chat trigger: {}", chat_trigger.id()),
+            &format!("Edit chat program: {}", chat_program.id()),
             window.size,
             window.pos(),
             &|| {
@@ -1052,19 +1052,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         let cmd_buffer2 = Rc::clone(&self.command_buffer);
                         self.ui_toolkit.draw_text_input_with_label(
                             "Bot command",
-                            &chat_trigger.prefix,
+                            &chat_program.prefix,
                             move |newvalue| {
                                 let newvalue = newvalue.to_string();
                                 cmd_buffer2
                                     .borrow_mut()
-                                    .change_chat_trigger(chat_trigger_id, move |mut ct| {
+                                    .change_chat_program(chat_program_id, move |mut ct| {
                                         ct.prefix = newvalue.to_string()
                                     })
                             },
                             &|| {},
                         )
                     },
-                    &|| self.render_code(chat_trigger.code.id),
+                    &|| self.render_code(chat_program.code.id),
                 ])
             },
             None::<fn(Keypress)>,
@@ -1072,10 +1072,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 cmd_buffer3
                     .borrow_mut()
                     .add_controller_command(move |controller| {
-                        controller.close_window(chat_trigger_id);
+                        controller.close_window(chat_program_id);
                     })
             }),
-            onwindowchange(Rc::clone(&self.command_buffer), chat_trigger_id),
+            onwindowchange(Rc::clone(&self.command_buffer), chat_program_id),
         )
     }
 
