@@ -7,10 +7,8 @@ implement it now
 
 - some functions need their argument names visible, even if there's only one argument. for example, `Reverse geocode` which takes a location
 
-- wrap operation fixing:
-  x local variables are constant... they can't wrap anything
-  x regular function menu shouldn't show anything, we have a special wrapped function generator
-  x control flow: only wrap if boolean
-  x control flow: only wrap if result
-  x struct literal: only wrap if one of the field types matches
-  x other literals cannot wrap anything
+- add quick action menu
+
+- change string to text
+
+- change name of chat trigger to chat program
