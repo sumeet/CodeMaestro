@@ -41,15 +41,16 @@ mod js {
     }
 
     pub fn load() -> StateDeserialize {
-        STORAGE.get("state")
-               .map(|stored| serde_json::from_str(&stored))
-               .unwrap_or_else(|| {
-                   let default = StateDeserialize::default();
-                   STORAGE.insert("state", &serde_json::to_string(&default).unwrap())
-                          .unwrap();
-                   Ok(default)
-               })
-               .unwrap()
+        let deserialized_state : Result<_, Box<dyn std::error::Error>> = try {
+            let stored = STORAGE.get("state").ok_or("no such key state")?;
+            serde_json::from_str(&stored)?
+        };
+        if let Ok(ds) = deserialized_state {
+            return ds
+        }
+       let default = StateDeserialize::default();
+       STORAGE.insert("state", &serde_json::to_string(&default).unwrap()).unwrap();
+       default
     }
 
     pub fn save_state(state_serialize: &StateSerialize) {
@@ -79,15 +80,18 @@ mod native {
     }
 
     pub fn load() -> StateDeserialize {
-        File::open(&*STATE_FILE_NAME).map(|file| serde_json::from_reader(file))
-                                     .unwrap_or_else(|_| {
-                                         let default = StateDeserialize::default();
-                                         create_dir_all(CONFIG_DIR.as_path()).unwrap();
-                                         let f = File::create(&*STATE_FILE_NAME).unwrap();
-                                         serde_json::to_writer_pretty(f, &default).unwrap();
-                                         Ok(default)
-                                     })
-                                     .unwrap()
+        let deserialized_state : Result<_, Box<dyn std::error::Error>> = try {
+            let file = File::open(&*STATE_FILE_NAME)?;
+            serde_json::from_reader(file)?
+        };
+        if let Ok(ds) = deserialized_state {
+            return ds
+        }
+        let default = StateDeserialize::default();
+        create_dir_all(CONFIG_DIR.as_path()).unwrap();
+        let f = File::create(&*STATE_FILE_NAME).unwrap();
+        serde_json::to_writer_pretty(f, &default).unwrap();
+        default
     }
 
     // JANK
