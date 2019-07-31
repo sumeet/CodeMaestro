@@ -29,6 +29,7 @@ pub trait UiToolkit {
                                                       draw_fn: &dyn Fn() -> Self::DrawResult,
                                                       handle_keypress: Option<F>)
                                                       -> Self::DrawResult;
+    fn draw_top_left_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self,
                                                                     window_name: &str,

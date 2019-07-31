@@ -94,8 +94,18 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
+        // 35px is hardcoded to dodge the menubar
         html! {
-            <div style={ format!("position: absolute; top: 10px; right: 10px; color: white; background-color: {}",rgba(WINDOW_BG_COLOR)) }, >
+            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(WINDOW_BG_COLOR)) }, >
+                {{ draw_fn() }}
+            </div>
+        }
+    }
+
+    fn draw_top_left_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
+        // 35px is hardcoded to dodge the menubar
+        html! {
+            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; left: 10px; color: white; background-color: {}",rgba(WINDOW_BG_COLOR)) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -567,13 +577,13 @@ impl UiToolkit for YewToolkit {
         // forgot why we needed to do this, whoops, should've written a comment
         let text = text.replace(" ", " ");
         html! {
-            <span>{ symbolize_text(&text) }</span>
+            <div style="padding: 0.2em;",>{ symbolize_text(&text) }</div>
         }
     }
 
     fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult {
         html! {
-            <div style=format!("padding: 0.1em; white-space: pre-wrap; word-wrap: break-word; color: {};", rgba(color)),>
+            <div style=format!("padding: 0.2em; white-space: pre-wrap; word-wrap: break-word; color: {};", rgba(color)),>
                 { symbolize_text(&text) }
             </div>
         }

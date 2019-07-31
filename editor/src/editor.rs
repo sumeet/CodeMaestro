@@ -49,6 +49,7 @@ use crate::chat::example_chat_program;
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
+pub const WHITE_COLOR: Color = [1., 1., 1., 1.];
 
 pub type Color = [f32; 4];
 
@@ -565,6 +566,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         });
         self.ui_toolkit.draw_all(&[
             &|| self.render_main_menu_bar(),
+            &|| self.render_quick_start_guide(),
             &|| self.render_scripts(),
             //&|| self.render_console_window(),
             &|| self.render_edit_code_funcs(),
@@ -587,22 +589,22 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.ui_toolkit.draw_all(&[
                 &move || {
                     let cmd_buffer = Rc::clone(&cmd_buffer);
-                    self.ui_toolkit.draw_button("Add code to the server", GREY_COLOR, move || {
+                    self.ui_toolkit.draw_button("Upload to \u{f544}", GREY_COLOR, move || {
                         cmd_buffer.borrow_mut().save_to_net()
                     })
                 },
                 &|| match &self.controller.send_to_server_overlay.borrow().status {
-                    SendToServerOverlayStatus::Ready => self.ui_toolkit.draw_text("Ready"),
+                    SendToServerOverlayStatus::Ready => self.ui_toolkit.draw_text("Status: Ready"),
                     SendToServerOverlayStatus::Error(e) => {
-                        self.ui_toolkit.draw_text(&format!(" There was an error \n{}", e))
+                        self.ui_toolkit.draw_text(&format!("Status:  There was an error \n{}", e))
                     }
                     SendToServerOverlayStatus::Submitting => {
                         self.ui_toolkit.draw_all_on_same_line(&[
-                            &|| self.ui_toolkit.draw_text("Sending to server..."),
+                            &|| self.ui_toolkit.draw_text("Status: Uploading to \u{f544}..."),
                             &|| self.ui_toolkit.draw_spinner(),
                         ])
                     }
-                    SendToServerOverlayStatus::Success => self.ui_toolkit.draw_text(" Sent to server"),
+                    SendToServerOverlayStatus::Success => self.ui_toolkit.draw_text("Status:  Sent to server"),
                 },
             ])
         })
@@ -668,6 +670,30 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             })
         })
+    }
+
+    fn render_quick_start_guide(&self) -> T::DrawResult {
+        // hax: (5, 30) is the initial window position, with enough clearance to clear the titlebar
+        // got it from window_positions.rs
+        self.ui_toolkit.draw_window("Quick start guide", (350, 350), (5, 30), &|| {
+            self.ui_toolkit.draw_all(&[
+                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Hi, my name is \u{f544}. I'm here to serve your chat room, and anyone can add programs to me."),
+                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
+                &|| {
+                    let cmd_buffer = Rc::clone(&self.command_buffer);
+                    self.ui_toolkit.draw_button("Make a new chat program", GREY_COLOR, move || {
+                        cmd_buffer.borrow_mut().load_chat_program(example_chat_program());
+                    })
+                },
+                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
+                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Use the test chat window to try your program."),
+                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
+                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "When you're done, press the button on the right to upload it so everyone can use it."),
+            ])},
+                                    None::<fn(Keypress)>,
+                                    None::<fn()>,
+            &|_, _| {},
+        )
     }
 
     fn render_opener(&self) -> T::DrawResult {
@@ -1032,11 +1058,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_chat_programs(&self) -> T::DrawResult {
-        let triggers = self
+        let programs = self
             .list_open_functions()
             .filter_map(|(func, window)| Some((func.downcast_ref::<ChatProgram>()?, window)));
         draw_all_iter!(T::self.ui_toolkit,
-            triggers.map(|(trigger, window)| move || self.render_chat_program(trigger, &window)))
+            programs.map(|(trigger, window)| move || self.render_chat_program(trigger, &window)))
     }
 
     fn render_chat_program(&self, chat_program: &ChatProgram, window: &Window) -> T::DrawResult {

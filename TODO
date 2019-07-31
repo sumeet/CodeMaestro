@@ -1,14 +1,15 @@
+p1:
+
+- fix alignment of button and text in quick start guide will this fix need to be applied elsewhere? check the imgui rendering, especially of the menu, and see if that lines up as well as the wasm version
+
+do later:
+
 - hovering changes color of buttons in html
 
-- implement function call rendering in code, there's enough groundwork to
-implement it now
+- implement function call rendering in code, there's enough groundwork to implement it now
 
 - many functions need their argument names hidden, esp when there's only one argument. for instance Print, or Reply, or Capitalize.
 
 - some functions need their argument names visible, even if there's only one argument. for example, `Reverse geocode` which takes a location
 
-- add quick action menu
-
 - change string to text
-
-- change name of chat trigger to chat program

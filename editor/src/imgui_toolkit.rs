@@ -580,8 +580,27 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui
             .window(&self.imlabel("top_right_overlay"))
             .flags(ImGuiWindowFlags::NoNav)
-            .position(// 2.5: HARDCODE HAX
+            .position(// 2.5: HARDCODE HAX, taking into account menubar height
                       (display_size_x - distance, distance * 2.5),
+                      ImGuiCond::Always)
+            .position_pivot((1.0, 0.0))
+            .movable(false)
+            .title_bar(false)
+            .resizable(false)
+            .always_auto_resize(true)
+            .save_settings(false)
+            .no_focus_on_appearing(true)
+            .build(draw_fn)
+    }
+
+    // TODO: basically a copy+paste of draw_top_right_overlay
+    fn draw_top_left_overlay(&self, draw_fn: &dyn Fn()) {
+        let distance = 10.0;
+        self.ui
+            .window(&self.imlabel("top_left"))
+            .flags(ImGuiWindowFlags::NoNav)
+            .position(// 2.5: HARDCODE HAX, taking into account menubar height
+                      (distance * 2.5, distance * 2.5),
                       ImGuiCond::Always)
             .position_pivot((1.0, 0.0))
             .movable(false)
@@ -621,7 +640,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let mut window_builder = self.ui.window(&window_name).movable(true).scrollable(true);
 
         if let Some(window) = window_after_prev_draw {
-            if window.size != (size.0 as f32, size.1 as f32) {
+            // size == (0, 0) means don't interfere with the window size, let imgui do its thing
+            if window.size != (size.0 as f32, size.1 as f32) && (size != (0, 0)) {
                 window_builder =
                     window_builder.size((size.0 as f32, size.1 as f32), ImGuiCond::Always)
             }
