@@ -184,21 +184,7 @@ impl ChatThingy {
             env_genie.list_chat_programs().cloned().collect_vec()
         };
 
-        let triggered_values = triggers.iter()
-            .filter_map(|ct| {
-                println!("{:?}", ct);
-                ct.try_to_trigger(self.interp.dup(), sender.clone(),
-                                  text.clone())
-            })
-            .collect_vec();
-
-        Box::pin(async move {
-            for value in triggered_values {
-                println!("there's a triggered value d00d");
-                await!(resolve_all_futures(value));
-            }
-            ()
-        })
+        message_received(&triggers, &self.interp, sender, text)
     }
 }
 
@@ -391,6 +377,7 @@ use hyper::service::Service;
 use branca::Branca;
 use std::sync::{Arc, Mutex};
 use futures_util::stream::StreamExt;
+use cs::chat_program::message_received;
 
 #[derive(Clone)]
 pub struct DirectoryConfig;

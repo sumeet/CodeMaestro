@@ -10,6 +10,10 @@ use super::env;
 use super::lang;
 use crate::builtins::new_message;
 use crate::lang::Function;
+use std::pin::Pin;
+use crate::resolve_all_futures;
+use itertools::Itertools;
+use crate::env::Interpreter;
 
 lazy_static! {
     static ref MESSAGE_ARG_ID: lang::ID =
@@ -98,4 +102,19 @@ impl lang::Function for ChatProgram {
     fn returns(&self) -> lang::Type {
         lang::Type::from_spec(&*lang::NULL_TYPESPEC)
     }
+}
+
+pub fn message_received(chat_programs: &[ChatProgram], interp: &Interpreter, sender: String, text: String) -> Pin<Box<dyn std::future::Future<Output = ()>>> {
+    let triggered_values = chat_programs.iter()
+        .filter_map(|cp| {
+            println!("{:?}", cp);
+            cp.try_to_trigger(interp.dup(), sender.clone(), text.clone())
+        }).collect_vec();
+
+    Box::pin(async move {
+        for value in triggered_values {
+            println!("there's a triggered value d00d");
+            resolve_all_futures(value).await;
+        }
+    })
 }

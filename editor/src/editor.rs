@@ -31,7 +31,6 @@ use cs::json_http_client::JSONHTTPClient;
 use super::json_http_client_builder::JSONHTTPClientBuilder;
 use cs::jsstuff;
 use cs::lang;
-use cs::lang::TypeSpec;
 use cs::lang::{CodeNode, Function, Value, ID};
 use cs::pystuff;
 use super::save_state;
@@ -46,6 +45,7 @@ use crate::window_positions::Window;
 use crate::send_to_server_overlay::{SendToServerOverlay,SendToServerOverlayStatus};
 use cs::code_loading::TheWorld;
 use crate::chat::example_chat_program;
+use crate::ui_toolkit::DrawFnRef;
 
 pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
 pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
@@ -839,10 +839,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_script(&self, script: &scripts::Script, window: &Window) -> T::DrawResult {
-        self.ui_toolkit.draw_window(
+        self.draw_managed_window(
+            window,
             &format!("Script {}", script.id()),
-            window.size,
-            (window.x, window.y),
             &|| {
                 self.ui_toolkit
                     .draw_layout_with_bottom_bar(&|| self.render_code(script.id()), &|| {
@@ -850,8 +849,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     })
             },
             None::<fn(Keypress)>,
-            None::<fn()>,
-            onwindowchange(Rc::clone(&self.command_buffer), script.id()),
         )
     }
 
@@ -870,12 +867,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         code_func: &code_function::CodeFunction,
         window: &Window,
     ) -> T::DrawResult {
-        let cmd_buffer = Rc::clone(&self.command_buffer);
-        let code_func_id = code_func.id();
-        self.ui_toolkit.draw_window(
+        self.draw_managed_window(
+            window,
             &format!("Edit function: {}", code_func.id()),
-            window.size,
-            window.pos(),
             &|| {
                 self.ui_toolkit.draw_all(&[
                     &|| {
@@ -900,14 +894,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            Some(move || {
-                cmd_buffer
-                    .borrow_mut()
-                    .add_controller_command(move |controller| {
-                        controller.close_window(code_func_id);
-                    })
-            }),
-            onwindowchange(Rc::clone(&self.command_buffer), code_func.id()),
         )
     }
 
@@ -921,10 +907,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_pyfunc(&self, pyfunc: &pystuff::PyFunc, window: &Window) -> T::DrawResult {
-        self.ui_toolkit.draw_window(
+        self.draw_managed_window(
+            window,
             &format!("Edit PyFunc: {}", pyfunc.id),
-            window.size,
-            window.pos(),
             &|| {
                 self.ui_toolkit.draw_all(&[
                     &|| {
@@ -977,8 +962,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            None::<fn()>,
-            onwindowchange(Rc::clone(&self.command_buffer), pyfunc.id()),
         )
     }
 
@@ -992,12 +975,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_jsfunc(&self, jsfunc: &jsstuff::JSFunc, window: &Window) -> T::DrawResult {
-        self.ui_toolkit.draw_window(
+        self.draw_managed_window(
+            window,
             &format!("Edit JSFunc: {}", jsfunc.id),
-            window.size,
-            window.pos(),
             &|| {
-
                 self.ui_toolkit.draw_all(&[
                     &|| {
                         let cont1 = Rc::clone(&self.command_buffer);
@@ -1035,8 +1016,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            None::<fn()>,
-            onwindowchange(Rc::clone(&self.command_buffer), jsfunc.id()),
         )
     }
 
@@ -1065,13 +1044,27 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             programs.map(|(trigger, window)| move || self.render_chat_program(trigger, &window)))
     }
 
+    // TODO: should window_name go inside of Window?
+    fn draw_managed_window(&self, window: &Window, window_name: &str, draw_fn: DrawFnRef<T>, handle_keypress: Option<impl Fn(Keypress) + 'static>) -> T::DrawResult {
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        let window_id = window.id;
+        self.ui_toolkit.draw_window(window_name, window.size, window.pos(), draw_fn, handle_keypress,
+            Some(move || {
+                cmd_buffer
+                    .borrow_mut()
+                    .add_controller_command(move |controller| {
+                        controller.close_window(window_id);
+                    })
+            }),
+            onwindowchange(Rc::clone(&self.command_buffer), window.id),
+        )
+    }
+
     fn render_chat_program(&self, chat_program: &ChatProgram, window: &Window) -> T::DrawResult {
         let chat_program_id = chat_program.id;
-        let cmd_buffer3 = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_window(
+        self.draw_managed_window(
+            window,
             &format!("Edit chat program: {}", chat_program.id()),
-            window.size,
-            window.pos(),
             &|| {
                 self.ui_toolkit.draw_all(&[
                     &|| {
@@ -1093,15 +1086,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     &|| self.render_code(chat_program.code.id),
                 ])
             },
-            None::<fn(Keypress)>,
-            Some(move || {
-                cmd_buffer3
-                    .borrow_mut()
-                    .add_controller_command(move |controller| {
-                        controller.close_window(chat_program_id);
-                    })
-            }),
-            onwindowchange(Rc::clone(&self.command_buffer), chat_program_id),
+            None::<fn(Keypress)>
         )
     }
 
@@ -1118,12 +1103,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         builder: &JSONHTTPClientBuilder,
         window: &Window,
     ) -> T::DrawResult {
-        let cmdbuffer = Rc::clone(&self.command_buffer);
-        let json_http_client_id = builder.json_http_client_id;
-        self.ui_toolkit.draw_window(
+        self.draw_managed_window(
+            window,
             &format!("Edit JSON HTTP Client: {}", builder.json_http_client_id),
-            window.size,
-            (window.x, window.y),
             &|| {
                 let client = self
                     .env_genie
@@ -1209,14 +1191,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            Some(move || {
-                cmdbuffer
-                    .borrow_mut()
-                    .add_controller_command(move |controller| {
-                        controller.close_window(json_http_client_id);
-                    })
-            }),
-            onwindowchange(Rc::clone(&self.command_buffer), json_http_client_id),
         )
     }
 
@@ -1391,12 +1365,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_struct(&self, strukt: &structs::Struct, window: &Window) -> T::DrawResult {
-        let strukt_id = strukt.id();
-        let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_window(
+        self.draw_managed_window(
+            window,
             &format!("Edit Struct: {}", strukt.id),
-            window.size,
-            window.pos(),
             &|| {
                 self.ui_toolkit.draw_all(&[
                     &|| {
@@ -1432,14 +1403,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            Some(move || {
-                cmd_buffer
-                    .borrow_mut()
-                    .add_controller_command(move |controller| {
-                        controller.close_window(strukt_id);
-                    })
-            }),
-            onwindowchange(Rc::clone(&self.command_buffer), strukt_id),
         )
     }
 
@@ -1496,12 +1459,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_edit_enum(&self, eneom: &enums::Enum, window: &Window) -> T::DrawResult {
-        let eneom_id = eneom.id;
-        let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_window(
+        self.draw_managed_window(
+            window,
             &format!("Edit Enum: {}", eneom.id),
-            window.size,
-            window.pos(),
             &|| {
                 self.ui_toolkit.draw_all(&[
                     &|| {
@@ -1538,14 +1498,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 ])
             },
             None::<fn(Keypress)>,
-            Some(move || {
-                cmd_buffer
-                    .borrow_mut()
-                    .add_controller_command(move |controller| {
-                        controller.close_window(eneom_id);
-                    })
-            }),
-            onwindowchange(Rc::clone(&self.command_buffer), eneom_id),
         )
     }
 

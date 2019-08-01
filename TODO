@@ -1,5 +1,12 @@
 p1:
 
+- opening chat program editor from the quick start menu in wasm... it doesn't pop over. generally new windows should pop over existing ones, wasm's got it right. i think all that needs to be done really is to try giving focus to newly opened windows, ugh idk how hard that will be. another fix could just be drawing it in a different place, away from where the first window will pop open... idk
+
+  - figured out a solution for this. manage the quick start window just like any other window is managed:
+    - hardcode the ID and initial size inside window_position.rs, if creating a new WindowPositions then include the quick start window
+    - make it thinner
+    - have to add to window positions code to open the next window to the RIGHT of current ones, and if there's no more space to the right, then open it UNDER
+
 - fix alignment of button and text in quick start guide will this fix need to be applied elsewhere? check the imgui rendering, especially of the menu, and see if that lines up as well as the wasm version
 
 do later:
