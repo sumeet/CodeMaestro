@@ -38,7 +38,7 @@ use cs::scripts;
 use cs::structs;
 use cs::tests;
 use super::ui_toolkit::{SelectableItem, UiToolkit};
-use super::window_positions::WindowPositions;
+use super::window_positions::{WindowPositions,QUICK_START_GUIDE_WINDOW_ID};
 use crate::opener::MenuItem;
 use crate::opener::Opener;
 use crate::window_positions::Window;
@@ -673,27 +673,28 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_quick_start_guide(&self) -> T::DrawResult {
-        // hax: (5, 30) is the initial window position, with enough clearance to clear the titlebar
-        // got it from window_positions.rs
-        self.ui_toolkit.draw_window("Quick start guide", (350, 350), (5, 30), &|| {
-            self.ui_toolkit.draw_all(&[
-                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Hi, my name is \u{f544}. I'm here to serve your chat room, and anyone can add programs to me."),
-                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
-                &|| {
-                    let cmd_buffer = Rc::clone(&self.command_buffer);
-                    self.ui_toolkit.draw_button("Make a new chat program", GREY_COLOR, move || {
-                        cmd_buffer.borrow_mut().load_chat_program(example_chat_program());
-                    })
-                },
-                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
-                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Use the test chat window to try your program."),
-                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
-                &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "When you're done, press the button on the right to upload it so everyone can use it."),
-            ])},
-                                    None::<fn(Keypress)>,
-                                    None::<fn()>,
-            &|_, _| {},
-        )
+        let open_window = self.controller.window_positions.get_open_window(&*QUICK_START_GUIDE_WINDOW_ID);
+        if let Some(open_window) = open_window {
+            self.draw_managed_window(&open_window, "Quick start guide", &|| {
+                self.ui_toolkit.draw_all(&[
+                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Hi, my name is \u{f544}. I'm here to serve your chat room, and anyone can add programs to me."),
+                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_button("Make a new chat program", GREY_COLOR, move || {
+                            cmd_buffer.borrow_mut().load_chat_program(example_chat_program());
+                        })
+                    },
+                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
+                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Use the test chat window to try your program."),
+                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
+                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "When you're done, press the button on the right to upload it so everyone can use it."),
+                ])},
+                                        None::<fn(Keypress)>,
+            )
+        } else {
+            self.ui_toolkit.draw_all(&[])
+        }
     }
 
     fn render_opener(&self) -> T::DrawResult {

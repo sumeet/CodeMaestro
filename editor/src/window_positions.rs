@@ -1,8 +1,21 @@
 use cs::lang;
+use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
+use uuid;
 
+lazy_static! {
+    pub static ref QUICK_START_GUIDE_WINDOW_ID: lang::ID =
+        uuid::Uuid::parse_str("8d12c907-3129-40b2-af67-a6f727a1e888").unwrap();
+}
+
+// go under the title bar
+// TODO: something else should handle going under the title bar... this should just start
+// at 0, 0 pry
+const INITIAL_WINDOW_POSITION: (isize, isize) = (5, 30);
 const INITIAL_WINDOW_SIZE: (usize, usize) = (550, 650);
+
+const QUICK_START_WINDOW_SIZE: (usize, usize) = (200, 350);
 
 #[derive(Deserialize, Serialize)]
 pub struct WindowPositions {
@@ -12,8 +25,14 @@ pub struct WindowPositions {
 
 impl Default for WindowPositions {
     fn default() -> Self {
+        let mut open_windows = HashMap::new();
+        open_windows.insert(*QUICK_START_GUIDE_WINDOW_ID,
+                            Window { id: *QUICK_START_GUIDE_WINDOW_ID,
+                                     size: QUICK_START_WINDOW_SIZE,
+                                     x: INITIAL_WINDOW_POSITION.0,
+                                     y: INITIAL_WINDOW_POSITION.1 });
         Self { size: (4000, 3000),
-               open_windows: HashMap::new() }
+               open_windows }
     }
 }
 
@@ -25,8 +44,8 @@ impl WindowPositions {
         let initial_pos = self.get_next_window_position();
         self.open_windows.insert(window_id,
                                  Window { id: window_id,
-                                          x: initial_pos.0 as isize,
-                                          y: initial_pos.1 as isize,
+                                          x: initial_pos.0,
+                                          y: initial_pos.1,
                                           size: INITIAL_WINDOW_SIZE });
     }
 
@@ -38,11 +57,11 @@ impl WindowPositions {
     }
 
     // TODO: i don't think this is used except for getting the first window pos
-    fn get_next_window_position(&self) -> (usize, usize) {
-        // go under the title bar
-        // TODO: something else should handle going under the title bar... this should just start
-        // at 0, 0 pry
-        (5, 30)
+    fn get_next_window_position(&self) -> (isize, isize) {
+        // TODO: some calculationz
+        // for now, just open up anything to the right of the quick start window
+        (INITIAL_WINDOW_POSITION.0 + QUICK_START_WINDOW_SIZE.0 as isize + 5,
+         INITIAL_WINDOW_POSITION.1)
     }
 
     pub fn get_open_window(&self, id: &lang::ID) -> Option<Window> {
