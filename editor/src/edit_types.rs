@@ -1,6 +1,8 @@
 use cs::lang;
 
-pub fn set_typespec(t: &mut lang::Type, typespec: &Box<dyn lang::TypeSpec>, nesting_level: &[usize]) {
+pub fn set_typespec(t: &mut lang::Type,
+                    typespec: &Box<dyn lang::TypeSpec>,
+                    nesting_level: &[usize]) {
     let mut type_to_modify = t;
     for param_index in nesting_level {
         type_to_modify = &mut type_to_modify.params[*param_index]

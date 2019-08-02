@@ -1,4 +1,4 @@
-use stdweb::{spawn_local};
+use stdweb::spawn_local;
 
 use std::future::Future as NewFuture;
 use std::rc::Rc;
@@ -14,16 +14,16 @@ pub struct AsyncExecutor {
 
 impl AsyncExecutor {
     pub fn new() -> Self {
-        Self {
-            onupdate: None,
-        }
+        Self { onupdate: None }
     }
 
     pub fn setonupdate(&mut self, onupdate: Rc<dyn Fn()>) {
         self.onupdate = Some(onupdate)
     }
 
-    pub fn exec<I, E: std::fmt::Debug, F: NewFuture<Output = Result<I, E>> + 'static>(&mut self, future: F) {
+    pub fn exec<I, E: std::fmt::Debug, F: NewFuture<Output = Result<I, E>> + 'static>(&mut self,
+                                                                                      future: F)
+    {
         let onupdate = self.onupdate.clone();
         spawn_local(async move {
             await!(future).unwrap();

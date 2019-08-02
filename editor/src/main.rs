@@ -14,6 +14,7 @@ use cfg_if::cfg_if;
 // modules
 mod app;
 mod chat;
+mod chat_test_window;
 mod code_editor;
 mod code_editor_renderer;
 mod code_generation;

@@ -7,6 +7,8 @@ use uuid;
 lazy_static! {
     pub static ref QUICK_START_GUIDE_WINDOW_ID: lang::ID =
         uuid::Uuid::parse_str("8d12c907-3129-40b2-af67-a6f727a1e888").unwrap();
+    pub static ref CHAT_TEST_WINDOW_ID: lang::ID =
+        uuid::Uuid::parse_str("1f5dbdf2-c8b7-4594-bc3e-9a4ca4c6184b").unwrap();
 }
 
 // go under the title bar
@@ -15,7 +17,8 @@ lazy_static! {
 const INITIAL_WINDOW_POSITION: (isize, isize) = (5, 30);
 const INITIAL_WINDOW_SIZE: (usize, usize) = (550, 650);
 
-const QUICK_START_WINDOW_SIZE: (usize, usize) = (200, 350);
+const QUICK_START_WINDOW_SIZE: (usize, usize) = (300, 200);
+const CHAT_TEST_WINDOW_SIZE: (usize, usize) = (300, 500);
 
 #[derive(Deserialize, Serialize)]
 pub struct WindowPositions {
@@ -31,6 +34,13 @@ impl Default for WindowPositions {
                                      size: QUICK_START_WINDOW_SIZE,
                                      x: INITIAL_WINDOW_POSITION.0,
                                      y: INITIAL_WINDOW_POSITION.1 });
+        open_windows.insert(*CHAT_TEST_WINDOW_ID,
+                            Window { id: *CHAT_TEST_WINDOW_ID,
+                                     size: CHAT_TEST_WINDOW_SIZE,
+                                     x: INITIAL_WINDOW_POSITION.0,
+                                     y: INITIAL_WINDOW_POSITION.1
+                                        + QUICK_START_WINDOW_SIZE.1 as isize
+                                        + 5 });
         Self { size: (4000, 3000),
                open_windows }
     }

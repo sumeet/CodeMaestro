@@ -9,11 +9,11 @@ use super::builtins::MESSAGE_STRUCT_ID;
 use super::env;
 use super::lang;
 use crate::builtins::new_message;
+use crate::env::{Interpreter, ExecutionEnvironment};
 use crate::lang::Function;
-use std::pin::Pin;
-use crate::resolve_all_futures;
+use crate::{resolve_all_futures, EnvGenie, builtins};
 use itertools::Itertools;
-use crate::env::Interpreter;
+use std::pin::Pin;
 
 lazy_static! {
     static ref MESSAGE_ARG_ID: lang::ID =
@@ -104,12 +104,24 @@ impl lang::Function for ChatProgram {
     }
 }
 
-pub fn message_received(chat_programs: &[ChatProgram], interp: &Interpreter, sender: String, text: String) -> Pin<Box<dyn std::future::Future<Output = ()>>> {
-    let triggered_values = chat_programs.iter()
-        .filter_map(|cp| {
-            println!("{:?}", cp);
-            cp.try_to_trigger(interp.dup(), sender.clone(), text.clone())
-        }).collect_vec();
+pub fn message_received(interp: &Interpreter,
+                        sender: String,
+                        text: String)
+                        -> Pin<Box<dyn std::future::Future<Output = ()>>> {
+    // this is mandatory or else we'll borrow the Env for too long
+    // TODO: make this a better comment
+    // BorrowMutError
+    let chat_programs = {
+        let env = interp.env.borrow();
+        let env_genie = EnvGenie::new(&env);
+        env_genie.list_chat_programs().cloned().collect::<Vec<_>>()
+    };
+    let triggered_values =
+        chat_programs.iter().filter_map(|cp| {
+                         println!("{:?}", cp);
+                         cp.try_to_trigger(interp.dup(), sender.clone(), text.clone())
+                     })
+                     .collect_vec();
 
     Box::pin(async move {
         for value in triggered_values {
@@ -117,4 +129,12 @@ pub fn message_received(chat_programs: &[ChatProgram], interp: &Interpreter, sen
             resolve_all_futures(value).await;
         }
     })
+}
+
+pub fn flush_reply_buffer(env_genie: &EnvGenie) -> Vec<String> {
+    let chat_reply = env_genie.find_function(*builtins::CHAT_REPLY_FUNC_ID).unwrap().downcast_ref::<builtins::ChatReply>().unwrap();
+
+    let mut output_buffer = vec![];
+    std::mem::swap(&mut output_buffer, &mut chat_reply.output_buffer.lock().unwrap());
+    output_buffer
 }

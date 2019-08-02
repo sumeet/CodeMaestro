@@ -992,6 +992,32 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe { imgui_sys::igSetScrollHereY(1.0) };
     }
 
+    // cribbed from https://github.com/ocornut/imgui/issues/1388
+    fn draw_whole_line_console_text_input(&self, ondone: impl Fn(&str) + 'static) {
+        let draw_fn = &|| {
+            self.ui.with_item_width(-1., &|| {
+                       // this is a copy and paste of draw_text_input
+                       let mut box_input = buf("");
+                       let enter_pressed = self.ui
+                                               .input_text(&self.imlabel(""), &mut box_input)
+                                               .enter_returns_true(true)
+                                               .always_insert_mode(true)
+                                               .build();
+                       if enter_pressed {
+                           ondone(box_input.as_ref() as &str);
+                       }
+                   })
+        };
+
+        let is_mouse_clicked = unsafe { imgui_sys::igIsMouseClicked(0, false) };
+        let is_any_item_active = unsafe { imgui_sys::igIsAnyItemActive() };
+        if self.ui.is_window_focused() && !is_mouse_clicked && !is_any_item_active {
+            self.focused(draw_fn)
+        } else {
+            draw_fn()
+        }
+    }
+
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self,
                                                                        existing_value: &str,
                                                                        onchange: F,
@@ -1019,12 +1045,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                                                   ondone: D) {
         let mut box_input = buf(existing_value);
 
-        let mut flags = ImGuiInputTextFlags::empty();
-        flags.set(ImGuiInputTextFlags::EnterReturnsTrue, true);
-
         let enter_pressed = self.ui
                                 .input_text(&self.imlabel(label), &mut box_input)
-                                .flags(flags)
+                                .enter_returns_true(true)
+                                .always_insert_mode(true)
                                 .build();
         if enter_pressed {
             ondone();

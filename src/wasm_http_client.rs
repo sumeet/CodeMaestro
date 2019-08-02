@@ -1,10 +1,10 @@
+use http::{Request, Response};
 use stdweb::PromiseFuture;
-use http::{Request,Response};
 use stdweb::{js, js_deserializable};
 //use stdweb::unstable::TryFrom;
-use stdweb::unstable::TryInto;
+use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
-use serde_derive::{Serialize,Deserialize};
+use stdweb::unstable::TryInto;
 
 // this conflicts with the js_deserializable macro definition if it's called Result, hence the rename
 // to EZResult
@@ -28,13 +28,15 @@ fn js_fetch(request: Request<String>) -> PromiseFuture<JSHTTPResponse> {
     let request_body = request.body();
     js! (
         return CS_FETCH__(@{request_url}, @{request_method}, @{request_headers}, @{request_body});
-    ).try_into().unwrap()
+    ).try_into()
+     .unwrap()
 }
 
 fn serializable_headers(request: &Request<String>) -> HashMap<String, &[u8]> {
-    request.headers().iter().map(|(key, val)| {
-        (key.to_string(), val.as_ref())
-    }).collect()
+    request.headers()
+           .iter()
+           .map(|(key, val)| (key.to_string(), val.as_ref()))
+           .collect()
 }
 
 // this matches the JS object created in scope.js
@@ -42,7 +44,7 @@ fn serializable_headers(request: &Request<String>) -> HashMap<String, &[u8]> {
 struct JSHTTPResponse {
     text: String,
     status: u16,
-    headers: HashMap<String,String>,
+    headers: HashMap<String, String>,
 }
 
 js_deserializable!(JSHTTPResponse);

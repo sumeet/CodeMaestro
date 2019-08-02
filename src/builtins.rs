@@ -195,8 +195,7 @@ pub fn new_result(ok_type: lang::Type) -> lang::Type {
 
 #[derive(Clone)]
 pub struct ChatReply {
-    //    output_buffer: Rc<RefCell<Vec<String>>>,
-    output_buffer: Arc<Mutex<Vec<String>>>,
+    pub output_buffer: Arc<Mutex<Vec<String>>>,
 }
 
 impl<'de> DeserializeTrait<'de> for ChatReply {

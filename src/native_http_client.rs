@@ -1,6 +1,6 @@
-use reqwest::{r#async::Client};
-use http::{Request,Response};
 use futures::stream::Stream;
+use http::{Request, Response};
+use reqwest::r#async::Client;
 
 use super::asynk::forward;
 
@@ -8,11 +8,11 @@ use super::asynk::forward;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub async fn fetch(request: Request<String>) -> Result<Response<String>> {
-    let resp = await!(forward(Client::new()
-        .request(request.method().clone(), &request.uri().to_string())
-        .headers(request.headers().clone())
-        .body(request.body().clone())
-        .send()))?;
+    let resp = await!(forward(Client::new().request(request.method().clone(),
+                                                    &request.uri().to_string())
+                                           .headers(request.headers().clone())
+                                           .body(request.body().clone())
+                                           .send()))?;
 
     let mut resp_builder = Response::builder();
     resp_builder.status(resp.status());
@@ -24,5 +24,3 @@ pub async fn fetch(request: Request<String>) -> Result<Response<String>> {
     let body = String::from_utf8_lossy(&body);
     Ok(resp_builder.body(body.into())?)
 }
-
-

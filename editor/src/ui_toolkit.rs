@@ -89,6 +89,9 @@ pub trait UiToolkit {
                                             onclick: F)
                                             -> Self::DrawResult;
     fn draw_text_box(&self, text: &str) -> Self::DrawResult;
+    fn draw_whole_line_console_text_input(&self,
+                                          ondone: impl Fn(&str) + 'static)
+                                          -> Self::DrawResult;
     fn draw_text_input<F: Fn(&str) + 'static, D: Fn() + 'static>(&self,
                                                                  existing_value: &str,
                                                                  onchange: F,

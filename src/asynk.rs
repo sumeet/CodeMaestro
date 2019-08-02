@@ -1,7 +1,6 @@
 pub use futures::Future as OldFuture;
 use std::future::Future as NewFuture;
 
-
 // converts from a new style Future to an old style one:
 // javascript needs 0.1 futures while tokio needs 0.3 futures, idk why:
 // but see https://github.com/tokio-rs/tokio/pull/819 for how i figured this out

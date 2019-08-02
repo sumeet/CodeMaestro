@@ -4,32 +4,32 @@ extern crate cs;
 
 use std::pin::Pin;
 
-use std::collections::HashMap;
 use cs::asynk::{backward, forward, OldFuture};
-use itertools::Itertools;
-use std::cell::RefCell;
-use std::rc::Rc;
 use cs::builtins::ChatReply;
+use cs::code_loading::TheWorld;
+use cs::env;
 use cs::resolve_all_futures;
 use cs::EnvGenie;
-use cs::env;
-use tokio::prelude::*;
-use irc::client::prelude::*;
-use irc::client::PackedIrcClient;
-use irc_proto::{Command};
-use tokio::runtime::current_thread::Runtime;
+use diesel::prelude::*;
+use diesel::query_dsl::QueryDsl;
 use futures::future::join_all;
 use futures_channel::mpsc;
-use noob;
-use hyper::{Body,Request,Response,Server};
-use hyper::service::{service_fn};
-use serde::Deserialize;
-use cs::code_loading::TheWorld;
-use diesel::query_dsl::QueryDsl;
-use diesel::prelude::*;
-use std::thread;
-use serde_derive::{Deserialize as Deserializeable, Serialize as Serializeable};
 use futures_util::compat::Stream01CompatExt;
+use hyper::service::service_fn;
+use hyper::{Body, Request, Response, Server};
+use irc::client::prelude::*;
+use irc::client::PackedIrcClient;
+use irc_proto::Command;
+use itertools::Itertools;
+use noob;
+use serde::Deserialize;
+use serde_derive::{Deserialize as Deserializeable, Serialize as Serializeable};
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+use std::thread;
+use tokio::prelude::*;
+use tokio::runtime::current_thread::Runtime;
 
 fn main() {
     use std::fs::File;
@@ -43,17 +43,18 @@ fn main() {
     if main_arg == Some("load_service_configs".to_string()) {
         let filename = args.next().expect("expected a filename");
         let file = File::open(filename).unwrap();
-        let configs : Vec<NewServiceConfig> = serde_json::from_reader(BufReader::new(file)).unwrap();
-        runtime.block_on(insert_new_service_configs(configs)).unwrap();
+        let configs: Vec<NewServiceConfig> = serde_json::from_reader(BufReader::new(file)).unwrap();
+        runtime.block_on(insert_new_service_configs(configs))
+               .unwrap();
         std::process::exit(0);
     }
 
     let service_configs_by_instance_id = runtime.block_on(backward(load_instances())).unwrap();
 
-
     if main_arg == Some("list_instance_urls".to_string()) {
         for (instance_id, service_configs) in service_configs_by_instance_id.iter() {
-            let url = GenerateProgramBotUrl::new(*instance_id).generate_url().unwrap();
+            let url = GenerateProgramBotUrl::new(*instance_id).generate_url()
+                                                              .unwrap();
             let nicknames = service_configs.iter().map(|sc| &sc.nickname).join(", ");
             println!("instance {}: {}", instance_id, nicknames);
             println!("{}", url);
@@ -61,7 +62,6 @@ fn main() {
         }
         std::process::exit(0);
     }
-
 
     let mut new_code_sender_by_instance_id = HashMap::new();
 
@@ -75,54 +75,63 @@ fn main() {
     }).collect_vec();
 
     threads.push(thread::spawn(move || {
-        let mut runtime = Runtime::new().unwrap();
-        runtime.block_on(backward(http_server(new_code_sender_by_instance_id))).unwrap();
-    }));
+                     let mut runtime = Runtime::new().unwrap();
+                     runtime.block_on(backward(http_server(new_code_sender_by_instance_id)))
+                            .unwrap();
+                 }));
 
     for thread in threads {
         thread.join().unwrap();
     }
 }
 
-fn start_new_interpreter_instance_with_services(instance_id: i32, service_configs: &[ServiceConfig], new_code_receiver: mpsc::UnboundedReceiver<TheWorld>) {
+fn start_new_interpreter_instance_with_services(instance_id: i32,
+                                                service_configs: &[ServiceConfig],
+                                                new_code_receiver: mpsc::UnboundedReceiver<TheWorld>)
+{
     let mut runtime = Runtime::new().unwrap();
     let chat_thingy = Rc::new(RefCell::new(ChatThingy::new(instance_id)));
 
-    runtime.block_on(
-        backward(load_code_from_the_db_into(Rc::clone(&chat_thingy),
-                                              instance_id))
-    ).unwrap();
+    runtime.block_on(backward(load_code_from_the_db_into(Rc::clone(&chat_thingy), instance_id)))
+           .unwrap();
     let mut futures = service_configs.iter()
-        .map(|service_config| {
-            let b : Box<dyn OldFuture<Item = (), Error = ()>> = Box::new(backward(new_conn(service_config, Rc::clone(&chat_thingy))));
-            b
-        }).collect_vec();
+                                     .map(|service_config| {
+                                         let b: Box<dyn OldFuture<Item = (), Error = ()>> =
+                                             Box::new(backward(new_conn(service_config,
+                                                                        Rc::clone(&chat_thingy))));
+                                         b
+                                     })
+                                     .collect_vec();
     futures.push(Box::new(backward(receive_code(chat_thingy, new_code_receiver))));
     let joined = join_all(futures);
     runtime.block_on(joined).unwrap();
 }
 
-async fn receive_code(chat_thingy: Rc<RefCell<ChatThingy>>, mut rx: mpsc::UnboundedReceiver<TheWorld>) -> Result<(), ()> {
+async fn receive_code(chat_thingy: Rc<RefCell<ChatThingy>>,
+                      mut rx: mpsc::UnboundedReceiver<TheWorld>)
+                      -> Result<(), ()> {
     while let Some(world) = await!(rx.next()) {
         chat_thingy.borrow_mut().load_world(&world);
     }
     Ok::<(), ()>(())
 }
 
-async fn new_conn(service_config: &ServiceConfig, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+async fn new_conn(service_config: &ServiceConfig,
+                  chat_thingy: Rc<RefCell<ChatThingy>>)
+                  -> Result<(), ()> {
     match service_config.service_type.as_str() {
         "irc" => {
             println!("new irc conn");
             await!(new_irc_conn(service_config.irc_config().unwrap(), chat_thingy))
-        },
+        }
         "discord" => {
             println!("new discord conn");
             await!(new_discord_conn(service_config.discord_token().unwrap(), chat_thingy))
-        },
+        }
         "slack" => {
             println!("new slack conn");
             await!(new_slack_conn(service_config.slack_token().unwrap(), chat_thingy))
-        },
+        }
         _ => panic!("unknown service type: {}", service_config.service_type),
     }
 }
@@ -157,7 +166,9 @@ impl ChatThingy {
         let reply_function = ChatReply::new(Arc::clone(&reply_buffer));
         interp.env.borrow_mut().add_function(reply_function);
 
-        Self { interp, reply_buffer, instance_id }
+        Self { interp,
+               reply_buffer,
+               instance_id }
     }
 
     // TODO: this is duped from lib.rs
@@ -171,44 +182,47 @@ impl ChatThingy {
         }
     }
 
-    pub fn message_received(&self, sender: String, text: String) -> Pin<Box<dyn std::future::Future<Output = ()>>> {
+    pub fn message_received(&self,
+                            sender: String,
+                            text: String)
+                            -> Pin<Box<dyn std::future::Future<Output = ()>>> {
         if text == ".letmeprogramyou" {
-            let program_url = GenerateProgramBotUrl::new(self.instance_id).generate_url().unwrap();
-            self.reply_buffer.lock().unwrap().push(program_url.to_string());
+            let program_url = GenerateProgramBotUrl::new(self.instance_id).generate_url()
+                                                                          .unwrap();
+            self.reply_buffer
+                .lock()
+                .unwrap()
+                .push(program_url.to_string());
             return Box::pin(async { () });
         }
 
-        let triggers = {
-            let env = self.interp.env.borrow();
-            let env_genie = EnvGenie::new(&env);
-            env_genie.list_chat_programs().cloned().collect_vec()
-        };
-
-        message_received(&triggers, &self.interp, sender, text)
+        message_received(&self.interp, sender, text)
     }
 }
 
 async fn new_irc_conn(mut config: Config, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     config.version = Some("cs: program me!".to_string());
-    config.alt_nicks = Some(
-        (1..6).map(|n| {
-            let underscores = std::iter::repeat("_").take(n).join("");
-            format!("{}{}", config.nickname.as_ref().unwrap(), underscores)
-        }).collect()
-    );
+    config.alt_nicks =
+        Some((1..6).map(|n| {
+                       let underscores = std::iter::repeat("_").take(n).join("");
+                       format!("{}{}", config.nickname.as_ref().unwrap(), underscores)
+                   })
+                   .collect());
     let irc_client_future = IrcClient::new_future(config).unwrap();
-    let PackedIrcClient(client,
-                        irc_future) = await!(forward(irc_client_future)).unwrap();
+    let PackedIrcClient(client, irc_future) = await!(forward(irc_client_future)).unwrap();
     client.identify().unwrap();
     let irc_future = backward(async move {
-        await!(forward(irc_future)).map_err(|e| println!("irc error: {:?}", e)).ok();
+        await!(forward(irc_future)).map_err(|e| println!("irc error: {:?}", e))
+                                   .ok();
         Ok::<(), ()>(())
     });
     await!(forward(backward(irc_interaction_future(client, chat_thingy)).join(irc_future))).ok();
     Ok::<(), ()>(())
 }
 
-async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
+async fn irc_interaction_future(client: IrcClient,
+                                chat_thingy: Rc<RefCell<ChatThingy>>)
+                                -> Result<(), ()> {
     let mut stream = client.stream().compat();
     while let Some(message) = await!(stream.next()) {
         if message.is_err() {
@@ -218,11 +232,17 @@ async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatT
             println!("{:?}", message);
             if let Command::PRIVMSG(sender, text) = &message.command {
                 if let Some(response_target) = message.response_target() {
-                    await!(chat_thingy.borrow_mut().message_received(sender.clone(), text.clone()));
-                    for reply in chat_thingy.borrow_mut().reply_buffer.lock().unwrap().drain(..) {
-                        client.send_privmsg(response_target, &reply).map_err(|err| {
-                            println!("error sending msg: {:?}", err)
-                        }).ok();
+                    await!(chat_thingy.borrow_mut()
+                                      .message_received(sender.clone(), text.clone()));
+                    for reply in chat_thingy.borrow_mut()
+                                            .reply_buffer
+                                            .lock()
+                                            .unwrap()
+                                            .drain(..)
+                    {
+                        client.send_privmsg(response_target, &reply)
+                              .map_err(|err| println!("error sending msg: {:?}", err))
+                              .ok();
                     }
                 }
             }
@@ -232,16 +252,24 @@ async fn irc_interaction_future(client: IrcClient, chat_thingy: Rc<RefCell<ChatT
 }
 
 async fn new_discord_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
-    let (client, stream) = await!(forward(noob::Client::connect(token))).unwrap_or_else(|e| {
-        panic!("error connecting to discord: {:?}", e)
-    });
+    let (client, stream) =
+        await!(forward(noob::Client::connect(token))).unwrap_or_else(|e| {
+                                                         panic!("error connecting to discord: {:?}",
+                                                                e)
+                                                     });
     let mut stream = stream.compat();
     while let Some(event) = await!(stream.next()) {
         match event {
             Ok(noob::Event::MessageCreate(msg)) => {
-                await!(chat_thingy.borrow_mut().message_received(msg.author.username, msg.content));
+                await!(chat_thingy.borrow_mut()
+                                  .message_received(msg.author.username, msg.content));
 
-                for reply in chat_thingy.borrow_mut().reply_buffer.lock().unwrap().drain(..) {
+                for reply in chat_thingy.borrow_mut()
+                                        .reply_buffer
+                                        .lock()
+                                        .unwrap()
+                                        .drain(..)
+                {
                     await!(forward(client.send_message(&noob::MessageBuilder::new(&reply), &msg.channel_id)))
                         .map_err(|e| println!("error sending discord message: {:?}", e)).ok();
                 }
@@ -254,10 +282,10 @@ async fn new_discord_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> 
 }
 
 async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
-    use slack::{Event, Message};
+    use futures::future::{ok, FutureResult};
     use slack::api::MessageStandard;
     use slack::future::client::{Client, EventHandler};
-    use futures::future::{ok, FutureResult};
+    use slack::{Event, Message};
 
     struct MyHandler {
         chat_thingy: Rc<RefCell<ChatThingy>>,
@@ -272,13 +300,12 @@ async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Re
             // print out the event
             // do something if it's a `Message::Standard`
             if let Event::Message(ref message) = event {
-                if let Message::Standard(MessageStandard {
-                                             ref channel,
-                                             ref user,
-                                             ref text,
-                                             ts: _,
-                                             ..
-                                         }) = **message {
+                if let Message::Standard(MessageStandard { ref channel,
+                                                           ref user,
+                                                           ref text,
+                                                           ts: _,
+                                                           .. }) = **message
+                {
                     if let (Some(channel), Some(text), Some(user)) = (channel, text, user) {
                         let msg_sender = cli.sender().clone();
                         let sender = user.clone();
@@ -287,16 +314,22 @@ async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Re
 
                         let chat_thingy = Rc::clone(&self.chat_thingy);
                         return Box::new(backward(async move {
-
                             await!(chat_thingy.borrow_mut().message_received(sender, text));
 
-                            for reply in chat_thingy.borrow_mut().reply_buffer.lock().unwrap().drain(..) {
-                                msg_sender.send_message(&channel, &reply).map_err(|err| {
-                                    println!("error sending slack message: {:?}", err)
-                                }).ok();
+                            for reply in chat_thingy.borrow_mut()
+                                                    .reply_buffer
+                                                    .lock()
+                                                    .unwrap()
+                                                    .drain(..)
+                            {
+                                msg_sender.send_message(&channel, &reply)
+                                          .map_err(|err| {
+                                              println!("error sending slack message: {:?}", err)
+                                          })
+                                          .ok();
                             }
                             Ok(())
-                        }))
+                        }));
                     }
                 }
             }
@@ -319,65 +352,61 @@ async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Re
     Ok::<(), ()>(())
 }
 
-
 // database shit
-use futures_cpupool::CpuPool;
 use diesel;
+use futures_cpupool::CpuPool;
 //use diesel::prelude::*;
-use diesel::{Insertable,Queryable};
-use diesel::r2d2;
-use lazy_static::lazy_static;
-use cs::schema::{codes,service_configs};
-use diesel::query_dsl::RunQueryDsl;
 use cs::config;
+use cs::schema::{codes, service_configs};
+use diesel::query_dsl::RunQueryDsl;
+use diesel::r2d2;
+use diesel::{Insertable, Queryable};
+use lazy_static::lazy_static;
 
 pub type Conn = diesel::pg::PgConnection;
 pub type Pool = r2d2::Pool<r2d2::ConnectionManager<Conn>>;
 
 lazy_static! {
-    static ref DIESEL_CONN_POOL : Pool = connect();
+    static ref DIESEL_CONN_POOL: Pool = connect();
 }
 
 fn connect() -> Pool {
     let db_url = config::get("DATABASE_URL").expect("couldn't find DATABASE_URL");
     let manager = r2d2::ConnectionManager::<Conn>::new(db_url);
-    r2d2::Pool::builder().build(manager).expect("Failed to create pool")
+    r2d2::Pool::builder().build(manager)
+                         .expect("Failed to create pool")
 }
 
 pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
-    where
-        T: Send + 'static,
-        E: std::error::Error + Send + 'static,
-        F: FnOnce(&Conn) -> R + Send + 'static,
-        R: IntoFuture<Item = T, Error = E> + Send + 'static,
-        <R as IntoFuture>::Future: Send,
+    where T: Send + 'static,
+          E: std::error::Error + Send + 'static,
+          F: FnOnce(&Conn) -> R + Send + 'static,
+          R: IntoFuture<Item = T, Error = E> + Send + 'static,
+          <R as IntoFuture>::Future: Send
 {
     lazy_static! {
-      static ref THREAD_POOL: CpuPool = {
-        CpuPool::new_num_cpus()
-      };
+        static ref THREAD_POOL: CpuPool = { CpuPool::new_num_cpus() };
     }
 
     let pool = DIESEL_CONN_POOL.clone();
     THREAD_POOL.spawn_fn(move || {
-        pool
-            .get()
-            // TODO: this is still super fucked. we'll crash any time the insert fails lol
-            .map_err(|_err| panic!("ugh fuck this thing"))
-            .map(|conn| f(&conn))
-            .into_future()
-            .and_then(|f| f)
-    })
+                   pool.get()
+                       // TODO: this is still super fucked. we'll crash any time the insert fails lol
+                       .map_err(|_err| panic!("ugh fuck this thing"))
+                       .map(|conn| f(&conn))
+                       .into_future()
+                       .and_then(|f| f)
+               })
 }
 
-use http_fs::config::{StaticFileConfig};
-use http_fs::{StaticFiles};
-use std::path::Path;
-use hyper::service::Service;
 use branca::Branca;
-use std::sync::{Arc, Mutex};
-use futures_util::stream::StreamExt;
 use cs::chat_program::message_received;
+use futures_util::stream::StreamExt;
+use http_fs::config::StaticFileConfig;
+use http_fs::StaticFiles;
+use hyper::service::Service;
+use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 #[derive(Clone)]
 pub struct DirectoryConfig;
@@ -398,14 +427,15 @@ impl StaticFileConfig for DirectoryConfig {
     }
 }
 
-
-pub fn serve_static(req: Request<Body>) -> impl std::future::Future<Output = Result<Response<Body>, std::io::Error>> {
+pub fn serve_static(
+    req: Request<Body>)
+    -> impl std::future::Future<Output = Result<Response<Body>, std::io::Error>> {
     let mut static_files = StaticFiles::new(DirectoryConfig);
     forward(static_files.call(req))
 }
 
 #[derive(Insertable)]
-#[table_name="codes"]
+#[table_name = "codes"]
 struct NewCode {
     added_by: String,
     code: serde_json::Value,
@@ -425,14 +455,13 @@ struct Code {
 }
 
 #[derive(Insertable, Serializeable, Deserializeable)]
-#[table_name="service_configs"]
+#[table_name = "service_configs"]
 struct NewServiceConfig {
     instance_id: i32,
     nickname: String,
     service_type: String,
     config: serde_json::Value,
 }
-
 
 #[derive(Queryable, Debug)]
 // for some reason, Queryable requires that we have all DB fields even if we don't use them
@@ -449,60 +478,68 @@ struct ServiceConfig {
 
 impl ServiceConfig {
     pub fn discord_token(&self) -> Result<&str, Box<dyn std::error::Error>> {
-        Ok(self.config.get("token")
-            .ok_or("discord token not found in config")?
-            .as_str().ok_or("discord token not a string")?)
+        Ok(self.config
+               .get("token")
+               .ok_or("discord token not found in config")?
+               .as_str()
+               .ok_or("discord token not a string")?)
     }
 
     pub fn slack_token(&self) -> Result<&str, Box<dyn std::error::Error>> {
-        Ok(self.config.get("token")
-            .ok_or("slack token not found in config")?
-            .as_str().ok_or("slack token not a string")?)
+        Ok(self.config
+               .get("token")
+               .ok_or("slack token not found in config")?
+               .as_str()
+               .ok_or("slack token not a string")?)
     }
 
     pub fn irc_config(&self) -> Result<Config, Box<dyn std::error::Error>> {
-       Ok(serde_json::from_value(self.config.clone())?)
+        Ok(serde_json::from_value(self.config.clone())?)
     }
 }
 
-fn insert_new_code(code: &TheWorld, instance_id: i32) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
+fn insert_new_code(
+    code: &TheWorld,
+    instance_id: i32)
+    -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
     use cs::schema::codes::dsl::codes;
-    let newcode = NewCode {
-        added_by: "sumeet".to_string(),
-        code: serde_json::to_value(code).unwrap(),
-        instance_id,
-    };
-    exec_async(|conn| {
-        diesel::insert_into(codes).values(newcode).execute(conn)
-    })
+    let newcode = NewCode { added_by: "sumeet".to_string(),
+                            code: serde_json::to_value(code).unwrap(),
+                            instance_id };
+    exec_async(|conn| diesel::insert_into(codes).values(newcode).execute(conn))
 }
 
-fn insert_new_service_configs(configs: Vec<NewServiceConfig>) -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
+fn insert_new_service_configs(
+    configs: Vec<NewServiceConfig>)
+    -> impl OldFuture<Error = impl std::error::Error + std::fmt::Debug + 'static> {
     use cs::schema::service_configs::dsl::service_configs;
     exec_async(move |conn| {
-        diesel::insert_into(service_configs).values(configs).execute(conn)
+        diesel::insert_into(service_configs).values(configs)
+                                            .execute(conn)
     })
 }
 
 async fn load_instances() -> Result<HashMap<i32, Vec<ServiceConfig>>, Box<dyn std::error::Error>> {
     use crate::service_configs::dsl::*;
 
-    let all_service_configs = await!(forward(exec_async(|conn| {
-        service_configs.load::<ServiceConfig>(conn)
-    })))?;
+    let all_service_configs =
+        await!(forward(exec_async(|conn| service_configs.load::<ServiceConfig>(conn))))?;
 
     Ok(all_service_configs.into_iter()
-        .map(|service_config| (service_config.instance_id, service_config))
-        .into_group_map())
+                          .map(|service_config| (service_config.instance_id, service_config))
+                          .into_group_map())
 }
 
-async fn load_code_from_the_db_into(chat_thingy: Rc<RefCell<ChatThingy>>, for_instance_id: i32) -> Result<(), ()> {
+async fn load_code_from_the_db_into(chat_thingy: Rc<RefCell<ChatThingy>>,
+                                    for_instance_id: i32)
+                                    -> Result<(), ()> {
     use crate::codes::dsl::*;
 
     let code_rows = await!(forward(exec_async(move |conn| {
-        codes.filter(instance_id.eq(for_instance_id))
-            .load::<Code>(conn)
-    }))).unwrap();
+                                       codes.filter(instance_id.eq(for_instance_id))
+                                            .load::<Code>(conn)
+                                   })))
+                                       .unwrap();
     for code_row in code_rows {
         let the_world = serde_json::from_value(code_row.code);
         match the_world {
@@ -517,21 +554,21 @@ async fn load_code_from_the_db_into(chat_thingy: Rc<RefCell<ChatThingy>>, for_in
     Ok::<(), ()>(())
 }
 
-
-async fn http_server(new_code_sender_by_instance_id: HashMap<i32, mpsc::UnboundedSender<TheWorld>>) -> Result<(), ()> {
-    let port = config::get("PORT")
-        .expect("PORT envvar not set")
-        .parse()
-        .expect("PORT must be an integer");
+async fn http_server(new_code_sender_by_instance_id: HashMap<i32,
+                             mpsc::UnboundedSender<TheWorld>>)
+                     -> Result<(), ()> {
+    let port = config::get("PORT").expect("PORT envvar not set")
+                                  .parse()
+                                  .expect("PORT must be an integer");
     await!(forward(Server::bind(&([0, 0, 0, 0], port).into())
         .executor(tokio::runtime::current_thread::TaskExecutor::current())
         .serve(move || service_fn(http_handler(new_code_sender_by_instance_id.clone()))))).unwrap();
     Ok::<(), ()>(())
 }
 
-
-async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<dyn std::error::Error + 'static>>
-    where for<'de> T: Deserialize<'de>,
+async fn deserialize<T>(req: Request<Body>)
+                        -> Result<Request<T>, Box<dyn std::error::Error + 'static>>
+    where for<'de> T: Deserialize<'de>
 {
     let (parts, body) = req.into_parts();
     let body = await!(forward(body.concat2()))?;
@@ -540,40 +577,42 @@ async fn deserialize<T>(req: Request<Body>) -> Result<Request<T>, Box<dyn std::e
     Ok(Request::from_parts(parts, body))
 }
 
-fn http_handler(new_code_sender_by_instance_id: HashMap<i32, mpsc::UnboundedSender<TheWorld>>) ->
-    impl Fn(Request<Body>) -> Box<dyn OldFuture<Item = Response<Body>, Error=hyper::Error>> {
-
+fn http_handler(
+    new_code_sender_by_instance_id: HashMap<i32, mpsc::UnboundedSender<TheWorld>>)
+    -> impl Fn(Request<Body>) -> Box<dyn OldFuture<Item = Response<Body>, Error = hyper::Error>> {
     move |request| {
         let uri = request.uri();
         let new_code_intent = extract_intent(uri);
-        let new_code_sender = new_code_intent.as_ref()
-            .and_then(|intent| new_code_sender_by_instance_id.get(&intent.instance_id));
+        let new_code_sender =
+            new_code_intent.as_ref().and_then(|intent| {
+                                        new_code_sender_by_instance_id.get(&intent.instance_id)
+                                    });
         if uri.path() == "/postthecode" && new_code_sender.is_some() {
             let mut new_code_sender = new_code_sender.unwrap().clone();
             let new_code_intent = new_code_intent.unwrap();
             Box::new(backward(async move {
-                let body = await!(deserialize::<TheWorld>(request));
-                if let Err(e) = body {
-                    println!("error: {:?}", e);
-                    return Ok(validation_error("ur world sucked"))
-                }
+                         let body = await!(deserialize::<TheWorld>(request));
+                         if let Err(e) = body {
+                             println!("error: {:?}", e);
+                             return Ok(validation_error("ur world sucked"));
+                         }
 
-                let the_world = body.unwrap().into_body();
-                await!(forward(insert_new_code(&the_world, new_code_intent.instance_id))).unwrap();
+                         let the_world = body.unwrap().into_body();
+                         await!(forward(insert_new_code(&the_world, new_code_intent.instance_id))).unwrap();
 
-                use futures_util::sink::SinkExt;
-                await!(new_code_sender.send(the_world)).unwrap();
+                         use futures_util::sink::SinkExt;
+                         await!(new_code_sender.send(the_world)).unwrap();
 
-                Ok(Response::new(Body::from("던지다")))
-            }))
+                         Ok(Response::new(Body::from("던지다")))
+                     }))
         } else {
             Box::new(backward(async move {
-                // oh jesus christ, the unimplemented
-                await!(serve_static(request)).map_err(|e| {
-                    println!("{:?}", e);
-                    unimplemented!()
-                })
-            }))
+                         // oh jesus christ, the unimplemented
+                         await!(serve_static(request)).map_err(|e| {
+                                                          println!("{:?}", e);
+                                                          unimplemented!()
+                                                      })
+                     }))
         }
     }
 }

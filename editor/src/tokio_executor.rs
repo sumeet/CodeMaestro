@@ -1,7 +1,7 @@
+use cs::asynk::backward;
 use std::future::Future as NewFuture;
-use tokio_current_thread::CurrentThread;
 use std::time;
-use cs::asynk::{backward};
+use tokio_current_thread::CurrentThread;
 use tokio_reactor::Reactor;
 use tokio_timer::timer::{self, Timer};
 
@@ -39,11 +39,12 @@ pub fn with_executor_context<F: FnOnce(AsyncExecutor)>(run: F) {
 
 #[derive(Debug)]
 pub struct AsyncExecutor<'a> {
-    executor: tokio_current_thread::Entered<'a, tokio_timer::timer::Timer<tokio_reactor::Reactor>>
+    executor: tokio_current_thread::Entered<'a, tokio_timer::timer::Timer<tokio_reactor::Reactor>>,
 }
 
 impl<'a> AsyncExecutor<'a> {
-    pub fn new(executor: tokio_current_thread::Entered<'a, tokio_timer::timer::Timer<tokio_reactor::Reactor>>) -> Self {
+    pub fn new(executor: tokio_current_thread::Entered<'a, tokio_timer::timer::Timer<tokio_reactor::Reactor>>)
+               -> Self {
         Self { executor }
     }
 
@@ -52,10 +53,12 @@ impl<'a> AsyncExecutor<'a> {
         self.executor.turn(Some(duration)).unwrap();
     }
 
-    pub fn exec<I, E: std::fmt::Debug, F: NewFuture<Output = Result<I, E>> + 'static>(&mut self, future: F) {
+    pub fn exec<I, E: std::fmt::Debug, F: NewFuture<Output = Result<I, E>> + 'static>(&mut self,
+                                                                                      future: F)
+    {
         self.executor.spawn(backward(async {
-            await!(future).unwrap();
-            Ok(())
-        }));
+                                await!(future).unwrap();
+                                Ok(())
+                            }));
     }
 }

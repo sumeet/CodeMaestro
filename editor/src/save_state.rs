@@ -41,16 +41,17 @@ mod js {
     }
 
     pub fn load() -> StateDeserialize {
-        let deserialized_state : Result<_, Box<dyn std::error::Error>> = try {
+        let deserialized_state: Result<_, Box<dyn std::error::Error>> = try {
             let stored = STORAGE.get("state").ok_or("no such key state")?;
             serde_json::from_str(&stored)?
         };
         if let Ok(ds) = deserialized_state {
-            return ds
+            return ds;
         }
-       let default = StateDeserialize::default();
-       STORAGE.insert("state", &serde_json::to_string(&default).unwrap()).unwrap();
-       default
+        let default = StateDeserialize::default();
+        STORAGE.insert("state", &serde_json::to_string(&default).unwrap())
+               .unwrap();
+        default
     }
 
     pub fn save_state(state_serialize: &StateSerialize) {
@@ -80,12 +81,12 @@ mod native {
     }
 
     pub fn load() -> StateDeserialize {
-        let deserialized_state : Result<_, Box<dyn std::error::Error>> = try {
+        let deserialized_state: Result<_, Box<dyn std::error::Error>> = try {
             let file = File::open(&*STATE_FILE_NAME)?;
             serde_json::from_reader(file)?
         };
         if let Ok(ds) = deserialized_state {
-            return ds
+            return ds;
         }
         let default = StateDeserialize::default();
         create_dir_all(CONFIG_DIR.as_path()).unwrap();
