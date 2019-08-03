@@ -668,7 +668,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         })
                     },
                     &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
-                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Use the test chat window to try your program."),
+                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Type your command in the chat test area to try your program before deploying it."),
                     &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
                     &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "When you're done, press the button on the right to upload it so everyone can use it."),
                 ])},

@@ -17,8 +17,8 @@ lazy_static! {
 const INITIAL_WINDOW_POSITION: (isize, isize) = (5, 30);
 const INITIAL_WINDOW_SIZE: (usize, usize) = (550, 650);
 
-const QUICK_START_WINDOW_SIZE: (usize, usize) = (300, 200);
-const CHAT_TEST_WINDOW_SIZE: (usize, usize) = (300, 500);
+const QUICK_START_WINDOW_SIZE: (usize, usize) = (300, 250);
+const CHAT_TEST_WINDOW_SIZE: (usize, usize) = (300, 300);
 
 #[derive(Deserialize, Serialize)]
 pub struct WindowPositions {

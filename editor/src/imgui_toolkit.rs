@@ -296,7 +296,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe {
             // HACK: the igIsAnyItemHovered allows me to click buttons while focusing a text field.
             // good enough for now.
-            if !imgui_sys::igIsAnyItemActive() && !imgui_sys::igIsAnyItemHovered() {
+            if imgui_sys::igIsItemHovered(imgui_sys::ImGuiHoveredFlags::empty())
+               || (!imgui_sys::igIsAnyItemActive() && !imgui_sys::igIsAnyItemHovered())
+            {
                 imgui_sys::igSetKeyboardFocusHere(-1)
             }
         }
