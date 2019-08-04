@@ -223,7 +223,9 @@ impl UiToolkit for YewToolkit {
         ondone: D)
         -> Self::DrawResult {
         html! {
-            <div style="display: flex;",>
+            // min-height: fit-content is a fix for safari. otherwise this doesn't take up any space
+            // and gets stomped in flex layouts
+            <div style="display: flex; min-height: fit-content;",>
                 {{ self.draw_text_input(existing_value, onchange, ondone) }}
                 <label>{{ label }}</label>
             </div>
