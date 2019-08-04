@@ -9,7 +9,7 @@ use super::builtins::MESSAGE_STRUCT_ID;
 use super::env;
 use super::lang;
 use crate::builtins::new_message;
-use crate::env::{Interpreter, ExecutionEnvironment};
+use crate::env::{Interpreter};
 use crate::lang::Function;
 use crate::{resolve_all_futures, EnvGenie, builtins};
 use itertools::Itertools;

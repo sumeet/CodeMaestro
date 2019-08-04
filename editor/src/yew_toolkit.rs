@@ -11,10 +11,11 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use itertools::Itertools;
-//use stdweb::{console};
+//use stdweb::console;
 use stdweb::js;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
+use stdweb::web::html_element::InputElement;
 use stdweb::web::{document, IElement, IEventTarget};
 use yew::html;
 use yew::prelude::*;
@@ -322,7 +323,7 @@ impl UiToolkit for YewToolkit {
                     { if let Some(onclose) = onclose {
                         html! {
                             <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
-                                { "X" }
+                                { symbolize_text("\u{f410}") }
                             </div>
                         }
                     } else {
@@ -470,11 +471,13 @@ impl UiToolkit for YewToolkit {
         // TODO: this only renders the bottom bar directly under the content. the bottom bar needs
         // to be fixed at the bottom
         html! {
-            <div id={ self.incr_last_drawn_element_id().to_string() }, >
-                { draw_content_fn() }
-                { self.draw_empty_line() }
-                { self.draw_empty_line() }
-                { draw_bottom_bar_fn() }
+            <div id={ self.incr_last_drawn_element_id().to_string() }, style="display: flex; flex-direction: column;", >
+                <div style="flex-grow: 1; display: flex;",>
+                    { draw_content_fn() }
+                </div>
+                <div style="flex-grow: 0; display: flex;",>
+                    { draw_bottom_bar_fn() }
+                </div>
             </div>
         }
     }
@@ -535,8 +538,17 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_text_box(&self, text: &str) -> Self::DrawResult {
+        let id = self.incr_last_drawn_element_id();
+        // this shit is the only way i can get a div to stay scrolled to the bottom
+        // see https://stackoverflow.com/questions/18614301/keep-overflow-div-scrolled-to-bottom-unless-user-scrolls-up/44051405#44051405
         html! {
-            <textarea readonly={true}, id={ self.incr_last_drawn_element_id().to_string() },>{ text }</textarea>
+            <div style="height: 100%; overflow-y: auto; display: flex; flex-direction: column-reverse; border: none; width: 100%;",
+                      readonly={true},
+                      id={ id.to_string() },>
+            { for text.lines().rev().into_iter().map(|line| html! {
+                <div>{ symbolize_text(line) }</div>
+            }) }
+            </div>
         }
     }
 
@@ -570,6 +582,27 @@ impl UiToolkit for YewToolkit {
                value=existing_value,
                oninput=|e| {onchange(&e.value) ; Msg::Redraw},
                onkeypress=|e| { if e.key() == "Enter" { ondone2() } ; Msg::Redraw }, />
+        }
+    }
+
+    fn draw_whole_line_console_text_input(&self,
+                                          ondone: impl Fn(&str) + 'static)
+                                          -> Self::DrawResult {
+        html! {
+            <input type="text",
+               style="display: block; width: 100%;",
+               autocomplete="off",
+               id={ self.incr_last_drawn_element_id().to_string() },
+               value="",
+               onkeypress=|e| {
+                   if e.key() == "Enter" {
+                     // no idea how to do this safely but it works!
+                     let el : InputElement = unsafe { std::mem::transmute(e.target().unwrap()) };
+                     ondone(&el.raw_value());
+                     el.set_raw_value("");
+                   }
+                   Msg::Redraw
+               }, />
         }
     }
 
