@@ -96,7 +96,7 @@ replaceonhoverhack {
 }
 
 .fit-content {
-    max-width: -moz-fit-content;
+    /*max-width: -moz-fit-content;*/
     max-width: fit-content;
     white-space: nowrap;
 }
