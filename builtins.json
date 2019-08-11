@@ -90,7 +90,7 @@
         },
         {
           "id": "9a8d9059-a729-4660-b440-8ee7c411e70a",
-          "name": "full text, including command name",
+          "name": "full text",
           "description": "The full text of the message that triggered this message. In the example, \".weather san francisco\", this would be \".weather san francisco\".",
           "field_type": {
             "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
