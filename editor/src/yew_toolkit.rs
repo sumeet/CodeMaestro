@@ -19,6 +19,7 @@ use stdweb::web::html_element::InputElement;
 use stdweb::web::{document, IElement, IEventTarget};
 use yew::html;
 use yew::prelude::*;
+use yew::virtual_dom::VTag;
 use yew::virtual_dom::{VList, VNode};
 
 pub struct Model {
@@ -494,14 +495,20 @@ impl UiToolkit for YewToolkit {
                                     draw_fn: &dyn Fn() -> Self::DrawResult,
                                     onclick: F)
                                     -> Self::DrawResult {
+        let draw_with_overlay_on_hover = || {
+            let mut drawn = vtag(draw_fn());
+            // see buttonize-hover.js
+            if drawn.attributes.contains_key("onmouseover") {
+                panic!("{:?} already contains onmouseover", drawn);
+            }
+            drawn.attributes.insert("onmouseover".into(),
+                                    format!("displayButtonizedHoverOverlayOn(this, \"{}\");",
+                                            rgba(BUTTON_HOVERED_COLOR)));
+            VNode::VTag(drawn)
+        };
         html! {
-            <div style="position: relative;", onclick=|_| { onclick(); Msg::Redraw }, >
-                <div class="buttonized-hover-overlay",
-                    // buttonized-hover-overlay:hover is opacity: 100%; in main.css
-                     style=format!("opacity: 0; top: 0; bottom: 0; right: 0; left: 0; position: absolute; background-color: {}", rgba(BUTTON_HOVERED_COLOR)),>
-                    {" "}
-                </div>
-                { draw_fn() }
+            <div style="position: relative;", onclick=|_| { onclick(); Msg::Redraw }, onmouseleave="removeOverlays(this);",>
+                { draw_with_overlay_on_hover() }
             </div>
         }
     }
@@ -627,7 +634,11 @@ impl UiToolkit for YewToolkit {
     // TODO: apparently this isn't needed in HTML, it happens automatically... though we needed it
     // in imgui
     fn draw_taking_up_full_width(&self, draw_fn: DrawFnRef<Self>) -> Self::DrawResult {
-        draw_fn()
+        html! {
+            <div style="width: calc(100%); max-width: calc(100%);",>
+                { draw_fn() }
+            </div>
+        }
     }
 
     fn draw_full_width_heading(&self,
@@ -888,11 +899,11 @@ impl UiToolkit for YewToolkit {
         // pointer-events stuff is to allow children to respond to click handlers
         // see https://stackoverflow.com/questions/3680429/click-through-div-to-underlying-elements
         html! {
-            <div style="pointer-events: none;", class={"overlay-wrapper"}, >
+            <div style="pointer-events: none;", class="overlay-wrapper", >
                 <div style="pointer-events: auto;", >
                      { draw_fn() }
                  </div>
-                 <div class={"overlay"},
+                 <div class="overlay",
                       style={ format!("pointer-events: none; top: 0px; left: 0px; height: 100%; background-color: {};", rgba(color)) }, >
                       {" "}
                  </div>
@@ -1299,4 +1310,11 @@ fn rgba(color: [f32; 4]) -> String {
             color[1] * 255.0,
             color[2] * 255.0,
             color[3])
+}
+
+fn vtag(html: Html<Model>) -> VTag<Model> {
+    match html {
+        VNode::VTag(vtag) => vtag,
+        _ => panic!("expected a vtag!"),
+    }
 }
