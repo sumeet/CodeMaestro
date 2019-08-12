@@ -60,6 +60,10 @@ lazy_static! {
         symbol: "\u{f06a}".to_string(),
         num_params: 0,
     };
+
+    pub static ref BUILT_IN_TYPESPECS : Vec<&'static BuiltInTypeSpec> = vec![
+        &NULL_TYPESPEC, &BOOLEAN_TYPESPEC, &STRING_TYPESPEC, &NUMBER_TYPESPEC,
+        &LIST_TYPESPEC, &ERROR_TYPESPEC];
 }
 
 #[typetag::serde(tag = "type")]

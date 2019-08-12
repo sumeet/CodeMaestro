@@ -278,14 +278,22 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_insertion_type_information(&self, search_params: &CodeSearchParams) -> T::DrawResult {
         let typ = search_params.return_type.as_ref();
         if let Some(typ) = typ {
-            self.ui_toolkit
-                .draw_all_on_same_line(&[&|| self.ui_toolkit.draw_text("Showing options resulting in type"), &|| {
-                                           let type_name =
-                                               self.env_genie.get_name_for_type(typ).unwrap();
-                                           self.render_name_with_type_definition(&type_name,
-                                                                                 BLACK_COLOR,
-                                                                                 typ)
-                                       }])
+            self.ui_toolkit.draw_all_on_same_line(&[
+                &|| {
+                    self.ui_toolkit
+                        .draw_text("Showing options resulting in type")
+                },
+                &|| {
+                    let type_name = self.env_genie
+                                        .get_name_for_type(typ)
+                                        .ok_or_else(|| {
+                                            format!("couldn't find name for type w/ typespec id {}",
+                                                    typ.typespec_id)
+                                        })
+                                        .unwrap();
+                    self.render_name_with_type_definition(&type_name, BLACK_COLOR, typ)
+                },
+            ])
         } else {
             self.ui_toolkit.draw_all(&[])
         }

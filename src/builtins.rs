@@ -1,6 +1,7 @@
 use super::code_loading;
 use super::env;
 use super::lang;
+use crate::lang::BuiltInTypeSpec;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use maplit::hashmap;
@@ -39,7 +40,11 @@ pub struct Builtins {
 impl Builtins {
     pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
         let str = include_str!("../builtins.json");
-        Ok(Self::deserialize(str)?)
+        let mut builtins = Self::deserialize(str)?;
+        for ts in lang::BUILT_IN_TYPESPECS.iter().cloned().cloned() {
+            builtins.typespecs.insert(ts.id, Box::new(ts));
+        }
+        Ok(builtins)
     }
 
     pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
