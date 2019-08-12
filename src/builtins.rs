@@ -1,7 +1,6 @@
 use super::code_loading;
 use super::env;
 use super::lang;
-use crate::lang::BuiltInTypeSpec;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use maplit::hashmap;

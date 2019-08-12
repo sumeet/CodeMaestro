@@ -624,14 +624,28 @@ impl UiToolkit for YewToolkit {
         // forgot why we needed to do this, whoops, should've written a comment
         let text = text.replace(" ", " ");
         html! {
-            <div style="padding: 0.2em;",>{ symbolize_text(&text) }</div>
+            <div style="padding: 0.2em;",>
+                {
+                    if text.is_empty() {
+                        html! { <span>{" "}</span> }
+                    } else {
+                       symbolize_text(&text)
+                    }
+                }
+            </div>
         }
     }
 
     fn draw_wrapped_text(&self, color: Color, text: &str) -> Self::DrawResult {
         html! {
             <div style=format!("padding: 0.2em; white-space: pre-wrap; word-wrap: break-word; color: {};", rgba(color)),>
-                { symbolize_text(&text) }
+                {
+                    if text.is_empty() {
+                        html! { <span>{" "}</span> }
+                    } else {
+                       symbolize_text(&text)
+                    }
+                }
             </div>
         }
     }
