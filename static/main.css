@@ -3,6 +3,19 @@ body {
     zoom: 110%;
 }
 
+/* hack for firefox not supporting zoom
+   see http://forums.mozillazine.org/viewtopic.php?p=14138369&sid=a012474c5e14cbb0531bfe0b596083a1#p14138369
+   and https://stackoverflow.com/a/32455002 */
+@supports (-moz-appearance:none)  {
+    body {
+        -moz-transform-origin: left top;
+        -moz-transform: scale(1.1);
+        margin-right: 9.0909%;
+        margin-left: 0px;
+        margin-top: 0px;
+    }
+}
+
 input {
     box-sizing: border-box;
     padding: 1px 2px;
