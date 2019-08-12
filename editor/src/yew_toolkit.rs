@@ -509,6 +509,11 @@ impl UiToolkit for YewToolkit {
         html! {
             <div style="position: relative;", onclick=|_| { onclick(); Msg::Redraw }, onmouseleave="removeOverlays(this);",>
                 { draw_with_overlay_on_hover() }
+                <div style="position: absolute; top: 0px; left: 0px; display: none; height: 0px; width: 0px;",
+                     class="buttonized-hover-overlay",>
+                     {" "}
+                </div>
+
             </div>
         }
     }

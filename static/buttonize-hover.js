@@ -1,10 +1,20 @@
 var displayButtonizedHoverOverlayOn = function(el, bgcolor) {
-  el.insertAdjacentHTML("afterend", `<div style="position: absolute; top: ${el.offsetTop}px; left: ${el.offsetLeft}px; height: ${el.offsetHeight}px; width: ${el.offsetWidth}px; background-color: ${bgcolor};" class="buttonized-hover-overlay">&nbsp;</div>`);
+  el.parentElement.querySelectorAll('.buttonized-hover-overlay').forEach(function(overlay) {
+    overlay.style.position = "absolute";
+    overlay.style.top = `${el.offsetTop}px`;
+    overlay.style.left = `${el.offsetLeft}px`;
+    overlay.style.height = `${el.offsetHeight}px`;
+    overlay.style.width = `${el.offsetWidth}px`;
+    overlay.style.backgroundColor = bgcolor;
+    overlay.style.display = "block";
+  });
 };
 
 var removeOverlays = function(el) {
-  console.log('removeOverlays');
   el.querySelectorAll('.buttonized-hover-overlay').forEach(function(overlay) {
-    overlay.remove();
+    console.log(overlay);
+    overlay.style.height = "0px;"
+    overlay.style.width = "0px;"
+    overlay.style.display = "none";
   });
 };
