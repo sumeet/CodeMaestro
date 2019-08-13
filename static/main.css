@@ -130,3 +130,8 @@ replaceonhoverhack {
 .all-drawn > * + .all-drawn > * {
     margin-top: 0.1em;
 }
+
+/* safari buttons seem to come with margin */
+button {
+    margin: 0px;
+}
