@@ -12,7 +12,6 @@ var displayButtonizedHoverOverlayOn = function(el, bgcolor) {
 
 var removeOverlays = function(el) {
   el.querySelectorAll('.buttonized-hover-overlay').forEach(function(overlay) {
-    console.log(overlay);
     overlay.style.height = "0px;"
     overlay.style.width = "0px;"
     overlay.style.display = "none";

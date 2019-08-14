@@ -24,7 +24,7 @@ use crate::opener::Opener;
 use crate::send_to_server_overlay::{SendToServerOverlay, SendToServerOverlayStatus};
 use crate::ui_toolkit::DrawFnRef;
 use crate::window_positions::Window;
-use cs::await_eval_result;
+use cs::{await_eval_result, EnvGenie};
 use cs::builtins;
 use cs::chat_program::{ChatProgram, message_received, flush_reply_buffer};
 use cs::code_function;
@@ -118,7 +118,7 @@ pub struct Controller {
     pub opener: Option<Opener>,
     window_positions: WindowPositions,
     pub send_to_server_overlay: Rc<RefCell<SendToServerOverlay>>,
-    chat_test_window: ChatTestWindow,
+    chat_test_window: Rc<RefCell<ChatTestWindow>>,
 }
 
 impl<'a> Controller {
@@ -133,7 +133,7 @@ impl<'a> Controller {
                      opener: None,
                      window_positions: WindowPositions::default(),
                      send_to_server_overlay: Rc::new(RefCell::new(SendToServerOverlay::new())),
-                     chat_test_window: ChatTestWindow::new() }
+                     chat_test_window: Rc::new(RefCell::new(ChatTestWindow::new())) }
     }
 
     pub fn load_serialized_window_positions(&mut self, window_positions: WindowPositions) {
@@ -683,32 +683,34 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let open_window = self.controller
                               .window_positions
                               .get_open_window(&*CHAT_TEST_WINDOW_ID);
-        // TODO: probably not the best place for this, but it'll work. if there's any unflushed
-        // bot output , stick it in the chat test window
-        for reply in flush_reply_buffer(self.env_genie) {
-            self.command_buffer.borrow_mut().add_controller_command(|cont| {
-                cont.chat_test_window.add_message("\u{f544}".to_string(), reply);
-            });
-        }
-
-
         if let Some(open_window) = open_window {
             self.draw_managed_window(&open_window,
                                      "Chat test area",
                                      &|| {
                                          self.ui_toolkit.draw_layout_with_bottom_bar(
-                                             &|| self.ui_toolkit.draw_text_box(&self.controller.chat_test_window.view()),
+                                             &|| self.ui_toolkit.draw_text_box(&self.controller.chat_test_window.borrow().view()),
                                              &|| {
                                                  let cmd_buffer = Rc::clone(&self.command_buffer);
                                                  self.ui_toolkit.draw_whole_line_console_text_input(move |entered_text| {
                                                      let entered_text = entered_text.to_string();
                                                      let mut cmd_buffer = cmd_buffer.borrow_mut();
                                                      cmd_buffer.add_integrating_command(move |cont, interp, async_executor, _cmd_buffer| {
-                                                        cont.chat_test_window.add_message("\u{f406}".to_string(), entered_text.clone()) ;
+                                                        cont.chat_test_window.borrow_mut().add_message("\u{f406}".to_string(), entered_text.clone()) ;
 
                                                          let interp = interp.dup();
+                                                         let chat_test_window = Rc::clone(&cont.chat_test_window);
                                                          async_executor.exec(async move {
                                                              message_received(&interp, "\u{f406}".to_string(), entered_text).await;
+
+                                                             // TODO: probably not the best place for this, but it'll work. if there's any unflushed
+                                                             // bot output , stick it in the chat test window
+                                                             let env = interp.env.borrow();
+                                                             let env_genie = EnvGenie::new(&env);
+                                                             let mut chat_test_window = chat_test_window.borrow_mut();
+                                                             for reply in flush_reply_buffer(&env_genie) {
+                                                                 chat_test_window.add_message("\u{f544}".to_string(), reply);
+                                                             }
+
                                                              let ok: Result<(), ()> = Ok(());
                                                              ok
                                                          });
