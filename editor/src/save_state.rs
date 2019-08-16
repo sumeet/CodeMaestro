@@ -41,18 +41,25 @@ mod js {
     }
 
     pub fn load() -> StateDeserialize {
-        let deserialized_state: Result<_, Box<dyn std::error::Error>> = try {
-            let stored = STORAGE.get("state").ok_or("no such key state")?;
-            serde_json::from_str(&stored)?
-        };
-        if let Ok(ds) = deserialized_state {
-            return ds;
-        }
-        let default = StateDeserialize::default();
-        STORAGE.insert("state", &serde_json::to_string(&default).unwrap())
-               .unwrap();
-        default
+        StateDeserialize::default()
     }
+
+    // TODO: don't deserialize, just load the default. i don't want state rn because i want to test
+    // the default state
+    // TODO: same for native version below
+    //    pub fn load() -> StateDeserialize {
+    //        let deserialized_state: Result<_, Box<dyn std::error::Error>> = try {
+    //            let stored = STORAGE.get("state").ok_or("no such key state")?;
+    //            serde_json::from_str(&stored)?
+    //        };
+    //        if let Ok(ds) = deserialized_state {
+    //            return ds;
+    //        }
+    //        let default = StateDeserialize::default();
+    //        STORAGE.insert("state", &serde_json::to_string(&default).unwrap())
+    //               .unwrap();
+    //        default
+    //    }
 
     pub fn save_state(state_serialize: &StateSerialize) {
         STORAGE.insert("state", &serde_json::to_string(state_serialize).unwrap())
@@ -81,6 +88,13 @@ mod native {
     }
 
     pub fn load() -> StateDeserialize {
+        StateDeserialize::default()
+    }
+
+    // TODO: don't deserialize, just load the default. i don't want state rn because i want to test
+    // the default state
+    // TODO: same for wasm version above
+    pub fn _load() -> StateDeserialize {
         let deserialized_state: Result<_, Box<dyn std::error::Error>> = try {
             let file = File::open(&*STATE_FILE_NAME)?;
             serde_json::from_reader(file)?
