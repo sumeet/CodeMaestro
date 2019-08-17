@@ -5,7 +5,6 @@ use super::imgui_support;
 use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
 use itertools::Itertools;
 
-use crate::code_editor_renderer::{BLUE_COLOR, PURPLE_COLOR};
 use crate::imgui_support::BUTTON_ACTIVE_COLOR;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef, BUTTON_HOVERED_COLOR};
 use imgui::*;
@@ -556,22 +555,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         }
                     }
                 }
-
-                // i think this is a good place to fuck around
-                self.draw_all_on_same_line(&[
-                &|| {
-                    self.ui
-                        .with_color_vars(&[(ImGuiCol::FrameBg, BLUE_COLOR)], &|| {
-                            self.draw_text("some other shiat")
-                        })
-                },
-                &|| {
-                    self.ui
-                        .with_color_vars(&[(ImGuiCol::FrameBg, PURPLE_COLOR)], &|| {
-                            self.draw_text("some shiatr")
-                        })
-                },
-            ])
             });
     }
 
