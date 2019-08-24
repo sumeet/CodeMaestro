@@ -5,11 +5,8 @@ use glium::glutin::WindowEvent::*;
 use imgui::{FontGlyphRange, ImFontConfig, ImGui, ImGuiCol, Ui};
 use std::time::Instant;
 
-// pulled out from imgui classic theme, style.colors[ImGuiCol::ButtonActive]
-// and modified a little bit, sorry for the mess
-pub static BUTTON_ACTIVE_COLOR: (f32, f32, f32, f32) = (0.46, 0.54, 0.8, 0.6);
-
 use super::editor::{Key as AppKey, Keypress};
+use crate::color_schemes::COLOR_SCHEME;
 use imgui_winit_support;
 
 pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
@@ -43,11 +40,10 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
         imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
     }
     let mut style = imgui.style_mut();
-    // the default BG color is transparent black, which is super annoying. make it a little
-    // lighter (0.3 -> 0.35), so it contrasts with the black used for signifying nesting.
     //
-    // keep this in sync with the WINDOW_BG_COLOR defined in yew_toolkit.rs
-    style.colors[ImGuiCol::WindowBg as usize] = (0.375, 0.375, 0.375, 1.0).into();
+    style.colors[ImGuiCol::WindowBg as usize] = COLOR_SCHEME.window_bg_color.into();
+    style.colors[ImGuiCol::ButtonActive as usize] = COLOR_SCHEME.button_active_color.into();
+    style.colors[ImGuiCol::ButtonHovered as usize] = COLOR_SCHEME.button_hover_color.into();
 
     // debug code to print colors
     //    println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);

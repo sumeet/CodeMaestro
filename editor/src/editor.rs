@@ -47,12 +47,7 @@ use cs::scripts;
 use cs::structs;
 use cs::tests;
 use crate::chat_test_window::ChatTestWindow;
-
-pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
-pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
-pub const WHITE_COLOR: Color = [1., 1., 1., 1.];
-
-pub type Color = [f32; 4];
+use crate::color_schemes::COLOR_SCHEME;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Keypress {
@@ -559,7 +554,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &move || {
                     let cmd_buffer = Rc::clone(&cmd_buffer);
                     self.ui_toolkit
-                        .draw_button("Upload to \u{f544}", GREY_COLOR, move || {
+                        .draw_button("Upload to \u{f544}", COLOR_SCHEME.action_color, move || {
                             cmd_buffer.borrow_mut().save_to_net()
                         })
                 },
@@ -659,18 +654,18 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         if let Some(open_window) = open_window {
             self.draw_managed_window(&open_window, "Quick start guide", &|| {
                 self.ui_toolkit.draw_all(&[
-                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Hi, my name is \u{f544}. I'm here to serve your chat room, and anyone can add programs to me."),
-                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
+                    &|| self.ui_toolkit.draw_wrapped_text(COLOR_SCHEME.text_color, "Hi, my name is \u{f544}. I'm here to serve your chat room, and anyone can add programs to me."),
+                    &|| self.ui_toolkit.draw_wrapped_text(COLOR_SCHEME.text_color, ""),
                     &|| {
                         let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit.draw_button("Make a new chat program", GREY_COLOR, move || {
+                        self.ui_toolkit.draw_button("Make a new chat program", COLOR_SCHEME.action_color, move || {
                             cmd_buffer.borrow_mut().load_chat_program(example_chat_program());
                         })
                     },
-                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
-                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "Type your command in the chat test area to try your program before deploying it."),
-                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, ""),
-                    &|| self.ui_toolkit.draw_wrapped_text(WHITE_COLOR, "When you're done, press the button on the right to upload it so everyone can use it."),
+                    &|| self.ui_toolkit.draw_wrapped_text(COLOR_SCHEME.text_color, ""),
+                    &|| self.ui_toolkit.draw_wrapped_text(COLOR_SCHEME.text_color, "Type your command in the chat test area to try your program before deploying it."),
+                    &|| self.ui_toolkit.draw_wrapped_text(COLOR_SCHEME.text_color, ""),
+                    &|| self.ui_toolkit.draw_wrapped_text(COLOR_SCHEME.text_color, "When you're done, press the button on the right to upload it so everyone can use it."),
                 ])},
                                         None::<fn(Keypress)>,
             )
@@ -876,7 +871,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_run_button(&self, code_node: CodeNode) -> T::DrawResult {
         let cmd_buffer = self.command_buffer.clone();
-        self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
+        self.ui_toolkit.draw_button("Run", COLOR_SCHEME.action_color, move || {
                            let mut cmd_buffer = cmd_buffer.borrow_mut();
                            cmd_buffer.run(&code_node, |_val| {
                                          //println!("{:?}", val)
@@ -1206,7 +1201,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     let cmd_buffer4 = Rc::clone(&self.command_buffer);
                     let cmd_buffer5 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit
-                        .draw_button("Run test", GREY_COLOR, move || {
+                        .draw_button("Run test", COLOR_SCHEME.action_color, move || {
                             let cmd_buffer5 = Rc::clone(&cmd_buffer5);
                             cmd_buffer4.borrow_mut().add_integrating_command(
                                     move |cont, _interp, async_executor, _| {
@@ -1256,7 +1251,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| {
                     let cmd_buffer = Rc::clone(&self.command_buffer);
                     self.ui_toolkit
-                        .draw_button("Apply return type", GREY_COLOR, move || {
+                        .draw_button("Apply return type", COLOR_SCHEME.action_color, move || {
                             cmd_buffer.borrow_mut()
                                       .add_integrating_command(move |cont, interp, _, _| {
                                           let mut env = interp.env.borrow_mut();
@@ -1489,7 +1484,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let strukt1 = strukt.clone();
                 let cont1 = Rc::clone(&self.command_buffer);
                 self.ui_toolkit
-                    .draw_button("Add another field", GREY_COLOR, move || {
+                    .draw_button("Add another field", COLOR_SCHEME.action_color, move || {
                         let mut newstrukt = strukt1.clone();
                         newstrukt.fields.push(structs::StructField::new(
                            format!("field{}", newstrukt.fields.len()),
@@ -1617,7 +1612,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             &|| {
                                 let eneom1 = eneom.clone();
                                 let cont1 = Rc::clone(&self.command_buffer);
-                                self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
+                                self.ui_toolkit.draw_button("Delete", COLOR_SCHEME.danger_color, move || {
                                     let mut neweneom = eneom1.clone();
                                     neweneom.variants.remove(current_variant_index);
                                     cont1.borrow_mut().load_typespec(neweneom)
@@ -1627,7 +1622,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                 let eneom1 = eneom.clone();
                                 let cont1 = Rc::clone(&self.command_buffer);
                                 self.ui_toolkit
-                                    .draw_button("Add another variant", GREY_COLOR, move || {
+                                    .draw_button("Add another variant", COLOR_SCHEME.action_color, move || {
                                         let mut neweneom = eneom1.clone();
                                         neweneom.variants.push(enums::EnumVariant::new(
                                             format!("variant{}", neweneom.variants.len()),
@@ -1648,7 +1643,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                        let cont1 = Rc::clone(&self.command_buffer);
                                        let func_id = func.id();
                                        self.ui_toolkit
-                                           .draw_button("Delete", RED_COLOR, move || {
+                                           .draw_button("Delete", COLOR_SCHEME.danger_color, move || {
                                                cont1.borrow_mut().remove_function(func_id);
                                            })
                                    },
@@ -1681,7 +1676,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {
                 let cmd_buffer = Rc::clone(&self.command_buffer);
                 self.ui_toolkit
-                    .draw_button("Add a test", GREY_COLOR, move || {
+                    .draw_button("Add a test", COLOR_SCHEME.action_color, move || {
                         cmd_buffer.borrow_mut().add_controller_command(move |cont| {
                                                    cont.load_test(tests::Test::new(subject))
                                                })
@@ -1777,7 +1772,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                 let func1 = func.clone();
                                 let args1 = func.takes_args();
                                 let cont1 = Rc::clone(&self.command_buffer);
-                                self.ui_toolkit.draw_button("Delete", RED_COLOR, move || {
+                                self.ui_toolkit.draw_button("Delete", COLOR_SCHEME.danger_color, move || {
                                                    let mut newfunc = func1.clone();
                                                    let mut newargs = args1.clone();
                                                    newargs.remove(current_arg_index);
@@ -1795,7 +1790,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let args1 = args.clone();
                 let cont1 = Rc::clone(&self.command_buffer);
                 self.ui_toolkit
-                    .draw_button("Add another argument", GREY_COLOR, move || {
+                    .draw_button("Add another argument", COLOR_SCHEME.action_color, move || {
                         let mut args = args1.clone();
                         let mut func = func1.clone();
                         args.push(lang::ArgumentDefinition::new(
@@ -1937,7 +1932,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                    &|| {
                                        let func = func.clone();
                                        let cont = Rc::clone(&self.command_buffer);
-                                       self.ui_toolkit.draw_button("Run", GREY_COLOR, move || {
+                                       self.ui_toolkit.draw_button("Run", COLOR_SCHEME.action_color, move || {
                                                           run_test(&cont, func.as_ref());
                                                       })
                                    }])

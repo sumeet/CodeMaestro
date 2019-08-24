@@ -3,9 +3,8 @@ use super::async_executor::AsyncExecutor;
 use super::editor::{Key as AppKey, Keypress};
 use super::ui_toolkit::UiToolkit;
 use crate::code_editor_renderer::BLACK_COLOR;
-use crate::ui_toolkit::{
-    ChildRegionHeight, Color, DrawFnRef, SelectableItem, BUTTON_HOVERED_COLOR,
-};
+use crate::color_schemes::COLOR_SCHEME;
+use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -21,6 +20,9 @@ use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
 use yew::virtual_dom::{VList, VNode};
+
+// keep this in sync with the WindowBg color defined in imgui_support.rs
+const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
 
 pub struct Model {
     app: Option<Rc<RefCell<CSApp>>>,
@@ -70,10 +72,6 @@ impl Component for Model {
     }
 }
 
-// keep this in sync with the WindowBg color defined in imgui_support.rs
-const WINDOW_BG_COLOR: [f32; 4] = [0.375, 0.375, 0.375, 1.0];
-const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
-
 struct YewToolkit {
     last_drawn_element_id: RefCell<u32>,
     focused_element_id: RefCell<u32>,
@@ -98,7 +96,7 @@ impl UiToolkit for YewToolkit {
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
         html! {
-            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(WINDOW_BG_COLOR)) }, >
+            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(COLOR_SCHEME.window_bg_color)) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -107,7 +105,7 @@ impl UiToolkit for YewToolkit {
     fn draw_top_left_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
         html! {
-            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; left: 10px; color: white; background-color: {}",rgba(WINDOW_BG_COLOR)) }, >
+            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; left: 10px; color: white; background-color: {}",rgba(COLOR_SCHEME.window_bg_color)) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -167,7 +165,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(WINDOW_BG_COLOR)) },
+            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(COLOR_SCHEME.window_bg_color)) },
                  id={ self.incr_last_drawn_element_id().to_string() },
                  tabindex=0,
                  onkeypress=|e| {
@@ -293,7 +291,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(WINDOW_BG_COLOR), size.0, size.1) },
+           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(COLOR_SCHEME.window_bg_color), size.0, size.1) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {
@@ -503,7 +501,7 @@ impl UiToolkit for YewToolkit {
             }
             drawn.attributes.insert("onmouseover".into(),
                                     format!("displayButtonizedHoverOverlayOn(this, \"{}\");",
-                                            rgba(BUTTON_HOVERED_COLOR)));
+                                            rgba(COLOR_SCHEME.button_hover_color)));
             VNode::VTag(drawn)
         };
         html! {
@@ -1235,7 +1233,7 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
 
     // add css styles referencing code that we wouldn't be able to access from .css files
     //    add_style_string(&format!(".buttonized {{ background-color: {}; }}",
-    //                              rgba(BUTTON_HOVERED_COLOR)));
+    //                              rgba(COLOR_SCHEME.button_hover_color)));
 
     let yew_app = App::<Model>::new().mount_to_body();
     let renderer_state =

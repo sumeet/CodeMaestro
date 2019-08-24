@@ -19,6 +19,7 @@ mod code_editor;
 mod code_editor_renderer;
 mod code_generation;
 mod code_validation;
+mod color_schemes;
 mod edit_types;
 mod editor;
 #[cfg(not(target_arch = "wasm32"))]

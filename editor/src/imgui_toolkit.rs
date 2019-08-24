@@ -5,8 +5,8 @@ use super::imgui_support;
 use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
 use itertools::Itertools;
 
-use crate::imgui_support::BUTTON_ACTIVE_COLOR;
-use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef, BUTTON_HOVERED_COLOR};
+use crate::color_schemes::COLOR_SCHEME;
+use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use imgui::*;
 use lazy_static::lazy_static;
 use std::cell::RefCell;
@@ -16,8 +16,8 @@ use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-pub const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
-const TRANSPARENT_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
+// forgot why we need this exactly, but it needs to be passed in some places to imgui support
+const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
 const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
 const INITIAL_WINDOW_SIZE: (f32, f32) = (400.0, 500.0);
 // from http://jkorpela.fi/chars/spaces.html, used for indentation
@@ -319,7 +319,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
             self.ui
                 .get_window_draw_list()
-                .add_rect(min, max, BUTTON_HOVERED_COLOR)
+                .add_rect(min, max, COLOR_SCHEME.button_hover_color)
                 .filled(true)
                 .build();
         }
@@ -329,7 +329,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
             self.ui
                 .get_window_draw_list()
-                .add_rect(min, max, BUTTON_ACTIVE_COLOR)
+                .add_rect(min, max, COLOR_SCHEME.button_active_color)
                 .filled(true)
                 .build();
         }
@@ -376,9 +376,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_text(&self, text: &str) {
         self.ui
-            .with_color_vars(&[(ImGuiCol::ButtonHovered, TRANSPARENT_COLOR),
-                               (ImGuiCol::ButtonActive, TRANSPARENT_COLOR)],
-                             &|| self.draw_button(text, TRANSPARENT_COLOR, &|| {}))
+            .with_color_vars(&[(ImGuiCol::ButtonHovered, CLEAR_COLOR),
+                               (ImGuiCol::ButtonActive, CLEAR_COLOR)],
+                             &|| self.draw_button(text, CLEAR_COLOR, &|| {}))
     }
 
     fn draw_taking_up_full_width(&self, draw_fn: DrawFnRef<Self>) {

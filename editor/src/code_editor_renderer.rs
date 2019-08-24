@@ -8,7 +8,8 @@ use super::code_editor;
 use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
-use super::ui_toolkit::UiToolkit;
+use super::ui_toolkit::{Color, UiToolkit};
+use crate::color_schemes::COLOR_SCHEME;
 use crate::draw_all_iter;
 use crate::editor::Keypress;
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
@@ -18,20 +19,10 @@ use cs::lang;
 use cs::lang::CodeNode;
 use cs::structs;
 
-// TODO: move to colors.rs
-pub type Color = [f32; 4];
-
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
-pub const SELECTION_COLOR: Color = [1., 1., 1., 0.3];
-pub const YELLOW_COLOR: Color = [253.0 / 255.0, 159.0 / 255.0, 19.0 / 255.0, 1.0];
-pub const CLEAR_COLOR: Color = [0.0, 0.0, 0.0, 0.0];
-pub const GREY_COLOR: Color = [0.521, 0.521, 0.521, 1.0];
-pub const BLUE_COLOR: Color = [100.0 / 255.0, 149.0 / 255.0, 237.0 / 255.0, 1.0];
-pub const GREEN_COLOR: Color = [80. / 255., 161. / 255., 78. / 255., 1.];
-pub const SEPARATOR_COLOR: Color = [144. / 255., 144. / 255., 144. / 255., 1.];
+// TODO: move this into the color scheme, but we'll leave it in here for now -- lazy
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
-pub const RED_COLOR: Color = [0.858, 0.180, 0.180, 1.0];
-pub const PURPLE_COLOR: Color = [0.486, 0.353, 0.952, 1.0];
+
 // lifted from imgui classic colorscheme
 pub const TEXT_ENTRY_BG_COLOR: Color = [0.396, 0.396, 0.396, 1.0];
 pub const PX_PER_INDENTATION_LEVEL: i16 = 20;
@@ -138,7 +129,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                      -> T::DrawResult {
         self.ui_toolkit
             .scrolled_to_y_if_not_visible(scroll_hash, &|| {
-                self.ui_toolkit.draw_box_around(SELECTION_COLOR, draw)
+                self.ui_toolkit
+                    .draw_box_around(COLOR_SCHEME.selection_overlay_color, draw)
             })
     }
 
@@ -149,7 +141,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
                 self.set_selected_on_click(&|| {
-                    self.render_name_with_type_definition(&assignment.name, PURPLE_COLOR, &type_of_assignment)
+                    self.render_name_with_type_definition(&assignment.name, COLOR_SCHEME.variable_color, &type_of_assignment)
                 }, assignment.id)
             },
             &|| self.draw_text("   \u{f52c}   "),
@@ -390,7 +382,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn draw_operation_label(&self, text: &str) -> T::DrawResult {
-        self.ui_toolkit.draw_buttony_text(text, BLUE_COLOR)
+        self.ui_toolkit
+            .draw_buttony_text(text, COLOR_SCHEME.cool_color)
     }
 
     fn render_insertion_options_group(&self,
@@ -427,7 +420,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                           Some(help_text) if !help_text.is_empty() => {
                               self.ui_toolkit.draw_all(&[
                                     &|| self.render_code(&option.new_node),
-                                    &|| self.ui_toolkit.draw_wrapped_text(GREY_COLOR, &help_text),
+                                    &|| self.ui_toolkit.draw_wrapped_text(COLOR_SCHEME.action_color, &help_text),
                               ])
                           }
                           _ => self.render_code(&option.new_node),
@@ -467,7 +460,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         //       with the black lines (can actually make that generic so we can swap it with something
         //       else
         let type_symbol = self.env_genie.get_symbol_for_type(&t);
-        self.ui_toolkit.draw_buttony_text(&type_symbol, BLUE_COLOR)
+        self.ui_toolkit
+            .draw_buttony_text(&type_symbol, COLOR_SCHEME.cool_color)
     }
 
     fn render_list_literal_position(&self, pos: usize) -> T::DrawResult {
@@ -687,9 +681,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
-        let mut r = YELLOW_COLOR;
-        // LOL: mess around w/ some transparency
-        r[3] = 0.4;
         // TODO: maybe use the traffic cone instead of the exclamation triangle,
         // which is kinda hard to see
         self.set_selected_on_click(
@@ -699,7 +690,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 "{} {}",
                 PLACEHOLDER_ICON, placeholder.description
             ),
-                                                                         r,
+                                                                         COLOR_SCHEME.warning_color,
             )
                                    },
                                    placeholder.id,
@@ -722,12 +713,12 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let func = self.env_genie.find_function(function_id);
         if func.is_none() {
             let error_msg = format!("Error: function ID {} not found", function_id);
-            return self.draw_button(&error_msg, RED_COLOR, &|| {});
+            return self.draw_button(&error_msg, COLOR_SCHEME.danger_color, &|| {});
         }
         let func = func.unwrap();
         // TODO: rework this for when we have generics. the function arguments will need to take
         // the actual parameters as parameters
-        self.render_function_name(&func.name(), GREY_COLOR, &func.returns())
+        self.render_function_name(&func.name(), COLOR_SCHEME.action_color, &func.returns())
     }
 
     fn render_variable_reference(&self,
@@ -735,9 +726,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  -> T::DrawResult {
         let draw = &|| {
             if let Some((name, typ)) = self.lookup_variable_name_and_type(variable_reference) {
-                self.render_name_with_type_definition(&name, PURPLE_COLOR, &typ)
+                self.render_name_with_type_definition(&name, COLOR_SCHEME.variable_color, &typ)
             } else {
-                self.draw_button("Variable reference not found", RED_COLOR, &|| {})
+                self.draw_button("Variable reference not found",
+                                 COLOR_SCHEME.danger_color,
+                                 &|| {})
             }
         };
         self.set_selected_on_click(draw, variable_reference.id)
@@ -916,7 +909,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                  .draw_code_line_separator('\u{f0fe}',
                                                                            70.,
                                                                            2.,
-                                                                           SEPARATOR_COLOR)
+                                                                           COLOR_SCHEME.separator_color)
                                          },
                                          &|| self.render_add_code_here_button(insertion_point))
     }
@@ -925,8 +918,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_add_code_here_button(&self, insertion_point: InsertionPoint) -> T::DrawResult {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.buttonize(&|| {
-                                      self.ui_toolkit
-                                          .draw_buttony_text("\u{f0fe} Add code", GREEN_COLOR)
+                                      self.ui_toolkit.draw_buttony_text("\u{f0fe} Add code",
+                                                                        COLOR_SCHEME.adding_color)
                                   },
                                   move || {
                                       cmd_buffer.borrow_mut().add_editor_command(move |editor| {
@@ -1021,7 +1014,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {
         self.draw_button("this shouldn't have happened, you've got a missing function arg somehow",
-                         RED_COLOR,
+                         COLOR_SCHEME.danger_color,
                          &|| {})
     }
 
@@ -1155,7 +1148,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     &|| {
                         self.render_nested(&|| {
                                 self.render_name_with_type_definition(&struct_field.name,
-                                                                      BLUE_COLOR,
+                                                                      COLOR_SCHEME.cool_color,
                                                                       &struct_field.field_type)
                             })
                     },
@@ -1168,7 +1161,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_struct_identifier(&self, strukt: &structs::Struct) -> T::DrawResult {
         let typ = lang::Type::from_spec(strukt);
-        self.render_name_with_type_definition(&strukt.name, BLUE_COLOR, &typ)
+        self.render_name_with_type_definition(&strukt.name, COLOR_SCHEME.cool_color, &typ)
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
@@ -1176,7 +1169,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             &|| {
                 self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                             self.draw_button("If",
-                                                                             GREY_COLOR,
+                                                                             COLOR_SCHEME.action_color,
                                                                              &|| {})
                                                         },
                                                         &|| {
@@ -1192,7 +1185,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             &|| {
                 self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                             self.draw_button("Match",
-                                                                             GREY_COLOR,
+                                                                             COLOR_SCHEME.action_color,
                                                                              &|| {})
                                                         },
                                                         &|| {
@@ -1226,7 +1219,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                         &|| {
                                             self.ui_toolkit
                                                 .draw_button(&match_variant.enum_variant.name,
-                                                             PURPLE_COLOR,
+                                                             COLOR_SCHEME.variable_color,
                                                              &|| {})
                                         },
                                     ])
@@ -1249,7 +1242,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.set_selected_on_click(&|| {
                                        self.draw_buttony_text(&format!("\u{F10D} {} \u{F10E}",
                                                                        string_literal.value),
-                                                              CLEAR_COLOR)
+                                                              COLOR_SCHEME.literal_bg_color)
                                    },
                                    string_literal.id)
     }
@@ -1261,7 +1254,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.set_selected_on_click(&|| {
                                        self.ui_toolkit
                                            .draw_buttony_text(&number_literal.value.to_string(),
-                                                              CLEAR_COLOR)
+                                                              COLOR_SCHEME.literal_bg_color)
                                    },
                                    number_literal.id)
     }
@@ -1310,7 +1303,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     .borrow_mut()
                     .add_editor_command(|e| e.mark_as_not_editing());
                 self.draw_button(&format!("Not possible to edit {:?}", code_node),
-                                 RED_COLOR,
+                                 COLOR_SCHEME.danger_color,
                                  &|| {})
             }
         }
