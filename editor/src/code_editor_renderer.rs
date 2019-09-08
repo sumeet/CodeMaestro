@@ -23,8 +23,6 @@ pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 // TODO: move this into the color scheme, but we'll leave it in here for now -- lazy
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
 
-// lifted from imgui classic colorscheme
-pub const TEXT_ENTRY_BG_COLOR: Color = [0.396, 0.396, 0.396, 1.0];
 pub const PX_PER_INDENTATION_LEVEL: i16 = 20;
 
 fn transparency(mut color: Color, p: f32) -> Color {
@@ -66,7 +64,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let code = self.code_editor.get_code();
         let cmd_buffer1 = Rc::clone(&self.command_buffer);
         let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_child_region(TEXT_ENTRY_BG_COLOR,
+        self.ui_toolkit.draw_child_region(COLOR_SCHEME.child_region_bg_color,
                                           &|| self.render_code(code),
                                           ChildRegionHeight::ExpandFill { min_height: 100. },
                                           Some(&move || {

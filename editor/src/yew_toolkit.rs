@@ -21,9 +21,6 @@ use yew::prelude::*;
 use yew::virtual_dom::VTag;
 use yew::virtual_dom::{VList, VNode};
 
-// keep this in sync with the WindowBg color defined in imgui_support.rs
-const WINDOW_TITLE_BG_COLOR: [f32; 4] = [0.408, 0.408, 0.678, 1.0];
-
 pub struct Model {
     app: Option<Rc<RefCell<CSApp>>>,
     async_executor: Option<AsyncExecutor>,
@@ -320,7 +317,7 @@ impl UiToolkit for YewToolkit {
                     }
                 }, >
 
-                <h4 class="window-title", style={ format!("background-color: {}; color: white", rgba(WINDOW_TITLE_BG_COLOR)) },>
+               <h4 class="window-title", style={ format!("background-color: {}; color: white", rgba(COLOR_SCHEME.titlebar_bg_color)) },>
                     { if let Some(onclose) = onclose {
                         html! {
                             <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
@@ -708,7 +705,8 @@ impl UiToolkit for YewToolkit {
 
         html! {
             <nav class="dropdown-menu",
-                style="position: fixed; top: 0; left: 0; width: 100%; height: 1.25em; padding: 0.25em; background-color: #656583; color: white; user-select: none;",>
+                style=format!("position: fixed; top: 0; left: 0; width: 100%; height: 1.25em; padding: 0.25em; background-color: {}; color: white; user-select: none;",
+                              rgba(COLOR_SCHEME.menubar_color)), >
                 {{ draw_menus() }}
             </nav>
         }

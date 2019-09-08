@@ -19,6 +19,11 @@ pub struct ColorScheme {
     pub variable_color: Color,
     pub warning_color: Color,
     pub window_bg_color: Color,
+    pub child_region_bg_color: Color,
+    pub menubar_color: Color,
+    pub titlebar_bg_color: Color,
+    pub titlebar_active_bg_color: Color,
+    pub input_bg_color: Color,
 }
 
 pub static IMGUI_CLASSIC_COLOR_SCHEME: ColorScheme =
@@ -37,7 +42,16 @@ pub static IMGUI_CLASSIC_COLOR_SCHEME: ColorScheme =
                   // little lighter (0.3 -> 0.35), so it contrasts with the black used for
                   // signifying nesting.
                   window_bg_color: [0.375, 0.375, 0.375, 1.0],
+                  // lifted from imgui classic colorscheme
+                  child_region_bg_color: [0.396, 0.396, 0.396, 1.0],
                   separator_color: [144. / 255., 144. / 255., 144. / 255., 1.],
-                  selection_overlay_color: [1., 1., 1., 0.3] };
+                  selection_overlay_color: [1., 1., 1., 0.3],
+                  // lifted from imgui classic colorscheme
+                  // using the colorpicker because imgui uses layered transparent backgrounds, that
+                  // are not only difficult to reproduce, but we don't want translucency anyway
+                  input_bg_color: [0.3961, 0.3961, 0.3961, 1.],
+                  menubar_color: [0.3961, 0.3961, 0.5137, 1.],
+                  titlebar_bg_color: [0.3922, 0.3922, 0.6196, 1.],
+                  titlebar_active_bg_color: [0.4078, 0.4078, 0.6784, 1.] };
 
 pub static COLOR_SCHEME: ColorScheme = IMGUI_CLASSIC_COLOR_SCHEME;

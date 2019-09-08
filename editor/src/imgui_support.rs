@@ -44,16 +44,17 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     style.colors[ImGuiCol::WindowBg as usize] = COLOR_SCHEME.window_bg_color.into();
     style.colors[ImGuiCol::ButtonActive as usize] = COLOR_SCHEME.button_active_color.into();
     style.colors[ImGuiCol::ButtonHovered as usize] = COLOR_SCHEME.button_hover_color.into();
+    style.colors[ImGuiCol::MenuBarBg as usize] = COLOR_SCHEME.menubar_color.into();
+    style.colors[ImGuiCol::TitleBg as usize] = COLOR_SCHEME.titlebar_bg_color.into();
+    style.colors[ImGuiCol::TitleBgCollapsed as usize] = COLOR_SCHEME.titlebar_bg_color.into();
+    style.colors[ImGuiCol::TitleBgActive as usize] = COLOR_SCHEME.titlebar_active_bg_color.into();
 
     // debug code to print colors
-    //    println!("border: {:?}", style.colors[ImGuiCol::Border as usize]);
-    //    println!("bordershadow: {:?}",
-    //             style.colors[ImGuiCol::BorderShadow as usize]);
-    //    println!("childbg: {:?}", style.colors[ImGuiCol::WindowBg as usize]);
-    //    println!("buttonhovered: {:?}",
-    //             style.colors[ImGuiCol::ButtonHovered as usize]);
-    //    println!("buttonactive: {:?}",
-    //             style.colors[ImGuiCol::ButtonActive as usize]);
+    println!("titlebg: {:?}", style.colors[ImGuiCol::TitleBg as usize]);
+    println!("titlebgactive: {:?}",
+             style.colors[ImGuiCol::TitleBgActive as usize]);
+    println!("titlebgcollapsed: {:?}",
+             style.colors[ImGuiCol::TitleBgCollapsed as usize]);
 
     // merge mode off for the first entry, should be on for the rest of them
     // TODO: also i think you have to add the fonts in such a way that the more specific ranges are
