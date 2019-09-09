@@ -9,7 +9,7 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
-use crate::color_schemes::COLOR_SCHEME;
+use crate::colorscheme;
 use crate::draw_all_iter;
 use crate::editor::Keypress;
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
@@ -64,7 +64,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let code = self.code_editor.get_code();
         let cmd_buffer1 = Rc::clone(&self.command_buffer);
         let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_child_region(COLOR_SCHEME.child_region_bg_color,
+        self.ui_toolkit.draw_child_region(colorscheme!(child_region_bg_color),
                                           &|| self.render_code(code),
                                           ChildRegionHeight::ExpandFill { min_height: 100. },
                                           Some(&move || {
@@ -128,7 +128,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit
             .scrolled_to_y_if_not_visible(scroll_hash, &|| {
                 self.ui_toolkit
-                    .draw_box_around(COLOR_SCHEME.selection_overlay_color, draw)
+                    .draw_box_around(colorscheme!(selection_overlay_color), draw)
             })
     }
 
@@ -139,7 +139,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
                 self.set_selected_on_click(&|| {
-                    self.render_name_with_type_definition(&assignment.name, COLOR_SCHEME.variable_color, &type_of_assignment)
+                    self.render_name_with_type_definition(&assignment.name, colorscheme!(variable_color), &type_of_assignment)
                 }, assignment.id)
             },
             &|| self.draw_text("   \u{f52c}   "),
@@ -381,7 +381,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn draw_operation_label(&self, text: &str) -> T::DrawResult {
         self.ui_toolkit
-            .draw_buttony_text(text, COLOR_SCHEME.cool_color)
+            .draw_buttony_text(text, colorscheme!(cool_color))
     }
 
     fn render_insertion_options_group(&self,
@@ -418,7 +418,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                           Some(help_text) if !help_text.is_empty() => {
                               self.ui_toolkit.draw_all(&[
                                     &|| self.render_code(&option.new_node),
-                                    &|| self.ui_toolkit.draw_wrapped_text(COLOR_SCHEME.action_color, &help_text),
+                                    &|| self.ui_toolkit.draw_wrapped_text(colorscheme!(action_color), &help_text),
                               ])
                           }
                           _ => self.render_code(&option.new_node),
@@ -459,7 +459,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         //       else
         let type_symbol = self.env_genie.get_symbol_for_type(&t);
         self.ui_toolkit
-            .draw_buttony_text(&type_symbol, COLOR_SCHEME.cool_color)
+            .draw_buttony_text(&type_symbol, colorscheme!(cool_color))
     }
 
     fn render_list_literal_position(&self, pos: usize) -> T::DrawResult {
@@ -681,18 +681,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
         // TODO: maybe use the traffic cone instead of the exclamation triangle,
         // which is kinda hard to see
-        self.set_selected_on_click(
-                                   &|| {
-                                       self.ui_toolkit.draw_buttony_text(
-                                                                         &format!(
-                "{} {}",
-                PLACEHOLDER_ICON, placeholder.description
-            ),
-                                                                         COLOR_SCHEME.warning_color,
-            )
+        self.set_selected_on_click(&|| {
+                                       self.ui_toolkit
+                                           .draw_buttony_text(&format!("{} {}",
+                                                                       PLACEHOLDER_ICON,
+                                                                       placeholder.description),
+                                                              colorscheme!(warning_color))
                                    },
-                                   placeholder.id,
-        )
+                                   placeholder.id)
     }
 
     fn render_function_reference(&self,
@@ -711,12 +707,12 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let func = self.env_genie.find_function(function_id);
         if func.is_none() {
             let error_msg = format!("Error: function ID {} not found", function_id);
-            return self.draw_button(&error_msg, COLOR_SCHEME.danger_color, &|| {});
+            return self.draw_button(&error_msg, colorscheme!(danger_color), &|| {});
         }
         let func = func.unwrap();
         // TODO: rework this for when we have generics. the function arguments will need to take
         // the actual parameters as parameters
-        self.render_function_name(&func.name(), COLOR_SCHEME.action_color, &func.returns())
+        self.render_function_name(&func.name(), colorscheme!(action_color), &func.returns())
     }
 
     fn render_variable_reference(&self,
@@ -724,10 +720,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  -> T::DrawResult {
         let draw = &|| {
             if let Some((name, typ)) = self.lookup_variable_name_and_type(variable_reference) {
-                self.render_name_with_type_definition(&name, COLOR_SCHEME.variable_color, &typ)
+                self.render_name_with_type_definition(&name, colorscheme!(variable_color), &typ)
             } else {
                 self.draw_button("Variable reference not found",
-                                 COLOR_SCHEME.danger_color,
+                                 colorscheme!(danger_color),
                                  &|| {})
             }
         };
@@ -907,7 +903,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                  .draw_code_line_separator('\u{f0fe}',
                                                                            70.,
                                                                            2.,
-                                                                           COLOR_SCHEME.separator_color)
+                                                                           colorscheme!(separator_color))
                                          },
                                          &|| self.render_add_code_here_button(insertion_point))
     }
@@ -917,7 +913,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit.buttonize(&|| {
                                       self.ui_toolkit.draw_buttony_text("\u{f0fe} Add code",
-                                                                        COLOR_SCHEME.adding_color)
+                                                                        colorscheme!(adding_color))
                                   },
                                   move || {
                                       cmd_buffer.borrow_mut().add_editor_command(move |editor| {
@@ -1012,7 +1008,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_missing_function_argument(&self, _arg: &lang::ArgumentDefinition) -> T::DrawResult {
         self.draw_button("this shouldn't have happened, you've got a missing function arg somehow",
-                         COLOR_SCHEME.danger_color,
+                         colorscheme!(danger_color),
                          &|| {})
     }
 
@@ -1146,7 +1142,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     &|| {
                         self.render_nested(&|| {
                                 self.render_name_with_type_definition(&struct_field.name,
-                                                                      COLOR_SCHEME.cool_color,
+                                                                      colorscheme!(cool_color),
                                                                       &struct_field.field_type)
                             })
                     },
@@ -1159,7 +1155,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_struct_identifier(&self, strukt: &structs::Struct) -> T::DrawResult {
         let typ = lang::Type::from_spec(strukt);
-        self.render_name_with_type_definition(&strukt.name, COLOR_SCHEME.cool_color, &typ)
+        self.render_name_with_type_definition(&strukt.name, colorscheme!(cool_color), &typ)
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
@@ -1167,7 +1163,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             &|| {
                 self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                             self.draw_button("If",
-                                                                             COLOR_SCHEME.action_color,
+                                                                             colorscheme!(action_color),
                                                                              &|| {})
                                                         },
                                                         &|| {
@@ -1183,7 +1179,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             &|| {
                 self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                             self.draw_button("Match",
-                                                                             COLOR_SCHEME.action_color,
+                                                                             colorscheme!(action_color),
                                                                              &|| {})
                                                         },
                                                         &|| {
@@ -1217,7 +1213,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                         &|| {
                                             self.ui_toolkit
                                                 .draw_button(&match_variant.enum_variant.name,
-                                                             COLOR_SCHEME.variable_color,
+                                                             colorscheme!(variable_color),
                                                              &|| {})
                                         },
                                     ])
@@ -1240,7 +1236,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.set_selected_on_click(&|| {
                                        self.draw_buttony_text(&format!("\u{F10D} {} \u{F10E}",
                                                                        string_literal.value),
-                                                              COLOR_SCHEME.literal_bg_color)
+                                                              colorscheme!(literal_bg_color))
                                    },
                                    string_literal.id)
     }
@@ -1252,7 +1248,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.set_selected_on_click(&|| {
                                        self.ui_toolkit
                                            .draw_buttony_text(&number_literal.value.to_string(),
-                                                              COLOR_SCHEME.literal_bg_color)
+                                                              colorscheme!(literal_bg_color))
                                    },
                                    number_literal.id)
     }
@@ -1301,7 +1297,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     .borrow_mut()
                     .add_editor_command(|e| e.mark_as_not_editing());
                 self.draw_button(&format!("Not possible to edit {:?}", code_node),
-                                 COLOR_SCHEME.danger_color,
+                                 colorscheme!(danger_color),
                                  &|| {})
             }
         }

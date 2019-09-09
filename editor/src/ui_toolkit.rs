@@ -95,6 +95,11 @@ pub trait UiToolkit {
                                                                  onchange: F,
                                                                  ondone: D)
                                                                  -> Self::DrawResult;
+    fn draw_color_picker_with_label(&self,
+                                    label: &str,
+                                    existing_value: Color,
+                                    onchange: impl Fn(Color) + 'static)
+                                    -> Self::DrawResult;
     fn draw_text_input_with_label<F: Fn(&str) + 'static, D: Fn() + 'static>(&self,
                                                                             label: &str,
                                                                             existing_value: &str,

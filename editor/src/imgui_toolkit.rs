@@ -5,7 +5,7 @@ use super::imgui_support;
 use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
 use itertools::Itertools;
 
-use crate::color_schemes::COLOR_SCHEME;
+use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use imgui::*;
 use lazy_static::lazy_static;
@@ -319,7 +319,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
             self.ui
                 .get_window_draw_list()
-                .add_rect(min, max, COLOR_SCHEME.button_hover_color)
+                .add_rect(min, max, colorscheme!(button_hover_color))
                 .filled(true)
                 .build();
         }
@@ -329,7 +329,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
             self.ui
                 .get_window_draw_list()
-                .add_rect(min, max, COLOR_SCHEME.button_active_color)
+                .add_rect(min, max, colorscheme!(button_active_color))
                 .filled(true)
                 .build();
         }
@@ -1042,6 +1042,22 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
+        }
+    }
+
+    fn draw_color_picker_with_label(&self,
+                                    label: &str,
+                                    existing_value: Color,
+                                    onchange: impl Fn(Color) + 'static) {
+        let mut edited_value = existing_value.clone();
+        let was_color_changed = self.ui
+                                    .color_edit(&self.imlabel(label), &mut edited_value)
+                                    .alpha(true)
+                                    .alpha_bar(true)
+                                    .mode(ColorEditMode::HEX)
+                                    .build();
+        if was_color_changed && existing_value != edited_value {
+            onchange(edited_value)
         }
     }
 

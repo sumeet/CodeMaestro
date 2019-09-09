@@ -542,6 +542,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "editor"
 version = "0.1.0"
 dependencies = [
+ "backtrace 0.3.32 (registry+https://github.com/rust-lang/crates.io-index)",
  "cfg-if 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "cs 0.1.0",
  "directories 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",

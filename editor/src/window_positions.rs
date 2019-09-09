@@ -9,6 +9,8 @@ lazy_static! {
         uuid::Uuid::parse_str("8d12c907-3129-40b2-af67-a6f727a1e888").unwrap();
     pub static ref CHAT_TEST_WINDOW_ID: lang::ID =
         uuid::Uuid::parse_str("1f5dbdf2-c8b7-4594-bc3e-9a4ca4c6184b").unwrap();
+    pub static ref THEME_EDITOR_WINDOW_ID: lang::ID =
+        uuid::Uuid::parse_str("5532875b-ab0e-4ac0-af22-dcfd364b7d7a").unwrap();
 }
 
 // go under the title bar
@@ -41,8 +43,12 @@ impl Default for WindowPositions {
                                      y: INITIAL_WINDOW_POSITION.1
                                         + QUICK_START_WINDOW_SIZE.1 as isize
                                         + 5 });
-        Self { size: (4000, 3000),
-               open_windows }
+        // TODO: probably make the color editor now show up by default, but at least when i'm
+        // developing
+        let mut wp = Self { size: (4000, 3000),
+                            open_windows };
+        wp.add_window(*THEME_EDITOR_WINDOW_ID);
+        wp
     }
 }
 

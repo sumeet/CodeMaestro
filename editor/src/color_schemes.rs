@@ -1,6 +1,30 @@
 use crate::ui_toolkit::Color;
+use lazy_static::lazy_static;
+use serde_derive::{Deserialize, Serialize};
+use std::sync::{Mutex, MutexGuard};
 
-#[derive(Clone, Copy)]
+lazy_static! {
+    pub static ref COLOR_SCHEME: Mutex<ColorScheme> =
+        Mutex::new(IMGUI_CLASSIC_COLOR_SCHEME.clone());
+}
+
+#[macro_export]
+macro_rules! colorscheme {
+    ($attr_name:ident) => {{
+        let mut _color: $crate::ui_toolkit::Color;
+        // use an inner scope to make sure the mutex is dropped
+        {
+            _color = $crate::color_schemes::colorscheme2().$attr_name.clone();
+        }
+        _color
+    }};
+}
+
+pub fn colorscheme2() -> MutexGuard<'static, ColorScheme> {
+    COLOR_SCHEME.lock().unwrap()
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ColorScheme {
     pub action_color: Color,
     // traditionally a green, like green in diffs
@@ -53,5 +77,3 @@ pub static IMGUI_CLASSIC_COLOR_SCHEME: ColorScheme =
                   menubar_color: [0.3961, 0.3961, 0.5137, 1.],
                   titlebar_bg_color: [0.3922, 0.3922, 0.6196, 1.],
                   titlebar_active_bg_color: [0.4078, 0.4078, 0.6784, 1.] };
-
-pub static COLOR_SCHEME: ColorScheme = IMGUI_CLASSIC_COLOR_SCHEME;

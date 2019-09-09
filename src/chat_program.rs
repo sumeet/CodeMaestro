@@ -9,9 +9,9 @@ use super::builtins::MESSAGE_STRUCT_ID;
 use super::env;
 use super::lang;
 use crate::builtins::new_message;
-use crate::env::{Interpreter};
+use crate::env::Interpreter;
 use crate::lang::Function;
-use crate::{resolve_all_futures, EnvGenie, builtins};
+use crate::{builtins, resolve_all_futures, EnvGenie};
 use itertools::Itertools;
 use std::pin::Pin;
 
@@ -117,7 +117,8 @@ pub fn message_received(interp: &Interpreter,
         env_genie.list_chat_programs().cloned().collect::<Vec<_>>()
     };
     let triggered_values =
-        chat_programs.iter().filter_map(|cp| {
+        chat_programs.iter()
+                     .filter_map(|cp| {
                          println!("{:?}", cp);
                          cp.try_to_trigger(interp.dup(), sender.clone(), text.clone())
                      })
@@ -132,9 +133,13 @@ pub fn message_received(interp: &Interpreter,
 }
 
 pub fn flush_reply_buffer(env_genie: &EnvGenie) -> Vec<String> {
-    let chat_reply = env_genie.find_function(*builtins::CHAT_REPLY_FUNC_ID).unwrap().downcast_ref::<builtins::ChatReply>().unwrap();
+    let chat_reply = env_genie.find_function(*builtins::CHAT_REPLY_FUNC_ID)
+                              .unwrap()
+                              .downcast_ref::<builtins::ChatReply>()
+                              .unwrap();
 
     let mut output_buffer = vec![];
-    std::mem::swap(&mut output_buffer, &mut chat_reply.output_buffer.lock().unwrap());
+    std::mem::swap(&mut output_buffer,
+                   &mut chat_reply.output_buffer.lock().unwrap());
     output_buffer
 }

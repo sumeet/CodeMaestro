@@ -6,7 +6,7 @@ use imgui::{FontGlyphRange, ImFontConfig, ImGui, ImGuiCol, Ui};
 use std::time::Instant;
 
 use super::editor::{Key as AppKey, Keypress};
-use crate::color_schemes::COLOR_SCHEME;
+use crate::colorscheme;
 use imgui_winit_support;
 
 pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
@@ -40,21 +40,22 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
         imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
     }
     let mut style = imgui.style_mut();
-    //
-    style.colors[ImGuiCol::WindowBg as usize] = COLOR_SCHEME.window_bg_color.into();
-    style.colors[ImGuiCol::ButtonActive as usize] = COLOR_SCHEME.button_active_color.into();
-    style.colors[ImGuiCol::ButtonHovered as usize] = COLOR_SCHEME.button_hover_color.into();
-    style.colors[ImGuiCol::MenuBarBg as usize] = COLOR_SCHEME.menubar_color.into();
-    style.colors[ImGuiCol::TitleBg as usize] = COLOR_SCHEME.titlebar_bg_color.into();
-    style.colors[ImGuiCol::TitleBgCollapsed as usize] = COLOR_SCHEME.titlebar_bg_color.into();
-    style.colors[ImGuiCol::TitleBgActive as usize] = COLOR_SCHEME.titlebar_active_bg_color.into();
+    // currently duped in the loop so we can do it on every frame
+    // TODO: clean that up
+    style.colors[ImGuiCol::WindowBg as usize] = colorscheme!(window_bg_color).into();
+    style.colors[ImGuiCol::ButtonActive as usize] = colorscheme!(button_active_color).into();
+    style.colors[ImGuiCol::ButtonHovered as usize] = colorscheme!(button_hover_color).into();
+    style.colors[ImGuiCol::MenuBarBg as usize] = colorscheme!(menubar_color).into();
+    style.colors[ImGuiCol::TitleBg as usize] = colorscheme!(titlebar_bg_color).into();
+    style.colors[ImGuiCol::TitleBgCollapsed as usize] = colorscheme!(titlebar_bg_color).into();
+    style.colors[ImGuiCol::TitleBgActive as usize] = colorscheme!(titlebar_active_bg_color).into();
 
     // debug code to print colors
-    println!("titlebg: {:?}", style.colors[ImGuiCol::TitleBg as usize]);
-    println!("titlebgactive: {:?}",
-             style.colors[ImGuiCol::TitleBgActive as usize]);
-    println!("titlebgcollapsed: {:?}",
-             style.colors[ImGuiCol::TitleBgCollapsed as usize]);
+    //    println!("titlebg: {:?}", style.colors[ImGuiCol::TitleBg as usize]);
+    //    println!("titlebgactive: {:?}",
+    //             style.colors[ImGuiCol::TitleBgActive as usize]);
+    //    println!("titlebgcollapsed: {:?}",
+    //             style.colors[ImGuiCol::TitleBgCollapsed as usize]);
 
     // merge mode off for the first entry, should be on for the rest of them
     // TODO: also i think you have to add the fonts in such a way that the more specific ranges are
@@ -147,6 +148,17 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     let mut quit = false;
 
     loop {
+        // duped above... clean this up TODO
+        let mut style = imgui.style_mut();
+        style.colors[ImGuiCol::WindowBg as usize] = colorscheme!(window_bg_color).into();
+        style.colors[ImGuiCol::ButtonActive as usize] = colorscheme!(button_active_color).into();
+        style.colors[ImGuiCol::ButtonHovered as usize] = colorscheme!(button_hover_color).into();
+        style.colors[ImGuiCol::MenuBarBg as usize] = colorscheme!(menubar_color).into();
+        style.colors[ImGuiCol::TitleBg as usize] = colorscheme!(titlebar_bg_color).into();
+        style.colors[ImGuiCol::TitleBgCollapsed as usize] = colorscheme!(titlebar_bg_color).into();
+        style.colors[ImGuiCol::TitleBgActive as usize] =
+            colorscheme!(titlebar_active_bg_color).into();
+
         let mut keypress: Option<Keypress> = None;
 
         events_loop.poll_events(|event| {

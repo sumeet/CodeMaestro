@@ -3,7 +3,7 @@ use super::async_executor::AsyncExecutor;
 use super::editor::{Key as AppKey, Keypress};
 use super::ui_toolkit::UiToolkit;
 use crate::code_editor_renderer::BLACK_COLOR;
-use crate::color_schemes::COLOR_SCHEME;
+use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
 
 use std::cell::RefCell;
@@ -93,7 +93,7 @@ impl UiToolkit for YewToolkit {
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
         html! {
-            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(COLOR_SCHEME.window_bg_color)) }, >
+            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(colorscheme().window_bg_color)) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -102,7 +102,7 @@ impl UiToolkit for YewToolkit {
     fn draw_top_left_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
         html! {
-            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; left: 10px; color: white; background-color: {}",rgba(COLOR_SCHEME.window_bg_color)) }, >
+            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; left: 10px; color: white; background-color: {}",rgba(colorscheme().window_bg_color)) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -162,7 +162,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(COLOR_SCHEME.window_bg_color)) },
+            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(colorscheme().window_bg_color)) },
                  id={ self.incr_last_drawn_element_id().to_string() },
                  tabindex=0,
                  onkeypress=|e| {
@@ -288,7 +288,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(COLOR_SCHEME.window_bg_color), size.0, size.1) },
+           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme().window_bg_color), size.0, size.1) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {
@@ -317,7 +317,7 @@ impl UiToolkit for YewToolkit {
                     }
                 }, >
 
-               <h4 class="window-title", style={ format!("background-color: {}; color: white", rgba(COLOR_SCHEME.titlebar_bg_color)) },>
+               <h4 class="window-title", style={ format!("background-color: {}; color: white", rgba(colorscheme().titlebar_bg_color)) },>
                     { if let Some(onclose) = onclose {
                         html! {
                             <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
@@ -498,7 +498,7 @@ impl UiToolkit for YewToolkit {
             }
             drawn.attributes.insert("onmouseover".into(),
                                     format!("displayButtonizedHoverOverlayOn(this, \"{}\");",
-                                            rgba(COLOR_SCHEME.button_hover_color)));
+                                            rgba(colorscheme!(button_hover_color))));
             VNode::VTag(drawn)
         };
         html! {
@@ -706,7 +706,7 @@ impl UiToolkit for YewToolkit {
         html! {
             <nav class="dropdown-menu",
                 style=format!("position: fixed; top: 0; left: 0; width: 100%; height: 1.25em; padding: 0.25em; background-color: {}; color: white; user-select: none;",
-                              rgba(COLOR_SCHEME.menubar_color)), >
+                              rgba(colorscheme().menubar_color)), >
                 {{ draw_menus() }}
             </nav>
         }

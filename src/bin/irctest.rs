@@ -314,22 +314,23 @@ async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Re
 
                         let chat_thingy = Rc::clone(&self.chat_thingy);
                         return Box::new(backward(async move {
-                            await!(chat_thingy.borrow_mut().message_received(sender, text));
+                                            await!(chat_thingy.borrow_mut()
+                                                              .message_received(sender, text));
 
-                            for reply in chat_thingy.borrow_mut()
-                                                    .reply_buffer
-                                                    .lock()
-                                                    .unwrap()
-                                                    .drain(..)
-                            {
-                                msg_sender.send_message(&channel, &reply)
+                                            for reply in chat_thingy.borrow_mut()
+                                                                    .reply_buffer
+                                                                    .lock()
+                                                                    .unwrap()
+                                                                    .drain(..)
+                                            {
+                                                msg_sender.send_message(&channel, &reply)
                                           .map_err(|err| {
                                               println!("error sending slack message: {:?}", err)
                                           })
                                           .ok();
-                            }
-                            Ok(())
-                        }));
+                                            }
+                                            Ok(())
+                                        }));
                     }
                 }
             }
