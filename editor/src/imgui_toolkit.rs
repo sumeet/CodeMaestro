@@ -13,6 +13,8 @@ use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
+use std::fs::File;
+use std::io::{Read, Write};
 use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -248,22 +250,38 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     //        // set back to a single column
     //        self.ui.columns(1, &self.imlabel("columnsend"), false)
     //    }
-    fn open_file_open_dialog() -> Option<String> {
+    fn open_file_open_dialog(callback: impl Fn(&[u8]) + 'static) {
         let result = nfd::open_file_dialog(None, None).unwrap();
-        match result {
+        let filename = match result {
             nfd::Response::Okay(file_path) => Some(file_path),
             nfd::Response::OkayMultiple(file_paths) => file_paths.into_iter().nth(0),
             nfd::Response::Cancel => None,
+        };
+        if filename.is_none() {
+            return;
         }
+        let filename = filename.unwrap();
+        let mut read_buffer = Vec::new();
+        File::open(&filename).unwrap()
+                             .read_to_end(&mut read_buffer)
+                             .unwrap();
+        callback(&read_buffer);
     }
 
-    fn open_file_save_dialog() -> Option<String> {
+    fn open_file_save_dialog(_filename_suggestion: &str, contents: &[u8], _mimetype: &str) {
         let result = nfd::open_save_dialog(None, None).unwrap();
-        match result {
+        let filename = match result {
             nfd::Response::Okay(file_path) => Some(file_path),
             nfd::Response::OkayMultiple(file_paths) => file_paths.into_iter().nth(0),
             nfd::Response::Cancel => None,
+        };
+        if filename.is_none() {
+            return;
         }
+        let filename = filename.unwrap();
+        File::create(&filename).unwrap()
+                               .write_all(&contents)
+                               .unwrap();
     }
 
     fn draw_wrapped_text(&self, color: Color, text: &str) {
