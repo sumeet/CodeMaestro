@@ -12,7 +12,7 @@ use stdweb::unstable::TryInto;
 type EZResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub async fn fetch(request: Request<String>) -> EZResult<Response<String>> {
-    let js_resp = await!(js_fetch(request))?;
+    let js_resp = js_fetch(request).await?;
     let mut resp_builder = Response::builder();
     resp_builder.status(js_resp.status);
     for (key, val) in js_resp.headers.iter() {

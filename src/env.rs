@@ -16,7 +16,7 @@ use std::convert::TryInto;
 #[macro_export]
 macro_rules! await_eval_result {
     ($e:expr) => {
-        await!($crate::external_func::resolve_all_futures(await!($e)))
+        $crate::external_func::resolve_all_futures($e.await).await
     };
 }
 

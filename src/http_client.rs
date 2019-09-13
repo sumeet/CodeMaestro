@@ -12,5 +12,5 @@ pub async fn post_json<'a>(url: &'a str,
                            -> Result<http::Response<String>> {
     // TODO: why not just combine http_request.rs with http_client.rs?
     let req = http_request::post_json(url, data)?;
-    Ok(await!(fetch(req))?)
+    Ok(fetch(req).await?)
 }

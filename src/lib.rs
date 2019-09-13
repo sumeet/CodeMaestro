@@ -5,12 +5,10 @@
 #![feature(arbitrary_self_types)]
 #![feature(slice_concat_ext)]
 #![feature(box_patterns)]
-#![feature(await_macro, async_await)]
 #![feature(slice_patterns)]
 #![feature(drain_filter)]
 #![feature(generators)]
 #![recursion_limit = "256"]
-#![feature(fnbox)]
 
 pub mod asynk;
 pub mod builtins;

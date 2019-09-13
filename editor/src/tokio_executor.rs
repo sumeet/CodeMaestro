@@ -57,7 +57,7 @@ impl<'a> AsyncExecutor<'a> {
                                                                                       future: F)
     {
         self.executor.spawn(backward(async {
-                                await!(future).unwrap();
+                                future.await.unwrap();
                                 Ok(())
                             }));
     }

@@ -82,7 +82,7 @@ impl JSONHTTPClientBuilder {
         let url = self.test_url.clone();
         let mut new_builder = self.clone();
         async_executor.exec(async move {
-                          let val = await!(do_get_request(url));
+                          let val = do_get_request(url).await;
                           let result = val.map_err(|e| e.to_string());
                           new_builder.set_test_result(result);
                           callback(new_builder);
@@ -111,7 +111,7 @@ fn build_return_type(env_genie: &EnvGenie,
 }
 
 async fn do_get_request(url: String) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-    await!(json_http_client::get_json(http_request::get(&url)?))
+    json_http_client::get_json(http_request::get(&url)?).await
 }
 
 pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {

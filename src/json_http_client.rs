@@ -40,8 +40,8 @@ impl lang::Function for JSONHTTPClient {
         let request = self.http_request(interpreter.dup(), args);
         let returns = self.return_type.clone();
         lang::Value::new_future(async move {
-            let request = await!(request);
-            match await!(get_json(request)) {
+            let request = request.await;
+            match get_json(request).await {
                 Ok(json_value) => match ex(json_value, &returns, &interpreter.env.borrow()) {
                     Ok(value) => builtins::ok_result(value),
                     Err(e) => builtins::err_result(e),
@@ -178,7 +178,7 @@ fn serde_value_into_struct(mut value: serde_json::Value,
 }
 
 pub async fn get_json(request: http::Request<String>) -> Result<serde_json::Value> {
-    let resp = await!(http_client::fetch(request))?;
+    let resp = http_client::fetch(request).await?;
     Ok(serde_json::from_str(resp.body())?)
 }
 

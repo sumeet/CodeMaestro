@@ -1,7 +1,5 @@
-#![feature(await_macro, async_await)]
 #![feature(generators)]
 #![feature(box_patterns)]
-#![feature(fnbox)]
 #![feature(drain_filter)]
 #![feature(associated_type_defaults)]
 #![feature(try_blocks)]

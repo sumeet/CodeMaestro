@@ -323,7 +323,7 @@ impl CommandBuffer {
 
                 async_executor.exec(async move {
                                   overlay.borrow_mut().mark_as_submitting();
-                                  let resp = await!(postthecode(&theworld));
+                                  let resp = postthecode(&theworld).await;
                                   match resp {
                                       Err(e) => overlay.borrow_mut()
                                                        .mark_error(e.description().to_owned()),
@@ -483,7 +483,7 @@ async fn postthecode(theworld: &TheWorld)
                      -> Result<http::Response<String>, Box<dyn std::error::Error>> {
     let postcodetoken = config::get_or_err("SERVER_POST_TOKEN")?;
     let post_url = config::post_code_url(postcodetoken)?;
-    Ok(await!(http_client::post_json(post_url.as_str(), theworld))?)
+    Ok(http_client::post_json(post_url.as_str(), theworld).await?)
 }
 
 pub struct Renderer<'a, T> {

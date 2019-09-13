@@ -356,10 +356,6 @@ impl CodeGenie {
         self.code.replace(code);
     }
 
-    pub fn code_id(&self) -> lang::ID {
-        self.code.id()
-    }
-
     pub fn root(&self) -> &lang::CodeNode {
         &self.code
     }
@@ -553,27 +549,6 @@ impl CodeGenie {
                                  match_id: mach.id })
              })
              .collect()
-    }
-
-    pub fn find_enum_variants_preceding(&self,
-                                        node_id: lang::ID,
-                                        env_genie: &EnvGenie)
-                                        -> Vec<MatchVariant> {
-        let mut prev = self.find_node(node_id).unwrap();
-        let mut variants = vec![];
-        for node in self.all_parents_of(node_id) {
-            if let lang::CodeNode::Match(mach) = node {
-                for (variant_id, branch) in mach.branch_by_variant_id.iter() {
-                    if branch.id() == prev.id() {
-                        let mut type_and_enum_by_variant_id =
-                            self.match_variant_by_variant_id(mach, env_genie);
-                        variants.push(type_and_enum_by_variant_id.remove(variant_id).unwrap());
-                    }
-                }
-            }
-            prev = node;
-        }
-        variants
     }
 
     pub fn find_enum_variants_preceding_iter<'a>(&'a self,

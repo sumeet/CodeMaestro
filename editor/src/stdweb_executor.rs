@@ -26,7 +26,7 @@ impl AsyncExecutor {
     {
         let onupdate = self.onupdate.clone();
         spawn_local(async move {
-            await!(future).unwrap();
+            future.await.unwrap();
             onupdate.map(|f| f());
         });
     }
