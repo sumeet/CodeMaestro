@@ -1,6 +1,9 @@
-use crate::color_schemes::colorscheme2;
+use crate::color_schemes::{colorscheme2, load_colorscheme_from_disk, save_colorscheme_to_disk};
 use crate::colorscheme;
+use crate::editor::CommandBuffer;
 use crate::ui_toolkit::UiToolkit;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 macro_rules! render_theme_color_picker_with_label {
     ($renderer:expr, $label:expr, $attr_name:ident) => {{
@@ -111,6 +114,35 @@ impl<'a, T: UiToolkit> ThemeEditorRenderer<'a, T> {
                                        render_theme_color_picker_with_label!(self,
                                                                              "Menubar bg",
                                                                              menubar_color)
-                                   }])
+                                   },
+                                   &|| {
+                                       self.ui_toolkit.draw_button(
+                                           "Load theme file",
+                                           colorscheme!(action_color),
+                                           move || {
+                                               let filename_to_load = T::open_file_open_dialog();
+                                               if filename_to_load.is_none() {
+                                                   return;
+                                               }
+                                               let filename_to_load = filename_to_load.unwrap();
+                                               load_colorscheme_from_disk(&filename_to_load).unwrap();
+                                           },
+                                       )
+                                   },
+                                   &|| {
+                                       self.ui_toolkit.draw_button(
+                                           "Save theme file",
+                                           colorscheme!(action_color),
+                                           move || {
+                                               let save_filename = T::open_file_save_dialog();
+                                               if save_filename.is_none() {
+                                                   return;
+                                               }
+                                               let save_filename = save_filename.unwrap();
+                                               save_colorscheme_to_disk(&save_filename).unwrap();
+                                           },
+                                       )
+                                   },
+        ])
     }
 }

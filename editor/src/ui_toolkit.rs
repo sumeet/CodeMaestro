@@ -7,6 +7,8 @@ pub trait UiToolkit {
     type DrawResult;
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static);
+    fn open_file_open_dialog() -> Option<String>;
+    fn open_file_save_dialog() -> Option<String>;
     fn draw_code_line_separator(&self,
                                 plus_char: char,
                                 width: f32,

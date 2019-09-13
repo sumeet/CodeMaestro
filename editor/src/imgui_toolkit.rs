@@ -4,6 +4,7 @@ use super::editor::Keypress;
 use super::imgui_support;
 use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
 use itertools::Itertools;
+use nfd;
 
 use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
@@ -247,6 +248,23 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     //        // set back to a single column
     //        self.ui.columns(1, &self.imlabel("columnsend"), false)
     //    }
+    fn open_file_open_dialog() -> Option<String> {
+        let result = nfd::open_file_dialog(None, None).unwrap();
+        match result {
+            nfd::Response::Okay(file_path) => Some(file_path),
+            nfd::Response::OkayMultiple(file_paths) => file_paths.into_iter().nth(0),
+            nfd::Response::Cancel => None,
+        }
+    }
+
+    fn open_file_save_dialog() -> Option<String> {
+        let result = nfd::open_save_dialog(None, None).unwrap();
+        match result {
+            nfd::Response::Okay(file_path) => Some(file_path),
+            nfd::Response::OkayMultiple(file_paths) => file_paths.into_iter().nth(0),
+            nfd::Response::Cancel => None,
+        }
+    }
 
     fn draw_wrapped_text(&self, color: Color, text: &str) {
         let style = self.ui.imgui().style();

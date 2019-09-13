@@ -1,6 +1,8 @@
 use crate::ui_toolkit::Color;
 use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::BufReader;
 use std::sync::{Mutex, MutexGuard};
 
 lazy_static! {
@@ -18,6 +20,18 @@ macro_rules! colorscheme {
         }
         _color
     }};
+}
+
+pub fn load_colorscheme_from_disk(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let file = File::open(path)?;
+    let loaded_colorscheme = serde_json::from_reader(BufReader::new(file))?;
+    *colorscheme2() = loaded_colorscheme;
+    Ok(())
+}
+
+pub fn save_colorscheme_to_disk(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let f = File::create(path)?;
+    Ok(serde_json::to_writer_pretty(f, &*colorscheme2())?)
 }
 
 pub fn colorscheme2() -> MutexGuard<'static, ColorScheme> {
@@ -48,6 +62,16 @@ pub struct ColorScheme {
     pub titlebar_bg_color: Color,
     pub titlebar_active_bg_color: Color,
     pub input_bg_color: Color,
+}
+
+impl ColorScheme {
+    pub fn from_json(json_str: &str) -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(serde_json::from_str(json_str)?)
+    }
+
+    pub fn to_json(&self) -> String {
+        serde_json::to_string_pretty(self).unwrap()
+    }
 }
 
 pub static IMGUI_CLASSIC_COLOR_SCHEME: ColorScheme =
