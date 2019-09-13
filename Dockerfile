@@ -1,4 +1,4 @@
-FROM registry.gitlab.com/rust_musl_docker/image:nightly-2019-06-27
+FROM registry.gitlab.com/rust_musl_docker/image:nightly-2019-09-12
 
 WORKDIR /workdir/
 
