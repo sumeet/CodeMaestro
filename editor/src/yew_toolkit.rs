@@ -93,7 +93,7 @@ impl UiToolkit for YewToolkit {
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
         html! {
-            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(colorscheme().window_bg_color)) }, >
+            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(colorscheme!(window_bg_color))) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -102,7 +102,7 @@ impl UiToolkit for YewToolkit {
     fn draw_top_left_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
         html! {
-            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; left: 10px; color: white; background-color: {}",rgba(colorscheme().window_bg_color)) }, >
+            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; left: 10px; color: white; background-color: {}",rgba(colorscheme!(window_bg_color))) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -162,7 +162,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(colorscheme().window_bg_color)) },
+            <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(colorscheme!(window_bg_color))) },
                  id={ self.incr_last_drawn_element_id().to_string() },
                  tabindex=0,
                  onkeypress=|e| {
@@ -207,7 +207,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_separator(&self) -> Self::DrawResult {
         html! {
-            <hr>
+            <hr />
         }
     }
 
@@ -288,7 +288,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
         html! {
-           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme().window_bg_color), size.0, size.1) },
+           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {
@@ -317,7 +317,7 @@ impl UiToolkit for YewToolkit {
                     }
                 }, >
 
-               <h4 class="window-title", style={ format!("background-color: {}; color: white", rgba(colorscheme().titlebar_bg_color)) },>
+               <h4 class="window-title", style={ format!("background-color: {}; color: white", rgba(colorscheme!(titlebar_bg_color))) },>
                     { if let Some(onclose) = onclose {
                         html! {
                             <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
@@ -502,7 +502,8 @@ impl UiToolkit for YewToolkit {
             VNode::VTag(drawn)
         };
         html! {
-            <div style="position: relative;", onclick=|_| { onclick(); Msg::Redraw }, onmouseleave="removeOverlays(this);",>
+            <div style="position: relative;", onclick=|_| { onclick(); Msg::Redraw },
+                 onmouseleave=|e| { js! { removeOverlays(@{e.target()}); } ; Msg::DontRedraw},>
                 { draw_with_overlay_on_hover() }
                 <div style="position: absolute; top: 0px; left: 0px; display: none; height: 0px; width: 0px;",
                      class="buttonized-hover-overlay",>
@@ -706,7 +707,7 @@ impl UiToolkit for YewToolkit {
         html! {
             <nav class="dropdown-menu",
                 style=format!("position: fixed; top: 0; left: 0; width: 100%; height: 1.25em; padding: 0.25em; background-color: {}; color: white; user-select: none;",
-                              rgba(colorscheme().menubar_color)), >
+                              rgba(colorscheme!(menubar_color))), >
                 {{ draw_menus() }}
             </nav>
         }
@@ -772,37 +773,39 @@ impl UiToolkit for YewToolkit {
         let selected_item_in_combo_box = items.into_iter().position(|i| is_item_selected(i));
         let items = items.into_iter().map(|i| (*i).clone()).collect_vec();
         html! {
-            <select onchange=|event| {
-                        match event {
-                            ChangeData::Select(elem) => {
-                                if let Some(selected_index) = elem.selected_index() {
-                                    onchange(&items[selected_index as usize]);
+            <div>
+                <select onchange=|event| {
+                            match event {
+                                ChangeData::Select(elem) => {
+                                    if let Some(selected_index) = elem.selected_index() {
+                                        onchange(&items[selected_index as usize]);
+                                    }
+                                    Msg::Redraw
                                 }
-                                Msg::Redraw
+                                _ => {
+                                    unreachable!();
+                                }
                             }
-                            _ => {
-                                unreachable!();
+                        },>
+                    { for formatted_items.into_iter().enumerate().map(|(index, item)| {
+                        let selected = Some(index) == selected_item_in_combo_box;
+                        if selected {
+                            html! {
+                                <option selected=true, >
+                                    { item }
+                                </option>
+                            }
+                        } else {
+                            html! {
+                                <option>
+                                    { item }
+                                </option>
                             }
                         }
-                    },>
-                { for formatted_items.into_iter().enumerate().map(|(index, item)| {
-                    let selected = Some(index) == selected_item_in_combo_box;
-                    if selected {
-                        html! {
-                            <option selected=true, >
-                                { item }
-                            </option>
-                        }
-                    } else {
-                        html! {
-                            <option>
-                                { item }
-                            </option>
-                        }
-                    }
-                })}
-            </select>
-            <label>{ label }</label>
+                    })}
+                </select>
+                <label>{ label }</label>
+            </div>
         }
     }
 

@@ -4,7 +4,7 @@
 #![feature(associated_type_defaults)]
 #![feature(try_blocks)]
 #![feature(unsized_locals)]
-#![recursion_limit = "256"]
+#![recursion_limit = "1024"]
 
 // crates
 use cfg_if::cfg_if;
