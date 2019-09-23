@@ -90,6 +90,30 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn open_file_open_dialog(callback: impl Fn(&[u8]) + 'static) {
+        use stdweb::unstable::TryInto;
+        let callback = move |value: stdweb::Value| {
+            let array_buffer: stdweb::web::ArrayBuffer = value.try_into().unwrap();
+            let vu8: Vec<u8> = array_buffer.into();
+            callback(&vu8);
+        };
+        js! { openFileDialog(@{callback}); }
+    }
+
+    fn open_file_save_dialog(filename_suggestion: &str, contents: &[u8], mimetype: &str) {}
+
+    fn draw_color_picker_with_label(&self,
+                                    label: &str,
+                                    existing_value: Color,
+                                    onchange: impl Fn(Color) + 'static)
+                                    -> Self::DrawResult {
+        html! {
+            <div>
+                {"helo"}
+            </div>
+        }
+    }
+
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
         html! {
@@ -1125,6 +1149,7 @@ impl RendererState {
         }
     }
 
+    #[allow(unused_must_use)]
     pub fn set_global_keydown_handler(&self, handle_keypress: impl Fn(Keypress) + 'static) {
         self.global_key_handler.replace(Box::new(handle_keypress));
     }

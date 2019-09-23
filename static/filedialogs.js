@@ -14,7 +14,7 @@ function openFileDialog(callback) {
             console.log(reader.result);
         };
 
-        callback(reader.readAsText(file));
+        callback(reader.readAsArrayBuffer(file));
     });
     fileInput.click();
 }
