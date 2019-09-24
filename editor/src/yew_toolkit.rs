@@ -100,7 +100,9 @@ impl UiToolkit for YewToolkit {
         js! { openFileDialog(@{callback}); }
     }
 
-    fn open_file_save_dialog(filename_suggestion: &str, contents: &[u8], mimetype: &str) {}
+    fn open_file_save_dialog(filename_suggestion: &str, bytes: &[u8], mimetype: &str) {
+        js! { saveFile(@{bytes}, @{filename_suggestion}, @{mimetype}); }
+    }
 
     fn draw_color_picker_with_label(&self,
                                     label: &str,
