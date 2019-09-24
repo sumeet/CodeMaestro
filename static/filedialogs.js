@@ -8,13 +8,10 @@ function openFileDialog(callback) {
     fileInput.addEventListener('change', function() {
         var file = fileInput.files[0];
         var reader = new FileReader();
-
-        // TODO: remove this after testing
         reader.onload = function() {
-            console.log(reader.result);
+            callback(reader.result);
         };
-
-        callback(reader.readAsArrayBuffer(file));
+        reader.readAsArrayBuffer(file);
     });
     fileInput.click();
 }
