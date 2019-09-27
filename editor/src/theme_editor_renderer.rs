@@ -66,9 +66,7 @@ impl<'a, T: UiToolkit> ThemeEditorRenderer<'a, T> {
                                             colorscheme!(action_color),
                                             move || {
                                                 T::open_file_open_dialog(|file_data| {
-                                                    println!("file_data {:?}", file_data);
                                                     let str = String::from_utf8_lossy(file_data);
-                                                    println!("hi {}", str);
                                                     let cs = ColorScheme::from_json(&str).unwrap();
                                                     set_colorscheme(cs);
                                                 });

@@ -14,6 +14,7 @@ use itertools::Itertools;
 use stdweb::js;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
+use stdweb::unstable::TryInto;
 use stdweb::web::html_element::InputElement;
 use stdweb::web::{document, IElement, IEventTarget};
 use yew::html;
@@ -91,7 +92,6 @@ impl UiToolkit for YewToolkit {
     }
 
     fn open_file_open_dialog(callback: impl Fn(&[u8]) + 'static) {
-        use stdweb::unstable::TryInto;
         let callback = move |value: stdweb::Value| {
             let array_buffer: stdweb::web::ArrayBuffer = value.try_into().unwrap();
             let vu8: Vec<u8> = array_buffer.into();
@@ -109,9 +109,29 @@ impl UiToolkit for YewToolkit {
                                     existing_value: Color,
                                     onchange: impl Fn(Color) + 'static)
                                     -> Self::DrawResult {
+        let input_id = self.incr_last_drawn_element_id();
+        let onchange = move |value: stdweb::Value| {
+            let vec: Vec<f64> = value.try_into().unwrap();
+            let color: Color = [vec[0] as f32, vec[1] as f32, vec[2] as f32, vec[3] as f32];
+            onchange(color);
+        };
+        let onchange_js = js! {
+            return function(color) {
+                const rgba = color.toRgb();
+                @{onchange}([rgba.r / 255, rgba.g / 255, rgba.b / 255, rgba.a]);
+            };
+        };
+        self.renderer_state.borrow().add_run_after_render(move || {
+            js! {
+                $("#" + @{input_id}.toString())
+                    .spectrum({change: @{&onchange_js}, showInput: true, showAlpha: true,
+                               preferredFormat: "hex", color: @{rgba(existing_value)}});
+            };
+        });
         html! {
             <div>
-                {"helo"}
+                <input id=input_id, type="color", name=label />
+                <label>{label}</label>
             </div>
         }
     }
