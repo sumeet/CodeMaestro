@@ -704,6 +704,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                              &|| {
                                                  let cmd_buffer = Rc::clone(&self.command_buffer);
                                                  self.ui_toolkit.draw_whole_line_console_text_input(move |entered_text| {
+                                                     if entered_text.is_empty() {
+                                                         return
+                                                     }
+
                                                      let entered_text = entered_text.to_string();
                                                      let mut cmd_buffer = cmd_buffer.borrow_mut();
                                                      cmd_buffer.add_integrating_command(move |cont, interp, async_executor, _cmd_buffer| {
