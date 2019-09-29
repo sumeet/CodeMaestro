@@ -32,7 +32,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
 
     let hidpi_factor = window.get_hidpi_factor();
 
-    let font_size = (15.0 * hidpi_factor) as f32;
+    let font_size = (17.0 * hidpi_factor) as f32;
     let icon_font_size = font_size / 1.75;
     let icon_y_offset = (-2.0 * hidpi_factor) as f32;
 
