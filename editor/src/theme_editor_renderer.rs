@@ -61,28 +61,31 @@ impl<'a, T: UiToolkit> ThemeEditorRenderer<'a, T> {
             &|| render_theme_color_picker_with_label!(self, "Variable color", variable_color),
             &|| render_theme_color_picker_with_label!(self, "Warning color", warning_color),
             &|| render_theme_color_picker_with_label!(self, "Menubar bg", menubar_color),
-            &|| {
-                self.ui_toolkit.draw_button("Load theme file",
-                                            colorscheme!(action_color),
-                                            move || {
-                                                T::open_file_open_dialog(|file_data| {
-                                                    let str = String::from_utf8_lossy(file_data);
-                                                    let cs = ColorScheme::from_json(&str).unwrap();
-                                                    set_colorscheme(cs);
-                                                });
-                                            })
-            },
-            &|| {
-                self.ui_toolkit.draw_button("Save theme file",
-                                            colorscheme!(action_color),
-                                            move || {
-                                                T::open_file_save_dialog(
-                                                   "theme.json",
-                                                   serialize_colorscheme().as_bytes(),
-                                                   "application/json",
-                                               )
-                                            })
-            },
+            &|| self.ui_toolkit.draw_all_on_same_line(&[
+                &|| {
+                    self.ui_toolkit.draw_button("Load theme file",
+                                                colorscheme!(action_color),
+                                                move || {
+                                                    T::open_file_open_dialog(|file_data| {
+                                                        let str = String::from_utf8_lossy(file_data);
+                                                        let cs = ColorScheme::from_json(&str).unwrap();
+                                                        set_colorscheme(cs);
+                                                    });
+                                                })
+                },
+                &|| self.ui_toolkit.draw_text(""),
+                &|| {
+                    self.ui_toolkit.draw_button("Save theme file",
+                                                colorscheme!(action_color),
+                                                move || {
+                                                    T::open_file_save_dialog(
+                                                        "theme.json",
+                                                        serialize_colorscheme().as_bytes(),
+                                                        "application/json",
+                                                    )
+                                                })
+                },
+            ])
         ])
     }
 }
