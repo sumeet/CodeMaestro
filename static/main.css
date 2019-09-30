@@ -40,6 +40,7 @@ input:not(:focus) {
     display: flex;
     flex-direction: column;
     z-index: -2;
+    border-radius: 5px;
 }
 
 .window:focus {
@@ -48,8 +49,9 @@ input:not(:focus) {
 }
 
 .window-title {
-    padding: 0.25em;
-    padding-left: 0.4em;
+    border-radius: 5px 5px 0 0;
+    padding: 0.1em;
+    padding-left: 0.5em;
     margin: 0px;
 }
 

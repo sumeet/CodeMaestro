@@ -370,18 +370,18 @@ impl UiToolkit for YewToolkit {
                     }
                 }, >
 
-               <h4 class="window-title", style={ format!("background-color: {}; color: white", rgba(colorscheme!(titlebar_bg_color))) },>
+               <div class="window-title", style={ format!("background-color: {}; color: white", rgba(colorscheme!(titlebar_bg_color))) },>
                     { if let Some(onclose) = onclose {
                         html! {
                             <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
-                                { symbolize_text("\u{f410}") }
+                                { symbolize_text("🗙") }
                             </div>
                         }
                     } else {
                         html! { <div></div> }
                     } }
                     { window_name }
-                </h4>
+                </div>
                 <div class="window-content",>
                     { f() }
                 </div>
