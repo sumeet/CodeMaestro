@@ -1,3 +1,12 @@
+- continue working on the design of wasm, make it look just as good as the native
+  version
+
+
+
+that list is old, idk if it's still relevant, i don't want to look at it rn:
+
+------
+
 p1:
 
 - opening chat program editor from the quick start menu in wasm... it doesn't pop over. generally new windows should pop over existing ones, wasm's got it right. i think all that needs to be done really is to try giving focus to newly opened windows, ugh idk how hard that will be. another fix could just be drawing it in a different place, away from where the first window will pop open... idk

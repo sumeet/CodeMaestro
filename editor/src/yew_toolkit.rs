@@ -340,8 +340,11 @@ impl UiToolkit for YewToolkit {
         });
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
+        // outline: none; prevents the browser from drawing the ring outline around active windows,
+        // which we don't need because we already differentiate active windows w/ a different titlebar
+        // bg color
         html! {
-           <div class="window", style={ format!("left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1) },
+           <div class="window", style={ format!("outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1) },
                 id={ self.incr_last_drawn_element_id().to_string() },
                 tabindex=0,
                 onkeypress=|e| {
@@ -370,7 +373,17 @@ impl UiToolkit for YewToolkit {
                     }
                 }, >
 
-               <div class="window-title", style={ format!("background-color: {}; color: white", rgba(colorscheme!(titlebar_bg_color))) },>
+                // outline: none prevents browsers from drawing a border around the window when
+                // it's selected. there's no need because we already differentiate active windows
+                // with a different titlebar color
+                { css(&format!(r#"
+                    .window-title {{ background-color: {}; }}
+                    .window:focus-within .window-title {{ background-color: {}; }}
+                "#, rgba(colorscheme!(titlebar_bg_color)),
+                    rgba(colorscheme!(titlebar_active_bg_color))
+                )) }
+
+               <div class="window-title", style="color: white;",>
                     { if let Some(onclose) = onclose {
                         html! {
                             <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
@@ -1193,7 +1206,6 @@ impl Renderable<Model> for Model {
                       .unwrap()
                       .set_attribute("data-focused-id", &tk.get_focused_element_id().to_string())
                       .unwrap();
-
             drawn
         } else {
             html! { <p> {"No app"} </p> }
@@ -1396,4 +1408,29 @@ fn vtag(html: Html<Model>) -> VTag<Model> {
         VNode::VTag(vtag) => vtag,
         _ => panic!("expected a vtag!"),
     }
+}
+
+use stdweb::unstable::TryFrom;
+use stdweb::web::Node;
+
+fn css(css: &str) -> Html<Model> {
+    raw_html(&format!(
+        r#"
+        <style type="text/css">
+            {}
+        </style>
+    "#,
+        css
+    ))
+}
+
+fn raw_html(raw_html: &str) -> Html<Model> {
+    let js_el = js! {
+        var div = document.createElement("div");
+        div.innerHTML = @{raw_html};
+        console.log(div);
+        return div;
+    };
+    let node = Node::try_from(js_el).expect("convert js_el");
+    VNode::VRef(node)
 }
