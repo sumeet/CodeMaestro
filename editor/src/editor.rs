@@ -142,6 +142,9 @@ impl<'a> Controller {
                                window_id: lang::ID,
                                pos: (isize, isize),
                                size: (usize, usize)) {
+        use stdweb::console;
+        console!(log, format!("setting position to {:?}", pos));
+        console!(log, format!("setting size to {:?}", size));
         self.window_positions.set_window(window_id, pos, size);
         self.save_state();
     }

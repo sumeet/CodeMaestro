@@ -10,7 +10,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use itertools::Itertools;
-//use stdweb::console;
+use stdweb::console;
 use stdweb::js;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
@@ -21,6 +21,13 @@ use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
 use yew::virtual_dom::{VList, VNode};
+
+macro_rules! num {
+    ($to_type:ident, $stdweb_value:expr) => {{
+        let float: f64 = $stdweb_value.try_into().unwrap();
+        float as $to_type
+    }};
+}
 
 pub struct Model {
     app: Option<Rc<RefCell<CSApp>>>,
@@ -327,10 +334,37 @@ impl UiToolkit for YewToolkit {
                                                                             -> Self::DrawResult,
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
-                                                                    _onwindowchange: H)
+                                                                    onwindowchange: H)
                                                                     -> Self::DrawResult
         where H: Fn((isize, isize), (usize, usize)) + 'static
     {
+        let window_el_id = self.incr_last_drawn_element_id();
+
+        // TODO: i should just be able to move onwindowchange... i wonder why we have to wrap it in
+        // RC :/
+        let onwindowchange = Rc::new(onwindowchange);
+        let renderer_state = Rc::clone(&self.renderer_state);
+        self.renderer_state.borrow().add_run_after_render(move || {
+            let renderer_state = Rc::clone(&renderer_state);
+            let onwindowchange = Rc::clone(&onwindowchange);
+            let onwindowchange = move |pos_dx: stdweb::Value,
+                                       pos_dy: stdweb::Value,
+                                       new_width: stdweb::Value,
+                                       new_height: stdweb::Value| {
+                let pos_d = (num!(isize, pos_dx), num!(isize, pos_dy));
+                let new_pos = (pos.0 + pos_d.0, pos.1 + pos_d.1);
+                let new_size = if new_width.is_null() && new_height.is_null() {
+                    size
+                } else {
+                    (num!(usize, new_width), num!(usize, new_height))
+                };
+                onwindowchange(new_pos, new_size);
+                renderer_state.borrow().send_msg(Msg::Redraw);
+            };
+
+            js! { WINDOW_ONCHANGE_HANDLER_BY_ELEMENT_ID[@{&window_el_id}] = @{onwindowchange}; };
+        });
+
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
         let handle_keypress_1 = Rc::new(move |keypress: Keypress| {
@@ -345,7 +379,7 @@ impl UiToolkit for YewToolkit {
         // bg color
         html! {
            <div class="window", style={ format!("outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1) },
-                id={ self.incr_last_drawn_element_id().to_string() },
+                id={ window_el_id },
                 tabindex=0,
                 onkeypress=|e| {
                     if let Some(keypress) = map_keypress_event(&e) {
@@ -1428,7 +1462,6 @@ fn raw_html(raw_html: &str) -> Html<Model> {
     let js_el = js! {
         var div = document.createElement("div");
         div.innerHTML = @{raw_html};
-        console.log(div);
         return div;
     };
     let node = Node::try_from(js_el).expect("convert js_el");
