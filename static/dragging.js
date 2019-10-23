@@ -64,6 +64,7 @@ function onWindowChange(id, posDx, posDy, newWidth, newHeight) {
     const onChangeFunc = WINDOW_ONCHANGE_HANDLER_BY_ELEMENT_ID[id];
     if (!onChangeFunc) {
         console.log("couldn't find onChangeFunc for " + id.toString());
+        return;
     }
     onChangeFunc(posDx, posDy, newWidth, newHeight);
 }
