@@ -75,6 +75,20 @@ impl Component for Model {
             Msg::DontRedraw => false,
         }
     }
+
+    fn view(&self) -> Html<Self> {
+        if let (Some(app), Some(renderer_state)) = (&self.app, &self.renderer_state) {
+            let mut tk = YewToolkit::new(Rc::clone(renderer_state));
+            let drawn = app.borrow_mut().draw(&mut tk);
+            document().body()
+                      .unwrap()
+                      .set_attribute("data-focused-id", &tk.get_focused_element_id().to_string())
+                      .unwrap();
+            drawn
+        } else {
+            html! { <p> {"No app"} </p> }
+        }
+    }
 }
 
 struct YewToolkit {
@@ -599,7 +613,7 @@ impl UiToolkit for YewToolkit {
             drawn.attributes.insert("onmouseover".into(),
                                     format!("displayButtonizedHoverOverlayOn(this, \"{}\");",
                                             rgba(colorscheme!(button_hover_color))));
-            VNode::VTag(drawn)
+            VNode::VTag(Box::new(drawn))
         };
         html! {
             <div style="position: relative;", onclick=|_| { onclick(); Msg::Redraw },
@@ -1231,22 +1245,6 @@ impl RendererState {
     }
 }
 
-impl Renderable<Model> for Model {
-    fn view(&self) -> Html<Self> {
-        if let (Some(app), Some(renderer_state)) = (&self.app, &self.renderer_state) {
-            let mut tk = YewToolkit::new(Rc::clone(renderer_state));
-            let drawn = app.borrow_mut().draw(&mut tk);
-            document().body()
-                      .unwrap()
-                      .set_attribute("data-focused-id", &tk.get_focused_element_id().to_string())
-                      .unwrap();
-            drawn
-        } else {
-            html! { <p> {"No app"} </p> }
-        }
-    }
-}
-
 fn map_keypress_event<F: IKeyboardEvent>(keypress_event: &F) -> Option<Keypress> {
     let keystring_from_event = keypress_event.key();
     let appkey = map_key(&keystring_from_event)?;
@@ -1439,7 +1437,7 @@ fn rgba(color: [f32; 4]) -> String {
 
 fn vtag(html: Html<Model>) -> VTag<Model> {
     match html {
-        VNode::VTag(vtag) => vtag,
+        VNode::VTag(box vtag) => vtag,
         _ => panic!("expected a vtag!"),
     }
 }
