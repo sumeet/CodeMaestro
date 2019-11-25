@@ -1,3 +1,5 @@
+mod run_after_render;
+
 use super::app::App as CSApp;
 use super::async_executor::AsyncExecutor;
 use super::editor::{Key as AppKey, Keypress};
@@ -802,29 +804,27 @@ impl UiToolkit for YewToolkit {
     // TODO: the menu doesn't render correctly, and also doesn't go away when we select one of the
     // menu items
     fn draw_main_menu_bar(&self, draw_menus: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
-        self.renderer_state.borrow().add_run_after_render(move || {
-                                        js! {
-                                            var el = document.querySelector(".dropdown-menu");
-                                            var existingDroppyInstance = Droppy.prototype.getInstance(el);
-                                            if (!existingDroppyInstance) {
-                                                var droppy = new Droppy(el, {
-                                                    parentSelector: "nav > div",
-                                                    dropdownSelector: ".main-menu-dropdown",
-                                                    triggerSelector: ".main-menu-label",
-                                                    closeOthers: true,
-                                                    clickOutToClose: true
-                                                });
-                                            }
-                                        }
-                                    });
-
-        html! {
-            <nav class="dropdown-menu",
-                style=format!("position: fixed; top: 0; left: 0; width: 100%; height: 1.25em; padding: 0.25em; background-color: {}; color: white; user-select: none;",
-                              rgba(colorscheme!(menubar_color))), >
-                {{ draw_menus() }}
-            </nav>
-        }
+        run_after_render::run(html! {
+                                  <nav class="dropdown-menu",
+                                       style=format!("position: fixed; top: 0; left: 0; width: 100%; height: 1.25em; padding: 0.25em; background-color: {}; color: white; user-select: none;",
+                                                     rgba(colorscheme!(menubar_color))), >
+                                      {{ draw_menus() }}
+                                  </nav>
+                              },
+                              |el| {
+                                  js! {
+                                      var existingDroppyInstance = Droppy.prototype.getInstance(@{el});
+                                      if (!existingDroppyInstance) {
+                                          var droppy = new Droppy(@{el}, {
+                                              parentSelector: "nav > div",
+                                              dropdownSelector: ".main-menu-dropdown",
+                                              triggerSelector: ".main-menu-label",
+                                              closeOthers: true,
+                                              clickOutToClose: true
+                                          });
+                                      }
+                                  }
+                              })
     }
 
     fn draw_menu(&self,
@@ -1210,8 +1210,10 @@ impl RendererState {
                funcs_to_run_after_render }
     }
 
+    // TODO: kill this off after integrating RunAfterRender
     pub fn run_all_after_render(&self) {
         for func in self.funcs_to_run_after_render.borrow_mut().drain(..) {
+            console!(log, "running smth after render");
             func()
         }
     }
@@ -1456,6 +1458,7 @@ fn css(css: &str) -> Html<Model> {
     ))
 }
 
+//badboy from https://github.com/yewstack/yew/blob/master/examples/inner_html/src/lib.rs
 fn raw_html(raw_html: &str) -> Html<Model> {
     let js_el = js! {
         var div = document.createElement("div");
