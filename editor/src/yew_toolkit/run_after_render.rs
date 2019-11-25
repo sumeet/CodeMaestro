@@ -31,6 +31,22 @@ pub fn run<T: Component>(html: Html<T>, func: impl Fn(&Element) + 'static) -> Ht
     }
 }
 
+// TODO: consolidate the duplicated code
+#[allow(unused_must_use)]
+pub fn run_inline<T: Component>(html: Html<T>, func: impl Fn(&Element) + 'static) -> Html<T> {
+    let node_ref = match &html {
+        VNode::VTag(box tag) => tag.node_ref.clone(),
+        _ => panic!("this only works w/ tags"),
+    };
+    let func: Box<dyn Fn(&Element)> = Box::new(func);
+    html! {
+        <span>
+            {{ html }}
+            <RunAfterRender node_ref=node_ref, run=func />
+        </span>
+    }
+}
+
 impl Component for RunAfterRender {
     type Message = ();
     type Properties = RunAfterRenderProps;

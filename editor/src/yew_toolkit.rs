@@ -132,7 +132,6 @@ impl UiToolkit for YewToolkit {
                                     existing_value: Color,
                                     onchange: impl Fn(Color) + 'static)
                                     -> Self::DrawResult {
-        let input_id = self.incr_last_drawn_element_id();
         let renderer_state = Rc::clone(&self.renderer_state);
         let onchange = move |value: stdweb::Value| {
             let vec: Vec<f64> = value.try_into().unwrap();
@@ -149,18 +148,19 @@ impl UiToolkit for YewToolkit {
                 @{onchange}([rgba.r / 255, rgba.g / 255, rgba.b / 255, rgba.a]);
             };
         };
-        self.renderer_state
-            .borrow()
-            .add_run_after_render(move || {
-                js! {
-                    $("#" + @{input_id}.toString())
-                        .spectrum({change: @{&onchange_js}, move: @{&onchange_js}, showInput: true, showAlpha: true,
-                                   preferredFormat: "hex", color: @{rgba(existing_value)}});
-                };
-            });
+        let input: Html<Model> = run_after_render::run_inline(html! {
+                                                                  <input type="color", name=label />
+                                                              },
+                                                              move |el| {
+                                                                  js! {
+                                                                      $(@{el})
+                                                                        .spectrum({change: @{&onchange_js}, move: @{&onchange_js}, showInput: true, showAlpha: true,
+                                                                                   preferredFormat: "hex", color: @{rgba(existing_value)}});
+                                                                  };
+                                                              });
         html! {
             <div>
-                <input id=input_id, type="color", name=label />
+                {{ input }}
                 <label>{label}</label>
             </div>
         }
