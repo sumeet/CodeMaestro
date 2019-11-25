@@ -781,61 +781,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         );
     }
 
-    fn draw_x_scrollable_list<'b>(&'b self,
-                                  items: impl ExactSizeIterator<Item = (&'b dyn Fn(), bool)>,
-                                  lines_height: usize) {
-        let height = self.ui.get_text_line_height_with_spacing();
-        let first_element_screen_x = Rc::new(RefCell::new(0.));
-
-        let length = items.len();
-        if length == 0 {
-            return;
-        }
-        let last_element_index = length - 1;
-        let items: Vec<Box<dyn Fn()>> =
-            items.enumerate()
-                 .map(|(i, (draw_fn, is_focused))| {
-                     let first_element_screen_x = Rc::clone(&first_element_screen_x);
-                     let x: Box<dyn Fn()> = Box::new(move || {
-                         if i == 0 {
-                             first_element_screen_x.replace(self.ui.get_cursor_pos().0);
-                         }
-                         let (focused_element_x, _) = self.ui.get_cursor_screen_pos();
-                         draw_fn();
-                         if is_focused {
-                             if i == 0 {
-                                 unsafe { imgui_sys::igSetScrollX(0.) };
-                             } else if i == last_element_index {
-                                 unsafe { imgui_sys::igSetScrollX(imgui_sys::igGetScrollMaxX()) };
-                             } else if !self.is_last_drawn_item_totally_visible() {
-                                 // TODO: this thing is still wonky, but it works ok enough for now
-                                 //let set_to = focused_element_x - *first_element_screen_x.borrow();
-                                 let set_to = {
-                                     if focused_element_x < 0.0 {
-                                         (unsafe { imgui_sys::igGetScrollX() }) - 5.
-                                     } else {
-                                         (unsafe { imgui_sys::igGetScrollX() }) + 5.
-                                     }
-                                 };
-                                 unsafe { imgui_sys::igSetScrollX(set_to) };
-                             }
-                         }
-                     });
-                     x
-                 })
-                 .collect_vec();
-
-        self.ui
-            .child_frame(&self.imlabel(""), (0., lines_height as f32 * height))
-            .show_borders(false)
-            .always_show_vertical_scroll_bar(false)
-            .scrollbar_horizontal(false)
-            .always_show_horizontal_scroll_bar(false)
-            .build(&|| {
-                self.draw_all_on_same_line(&items.iter().map(|i| i.as_ref()).collect_vec());
-            })
-    }
-
     fn draw_layout_with_bottom_bar(&self,
                                    draw_content_fn: &dyn Fn(),
                                    draw_bottom_bar_fn: &dyn Fn()) {

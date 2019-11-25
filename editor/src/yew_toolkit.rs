@@ -192,40 +192,6 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_x_scrollable_list<'a>(&'a self,
-                                  items: impl ExactSizeIterator<Item = (&'a dyn Fn()
-                                                                   -> Self::DrawResult,
-                                                            bool)>,
-                                  lines_height: usize)
-                                  -> Self::DrawResult {
-        let items = items.map(|(draw_fn, is_selected)| {
-                             let drawn = draw_fn();
-                             let last_drawn_id = *self.last_drawn_element_id.borrow();
-                             if is_selected {
-                                 self.renderer_state.borrow().add_run_after_render(move || {
-                                    js! {
-                                        var el = document.getElementById(@{last_drawn_id});
-                                        if (el) {
-                                            el.scrollIntoView({inline: "center"});
-                                        }
-                                    }
-                                 });
-                             }
-                             drawn
-                         })
-                         .collect_vec();
-        html! {
-            //   TODO: margin-bottom is HAXXX
-            <div style={format!("display: flex; height: {}em; max-height: {}em; overflow: hidden; margin-bottom: 0.2em;", lines_height, lines_height)}, >
-                { for items.into_iter().map(|drawn| html! {
-                    <div style="white-space: nowrap;", >
-                        { drawn }
-                    </div>
-                })}
-            </div>
-        }
-    }
-
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
                                                       draw_fn: &dyn Fn() -> Self::DrawResult,
                                                       handle_keypress: Option<F>)

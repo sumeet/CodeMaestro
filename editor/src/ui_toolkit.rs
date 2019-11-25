@@ -48,12 +48,6 @@ pub trait UiToolkit {
                                                     draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult;
-    fn draw_x_scrollable_list<'a>(&'a self,
-                                  items: impl ExactSizeIterator<Item = (&'a dyn Fn()
-                                                                   -> Self::DrawResult,
-                                                            bool)>,
-                                  lines_height: usize)
-                                  -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self,
                                    draw_content_fn: &dyn Fn() -> Self::DrawResult,
                                    draw_bottom_bar_fn: &dyn Fn() -> Self::DrawResult)
