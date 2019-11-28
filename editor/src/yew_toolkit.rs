@@ -18,7 +18,7 @@ use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::unstable::TryInto;
 use stdweb::web::html_element::InputElement;
-use stdweb::web::{document, IElement, IEventTarget};
+use stdweb::web::{document, Element, IElement, IEventTarget};
 use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
@@ -320,13 +320,15 @@ impl UiToolkit for YewToolkit {
                                                                     -> Self::DrawResult
         where H: Fn((isize, isize), (usize, usize)) + 'static
     {
+        console!(log, format!("{:?}", size));
+        console!(log, format!("{:?}", pos));
         let window_el_id = self.incr_last_drawn_element_id();
 
         // TODO: i should just be able to move onwindowchange... i wonder why we have to wrap it in
         // RC :/
         let onwindowchange = Rc::new(onwindowchange);
         let renderer_state = Rc::clone(&self.renderer_state);
-        self.renderer_state.borrow().add_run_after_render(move || {
+        let run_after: Box<dyn Fn(&Element)> = Box::new(move |_| {
             let renderer_state = Rc::clone(&renderer_state);
             let onwindowchange = Rc::clone(&onwindowchange);
             let onwindowchange = move |pos_dx: stdweb::Value,
@@ -343,7 +345,7 @@ impl UiToolkit for YewToolkit {
                 onwindowchange(new_pos, new_size);
                 renderer_state.borrow().send_msg(Msg::Redraw);
             };
-
+            console!(log, "running after render");
             js! { WINDOW_ONCHANGE_HANDLER_BY_ELEMENT_ID[@{&window_el_id}] = @{onwindowchange}; };
         });
 
@@ -359,63 +361,64 @@ impl UiToolkit for YewToolkit {
         // outline: none; prevents the browser from drawing the ring outline around active windows,
         // which we don't need because we already differentiate active windows w/ a different titlebar
         // bg color
-        html! {
-           <div class="window", style={ format!("outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1) },
-                id={ window_el_id },
-                tabindex=0,
-                onkeypress=|e| {
-                    if let Some(keypress) = map_keypress_event(&e) {
-                        handle_keypress_1(keypress);
-                    }
-                    e.prevent_default();
-                    Msg::Redraw
-                },
-                onkeydown=|e| {
-                    global_keydown_handler(&e);
-                    // lol for these special keys we have to listen on keydown, but the
-                    // rest we can do keypress :/
-                    if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
-                        // LOL this is for ctrl+r
-                        ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
-                        //console!(log, e.key());
-                        if let Some(keypress) = map_keypress_event(&e) {
-                            //console!(log, format!("{:?}", keypress));
-                            handle_keypress_2(keypress);
-                        }
-                        e.prevent_default();
-                        Msg::Redraw
-                    } else {
-                        Msg::DontRedraw
-                    }
-                }, >
+        run_after_render::run(html! {
+                                 <div class="window", style={ format!("outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1) },
+                                      id={ window_el_id },
+                                      tabindex=0,
+                                      onkeypress=|e| {
+                                          if let Some(keypress) = map_keypress_event(&e) {
+                                              handle_keypress_1(keypress);
+                                          }
+                                          e.prevent_default();
+                                          Msg::Redraw
+                                      },
+                                      onkeydown=|e| {
+                                          global_keydown_handler(&e);
+                                          // lol for these special keys we have to listen on keydown, but the
+                                          // rest we can do keypress :/
+                                          if e.key() == "Tab" || e.key() == "Escape" || e.key() == "Esc" ||
+                                              // LOL this is for ctrl+r
+                                              ((e.key() == "r" || e.key() == "R") && e.ctrl_key()) {
+                                              //console!(log, e.key());
+                                              if let Some(keypress) = map_keypress_event(&e) {
+                                                  //console!(log, format!("{:?}", keypress));
+                                                  handle_keypress_2(keypress);
+                                              }
+                                              e.prevent_default();
+                                              Msg::Redraw
+                                          } else {
+                                              Msg::DontRedraw
+                                          }
+                                      }, >
 
-                // outline: none prevents browsers from drawing a border around the window when
-                // it's selected. there's no need because we already differentiate active windows
-                // with a different titlebar color
-                { css(&format!(r#"
-                    .window-title {{ background-color: {}; }}
-                    .window:focus-within .window-title {{ background-color: {}; }}
-                "#, rgba(colorscheme!(titlebar_bg_color)),
-                    rgba(colorscheme!(titlebar_active_bg_color))
-                )) }
+                                      // outline: none prevents browsers from drawing a border around the window when
+                                      // it's selected. there's no need because we already differentiate active windows
+                                      // with a different titlebar color
+                                      { css(&format!(r#"
+                                                .window-title {{ background-color: {}; }}
+                                                .window:focus-within .window-title {{ background-color: {}; }}
+                                            "#, rgba(colorscheme!(titlebar_bg_color)),
+                                          rgba(colorscheme!(titlebar_active_bg_color))
+                                      )) }
 
-               <div class="window-title", style="color: white;",>
-                    { if let Some(onclose) = onclose {
-                        html! {
-                            <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
-                                { symbolize_text("🗙") }
-                            </div>
-                        }
-                    } else {
-                        html! { <div></div> }
-                    } }
-                    { window_name }
-                </div>
-                <div class="window-content",>
-                    { f() }
-                </div>
-            </div>
-        }
+                                     <div class="window-title", style="color: white;",>
+                                          { if let Some(onclose) = onclose {
+                                              html! {
+                                                  <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
+                                                      { symbolize_text("🗙") }
+                                                  </div>
+                                              }
+                                          } else {
+                                              html! { <div></div> }
+                                          } }
+                                          { window_name }
+                                      </div>
+                                      <div class="window-content",>
+                                          { f() }
+                                      </div>
+                                  </div>
+                              },
+                              run_after)
     }
 
     // TODO: implement these
