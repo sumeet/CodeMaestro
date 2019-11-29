@@ -1,10 +1,8 @@
-WINDOW_ONCHANGE_HANDLER_BY_ELEMENT_ID = {};
-
 // this makes windows draggable and resizable
-document.addEventListener("DOMContentLoaded", function(event) {
-   interact('.window').draggable({
+function setupInteract(el, onWindowChange) {
+   interact(el).draggable({
      allowFrom: '.window-title',
-     onmove: dragMoveListener,
+     onmove: function(event) { dragMoveListener(event, onWindowChange); },
    }).resizable({
     // resize from all edges and corners except the top. top is
     // reserved for moving (.drag-handle is on top)
@@ -42,12 +40,12 @@ document.addEventListener("DOMContentLoaded", function(event) {
            return;
        }
 
-       onWindowChange(target.id, event.deltaRect.left, event.deltaRect.top, event.rect.width, event.rect.height);
+       onWindowChange(event.deltaRect.left, event.deltaRect.top, event.rect.width, event.rect.height);
      });
-});
+}
 
 // taken from the interactjs.io website
-function dragMoveListener(event) {
+function dragMoveListener(event, onWindowChange) {
   var target = event.target;
 
   var x = parseFloat(target.style.left);
@@ -56,15 +54,10 @@ function dragMoveListener(event) {
   target.style.left = `${x + event.dx}px`;
   target.style.top = `${y + event.dy}px`;
 
-  onWindowChange(target.id, event.dx, event.dy, null, null);
+  onWindowChange(event.dx, event.dy, null, null);
 }
 
 // newWidth and newHeight may be null if there's no change (if the window was dragged, but not resized)
-function onWindowChange(id, posDx, posDy, newWidth, newHeight) {
-    const onChangeFunc = WINDOW_ONCHANGE_HANDLER_BY_ELEMENT_ID[id];
-    if (!onChangeFunc) {
-        console.log("couldn't find onChangeFunc for " + id.toString());
-        return;
-    }
-    onChangeFunc(posDx, posDy, newWidth, newHeight);
-}
+//function onWindowChange(onChangeFunc, posDx, posDy, newWidth, newHeight) {
+//    onChangeFunc(posDx, posDy, newWidth, newHeight);
+//}

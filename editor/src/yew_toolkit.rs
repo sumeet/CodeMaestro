@@ -205,7 +205,6 @@ impl UiToolkit for YewToolkit {
         let global_keydown_handler = self.global_keydown_handler();
         html! {
             <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(colorscheme!(window_bg_color))) },
-                 id={ self.incr_last_drawn_element_id().to_string() },
                  tabindex=0,
                  onkeypress=|e| {
                      if let Some(keypress) = map_keypress_event(&e) {
@@ -322,13 +321,12 @@ impl UiToolkit for YewToolkit {
     {
         console!(log, format!("{:?}", size));
         console!(log, format!("{:?}", pos));
-        let window_el_id = self.incr_last_drawn_element_id();
 
         // TODO: i should just be able to move onwindowchange... i wonder why we have to wrap it in
         // RC :/
         let onwindowchange = Rc::new(onwindowchange);
         let renderer_state = Rc::clone(&self.renderer_state);
-        let run_after: Box<dyn Fn(&Element)> = Box::new(move |_| {
+        let run_after: Box<dyn Fn(&Element)> = Box::new(move |el| {
             let renderer_state = Rc::clone(&renderer_state);
             let onwindowchange = Rc::clone(&onwindowchange);
             let onwindowchange = move |pos_dx: stdweb::Value,
@@ -346,7 +344,7 @@ impl UiToolkit for YewToolkit {
                 renderer_state.borrow().send_msg(Msg::Redraw);
             };
             console!(log, "running after render");
-            js! { WINDOW_ONCHANGE_HANDLER_BY_ELEMENT_ID[@{&window_el_id}] = @{onwindowchange}; };
+            js! { setupInteract(@{el}, @{onwindowchange}); };
         });
 
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
@@ -363,7 +361,6 @@ impl UiToolkit for YewToolkit {
         // bg color
         run_after_render::run(html! {
                                  <div class="window", style={ format!("outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1) },
-                                      id={ window_el_id },
                                       tabindex=0,
                                       onkeypress=|e| {
                                           if let Some(keypress) = map_keypress_event(&e) {
@@ -446,18 +443,22 @@ impl UiToolkit for YewToolkit {
                         draw_when_not_hovered: &dyn Fn() -> Self::DrawResult,
                         draw_when_hovered: &dyn Fn() -> Self::DrawResult)
                         -> Self::DrawResult {
-        let not_hovered_id = self.incr_last_drawn_element_id();
-        let hovered_id = self.incr_last_drawn_element_id();
+        let not_hovered_ref = NodeRef::default();
+        let not_hovered_ref2 = not_hovered_ref.clone();
+        let not_hovered_ref3 = not_hovered_ref.clone();
+        let hovered_ref = NodeRef::default();
+        let hovered_ref2 = hovered_ref.clone();
+        let hovered_ref3 = hovered_ref.clone();
         // HAXXXX: ok this is insane, but the dom diffing engine in yew will mutate the hidden div
         // tags, and not reshow them when new stuff comes on the screen, and so we've gotta use replaceonhoverhack
         // tags instead. gonna define replaceonhoverhack to be display: block in the css file
         html! {
-            <replaceonhoverhack class="fit-content", onmouseover=|_| { hide(not_hovered_id) ; show(hovered_id); Msg::DontRedraw },
-                onmouseout=|_| { hide(hovered_id) ; show(not_hovered_id); Msg::DontRedraw }, >
-                <replaceonhoverhack class="fit-content", id={not_hovered_id.to_string()}, >
+            <replaceonhoverhack class="fit-content", onmouseover=|_| { hide(&not_hovered_ref3) ; show(&hovered_ref3); Msg::DontRedraw },
+                onmouseout=|_| { hide(&hovered_ref2) ; show(&not_hovered_ref2); Msg::DontRedraw }, >
+                <replaceonhoverhack class="fit-content", ref={not_hovered_ref}, >
                     { draw_when_not_hovered() }
                 </replaceonhoverhack>
-                <replaceonhoverhack id={hovered_id.to_string()}, style="display: none;", >
+                <replaceonhoverhack ref={hovered_ref}, style="display: none;", >
                     { draw_when_hovered() }
                 </replaceonhoverhack>
             </replaceonhoverhack>
@@ -483,7 +484,6 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
 
-        let context_menu_id = self.incr_last_drawn_element_id().to_string();
         let context_menu = draw_context_menu.map(|draw_context_menu| draw_context_menu());
         let is_context_menu = context_menu.is_some();
 
@@ -496,10 +496,22 @@ impl UiToolkit for YewToolkit {
             ChildRegionHeight::Pixels(px) => ("margin-top: 0px;", format!("height: {}px;", px)),
         };
 
+        let context_menu_ref = NodeRef::default();
+        let context_menu_ref2 = context_menu_ref.clone();
+
+        let show_right_click_menu = move |page_x: stdweb::Value, page_y: stdweb::Value| {
+            let page_x = num!(i32, page_x);
+            let page_y = num!(i32, page_y);
+            let context_menu_el = (&context_menu_ref2).try_into::<Element>().unwrap();
+            js! {
+                showRightClickMenu(@{&context_menu_el}, @{&page_x}, @{&page_y});
+            };
+        };
+
         // TODO: border color is hardcoded, ripped from imgui
         html! {
             <div style={ container_css },>
-                <div id={ &context_menu_id }, class="context_menu", style="display: none;",>
+                <div ref={context_menu_ref}, class="context_menu", style="display: none;",>
                     { context_menu.unwrap_or_else(|| VNode::from(VList::new())) }
                 </div>
 
@@ -510,7 +522,7 @@ impl UiToolkit for YewToolkit {
                         if is_context_menu {
                             e.prevent_default();
                             js! {
-                                showRightClickMenu(@{context_menu_id.clone()}, @{e.as_ref()});
+                                @{show_right_click_menu}(e.pageX, e.pageY);
                             }
                         }
                         Msg::DontRedraw
@@ -1372,18 +1384,20 @@ fn is_in_symbol_range(c: char) -> bool {
     }
 }
 
-fn show(id: u32) {
+fn show(node_ref: &NodeRef) {
+    let element = node_ref.try_into::<Element>().unwrap();
     js! {
-        var el = document.getElementById(@{id});
+        let el = @{element};
         if (el) {
             el.style.display = "block";
         }
     }
 }
 
-fn hide(id: u32) {
+fn hide(node_ref: &NodeRef) {
+    let element = node_ref.try_into::<Element>().unwrap();
     js! {
-        var el = document.getElementById(@{id});
+        let el = @{element};
         if (el) {
             el.style.display = "none";
         }
