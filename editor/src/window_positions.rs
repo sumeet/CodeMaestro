@@ -66,6 +66,10 @@ impl WindowPositions {
     }
 
     pub fn set_window(&mut self, window_id: lang::ID, pos: (isize, isize), size: (usize, usize)) {
+        use stdweb::console;
+        console!(log,
+                 format!("set_window {}: pos/({},{}) size/({},{})",
+                         window_id, pos.0, pos.1, size.0, size.1));
         let mut win = self.open_windows.get_mut(&window_id).unwrap();
         win.size = size;
         win.x = pos.0;

@@ -51,13 +51,15 @@ function dragMoveListener(event, onWindowChange) {
   var x = parseFloat(target.style.left);
   var y = parseFloat(target.style.top);
 
-  target.style.left = `${x + event.dx}px`;
-  target.style.top = `${y + event.dy}px`;
+  console.log("dragMoveListener dx " + event.dx.toString());
+  console.log("dragMoveListener dy " + event.dy.toString());
+
+//  target.style.left = `${x + event.dx}px`;
+//  target.style.top = `${y + event.dy}px`;
 
   onWindowChange(event.dx, event.dy, null, null);
 }
 
-// newWidth and newHeight may be null if there's no change (if the window was dragged, but not resized)
 //function onWindowChange(onChangeFunc, posDx, posDy, newWidth, newHeight) {
 //    onChangeFunc(posDx, posDy, newWidth, newHeight);
 //}

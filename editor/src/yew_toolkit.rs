@@ -319,8 +319,10 @@ impl UiToolkit for YewToolkit {
                                                                     -> Self::DrawResult
         where H: Fn((isize, isize), (usize, usize)) + 'static
     {
-        console!(log, format!("{:?}", size));
-        console!(log, format!("{:?}", pos));
+        console!(log,
+                 format!("drawing window {}, size: {:?}", window_name, size));
+        console!(log,
+                 format!("drawing window {}, pos: {:?}", window_name, pos));
 
         // TODO: i should just be able to move onwindowchange... i wonder why we have to wrap it in
         // RC :/
@@ -333,17 +335,21 @@ impl UiToolkit for YewToolkit {
                                        pos_dy: stdweb::Value,
                                        new_width: stdweb::Value,
                                        new_height: stdweb::Value| {
+                // newWidth and newHeight may be null if there's no change (if the window was
+                // dragged, but not resized)
                 let pos_d = (num!(isize, pos_dx), num!(isize, pos_dy));
+                console!(log, format!("old pos: {:?}", pos));
                 let new_pos = (pos.0 + pos_d.0, pos.1 + pos_d.1);
+                console!(log, format!("new pos: {:?}", new_pos));
                 let new_size = if new_width.is_null() && new_height.is_null() {
                     size
                 } else {
                     (num!(usize, new_width), num!(usize, new_height))
                 };
+
                 onwindowchange(new_pos, new_size);
                 renderer_state.borrow().send_msg(Msg::Redraw);
             };
-            console!(log, "running after render");
             js! { setupInteract(@{el}, @{onwindowchange}); };
         });
 
@@ -359,8 +365,12 @@ impl UiToolkit for YewToolkit {
         // outline: none; prevents the browser from drawing the ring outline around active windows,
         // which we don't need because we already differentiate active windows w/ a different titlebar
         // bg color
+        let window_style = format!(
+            "outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;",
+            pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1);
         run_after_render::run(html! {
-                                 <div class="window", style={ format!("outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;", pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1) },
+                                 <div class="window",
+                                      style={ window_style  },
                                       tabindex=0,
                                       onkeypress=|e| {
                                           if let Some(keypress) = map_keypress_event(&e) {
@@ -499,14 +509,15 @@ impl UiToolkit for YewToolkit {
         let context_menu_ref = NodeRef::default();
         let context_menu_ref2 = context_menu_ref.clone();
 
-        let show_right_click_menu = move |page_x: stdweb::Value, page_y: stdweb::Value| {
-            let page_x = num!(i32, page_x);
-            let page_y = num!(i32, page_y);
-            let context_menu_el = (&context_menu_ref2).try_into::<Element>().unwrap();
-            js! {
-                showRightClickMenu(@{&context_menu_el}, @{&page_x}, @{&page_y});
+        let show_right_click_menu =
+            move |el: stdweb::Value, page_x: stdweb::Value, page_y: stdweb::Value| {
+                let page_x = num!(i32, page_x);
+                let page_y = num!(i32, page_y);
+                let context_menu_el: Element = el.try_into().unwrap();
+                js! {
+                    showRightClickMenu(@{&context_menu_el}, @{&page_x}, @{&page_y});
+                };
             };
-        };
 
         // TODO: border color is hardcoded, ripped from imgui
         html! {
@@ -516,13 +527,14 @@ impl UiToolkit for YewToolkit {
                 </div>
 
                 <div style={ format!("border: 1px solid #6a6a6a; white-space: nowrap; background-color: {}; overflow: auto; {}", rgba(bg), height_css) },
-                    id={ self.incr_last_drawn_element_id().to_string() },
                     tabindex=0,
                     oncontextmenu=|e| {
+                        let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
                         if is_context_menu {
                             e.prevent_default();
                             js! {
-                                @{show_right_click_menu}(e.pageX, e.pageY);
+                                var e = @{&e};
+                                @{show_right_click_menu}(@{context_menu_el}, e.pageX, e.pageY);
                             }
                         }
                         Msg::DontRedraw
