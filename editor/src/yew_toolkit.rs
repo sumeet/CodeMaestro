@@ -12,7 +12,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use itertools::Itertools;
-use stdweb::console;
 use stdweb::js;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
@@ -1190,29 +1189,12 @@ impl YewToolkit {
 pub struct RendererState {
     pub global_key_handler: Rc<RefCell<Box<dyn Fn(Keypress) + 'static>>>,
     pub yew_app: Rc<RefCell<html::Scope<Model>>>,
-    pub funcs_to_run_after_render: Rc<RefCell<Vec<Box<dyn Fn()>>>>,
 }
 
 impl RendererState {
-    pub fn new(yew_app: html::Scope<Model>,
-               funcs_to_run_after_render: Rc<RefCell<Vec<Box<dyn Fn()>>>>)
-               -> Self {
+    pub fn new(yew_app: html::Scope<Model>) -> Self {
         Self { global_key_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
-               yew_app: Rc::new(RefCell::new(yew_app)),
-               funcs_to_run_after_render }
-    }
-
-    // TODO: kill this off after integrating RunAfterRender
-    pub fn run_all_after_render(&self) {
-        for func in self.funcs_to_run_after_render.borrow_mut().drain(..) {
-            func()
-        }
-    }
-
-    pub fn add_run_after_render(&self, fun: impl Fn() + 'static) {
-        self.funcs_to_run_after_render
-            .borrow_mut()
-            .push(Box::new(fun))
+               yew_app: Rc::new(RefCell::new(yew_app)) }
     }
 
     pub fn send_msg(&self, msg: Msg) {
@@ -1279,8 +1261,6 @@ fn was_shift_key_pressed(key: &str) -> bool {
 pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     yew::initialize();
 
-    let funcs_to_run_after_render: Rc<RefCell<Vec<Box<dyn Fn()>>>> = Rc::new(RefCell::new(vec![]));
-
     // dirty hacks to focus something
     js! {
         var CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = null;
@@ -1328,23 +1308,7 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     //                              rgba(COLOR_SCHEME.button_hover_color)));
 
     let yew_app = App::<Model>::new().mount_to_body();
-    let renderer_state =
-        Rc::new(RefCell::new(RendererState::new(yew_app, funcs_to_run_after_render)));
-
-    let run_after_render = {
-        let renderer_state = Rc::clone(&renderer_state);
-        move || {
-            renderer_state.borrow().run_all_after_render();
-        }
-    };
-    js! {
-        var observer = new MutationObserver(function() {
-            @{run_after_render}();
-        });
-        var config = {childList: true, subtree: true};
-        observer.observe(window.document.documentElement, config);
-
-    }
+    let renderer_state = Rc::new(RefCell::new(RendererState::new(yew_app)));
 
     setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&renderer_state));
     add_global_keydown_event_listener(Rc::clone(&renderer_state));
