@@ -319,11 +319,6 @@ impl UiToolkit for YewToolkit {
                                                                     -> Self::DrawResult
         where H: Fn((isize, isize), (usize, usize)) + 'static
     {
-        console!(log,
-                 format!("drawing window {}, size: {:?}", window_name, size));
-        console!(log,
-                 format!("drawing window {}, pos: {:?}", window_name, pos));
-
         // TODO: i should just be able to move onwindowchange... i wonder why we have to wrap it in
         // RC :/
         let onwindowchange = Rc::new(onwindowchange);
@@ -331,16 +326,20 @@ impl UiToolkit for YewToolkit {
         let run_after: Box<dyn Fn(&Element)> = Box::new(move |el| {
             let renderer_state = Rc::clone(&renderer_state);
             let onwindowchange = Rc::clone(&onwindowchange);
-            let onwindowchange = move |pos_dx: stdweb::Value,
+            let onwindowchange = move |target: stdweb::Value,
+                                       pos_dx: stdweb::Value,
                                        pos_dy: stdweb::Value,
                                        new_width: stdweb::Value,
                                        new_height: stdweb::Value| {
+                let el: Element = target.try_into().unwrap();
+                let current_pos_x = num!(isize, js! { return parseFloat(@{&el}.style.left); });
+                let current_pos_y = num!(isize, js! { return parseFloat(@{&el}.style.top); });
+                let pos = (current_pos_x, current_pos_y);
+
                 // newWidth and newHeight may be null if there's no change (if the window was
                 // dragged, but not resized)
                 let pos_d = (num!(isize, pos_dx), num!(isize, pos_dy));
-                console!(log, format!("old pos: {:?}", pos));
                 let new_pos = (pos.0 + pos_d.0, pos.1 + pos_d.1);
-                console!(log, format!("new pos: {:?}", new_pos));
                 let new_size = if new_width.is_null() && new_height.is_null() {
                     size
                 } else {
@@ -1206,7 +1205,6 @@ impl RendererState {
     // TODO: kill this off after integrating RunAfterRender
     pub fn run_all_after_render(&self) {
         for func in self.funcs_to_run_after_render.borrow_mut().drain(..) {
-            console!(log, "running smth after render");
             func()
         }
     }
