@@ -18,7 +18,7 @@ use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::unstable::TryInto;
 use stdweb::web::html_element::InputElement;
-use stdweb::web::{document, Element, IEventTarget};
+use stdweb::web::{document, Element, IEventTarget, IHtmlElement};
 use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
@@ -774,7 +774,10 @@ impl UiToolkit for YewToolkit {
     }
 
     fn focused(&self, draw_fn: &dyn Fn() -> Html<Model>) -> Self::DrawResult {
-        draw_fn()
+        run_after_render::run(draw_fn(), |element| {
+            let el: &InputElement = unsafe { std::mem::transmute(element) };
+            el.focus();
+        })
     }
 
     // we're using droppy (https://github.com/OutlawPlz/droppy/) to help us render the dropdown.
