@@ -1,3 +1,4 @@
+mod focus;
 mod run_after_render;
 
 use super::app::App as CSApp;
@@ -17,7 +18,7 @@ use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::unstable::TryInto;
 use stdweb::web::html_element::InputElement;
-use stdweb::web::{document, Element, IElement, IEventTarget};
+use stdweb::web::{document, Element, IEventTarget};
 use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
@@ -81,10 +82,6 @@ impl Component for Model {
         if let (Some(app), Some(renderer_state)) = (&self.app, &self.renderer_state) {
             let mut tk = YewToolkit::new(Rc::clone(renderer_state));
             let drawn = app.borrow_mut().draw(&mut tk);
-            document().body()
-                      .unwrap()
-                      .set_attribute("data-focused-id", &tk.get_focused_element_id().to_string())
-                      .unwrap();
             drawn
         } else {
             html! { <p> {"No app"} </p> }
@@ -93,8 +90,6 @@ impl Component for Model {
 }
 
 struct YewToolkit {
-    last_drawn_element_id: RefCell<u32>,
-    focused_element_id: RefCell<u32>,
     renderer_state: Rc<RefCell<RendererState>>,
 }
 
@@ -147,16 +142,16 @@ impl UiToolkit for YewToolkit {
                 @{onchange}([rgba.r / 255, rgba.g / 255, rgba.b / 255, rgba.a]);
             };
         };
-        let input: Html<Model> = run_after_render::run_inline(html! {
-                                                                  <input type="color", name=label />
-                                                              },
-                                                              move |el| {
-                                                                  js! {
-                                                                      $(@{el})
-                                                                        .spectrum({change: @{&onchange_js}, move: @{&onchange_js}, showInput: true, showAlpha: true,
-                                                                                   preferredFormat: "hex", color: @{rgba(existing_value)}});
-                                                                  };
-                                                              });
+        let input: Html<Model> = run_after_render::run(html! {
+                                                           <input type="color", name=label />
+                                                       },
+                                                       move |el| {
+                                                           js! {
+                                                               $(@{el})
+                                                                 .spectrum({change: @{&onchange_js}, move: @{&onchange_js}, showInput: true, showAlpha: true,
+                                                                            preferredFormat: "hex", color: @{rgba(existing_value)}});
+                                                           };
+                                                       });
         html! {
             <div>
                 {{ input }}
@@ -576,7 +571,7 @@ impl UiToolkit for YewToolkit {
         // TODO: this only renders the bottom bar directly under the content. the bottom bar needs
         // to be fixed at the bottom
         html! {
-            <div id={ self.incr_last_drawn_element_id().to_string() }, style="display: flex; flex-direction: column;", >
+            <div style="display: flex; flex-direction: column;", >
                 <div style="flex-grow: 1; display: flex;",>
                     { draw_content_fn() }
                 </div>
@@ -589,7 +584,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_empty_line(&self) -> Self::DrawResult {
         html! {
-            <br id={ self.incr_last_drawn_element_id().to_string() }, />
+            <br />
         }
     }
 
@@ -623,8 +618,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_buttony_text(&self, label: &str, color: [f32; 4]) -> Self::DrawResult {
         html! {
-            <button id={ self.incr_last_drawn_element_id().to_string() },
-                class="fit-content",
+            <button class="fit-content",
                 style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", rgba(color)), >
                 { symbolize_text(label) }
             </button>
@@ -646,8 +640,7 @@ impl UiToolkit for YewToolkit {
                                             on_button_press_callback: F)
                                             -> Self::DrawResult {
         html! {
-            <button id={ self.incr_last_drawn_element_id().to_string() },
-                 style=format!("display: block; font-size: 75%; color: white; background-color: {}; border: none; outline: none;", rgba(color)),
+            <button style=format!("display: block; font-size: 75%; color: white; background-color: {}; border: none; outline: none;", rgba(color)),
                  onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
             { label }
             </button>
@@ -655,13 +648,11 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_text_box(&self, text: &str) -> Self::DrawResult {
-        let id = self.incr_last_drawn_element_id();
         // this shit is the only way i can get a div to stay scrolled to the bottom
         // see https://stackoverflow.com/questions/18614301/keep-overflow-div-scrolled-to-bottom-unless-user-scrolls-up/44051405#44051405
         html! {
             <div style="height: 100%; overflow-y: auto; display: flex; flex-direction: column-reverse; border: none; width: 100%;",
-                      readonly={true},
-                      id={ id.to_string() },>
+                      readonly={true}, >
             { for text.lines().rev().into_iter().map(|line| html! {
                 <div>{ symbolize_text(line) }</div>
             }) }
@@ -673,8 +664,7 @@ impl UiToolkit for YewToolkit {
                              draw_fns: &[&dyn Fn() -> Self::DrawResult])
                              -> Self::DrawResult {
         html! {
-            <div id={ self.incr_last_drawn_element_id().to_string() },
-                 style={"display: flex;"}, >
+            <div style={"display: flex;"}, >
                 { for draw_fns.into_iter().map(|draw_fn| html! {
                     <div>
                         { draw_fn() }
@@ -695,7 +685,6 @@ impl UiToolkit for YewToolkit {
             <input type="text",
                style="display: block;",
                autocomplete="off",
-               id={ self.incr_last_drawn_element_id().to_string() },
                value=existing_value,
                oninput=|e| {onchange(&e.value) ; Msg::Redraw},
                onkeypress=|e| { if e.key() == "Enter" { ondone2() } ; Msg::Redraw }, />
@@ -709,7 +698,6 @@ impl UiToolkit for YewToolkit {
             <input type="text",
                style="display: block; width: 100%;",
                autocomplete="off",
-               id={ self.incr_last_drawn_element_id().to_string() },
                value="",
                onkeypress=|e| {
                    if e.key() == "Enter" {
@@ -786,9 +774,7 @@ impl UiToolkit for YewToolkit {
     }
 
     fn focused(&self, draw_fn: &dyn Fn() -> Html<Model>) -> Self::DrawResult {
-        let html = draw_fn();
-        self.focus_last_drawn_element();
-        html
+        draw_fn()
     }
 
     // we're using droppy (https://github.com/OutlawPlz/droppy/) to help us render the dropdown.
@@ -1154,28 +1140,7 @@ impl UiToolkit for YewToolkit {
 
 impl YewToolkit {
     fn new(renderer_state: Rc<RefCell<RendererState>>) -> Self {
-        YewToolkit { last_drawn_element_id: RefCell::new(0),
-                     focused_element_id: RefCell::new(0),
-                     renderer_state }
-    }
-
-    fn focus_last_drawn_element(&self) {
-        self.focused_element_id
-            .replace(self.get_last_drawn_element_id());
-    }
-
-    fn incr_last_drawn_element_id(&self) -> u32 {
-        let next_id = *self.last_drawn_element_id.borrow() + 1;
-        self.last_drawn_element_id.replace(next_id);
-        next_id
-    }
-
-    fn get_last_drawn_element_id(&self) -> u32 {
-        *self.last_drawn_element_id.borrow()
-    }
-
-    fn get_focused_element_id(&self) -> u32 {
-        *self.focused_element_id.borrow()
+        YewToolkit { renderer_state }
     }
 
     fn global_keydown_handler(&self) -> impl Fn(&KeyDownEvent) + 'static {
