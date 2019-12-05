@@ -1229,48 +1229,6 @@ fn was_shift_key_pressed(key: &str) -> bool {
 pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
     yew::initialize();
 
-    // dirty hacks to focus something
-    js! {
-        var CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = null;
-
-        var findClosestFocusable = function(el) {
-            return el.closest("[tabindex='0']");
-        };
-
-        var callback = function() {
-            var focusedId = document.body.getAttribute("data-focused-id");
-            var anything_is_focused = (document.hasFocus() &&
-                document.activeElement !== null &&
-                document.activeElement !== document.body &&
-                document.activeElement !== document.documentElement
-            );
-            if (focusedId && focusedId > 0) {
-                var el = document.getElementById(focusedId);
-                if (el) {
-                   //console.log("focusing: " + el.id);
-                   let closestFocusable = findClosestFocusable(el);
-                   if (closestFocusable) {
-                       CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS = closestFocusable;
-                   }
-                   el.focus();
-                }
-            // XXX: forgot to add a comment when i first wrote this, but i BELIEVE this is to restore
-            // focus to input boxes when rerendering as that sometimes causes loss of focus (i think)
-            } else if (CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS && !anything_is_focused) {
-                CS__PREVIOUS_FOCUSABLE_THAT_HAD_FOCUS.focus();
-            }
-        };
-        var observer = new MutationObserver(callback);
-        var config = {childList: true, subtree: true};
-        observer.observe(window.document.documentElement, config);
-
-        // if the user focuses an element, then let's mark that as the currently focused
-        // element
-        document.addEventListener("focusin", function(e) {
-            document.body.setAttribute("data-focused-id", e.target.id);
-        });
-    }
-
     // add css styles referencing code that we wouldn't be able to access from .css files
     //    add_style_string(&format!(".buttonized {{ background-color: {}; }}",
     //                              rgba(COLOR_SCHEME.button_hover_color)));
