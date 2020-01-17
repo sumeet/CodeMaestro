@@ -418,7 +418,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                           Some(help_text) if !help_text.is_empty() => {
                               self.ui_toolkit.draw_all(&[
                                     &|| self.render_code(&option.new_node),
-                                    &|| self.ui_toolkit.draw_wrapped_text(colorscheme!(action_color), &help_text),
+                                    &|| self.ui_toolkit.draw_wrapped_text(self.darken(colorscheme!(text_color)), &help_text),
                               ])
                           }
                           _ => self.render_code(&option.new_node),
