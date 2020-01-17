@@ -52,6 +52,7 @@ mod async_executor {
 }
 
 // uses for this module
+use crate::color_schemes::set_colorscheme;
 #[cfg(not(target_arch = "wasm32"))]
 use imgui_toolkit::draw_app;
 #[cfg(target_arch = "wasm32")]
@@ -72,7 +73,8 @@ cfg_if! {
 
 pub fn main() {
     init_debug();
-
+    let theme_from_plane = serde_json::from_str(include_str!("../../themefromplane.json")).unwrap();
+    set_colorscheme(theme_from_plane);
     async_executor::with_executor_context(|async_executor| {
         let app = app::App::new_rc();
         draw_app(app, async_executor);
