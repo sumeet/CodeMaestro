@@ -158,6 +158,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
         style.colors[ImGuiCol::TitleBgCollapsed as usize] = colorscheme!(titlebar_bg_color).into();
         style.colors[ImGuiCol::TitleBgActive as usize] =
             colorscheme!(titlebar_active_bg_color).into();
+        style.colors[ImGuiCol::FrameBg as usize] = colorscheme!(input_bg_color).into();
 
         let mut keypress: Option<Keypress> = None;
 

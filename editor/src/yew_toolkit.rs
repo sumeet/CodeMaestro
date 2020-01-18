@@ -683,7 +683,7 @@ impl UiToolkit for YewToolkit {
         let ondone2 = Rc::clone(&ondone);
         html! {
             <input type="text",
-               style="display: block;",
+               style=format!("display: block; background-color: {};", rgba(colorscheme!(input_bg_color))),
                autocomplete="off",
                value=existing_value,
                oninput=|e| {onchange(&e.value) ; Msg::Redraw},
@@ -696,7 +696,8 @@ impl UiToolkit for YewToolkit {
                                           -> Self::DrawResult {
         html! {
             <input type="text",
-               style="display: block; width: 100%;",
+               style=format!("display: block; width: 100%; background-color: {}",
+                             rgba(colorscheme!(input_bg_color))),
                autocomplete="off",
                value="",
                onkeypress=|e| {
