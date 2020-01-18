@@ -1129,8 +1129,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_main_menu_bar(&self, draw_menus: &dyn Fn()) {
-        self.ui.main_menu_bar(draw_menus)
+    fn draw_main_menu_bar(&self, draw_menus: &[DrawFnRef<Self>]) {
+        self.ui.main_menu_bar(&|| self.draw_all(draw_menus))
     }
 
     fn draw_menu(&self, label: &str, draw_menu_items: &dyn Fn()) {

@@ -783,12 +783,12 @@ impl UiToolkit for YewToolkit {
     // we're using droppy (https://github.com/OutlawPlz/droppy/) to help us render the dropdown.
     // TODO: the menu doesn't render correctly, and also doesn't go away when we select one of the
     // menu items
-    fn draw_main_menu_bar(&self, draw_menus: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
+    fn draw_main_menu_bar(&self, draw_menus: &[DrawFnRef<Self>]) -> Self::DrawResult {
         run_after_render::run(html! {
                                   <nav class="dropdown-menu",
                                        style=format!("position: fixed; top: 0; left: 0; width: 100%; height: 1.25em; padding: 0.25em; background-color: {}; color: white; user-select: none;",
                                                      rgba(colorscheme!(menubar_color))), >
-                                      {{ draw_menus() }}
+                                      {{ self.draw_all_on_same_line(draw_menus) }}
                                   </nav>
                               },
                               |el| {
@@ -796,7 +796,7 @@ impl UiToolkit for YewToolkit {
                                       var existingDroppyInstance = Droppy.prototype.getInstance(@{el});
                                       if (!existingDroppyInstance) {
                                           var droppy = new Droppy(@{el}, {
-                                              parentSelector: "nav > div",
+                                              parentSelector: ".main-menu-parent",
                                               dropdownSelector: ".main-menu-dropdown",
                                               triggerSelector: ".main-menu-label",
                                               closeOthers: true,
@@ -811,9 +811,8 @@ impl UiToolkit for YewToolkit {
                  label: &str,
                  draw_menu_items: &dyn Fn() -> Self::DrawResult)
                  -> Self::DrawResult {
-        // TODO: implement this for realsies
         html! {
-            <div>
+            <div class="main-menu-parent">
                 <div class="main-menu-label", style="padding: 1em; display: inline; cursor: default; margin: auto;", >
                     {label}
                 </div>

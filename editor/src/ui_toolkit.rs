@@ -163,7 +163,7 @@ pub trait UiToolkit {
                                  draw_fn: &dyn Fn() -> Self::DrawResult)
                                  -> Self::DrawResult;
     fn draw_statusbar(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
-    fn draw_main_menu_bar(&self, draw_menus: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult;
+    fn draw_main_menu_bar(&self, draw_menus: &[DrawFnRef<Self>]) -> Self::DrawResult;
     fn draw_menu(&self,
                  label: &str,
                  draw_menu_items: &dyn Fn() -> Self::DrawResult)

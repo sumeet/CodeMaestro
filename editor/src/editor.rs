@@ -599,68 +599,83 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_main_menu_bar(&self) -> T::DrawResult {
-        self.ui_toolkit.draw_main_menu_bar(&|| {
-                           self.ui_toolkit.draw_menu("File", &|| {
-                                              self.ui_toolkit.draw_all(&[
-                    #[cfg(not(target_arch = "wasm32"))]
-                    &|| {
-                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit.draw_menu_item("Save", move || {
-                                           cmd_buffer.borrow_mut().save();
-                                       })
-                    },
-                    &|| {
-                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit
-                            .draw_menu_item("Add new chat program", move || {
-                                cmd_buffer.borrow_mut()
-                                          .load_chat_program(example_chat_program());
-                            })
-                    },
-                    &|| {
-                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit
-                            .draw_menu_item("Add new JSON HTTP client", move || {
-                                cmd_buffer.borrow_mut()
-                                          .load_json_http_client(JSONHTTPClient::new());
-                            })
-                    },
-                    // disable scripts for now while we sprint to chat bot functionality
-                    //                        self.ui_toolkit.draw_menu_item("Add new script", move || {
-                    //                            cmdb6.borrow_mut().add_controller_command(|controller| {
-                    //                                controller.load_script(scripts::Script::new());
-                    //                            });
-                    //                        }),
-                    &|| {
-                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit.draw_menu_item("Add new function", move || {
-                                           cmd_buffer
-                                .borrow_mut()
-                                .load_code_func(code_function::CodeFunction::new());
-                                       })
-                    },
-                    &|| {
-                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit.draw_menu_item("Add Struct", move || {
-                                           cmd_buffer.borrow_mut()
-                                                     .load_typespec(structs::Struct::new());
-                                       })
-                    },
-                    &|| {
-                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit
-                            .draw_menu_item("Add Enum", move || {
-                                cmd_buffer.borrow_mut().load_typespec(enums::Enum::new());
-                            })
-                    },
-                    #[cfg(not(target_arch = "wasm32"))]
-                    &|| {
-                        self.ui_toolkit.draw_menu_item("Exit", || {
-                                           std::process::exit(0);
-                                       })
-                    },
-                ])
-                                          })
+        self.ui_toolkit.draw_main_menu_bar(&[&|| {
+                                                 self.ui_toolkit
+                                                     .draw_menu("File", &|| self.render_file_menu())
+                                             },
+                                             &|| {
+                                                 self.ui_toolkit
+                                                     .draw_menu("View", &|| self.render_view_menu())
+                                             }])
+    }
+
+    fn render_file_menu(&self) -> T::DrawResult {
+        self.ui_toolkit.draw_all(&[
+            #[cfg(not(target_arch = "wasm32"))]
+            &|| {
+                let cmd_buffer = Rc::clone(&self.command_buffer);
+                self.ui_toolkit.draw_menu_item("Save", move || {
+                                   cmd_buffer.borrow_mut().save();
+                               })
+            },
+            &|| {
+                let cmd_buffer = Rc::clone(&self.command_buffer);
+                self.ui_toolkit
+                    .draw_menu_item("Add new chat program", move || {
+                        cmd_buffer.borrow_mut()
+                                  .load_chat_program(example_chat_program());
+                    })
+            },
+            &|| {
+                let cmd_buffer = Rc::clone(&self.command_buffer);
+                self.ui_toolkit
+                    .draw_menu_item("Add new JSON HTTP client", move || {
+                        cmd_buffer.borrow_mut()
+                                  .load_json_http_client(JSONHTTPClient::new());
+                    })
+            },
+            // disable scripts for now while we sprint to chat bot functionality
+            //                        self.ui_toolkit.draw_menu_item("Add new script", move || {
+            //                            cmdb6.borrow_mut().add_controller_command(|controller| {
+            //                                controller.load_script(scripts::Script::new());
+            //                            });
+            //                        }),
+            &|| {
+                let cmd_buffer = Rc::clone(&self.command_buffer);
+                self.ui_toolkit.draw_menu_item("Add new function", move || {
+                                   cmd_buffer.borrow_mut()
+                                             .load_code_func(code_function::CodeFunction::new());
+                               })
+            },
+            &|| {
+                let cmd_buffer = Rc::clone(&self.command_buffer);
+                self.ui_toolkit.draw_menu_item("Add Struct", move || {
+                                   cmd_buffer.borrow_mut()
+                                             .load_typespec(structs::Struct::new());
+                               })
+            },
+            &|| {
+                let cmd_buffer = Rc::clone(&self.command_buffer);
+                self.ui_toolkit.draw_menu_item("Add Enum", move || {
+                                   cmd_buffer.borrow_mut().load_typespec(enums::Enum::new());
+                               })
+            },
+            #[cfg(not(target_arch = "wasm32"))]
+            &|| {
+                self.ui_toolkit.draw_menu_item("Exit", || {
+                                   std::process::exit(0);
+                               })
+            },
+        ])
+    }
+
+    fn render_view_menu(&self) -> T::DrawResult {
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        self.ui_toolkit.draw_menu_item("Theme editor", move || {
+                           let cmd_buffer = Rc::clone(&cmd_buffer);
+                           cmd_buffer.borrow_mut().add_controller_command(|cont| {
+                                                      cont.open_window(*THEME_EDITOR_WINDOW_ID);
+                                                  });
                        })
     }
 
@@ -1273,9 +1288,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| {
                     let cmd_buffer = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_button(
-                        "Apply return type",
-                        colorscheme!(action_color),
-                        move || {
+                                                "Apply return type",
+                                                colorscheme!(action_color),
+                                                move || {
                                                     cmd_buffer.borrow_mut()
                                       .add_integrating_command(move |cont, interp, _, _| {
                                           let mut env = interp.env.borrow_mut();
@@ -1509,9 +1524,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let strukt1 = strukt.clone();
                 let cont1 = Rc::clone(&self.command_buffer);
                 self.ui_toolkit.draw_button(
-                    "Add another field",
-                    colorscheme!(action_color),
-                    move || {
+                                            "Add another field",
+                                            colorscheme!(action_color),
+                                            move || {
                                                 let mut newstrukt = strukt1.clone();
                                                 newstrukt.fields.push(structs::StructField::new(
                            format!("field{}", newstrukt.fields.len()),
@@ -1821,9 +1836,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let args1 = args.clone();
                 let cont1 = Rc::clone(&self.command_buffer);
                 self.ui_toolkit.draw_button(
-                    "Add another argument",
-                    colorscheme!(action_color),
-                    move || {
+                                            "Add another argument",
+                                            colorscheme!(action_color),
+                                            move || {
                                                 let mut args = args1.clone();
                                                 let mut func = func1.clone();
                                                 args.push(lang::ArgumentDefinition::new(
