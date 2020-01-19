@@ -43,13 +43,6 @@ impl Default for WindowPositions {
                                      y: INITIAL_WINDOW_POSITION.1
                                         + QUICK_START_WINDOW_SIZE.1 as isize
                                         + 5 });
-        // TODO: probably make the color editor now show up by default, but at least when i'm
-        // developing
-        //        let mut wp = Self { size: (4000, 3000),
-        //                            open_windows };
-        //wp.add_window(*THEME_EDITOR_WINDOW_ID);
-        //        wp
-
         Self { size: (4000, 3000),
                open_windows }
     }

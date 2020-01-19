@@ -612,6 +612,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         if self.is_editing(code_node.id()) && !self.is_rendering_menu_atm() {
             return self.draw_inline_editor(code_node);
         }
+
+        match self.insertion_point() {
+            Some(InsertionPoint::Replace(id)) | Some(InsertionPoint::Wrap(id))
+            if { id == code_node.id() && !self.is_rendering_menu_atm() } =>
+                {
+                    return self.render_insert_code_node()
+                }
+            _ => {}
+        }
+
         let draw = || {
             match code_node {
                 CodeNode::FunctionCall(function_call) => self.render_function_call(&function_call),
@@ -650,15 +660,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::ListIndex(list_index) => self.render_list_index(&list_index),
             }
         };
-
-        match self.insertion_point() {
-            Some(InsertionPoint::Replace(id)) | Some(InsertionPoint::Wrap(id))
-                if { id == code_node.id() && !self.is_rendering_menu_atm() } =>
-            {
-                return self.render_insert_code_node()
-            }
-            _ => {}
-        }
 
         if self.is_selected(code_node.id()) {
             self.draw_selected(self.code_node_cursor_scroll_hash(code_node), &draw)
