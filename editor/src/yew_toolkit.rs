@@ -502,16 +502,6 @@ impl UiToolkit for YewToolkit {
         let context_menu_ref = NodeRef::default();
         let context_menu_ref2 = context_menu_ref.clone();
 
-        let show_right_click_menu =
-            move |el: stdweb::Value, page_x: stdweb::Value, page_y: stdweb::Value| {
-                let page_x = num!(i32, page_x);
-                let page_y = num!(i32, page_y);
-                let context_menu_el: Element = el.try_into().unwrap();
-                js! {
-                    showRightClickMenu(@{&context_menu_el}, @{&page_x}, @{&page_y});
-                };
-            };
-
         // TODO: border color is hardcoded, ripped from imgui
         html! {
             <div style={ container_css },>
@@ -527,7 +517,7 @@ impl UiToolkit for YewToolkit {
                             e.prevent_default();
                             js! {
                                 var e = @{&e};
-                                @{show_right_click_menu}(@{context_menu_el}, e.pageX, e.pageY);
+                                @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
                             }
                         }
                         Msg::DontRedraw
@@ -1350,4 +1340,13 @@ fn raw_html(raw_html: &str) -> Html<Model> {
     };
     let node = Node::try_from(js_el).expect("convert js_el");
     VNode::VRef(node)
+}
+
+fn show_right_click_menu(el: stdweb::Value, page_x: stdweb::Value, page_y: stdweb::Value) {
+    let page_x = num!(i32, page_x);
+    let page_y = num!(i32, page_y);
+    let context_menu_el: Element = el.try_into().unwrap();
+    js! {
+        showRightClickMenu(@{&context_menu_el}, @{&page_x}, @{&page_y});
+    };
 }
