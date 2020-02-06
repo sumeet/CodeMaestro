@@ -487,6 +487,7 @@ impl UiToolkit for YewToolkit {
         let handle_keypress_2 = Rc::clone(&handle_keypress_1);
         let global_keydown_handler = self.global_keydown_handler();
 
+        // TODO: can we get all the context menu stuff from `context_menu`?
         let context_menu = draw_context_menu.map(|draw_context_menu| draw_context_menu());
         let is_context_menu = context_menu.is_some();
 
@@ -511,17 +512,17 @@ impl UiToolkit for YewToolkit {
 
                 <div style={ format!("border: 1px solid #6a6a6a; white-space: nowrap; background-color: {}; overflow: auto; {}", rgba(bg), height_css) },
                     tabindex=0,
-                    oncontextmenu=|e| {
-                        let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
-                        if is_context_menu {
-                            e.prevent_default();
-                            js! {
-                                var e = @{&e};
-                                @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
-                            }
-                        }
-                        Msg::DontRedraw
-                    },
+//                    oncontextmenu=|e| {
+//                        let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
+//                        if is_context_menu {
+//                            e.prevent_default();
+//                            js! {
+//                                var e = @{&e};
+//                                @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
+//                            }
+//                        }
+//                        Msg::DontRedraw
+//                    },
                     onkeypress=|e| {
                         if let Some(keypress) = map_keypress_event(&e) {
                             handle_keypress_1(keypress);
@@ -1128,6 +1129,38 @@ impl UiToolkit for YewToolkit {
     fn draw_with_no_spacing_afterwards(&self, draw_fn: DrawFnRef<Self>) -> Self::DrawResult {
         // i think we automatically do this
         draw_fn()
+    }
+
+    fn context_menu(&self, draw_fn: DrawFnRef<Self>, draw_context_menu: DrawFnRef<Self>) -> Self::DrawResult {
+        let context_menu_ref = NodeRef::default();
+        let context_menu_ref2 = context_menu_ref.clone();
+        js! {
+            console.log("lol ok well we're DRAWING a context menu");
+        };
+        html! {
+            // w/o pointer-events, the click handlers inside won't work
+            <div style="pointer-events: none;">
+                <div ref={context_menu_ref}, class="context_menu", style="display: none;",>
+                    { draw_context_menu() }
+                </div>
+
+                <div style="pointer-events: auto;", oncontextmenu=|e| {
+                    js! { console.log("hello") };
+                    let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
+                    e.prevent_default();
+                    e.stop_propagation();
+                    js! {
+                        console.log("inner js stuff STARTED");
+                        var e = @{&e};
+                        @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
+                        console.log("inner js stuff DONE");
+                    }
+                    Msg::DontRedraw
+                }, >
+                    {{ draw_fn() }}
+                </div>
+            </div>
+        }
     }
 }
 

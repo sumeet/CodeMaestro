@@ -18,6 +18,7 @@ use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::CodeNode;
 use cs::structs;
+use crate::code_context_menu_renderer::render_context_menu;
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 // TODO: move this into the color scheme, but we'll leave it in here for now -- lazy
@@ -660,6 +661,19 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::ListIndex(list_index) => self.render_list_index(&list_index),
             }
         };
+
+        // testing things out
+//        let
+        let draw = || render_context_menu(code_node, self.ui_toolkit, &draw);
+//        let draw = || {
+//            self.ui_toolkit.context_menu(
+//                &draw,
+//                &|| {
+//                    let delstring = format!("Delete {}", code_node.description());
+//                    self.ui_toolkit.draw_menu_item(&delstring, || ())
+//                }
+//            )
+//        };
 
         if self.is_selected(code_node.id()) {
             self.draw_selected(self.code_node_cursor_scroll_hash(code_node), &draw)

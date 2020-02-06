@@ -13,6 +13,7 @@ use cfg_if::cfg_if;
 mod app;
 mod chat;
 mod chat_test_window;
+mod code_context_menu_renderer;
 mod code_editor;
 mod code_editor_renderer;
 mod code_generation;

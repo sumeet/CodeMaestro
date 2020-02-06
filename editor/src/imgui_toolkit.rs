@@ -203,6 +203,16 @@ impl<'a> ImguiToolkit<'a> {
     fn is_left_button_down(&self) -> bool {
         self.ui.imgui().is_mouse_down(ImMouseButton::Left)
     }
+
+    fn make_last_item_look_active(&self) {
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        self.ui
+            .get_window_draw_list()
+            .add_rect(min, max, colorscheme!(button_active_color))
+            .filled(true)
+            .build();
+    }
 }
 
 struct Rect {
@@ -340,14 +350,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn buttonize<F: Fn() + 'static>(&self, draw_fn: &dyn Fn(), onclick: F) {
-        // HAXXX: disable buttons that were drawn with `draw_button` from displaying as hovered.
-        // i think in actually this is very very very messy because what happens if someone clicks
-        // an inner button, do we run all the click handlers???
-        //        self.ui.with_color_vars(&[(ImGuiCol::ButtonHovered, (1., 1., 1., 0.)),
-        //                                            (ImGuiCol::ButtonActive, (1., 1., 1., 0.))], &|| {
         self.ui.group(draw_fn);
-        //                self.ui.with_color_vars(&[(ImGuiCol::ButtonHovered, (1., 1., 1., 0.)),
-        //                                                    (ImGuiCol::ButtonActive, (1., 1., 1., 0.))], draw_fn));
 
         // grabbed this code from draw_box_around
         if self.ui.is_item_hovered() {
@@ -361,20 +364,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
 
         if self.mouse_clicked_in_last_drawn_element() {
-            let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-            let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-            self.ui
-                .get_window_draw_list()
-                .add_rect(min, max, colorscheme!(button_active_color))
-                .filled(true)
-                .build();
+            self.make_last_item_look_active();
         }
 
         if self.mouse_released_in_last_drawn_element() {
             onclick()
         }
-
-        //        })
     }
 
     fn draw_statusbar(&self, draw_fn: &dyn Fn()) {
@@ -1140,6 +1135,27 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) {
         if self.ui.menu_item(&self.imlabel(label)).build() {
             onselect()
+        }
+    }
+
+    fn context_menu(&self, draw_fn: DrawFnRef<Self>,
+                    draw_context_menu: DrawFnRef<Self>) {
+        self.ui.group(draw_fn);
+        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
+        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        if unsafe {
+            let mouse_button = 1;
+            let label = self.imlabel("item_context_menu");
+            imgui_sys::igBeginPopupContextItem(label.as_ptr(),
+                                                 mouse_button)
+        } {
+            draw_context_menu();
+            unsafe { imgui_sys::igEndPopup() };
+            self.ui
+                .get_window_draw_list()
+                .add_rect(min, max, colorscheme!(button_active_color))
+                .filled(true)
+                .build();
         }
     }
 
