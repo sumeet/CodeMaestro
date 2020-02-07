@@ -585,22 +585,26 @@ impl UiToolkit for YewToolkit {
                                     draw_fn: &dyn Fn() -> Self::DrawResult,
                                     onclick: F)
                                     -> Self::DrawResult {
+//        let draw_with_overlay_on_hover = draw_fn;
         let draw_with_overlay_on_hover = || {
             let mut drawn = vtag(draw_fn());
             // see buttonize-hover.js
             if drawn.attributes.contains_key("onmouseover") {
                 panic!("{:?} already contains onmouseover", drawn);
             }
+            let old_style = drawn.attributes.get("style").map(|s| s.as_str()).unwrap_or("");
+            let new_style = format!("{}; pointer-events: auto;", old_style);
+            drawn.attributes.insert("style".into(), new_style);
             drawn.attributes.insert("onmouseover".into(),
                                     format!("displayButtonizedHoverOverlayOn(this, \"{}\");",
                                             rgba(colorscheme!(button_hover_color))));
             VNode::VTag(Box::new(drawn))
         };
         html! {
-            <div style="position: relative;", onclick=|_| { onclick(); Msg::Redraw },
+            <div style="position: relative; pointer-events: none;", onclick=|_| { onclick(); Msg::Redraw },
                  onmouseleave=|e| { js! { removeOverlays(@{e.target()}); } ; Msg::DontRedraw},>
                 { draw_with_overlay_on_hover() }
-                <div style="position: absolute; top: 0px; left: 0px; display: none; height: 0px; width: 0px;",
+                <div style="position: absolute; top: 0px; left: 0px; display: none; height: 0px; width: 0px; pointer-events: none;",
                      class="buttonized-hover-overlay",>
                      {" "}
                 </div>
@@ -1136,9 +1140,6 @@ impl UiToolkit for YewToolkit {
     fn context_menu(&self, draw_fn: DrawFnRef<Self>, draw_context_menu: DrawFnRef<Self>) -> Self::DrawResult {
         let context_menu_ref = NodeRef::default();
         let context_menu_ref2 = context_menu_ref.clone();
-        js! {
-            console.log("lol ok well we're DRAWING a context menu");
-        };
         html! {
             // w/o pointer-events, the click handlers inside won't work
             <div>
@@ -1147,15 +1148,12 @@ impl UiToolkit for YewToolkit {
                 </div>
 
                 <div class="context_menu_trigger", oncontextmenu=|e| {
-                    js! { console.log("hello") };
                     let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
                     e.prevent_default();
                     e.stop_propagation();
                     js! {
-                        console.log("inner js stuff STARTED");
                         var e = @{&e};
                         @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
-                        console.log("inner js stuff DONE");
                     }
                     Msg::DontRedraw
                 }, >
