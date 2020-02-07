@@ -1,5 +1,6 @@
 mod focus;
 mod run_after_render;
+mod context_menu;
 
 use super::app::App as CSApp;
 use super::async_executor::AsyncExecutor;
@@ -512,17 +513,18 @@ impl UiToolkit for YewToolkit {
 
                 <div style={ format!("border: 1px solid #6a6a6a; white-space: nowrap; background-color: {}; overflow: auto; {}", rgba(bg), height_css) },
                     tabindex=0,
-//                    oncontextmenu=|e| {
-//                        let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
-//                        if is_context_menu {
-//                            e.prevent_default();
-//                            js! {
-//                                var e = @{&e};
-//                                @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
-//                            }
-//                        }
-//                        Msg::DontRedraw
-//                    },
+                    class="context_menu_trigger",
+                    oncontextmenu=|e| {
+                        let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
+                        if is_context_menu {
+                            e.prevent_default();
+                            js! {
+                                var e = @{&e};
+                                @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
+                            }
+                        }
+                        Msg::DontRedraw
+                    },
                     onkeypress=|e| {
                         if let Some(keypress) = map_keypress_event(&e) {
                             handle_keypress_1(keypress);
@@ -1139,12 +1141,12 @@ impl UiToolkit for YewToolkit {
         };
         html! {
             // w/o pointer-events, the click handlers inside won't work
-            <div style="pointer-events: none;">
+            <div>
                 <div ref={context_menu_ref}, class="context_menu", style="display: none;",>
                     { draw_context_menu() }
                 </div>
 
-                <div style="pointer-events: auto;", oncontextmenu=|e| {
+                <div class="context_menu_trigger", oncontextmenu=|e| {
                     js! { console.log("hello") };
                     let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
                     e.prevent_default();
