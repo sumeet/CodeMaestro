@@ -6,12 +6,25 @@ function showRightClickMenu(el, pageX, pageY) {
         el.style.top = `${pageY * (100 / globalZoom)}px`;
         el.style.display = "";
     }
+    insertContextMenuIntoGlobalDiv(el);
 }
 
 // hide context menus after clicking on anything
 document.addEventListener("click", function() {
-    var els = document.getElementsByClassName("context_menu");
-    for (let el of els) {
-        el.style.display = "none";
-    }
+    removeContextMenuDivIfPresent();
 }, true);
+
+const CONTEXT_MENU_ID = "context_menu";
+
+function removeContextMenuDivIfPresent() {
+    const contextMenuDiv = document.getElementById(CONTEXT_MENU_ID);
+    if (contextMenuDiv) {
+        contextMenuDiv.remove();
+    }
+}
+
+function insertContextMenuIntoGlobalDiv(el) {
+    removeContextMenuDivIfPresent();
+    el.id = "context_menu"
+    document.body.appendChild(el);
+}

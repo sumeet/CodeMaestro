@@ -1,6 +1,5 @@
 mod focus;
 mod run_after_render;
-mod context_menu;
 
 use super::app::App as CSApp;
 use super::async_executor::AsyncExecutor;
@@ -585,14 +584,17 @@ impl UiToolkit for YewToolkit {
                                     draw_fn: &dyn Fn() -> Self::DrawResult,
                                     onclick: F)
                                     -> Self::DrawResult {
-//        let draw_with_overlay_on_hover = draw_fn;
+        //        let draw_with_overlay_on_hover = draw_fn;
         let draw_with_overlay_on_hover = || {
             let mut drawn = vtag(draw_fn());
             // see buttonize-hover.js
             if drawn.attributes.contains_key("onmouseover") {
                 panic!("{:?} already contains onmouseover", drawn);
             }
-            let old_style = drawn.attributes.get("style").map(|s| s.as_str()).unwrap_or("");
+            let old_style = drawn.attributes
+                                 .get("style")
+                                 .map(|s| s.as_str())
+                                 .unwrap_or("");
             let new_style = format!("{}; pointer-events: auto;", old_style);
             drawn.attributes.insert("style".into(), new_style);
             drawn.attributes.insert("onmouseover".into(),
@@ -1137,7 +1139,10 @@ impl UiToolkit for YewToolkit {
         draw_fn()
     }
 
-    fn context_menu(&self, draw_fn: DrawFnRef<Self>, draw_context_menu: DrawFnRef<Self>) -> Self::DrawResult {
+    fn context_menu(&self,
+                    draw_fn: DrawFnRef<Self>,
+                    draw_context_menu: DrawFnRef<Self>)
+                    -> Self::DrawResult {
         let context_menu_ref = NodeRef::default();
         let context_menu_ref2 = context_menu_ref.clone();
         html! {

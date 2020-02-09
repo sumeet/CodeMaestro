@@ -325,8 +325,7 @@ impl CommandBuffer {
                                   overlay.borrow_mut().mark_as_submitting();
                                   let resp = postthecode(&theworld).await;
                                   match resp {
-                                      Err(e) => overlay.borrow_mut()
-                                                       .mark_error(e.description().to_owned()),
+                                      Err(e) => overlay.borrow_mut().mark_error(e.to_string()),
                                       Ok(resp) => {
                                           let status = resp.status();
                                           if status == 200 {
