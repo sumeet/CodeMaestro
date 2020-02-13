@@ -172,14 +172,14 @@ impl<'a> ImguiToolkit<'a> {
         let item_min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let item_max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
 
-        ((window_min.0 <= item_min.x)
-         && (item_min.x <= window_max.0)
-         && (window_min.0 <= item_max.x)
-         && (item_max.x <= window_max.0)
-         && (window_min.1 <= item_min.y)
-         && (item_min.y <= window_max.1)
-         && (window_min.1 <= item_max.y)
-         && (item_max.y <= window_max.1))
+        (window_min.0 <= item_min.x)
+        && (item_min.x <= window_max.0)
+        && (window_min.0 <= item_max.x)
+        && (item_max.x <= window_max.0)
+        && (window_min.1 <= item_min.y)
+        && (item_min.y <= window_max.1)
+        && (window_min.1 <= item_max.y)
+        && (item_max.y <= window_max.1)
     }
 
     fn mouse_clicked_in_last_drawn_element(&self) -> bool {
@@ -717,7 +717,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let height = match height {
             ChildRegionHeight::ExpandFill { .. } => {
                 // TODO: use imgui stack layout once it's in (https://github.com/ocornut/imgui/pull/846)
-                0.9 * unsafe { imgui_sys::igGetWindowHeight() }
+                let window_height = unsafe { imgui_sys::igGetWindowHeight() };
+                window_height - 300.
             }
             ChildRegionHeight::Pixels(pixels) => pixels as f32,
         };
@@ -746,6 +747,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     .scrollbar_horizontal(true)
                     .build(&|| {
                         draw_fn();
+
                         if let Some(keypress) = self.keypress {
                             if self.ui.is_child_window_focused() {
                                 if let Some(ref handle_keypress) = handle_keypress {
@@ -1138,16 +1140,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn context_menu(&self, draw_fn: DrawFnRef<Self>,
-                    draw_context_menu: DrawFnRef<Self>) {
+    fn context_menu(&self, draw_fn: DrawFnRef<Self>, draw_context_menu: DrawFnRef<Self>) {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         if unsafe {
             let mouse_button = 1;
             let label = self.imlabel("item_context_menu");
-            imgui_sys::igBeginPopupContextItem(label.as_ptr(),
-                                                 mouse_button)
+            imgui_sys::igBeginPopupContextItem(label.as_ptr(), mouse_button)
         } {
             draw_context_menu();
             unsafe { imgui_sys::igEndPopup() };

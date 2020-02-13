@@ -1,5 +1,3 @@
-#![feature(async_await)]
-
 extern crate cs;
 
 use std::pin::Pin;
@@ -8,8 +6,6 @@ use cs::asynk::{backward, forward, OldFuture};
 use cs::builtins::ChatReply;
 use cs::code_loading::TheWorld;
 use cs::env;
-use cs::resolve_all_futures;
-use cs::EnvGenie;
 use diesel::prelude::*;
 use diesel::query_dsl::QueryDsl;
 use futures::future::join_all;
@@ -212,11 +208,13 @@ async fn new_irc_conn(mut config: Config, chat_thingy: Rc<RefCell<ChatThingy>>) 
     let PackedIrcClient(client, irc_future) = forward(irc_client_future).await.unwrap();
     client.identify().unwrap();
     let irc_future = backward(async move {
-        forward(irc_future).await.map_err(|e| println!("irc error: {:?}", e))
-                                   .ok();
+        forward(irc_future).await
+                           .map_err(|e| println!("irc error: {:?}", e))
+                           .ok();
         Ok::<(), ()>(())
     });
-    forward(backward(irc_interaction_future(client, chat_thingy)).join(irc_future)).await.ok();
+    forward(backward(irc_interaction_future(client, chat_thingy)).join(irc_future)).await
+                                                                                   .ok();
     Ok::<(), ()>(())
 }
 
@@ -233,7 +231,8 @@ async fn irc_interaction_future(client: IrcClient,
             if let Command::PRIVMSG(sender, text) = &message.command {
                 if let Some(response_target) = message.response_target() {
                     chat_thingy.borrow_mut()
-                                      .message_received(sender.clone(), text.clone()).await;
+                               .message_received(sender.clone(), text.clone())
+                               .await;
                     for reply in chat_thingy.borrow_mut()
                                             .reply_buffer
                                             .lock()
@@ -253,16 +252,17 @@ async fn irc_interaction_future(client: IrcClient,
 
 async fn new_discord_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
     let (client, stream) =
-        forward(noob::Client::connect(token)).await.unwrap_or_else(|e| {
-                                                         panic!("error connecting to discord: {:?}",
-                                                                e)
-                                                     });
+        forward(noob::Client::connect(token)).await
+                                             .unwrap_or_else(|e| {
+                                                 panic!("error connecting to discord: {:?}", e)
+                                             });
     let mut stream = stream.compat();
     while let Some(event) = stream.next().await {
         match event {
             Ok(noob::Event::MessageCreate(msg)) => {
                 chat_thingy.borrow_mut()
-                                  .message_received(msg.author.username, msg.content).await;
+                           .message_received(msg.author.username, msg.content)
+                           .await;
 
                 for reply in chat_thingy.borrow_mut()
                                         .reply_buffer
@@ -315,7 +315,8 @@ async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Re
                         let chat_thingy = Rc::clone(&self.chat_thingy);
                         return Box::new(backward(async move {
                                             chat_thingy.borrow_mut()
-                                                              .message_received(sender, text).await;
+                                                       .message_received(sender, text)
+                                                       .await;
 
                                             for reply in chat_thingy.borrow_mut()
                                                                     .reply_buffer
@@ -537,10 +538,10 @@ async fn load_code_from_the_db_into(chat_thingy: Rc<RefCell<ChatThingy>>,
     use crate::codes::dsl::*;
 
     let code_rows = forward(exec_async(move |conn| {
-                                       codes.filter(instance_id.eq(for_instance_id))
-                                            .load::<Code>(conn)
-                                   })).await
-                                       .unwrap();
+                                codes.filter(instance_id.eq(for_instance_id))
+                                     .load::<Code>(conn)
+                            })).await
+                               .unwrap();
     for code_row in code_rows {
         let the_world = serde_json::from_value(code_row.code);
         match the_world {
@@ -599,7 +600,8 @@ fn http_handler(
                          }
 
                          let the_world = body.unwrap().into_body();
-                         forward(insert_new_code(&the_world, new_code_intent.instance_id)).await.unwrap();
+                         forward(insert_new_code(&the_world, new_code_intent.instance_id)).await
+                                                                                          .unwrap();
 
                          use futures_util::sink::SinkExt;
                          new_code_sender.send(the_world).await.unwrap();
@@ -610,9 +612,9 @@ fn http_handler(
             Box::new(backward(async move {
                          // oh jesus christ, the unimplemented
                          serve_static(request).await.map_err(|e| {
-                                                          println!("{:?}", e);
-                                                          unimplemented!()
-                                                      })
+                                                        println!("{:?}", e);
+                                                        unimplemented!()
+                                                    })
                      }))
         }
     }

@@ -1681,17 +1681,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_general_function_menu<F: lang::Function>(&self, func: &F) -> T::DrawResult {
-        self.ui_toolkit.draw_all(&[&|| {
-                                       let cont1 = Rc::clone(&self.command_buffer);
-                                       let func_id = func.id();
-                                       self.ui_toolkit
-                                           .draw_button("Delete", colorscheme!(danger_color), move || {
-                                               cont1.borrow_mut().remove_function(func_id);
-                                           })
-                                   },
-                                   &|| self.render_test_section(func)])
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                let cont1 = Rc::clone(&self.command_buffer);
+                let func_id = func.id();
+                self.ui_toolkit
+                    .draw_button("Delete", colorscheme!(danger_color), move || {
+                        cont1.borrow_mut().remove_function(func_id);
+                    })
+            },
+            //                                   &|| self.render_test_section(func),
+        ])
     }
 
+    #[allow(unused)]
     fn render_test_section<F: lang::Function>(&self, func: &F) -> T::DrawResult {
         let subject = tests::TestSubject::Function(func.id());
         let tests = self.controller.list_tests(subject).collect_vec();
