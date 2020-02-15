@@ -181,8 +181,10 @@ pub trait UiToolkit {
                                     scroll_hash: String,
                                     draw_fn: &dyn Fn() -> Self::DrawResult)
                                     -> Self::DrawResult;
-    fn context_menu(&self, draw_fn: DrawFnRef<Self>,
-                    draw_context_menu: DrawFnRef<Self>) -> Self::DrawResult;
+    fn context_menu(&self,
+                    draw_fn: DrawFnRef<Self>,
+                    draw_context_menu: DrawFnRef<Self>)
+                    -> Self::DrawResult;
 }
 
 pub enum SelectableItem<T: 'static> {

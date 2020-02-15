@@ -31,12 +31,13 @@ lazy_static! {
     static ref SPACE_IMSTR: ImString = im_str! { "{}", SPACE }.clone();
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 struct Window {
     pos: (f32, f32),
     size: (f32, f32),
-    // the amount of screen space remaining after the content has been rendered, used for figuring out how much room is available for flex inside of the window's layout
-    avail_after_content: (f32, f32),
+    // the amount of screen space the content inside takes, this could actually be bigger
+    // than our size, in which case scrollbars would activate if enabled on the window
+    content_size: (f32, f32),
 }
 
 //enum ScrollStatus {
@@ -45,6 +46,7 @@ struct Window {
 //}
 
 struct TkCache {
+    current_window_label: Option<ImString>,
     focused_child_regions: HashMap<String, bool>,
     windows: HashMap<String, Window>,
     replace_on_hover: HashMap<String, bool>,
@@ -57,6 +59,7 @@ impl TkCache {
     fn new() -> Self {
         Self { focused_child_regions: HashMap::new(),
                replace_on_hover: HashMap::new(),
+               current_window_label: None,
                windows: HashMap::new(),
                //               scroll_for_keyboard_nav: HashMap::new(),
                elements_focused_in_prev_iteration: HashSet::new(),
@@ -67,6 +70,15 @@ impl TkCache {
         let mut cache = TK_CACHE.lock().unwrap();
         cache.elements_focused_in_prev_iteration = cache.elements_focused_in_this_iteration.clone();
         cache.elements_focused_in_this_iteration.clear();
+        cache.current_window_label.take();
+    }
+
+    pub fn get_window(window_name_str: &str) -> Option<Window> {
+        TK_CACHE.lock()
+                .unwrap()
+                .windows
+                .get(window_name_str)
+                .cloned()
     }
 
     pub fn is_new_focus_for_scrolling(scroll_hash: String) -> bool {
@@ -75,6 +87,21 @@ impl TkCache {
                                  .contains(&scroll_hash);
         cache.elements_focused_in_this_iteration.insert(scroll_hash);
         is_new_focus
+    }
+
+    pub fn set_current_window_label(label: &ImString) {
+        TK_CACHE.lock().unwrap().current_window_label = Some(label.clone())
+    }
+
+    pub fn clear_current_window_label() {
+        TK_CACHE.lock().unwrap().current_window_label.take();
+    }
+
+    pub fn get_current_window() -> Option<Window> {
+        let cache = TK_CACHE.lock().unwrap();
+        let current_window_label = cache.current_window_label.as_ref()?;
+        let current_window_label: &str = current_window_label.as_ref();
+        cache.windows.get(current_window_label).cloned()
     }
 
     pub fn is_focused(child_window_id: &str) -> bool {
@@ -650,11 +677,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let window_name = self.imlabel(window_name);
         let window_name_str: &str = window_name.as_ref();
 
-        let window_after_prev_draw = {
-            let cache = TK_CACHE.lock().unwrap();
-            cache.windows.get(window_name_str).cloned()
-        };
-
+        let window_after_prev_draw = TkCache::get_window(window_name_str);
         let mut window_builder = self.ui.window(&window_name).movable(true).scrollable(true);
 
         if let Some(window) = window_after_prev_draw {
@@ -680,14 +703,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
 
         window_builder.build(&|| {
+                          TkCache::set_current_window_label(&window_name);
                           self.ui.group(draw_window_contents);
-                          let avail_after_content = self.ui.get_content_region_avail();
+                          TkCache::clear_current_window_label();
+                          let content_size = self.ui.get_item_rect_size();
 
                           let mut cache = TK_CACHE.lock().unwrap();
                           let prev_window = cache.windows.get(window_name_str).cloned();
                           let drawn_window = Window { pos: self.ui.get_window_pos(),
                                                       size: self.ui.get_window_size(),
-                                                      avail_after_content };
+                                                      content_size };
                           cache.windows
                                .insert(window_name_str.to_string(), drawn_window);
                           if prev_window.is_some() && prev_window.unwrap() != drawn_window {
@@ -720,10 +745,18 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                     draw_context_menu: Option<&dyn Fn()>,
                                                     handle_keypress: Option<F>) {
         let height = match height {
-            ChildRegionHeight::ExpandFill { .. } => {
+            ChildRegionHeight::ExpandFill { min_height } => {
                 // TODO: use imgui stack layout once it's in (https://github.com/ocornut/imgui/pull/846)
-                let window_height = unsafe { imgui_sys::igGetWindowHeight() };
-                window_height - 300.
+                // ^^ i'm kind of implementing my own layout code, maybe we won't end up needing this ^
+                let current_window = TkCache::get_current_window();
+                match current_window {
+                    // initially give back 0 if the window size is totally empty
+                    None => 0.,
+                    Some(window) => {
+                        let free_height = window.size.1 - window.content_size.1;
+                        free_height.max(min_height)
+                    }
+                }
             }
             ChildRegionHeight::Pixels(pixels) => pixels as f32,
         };
