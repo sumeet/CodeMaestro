@@ -7,7 +7,7 @@ use itertools::Itertools;
 use nfd;
 
 use crate::colorscheme;
-use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
+use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef, Layout};
 use imgui::*;
 use lazy_static::lazy_static;
 use std::cell::RefCell;
@@ -42,11 +42,16 @@ struct Window {
 //    AlreadyFocused,
 //}
 
+//#[derive(Clone, Copy)]
+//struct LayoutCache {
+//    total_size_as_drawn: (usize, usize),
+//}
+
 struct TkCache {
+    //layouts: HashMap<String, LayoutCache>,
     focused_child_regions: HashMap<String, bool>,
     windows: HashMap<String, Window>,
     replace_on_hover: HashMap<String, bool>,
-    //scroll_for_keyboard_nav: HashMap<String, ScrollStatus>,
     elements_focused_in_prev_iteration: HashSet<String>,
     elements_focused_in_this_iteration: HashSet<String>,
 }
@@ -55,8 +60,8 @@ impl TkCache {
     fn new() -> Self {
         Self { focused_child_regions: HashMap::new(),
                replace_on_hover: HashMap::new(),
+               layouts: HashMap::new(),
                windows: HashMap::new(),
-               //               scroll_for_keyboard_nav: HashMap::new(),
                elements_focused_in_prev_iteration: HashSet::new(),
                elements_focused_in_this_iteration: HashSet::new() }
     }
@@ -97,6 +102,14 @@ impl TkCache {
                  .get(label)
                  .unwrap_or(&false)
     }
+
+    //    pub fn save_layout(label: String, layout: LayoutCache) {
+    //        TK_CACHE.lock().unwrap().layouts.insert(label, layout);
+    //    }
+    //
+    //    pub fn get_layout(label: &str) -> Option<LayoutCache> {
+    //        TK_CACHE.lock().unwrap().layouts.get(label).cloned()
+    //    }
 
     pub fn set_is_hovered(label: String, is_hovered: bool) {
         TK_CACHE.lock()
@@ -633,6 +646,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let time = self.ui.imgui().get_time();
         self.ui
             .text(["|", "/", "-", "\\"][(time / 0.05) as usize & 3])
+    }
+
+    // hmm not sure if i need this... going to try to just encode it all into child region
+    #[allow(unused)]
+    // works by resizing on the NEXT frame
+    fn draw_layout<'b>(&'b self, layout: Layout<'b, Self>) {
+        let layout_label = self.imlabel("anonymous_layout");
+        for item in layout.items {
+            (item.draw_fn)();
+        }
     }
 
     fn draw_window<F: Fn(Keypress) + 'static, G: Fn() + 'static, H>(&self,
