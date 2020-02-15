@@ -35,6 +35,8 @@ lazy_static! {
 struct Window {
     pos: (f32, f32),
     size: (f32, f32),
+    // the amount of screen space remaining after the content has been rendered, used for figuring out how much room is available for flex inside of the window's layout
+    avail_after_content: (f32, f32),
 }
 
 //enum ScrollStatus {
@@ -639,7 +641,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                                     window_name: &str,
                                                                     size: (usize, usize),
                                                                     pos: (isize, isize),
-                                                                    f: &dyn Fn(),
+                                                                    draw_window_contents: &dyn Fn(),
                                                                     handle_keypress: Option<F>,
                                                                     onclose: Option<G>,
                                                                     onwindowchange: H)
@@ -678,11 +680,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
 
         window_builder.build(&|| {
-                          f();
+                          self.ui.group(draw_window_contents);
+                          let avail_after_content = self.ui.get_content_region_avail();
+
                           let mut cache = TK_CACHE.lock().unwrap();
                           let prev_window = cache.windows.get(window_name_str).cloned();
                           let drawn_window = Window { pos: self.ui.get_window_pos(),
-                                                      size: self.ui.get_window_size() };
+                                                      size: self.ui.get_window_size(),
+                                                      avail_after_content };
                           cache.windows
                                .insert(window_name_str.to_string(), drawn_window);
                           if prev_window.is_some() && prev_window.unwrap() != drawn_window {
