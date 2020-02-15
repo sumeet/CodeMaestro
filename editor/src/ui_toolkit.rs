@@ -3,12 +3,14 @@ use super::editor::Keypress;
 
 pub type Color = [f32; 4];
 
-pub trait UiToolkit {
+pub trait UiToolkit: Sized {
     type DrawResult;
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static);
     fn open_file_open_dialog(callback: impl Fn(&[u8]) + 'static);
     fn open_file_save_dialog(filename_suggestion: &str, contents: &[u8], mimetype: &str);
+    #[allow(unused)]
+    fn draw_layout<'a>(&'a self, layout: Layout<'a, Self>) -> Self::DrawResult;
     fn draw_code_line_separator(&self,
                                 plus_char: char,
                                 width: f32,
@@ -232,3 +234,38 @@ macro_rules! draw_all_iter {
 //               percentage }
 //    }
 //}
+
+#[allow(unused)]
+pub struct Layout<'a, T: UiToolkit> {
+    pub height: usize,
+    pub items: Vec<LayoutItem<'a, T>>,
+}
+
+impl<'a, T: UiToolkit> Layout<'a, T> {
+    fn new(height: usize, items: Vec<LayoutItem<'a, T>>) -> Self {
+        Self { height, items }
+    }
+}
+
+pub struct LayoutItem<'a, T: UiToolkit> {
+    pub typ: LayoutItemType,
+    pub draw_fn: DrawFnRef<'a, T>,
+}
+
+impl<'a, T: UiToolkit> LayoutItem<'a, T> {
+    fn new_unscrollable(draw_fn: DrawFnRef<'a, T>) -> Self {
+        LayoutItem { typ: LayoutItemType::NonScrollable,
+                     draw_fn }
+    }
+
+    fn new_scrollable(draw_fn: DrawFnRef<'a, T>, weight: u8) -> Self {
+        LayoutItem { typ: LayoutItemType::Scrollable { weight },
+                     draw_fn }
+    }
+}
+
+pub enum LayoutItemType {
+    NonScrollable,
+    // weight is relative to other
+    Scrollable { weight: u8 },
+}
