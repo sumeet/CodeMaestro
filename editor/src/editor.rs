@@ -1690,6 +1690,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         cont1.borrow_mut().remove_function(func_id);
                     })
             },
+            // TODO: temporarily(?) disable function test section
             //                                   &|| self.render_test_section(func),
         ])
     }

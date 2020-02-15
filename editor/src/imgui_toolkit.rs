@@ -38,6 +38,7 @@ struct Window {
     // the amount of screen space the content inside takes, this could actually be bigger
     // than our size, in which case scrollbars would activate if enabled on the window
     content_size: (f32, f32),
+    remaining_size: (f32, f32),
 }
 
 //enum ScrollStatus {
@@ -45,9 +46,20 @@ struct Window {
 //    AlreadyFocused,
 //}
 
+struct ChildRegion {
+    is_focused: bool,
+    height: f32,
+}
+
+impl ChildRegion {
+    fn new(is_focused: bool, height: f32) -> Self {
+        Self { is_focused, height }
+    }
+}
+
 struct TkCache {
     current_window_label: Option<ImString>,
-    focused_child_regions: HashMap<String, bool>,
+    child_regions: HashMap<String, ChildRegion>,
     windows: HashMap<String, Window>,
     replace_on_hover: HashMap<String, bool>,
     //scroll_for_keyboard_nav: HashMap<String, ScrollStatus>,
@@ -57,7 +69,7 @@ struct TkCache {
 
 impl TkCache {
     fn new() -> Self {
-        Self { focused_child_regions: HashMap::new(),
+        Self { child_regions: HashMap::new(),
                replace_on_hover: HashMap::new(),
                current_window_label: None,
                windows: HashMap::new(),
@@ -107,16 +119,25 @@ impl TkCache {
     pub fn is_focused(child_window_id: &str) -> bool {
         *TK_CACHE.lock()
                  .unwrap()
-                 .focused_child_regions
+                 .child_regions
                  .get(child_window_id)
+                 .map(|child_region| &child_region.is_focused)
                  .unwrap_or(&false)
     }
 
-    pub fn set_is_focused(child_window_id: &str, is_focused: bool) {
+    pub fn set_child_region_info(child_window_id: &str, child_region: ChildRegion) {
         TK_CACHE.lock()
                 .unwrap()
-                .focused_child_regions
-                .insert(child_window_id.to_string(), is_focused);
+                .child_regions
+                .insert(child_window_id.to_string(), child_region);
+    }
+
+    pub fn get_child_region_height(child_window_id: &str) -> Option<f32> {
+        TK_CACHE.lock()
+                .unwrap()
+                .child_regions
+                .get(child_window_id)
+                .map(|cr| cr.height)
     }
 
     pub fn is_hovered(label: &str) -> bool {
@@ -712,6 +733,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                           let prev_window = cache.windows.get(window_name_str).cloned();
                           let drawn_window = Window { pos: self.ui.get_window_pos(),
                                                       size: self.ui.get_window_size(),
+                                                      remaining_size:
+                                                          self.ui.get_content_region_avail(),
                                                       content_size };
                           cache.windows
                                .insert(window_name_str.to_string(), drawn_window);
@@ -744,17 +767,35 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                     height: ChildRegionHeight,
                                                     draw_context_menu: Option<&dyn Fn()>,
                                                     handle_keypress: Option<F>) {
+        let child_frame_id = self.imlabel("");
         let height = match height {
             ChildRegionHeight::ExpandFill { min_height } => {
                 // TODO: use imgui stack layout once it's in (https://github.com/ocornut/imgui/pull/846)
                 // ^^ i'm kind of implementing my own layout code, maybe we won't end up needing this ^
                 let current_window = TkCache::get_current_window();
+                // MAGICNUMBER: some pixels of padding, for some reason the remaining height gives
+                // a few pixels less than we actually need to use up the whole screen
+                let magic = 16;
                 match current_window {
                     // initially give back 0 if the window size is totally empty
                     None => 0.,
                     Some(window) => {
-                        let free_height = window.size.1 - window.content_size.1;
-                        free_height.max(min_height)
+                        let prev_height =
+                            TkCache::get_child_region_height(child_frame_id.as_ref()).unwrap_or(0.);
+                        println!("remaining size: {:?}", window.remaining_size);
+                        let remaining_height = window.remaining_size.1;
+                        if remaining_height == 0. {
+                            println!("equal");
+                            (prev_height + magic).max(min_height)
+                        } else if remaining_height < 0. {
+                            println!("less than");
+                            // this was resized to be smaller
+                            (prev_height + remaining_height).max(min_height)
+                        } else {
+                            println!("greater than");
+                            // greater than
+                            prev_height + remaining_height + magic
+                        }
                     }
                 }
             }
@@ -766,7 +807,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let f = 1.5;
         let brighter_bg = (default_bg.0 * f, default_bg.1 * f, default_bg.2 * f, default_bg.3);
 
-        let child_frame_id = self.imlabel("");
         let color = if TkCache::is_focused(child_frame_id.as_ref()) {
             brighter_bg
         } else {
@@ -784,7 +824,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     .show_borders(true)
                     .scrollbar_horizontal(true)
                     .build(&|| {
-                        draw_fn();
+                        let child_region_height = self.ui.get_content_region_avail().1;
+                        self.ui.group(draw_fn);
 
                         if let Some(keypress) = self.keypress {
                             if self.ui.is_child_window_focused() {
@@ -794,8 +835,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                             }
                         }
 
-                        TkCache::set_is_focused(child_frame_id.as_ref(),
-                                                self.ui.is_child_window_focused());
+                        TkCache::set_child_region_info(child_frame_id.as_ref(),
+                                   ChildRegion::new(self.ui.is_child_window_focused(),
+                                   child_region_height));
 
                         if let Some(draw_context_menu) = draw_context_menu {
                             let label = self.imlabel("draw_context_menu");
