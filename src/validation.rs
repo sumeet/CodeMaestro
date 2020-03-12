@@ -41,16 +41,16 @@ pub fn can_be_run(func: &dyn lang::Function, env_genie: &EnvGenie) -> bool {
     func.cs_code().all(|code| {
                       // TODO: find a way not to clone in here
                       let code = lang::CodeNode::Block(code.clone());
-                      let all_referred_functions_can_be_run = find_functions_referred_to_by(&code, env_genie).all(|func| {
-                                                                         can_be_run(func.as_ref(),
-                                                                                    env_genie)
-                                                                     });
+                      let all_referred_functions_can_be_run =
+                          find_functions_referred_to_by(&code, env_genie).all(|func| {
+                              can_be_run(func.as_ref(), env_genie)
+                          });
                       all_referred_functions_can_be_run
                   })
 }
 
 fn find_placeholder_nodes(root: &lang::CodeNode) -> impl Iterator<Item = lang::ID> + '_ {
-    root.all_children_dfs_iter()
+    root.self_with_all_children_dfs()
         .filter_map(|code_node| match code_node {
             lang::CodeNode::Placeholder(ph) => Some(ph.id),
             _ => None,
@@ -60,9 +60,10 @@ fn find_placeholder_nodes(root: &lang::CodeNode) -> impl Iterator<Item = lang::I
 fn find_functions_referred_to_by<'a>(root: &'a lang::CodeNode,
                                      env_genie: &'a EnvGenie)
                                      -> impl Iterator<Item = &'a Box<dyn lang::Function>> + 'a {
-    root.children_iter().filter_map(move |code_node| {
-                            let function_reference = code_node.as_function_reference().ok()?;
-                            Some(env_genie.find_function(function_reference.function_id)
-                                          .unwrap())
-                        })
+    root.self_with_all_children_dfs()
+        .filter_map(move |code_node| {
+            let function_reference = code_node.as_function_reference().ok()?;
+            Some(env_genie.find_function(function_reference.function_id)
+                          .unwrap())
+        })
 }

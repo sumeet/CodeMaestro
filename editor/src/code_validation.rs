@@ -5,7 +5,7 @@ use cs::builtins;
 use cs::env;
 use cs::env_genie;
 use cs::lang;
-use cs::lang::{Block, Function};
+use cs::lang::Function;
 
 use crate::code_editor::CodeLocation;
 use cs::env_genie::EnvGenie;
@@ -201,4 +201,3 @@ impl<'a> FixableProblemFinder<'a> {
         code_genie.guess_type(code_genie.root(), self.env_genie)
     }
 }
-

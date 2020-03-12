@@ -11,7 +11,6 @@ use super::lang;
 use crate::builtins::new_message;
 use crate::env::Interpreter;
 use crate::lang::Function;
-use crate::validation::find_placeholder_nodes;
 use crate::{builtins, resolve_all_futures, validation, EnvGenie};
 use itertools::Itertools;
 use std::pin::Pin;
@@ -63,11 +62,13 @@ impl ChatProgram {
             let env_genie = EnvGenie::new(&env);
             validation::can_be_run(self, &env_genie)
         };
-        println!("can be run: {:?}", can_be_run);
         if !can_be_run {
             // TODO: send a message here saying that the code had an issue with it, and would've
             // otherwise run
             println!("would run this chat program, but deciding not to because it would crash");
+            let env = interpreter.env.borrow();
+            let env_genie = EnvGenie::new(&env);
+            append_to_chat_buffer(&env_genie, "The code you're trying to run has some issues and cannot be run. Please get in touch with the author or the administrator.".to_owned());
             return None;
         }
 
@@ -146,6 +147,14 @@ pub fn message_received(interp: &Interpreter,
             resolve_all_futures(value).await;
         }
     })
+}
+
+fn append_to_chat_buffer(env_genie: &EnvGenie, reply: String) {
+    let chat_reply = env_genie.find_function(*builtins::CHAT_REPLY_FUNC_ID)
+                              .unwrap()
+                              .downcast_ref::<builtins::ChatReply>()
+                              .unwrap();
+    chat_reply.output_buffer.lock().unwrap().push(reply);
 }
 
 pub fn flush_reply_buffer(env_genie: &EnvGenie) -> Vec<String> {
