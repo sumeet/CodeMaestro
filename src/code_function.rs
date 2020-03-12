@@ -84,4 +84,9 @@ impl lang::Function for CodeFunction {
     fn returns(&self) -> lang::Type {
         self.return_type.clone()
     }
+
+    fn cs_code(&self) -> Box<dyn Iterator<Item = &lang::Block> + '_> {
+        let x: Box<dyn Iterator<Item = &lang::Block>> = Box::new(std::iter::once(&self.block));
+        x
+    }
 }

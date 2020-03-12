@@ -5,7 +5,7 @@ use cs::builtins;
 use cs::env;
 use cs::env_genie;
 use cs::lang;
-use cs::lang::Function;
+use cs::lang::{Block, Function};
 
 use crate::code_editor::CodeLocation;
 use cs::env_genie::EnvGenie;
@@ -28,9 +28,12 @@ pub fn validate_and_fix(env: &mut env::ExecutionEnvironment,
 
 fn all_code<'a>(env_genie: &'a EnvGenie)
                 -> impl Iterator<Item = (CodeLocation, &'a lang::Block)> + 'a {
+    let chat_programs = env_genie.list_chat_programs()
+                                 .map(|cp| (CodeLocation::ChatProgram(cp.id()), &cp.code));
+
     env_genie.list_code_funcs().map(|code_func| {
         (CodeLocation::Function(code_func.id()), &code_func.block)
-    }).chain(
+    }).chain(chat_programs).chain(
         env_genie.list_json_http_clients().flat_map(|json_http_client| {
             once((CodeLocation::JSONHTTPClientURLParams(json_http_client.id()), &json_http_client.gen_url_params))
                 .chain(once((CodeLocation::JSONHTTPClientURL(json_http_client.id()), &json_http_client.gen_url)))
@@ -38,8 +41,11 @@ fn all_code<'a>(env_genie: &'a EnvGenie)
     )
 }
 
+// TODO: should we have a warning-style popup (can be a side menu as well) showing if the program
+// changed anything automatically? like if we fixed the return type, telling the user what we did
+// so they're not confused by what just happened.... probably...
 #[derive(Debug)]
-enum Problem {
+enum FixableProblem {
     InvalidReturnType {
         location: CodeLocation,
         block: lang::Block,
@@ -63,7 +69,7 @@ impl<'a> Validator<'a> {
 
     fn validate_and_fix_all_code(&mut self) {
         let env_genie = env_genie::EnvGenie::new(self.env);
-        let problem_finder = ProblemFinder::new(&env_genie);
+        let problem_finder = FixableProblemFinder::new(&env_genie);
 
         let problems = all_code(&env_genie).flat_map(|(location, block)| {
                                                problem_finder.find_problems(location, block)
@@ -74,11 +80,11 @@ impl<'a> Validator<'a> {
         }
     }
 
-    fn fix(&mut self, problem: Problem) {
+    fn fix(&mut self, problem: FixableProblem) {
         match problem {
-            Problem::InvalidReturnType { location,
-                                         block,
-                                         required_return_type, } => {
+            FixableProblem::InvalidReturnType { location,
+                                                block,
+                                                required_return_type, } => {
                 let new_block = self.fix_return_type(block, required_return_type);
                 self.update_code(location, new_block);
             }
@@ -147,11 +153,11 @@ fn is_placeholder_expression(code_node: Option<&lang::CodeNode>) -> bool {
     }
 }
 
-struct ProblemFinder<'a> {
+struct FixableProblemFinder<'a> {
     env_genie: &'a env_genie::EnvGenie<'a>,
 }
 
-impl<'a> ProblemFinder<'a> {
+impl<'a> FixableProblemFinder<'a> {
     fn new(env_genie: &'a env_genie::EnvGenie<'a>) -> Self {
         Self { env_genie }
     }
@@ -159,19 +165,19 @@ impl<'a> ProblemFinder<'a> {
     fn find_problems(&self,
                      location: CodeLocation,
                      block: &lang::Block)
-                     -> impl Iterator<Item = Problem> {
+                     -> impl Iterator<Item = FixableProblem> {
         self.find_return_type_problem(location, block).into_iter()
     }
 
     fn find_return_type_problem(&self,
                                 location: CodeLocation,
                                 block: &lang::Block)
-                                -> Option<Problem> {
+                                -> Option<FixableProblem> {
         let required_return_type = self.required_return_type(location)?;
         if !required_return_type.matches(&self.returned_type(block)) {
-            Some(Problem::InvalidReturnType { location,
-                                              block: block.clone(),
-                                              required_return_type })
+            Some(FixableProblem::InvalidReturnType { location,
+                                                     block: block.clone(),
+                                                     required_return_type })
         } else {
             None
         }
@@ -195,3 +201,4 @@ impl<'a> ProblemFinder<'a> {
         code_genie.guess_type(code_genie.root(), self.env_genie)
     }
 }
+

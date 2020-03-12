@@ -74,6 +74,9 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn id(&self) -> ID;
     fn takes_args(&self) -> Vec<ArgumentDefinition>;
     fn returns(&self) -> Type;
+    fn cs_code(&self) -> Box<dyn Iterator<Item = &Block> + '_> {
+        Box::new(std::iter::empty())
+    }
 }
 
 impl fmt::Debug for dyn Function {
@@ -163,10 +166,10 @@ impl Value {
         }
     }
 
-    pub fn as_str(&self) -> Option<&str> {
+    pub fn as_str(&self) -> Result<&str, Box<dyn std::error::Error>> {
         match self {
-            Value::String(s) => Some(s),
-            _ => None,
+            Value::String(s) => Ok(s),
+            _ => Err(format!("expected String, but got {:?}", self).into()),
         }
     }
 
@@ -325,10 +328,10 @@ impl Type {
 }
 
 impl CodeNode {
-    pub fn as_function_reference(&self) -> &FunctionReference {
+    pub fn as_function_reference(&self) -> Result<&FunctionReference, Box<dyn std::error::Error>> {
         match self {
-            CodeNode::FunctionReference(ref fr) => fr,
-            _ => panic!("not a function reference"),
+            CodeNode::FunctionReference(ref fr) => Ok(fr),
+            _ => Err(format!("expected function reference, got {:?} instead", self).into()),
         }
     }
 

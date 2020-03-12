@@ -685,7 +685,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         if let Some(open_window) = open_window {
             self.draw_managed_window(&open_window, "Quick start guide", &|| {
                 self.ui_toolkit.draw_all(&[
-                    &|| self.ui_toolkit.draw_wrapped_text(colorscheme!(text_color), "Hi, my name is \u{f544}. I'm here to serve your chat room, and anyone can add programs to me."),
+                    &|| self.ui_toolkit.draw_wrapped_text(colorscheme!(text_color), "Hi, I'm a \u{f544}, and I'm here to serve your chat room. Anyone can add programs to me from this screen, you can press the button below to get started."),
                     &|| self.ui_toolkit.draw_wrapped_text(colorscheme!(text_color), ""),
                     &|| {
                         let cmd_buffer = Rc::clone(&self.command_buffer);

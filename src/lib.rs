@@ -16,6 +16,7 @@ pub mod lang;
 pub mod structs;
 #[macro_use]
 pub mod env;
+pub mod validation;
 mod click_handling;
 pub mod code_loading;
 pub mod config;

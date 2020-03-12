@@ -11,7 +11,8 @@ use super::lang;
 use crate::builtins::new_message;
 use crate::env::Interpreter;
 use crate::lang::Function;
-use crate::{builtins, resolve_all_futures, EnvGenie};
+use crate::validation::find_placeholder_nodes;
+use crate::{builtins, resolve_all_futures, validation, EnvGenie};
 use itertools::Itertools;
 use std::pin::Pin;
 
@@ -56,6 +57,20 @@ impl ChatProgram {
         if !self.prefix_re().is_match(&message_text) {
             return None;
         }
+
+        let can_be_run = {
+            let env = interpreter.env.borrow();
+            let env_genie = EnvGenie::new(&env);
+            validation::can_be_run(self, &env_genie)
+        };
+        println!("can be run: {:?}", can_be_run);
+        if !can_be_run {
+            // TODO: send a message here saying that the code had an issue with it, and would've
+            // otherwise run
+            println!("would run this chat program, but deciding not to because it would crash");
+            return None;
+        }
+
         let argument_text = self.strip_prefix(&message_text);
         let message_struct = new_message(sender, argument_text, message_text);
         Some(self.call(interpreter, hashmap! {*MESSAGE_ARG_ID => message_struct}))
@@ -102,6 +117,11 @@ impl lang::Function for ChatProgram {
     fn returns(&self) -> lang::Type {
         lang::Type::from_spec(&*lang::NULL_TYPESPEC)
     }
+
+    fn cs_code(&self) -> Box<dyn Iterator<Item = &lang::Block> + '_> {
+        let x: Box<dyn Iterator<Item = &lang::Block>> = Box::new(std::iter::once(&self.code));
+        x
+    }
 }
 
 pub fn message_received(interp: &Interpreter,
@@ -118,15 +138,11 @@ pub fn message_received(interp: &Interpreter,
     };
     let triggered_values =
         chat_programs.iter()
-                     .filter_map(|cp| {
-                         println!("{:?}", cp);
-                         cp.try_to_trigger(interp.dup(), sender.clone(), text.clone())
-                     })
+                     .filter_map(|cp| cp.try_to_trigger(interp.dup(), sender.clone(), text.clone()))
                      .collect_vec();
 
     Box::pin(async move {
         for value in triggered_values {
-            println!("there's a triggered value d00d");
             resolve_all_futures(value).await;
         }
     })

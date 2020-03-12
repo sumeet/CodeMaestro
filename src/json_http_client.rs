@@ -71,6 +71,10 @@ impl lang::Function for JSONHTTPClient {
     fn returns(&self) -> lang::Type {
         new_result(self.return_type.clone())
     }
+
+    fn cs_code(&self) -> Box<dyn Iterator<Item = &lang::Block> + '_> {
+        Box::new(std::iter::once(&self.gen_url_params).chain(std::iter::once(&self.gen_url)))
+    }
 }
 
 impl function::SettableArgs for JSONHTTPClient {
