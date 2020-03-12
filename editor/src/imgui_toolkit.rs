@@ -351,6 +351,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_wrapped_text(&self, color: Color, text: &str) {
+        // TODO: explain wtf all this code is for!!!
         let style = self.ui.imgui().style();
         let padding = style.frame_padding;
         let x_padding = padding.x;
@@ -1041,7 +1042,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_text_box(&self, text: &str) {
-        self.ui.text(text);
+        self.ui.with_text_wrap_pos(0., &|| {
+                   self.ui.text(text);
+               });
         // GHETTO: text box is always scrolled to the bottom
         unsafe { imgui_sys::igSetScrollHereY(1.0) };
     }
