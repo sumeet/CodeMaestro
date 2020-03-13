@@ -212,6 +212,7 @@ impl CodeEditor {
             }
             lang::CodeNode::Argument(_)
             | lang::CodeNode::Assignment(_)
+            | lang::CodeNode::Block(_)
             | lang::CodeNode::ListIndex(_) => {
                 self.mark_as_editing(InsertionPoint::Replace(selected_node_id));
             }
@@ -317,7 +318,7 @@ impl CodeEditor {
         }
     }
 
-    fn delete_selected_code(&mut self) -> Option<()> {
+    pub fn delete_selected_code(&mut self) -> Option<()> {
         let deletion_result = self.mutation_master.delete_code(self.selected_node_id?,
                                                                &self.code_genie,
                                                                self.selected_node_id);

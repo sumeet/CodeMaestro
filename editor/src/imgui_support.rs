@@ -30,7 +30,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     let mut imgui = ImGui::init();
     imgui.set_ini_filename(None);
 
-    let hidpi_factor = window.get_hidpi_factor();
+    // let hidpi_factor = window.get_hidpi_factor();
     let hidpi_factor = 1.0;
 
     let font_size = (17.0 * hidpi_factor) as f32;

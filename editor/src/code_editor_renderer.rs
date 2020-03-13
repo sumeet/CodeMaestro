@@ -13,12 +13,11 @@ use crate::colorscheme;
 use crate::draw_all_iter;
 use crate::editor::Keypress;
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
-use crate::ui_toolkit::ChildRegionHeight;
+use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::CodeNode;
 use cs::structs;
-use crate::code_context_menu_renderer::render_context_menu;
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 // TODO: move this into the color scheme, but we'll leave it in here for now -- lazy
@@ -616,10 +615,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         match self.insertion_point() {
             Some(InsertionPoint::Replace(id)) | Some(InsertionPoint::Wrap(id))
-            if { id == code_node.id() && !self.is_rendering_menu_atm() } =>
-                {
-                    return self.render_insert_code_node()
-                }
+                if { id == code_node.id() && !self.is_rendering_menu_atm() } =>
+            {
+                return self.render_insert_code_node()
+            }
             _ => {}
         }
 
@@ -662,23 +661,47 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             }
         };
 
-        // testing things out
-//        let
-        let draw = || render_context_menu(code_node, self.ui_toolkit, &draw);
-//        let draw = || {
-//            self.ui_toolkit.context_menu(
-//                &draw,
-//                &|| {
-//                    let delstring = format!("Delete {}", code_node.description());
-//                    self.ui_toolkit.draw_menu_item(&delstring, || ())
-//                }
-//            )
-//        };
+        let draw = || self.render_context_menu(code_node, &draw);
 
         if self.is_selected(code_node.id()) {
             self.draw_selected(self.code_node_cursor_scroll_hash(code_node), &draw)
         } else {
             self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
+        }
+    }
+
+    pub fn render_context_menu(&self,
+                               code_node: &CodeNode,
+                               draw_code_fn: DrawFnRef<T>)
+                               -> T::DrawResult {
+        match code_node {
+            CodeNode::FunctionReference(_)
+            | CodeNode::FunctionCall(_)
+            | CodeNode::Argument(_)
+            | CodeNode::StringLiteral(_)
+            | CodeNode::NullLiteral(_)
+            | CodeNode::Assignment(_)
+            | CodeNode::Block(_)
+            | CodeNode::VariableReference(_)
+            | CodeNode::Placeholder(_)
+            | CodeNode::StructLiteral(_)
+            | CodeNode::StructLiteralField(_)
+            | CodeNode::Conditional(_)
+            | CodeNode::Match(_)
+            | CodeNode::ListLiteral(_)
+            | CodeNode::StructFieldGet(_)
+            | CodeNode::NumberLiteral(_)
+            | CodeNode::ListIndex(_) => {
+                self.ui_toolkit.context_menu(draw_code_fn, &|| {
+                                   let cmd_buffer = Rc::clone(&self.command_buffer);
+                                   self.ui_toolkit.draw_menu_item("Delete", move || {
+                                                      cmd_buffer.borrow_mut()
+                                                                .add_editor_command(|editor| {
+                                                                    editor.delete_selected_code();
+                                                                })
+                                                  })
+                               })
+            }
         }
     }
 

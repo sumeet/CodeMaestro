@@ -16,7 +16,6 @@ pub mod lang;
 pub mod structs;
 #[macro_use]
 pub mod env;
-pub mod validation;
 mod click_handling;
 pub mod code_loading;
 pub mod config;
@@ -24,6 +23,7 @@ pub mod env_genie;
 pub mod http_request;
 pub mod json_http_client;
 mod result;
+pub mod validation;
 #[cfg(not(target_arch = "wasm32"))]
 #[macro_use]
 extern crate diesel;

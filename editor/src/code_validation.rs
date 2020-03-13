@@ -112,7 +112,8 @@ impl<'a> Validator<'a> {
             if is_placeholder_expression(block.expressions.last()) {
                 block.expressions.pop();
             }
-            code_generation::new_placeholder("Return value".to_string(), required_return_type)
+            code_generation::new_placeholder("Return value placeholder".to_string(),
+                                             required_return_type)
         };
         block.expressions.push(expr_to_insert_at_the_end);
         block
