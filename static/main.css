@@ -123,6 +123,10 @@ replaceonhoverhack {
     position: fixed;
 }
 
+.context_menu_trigger.triggered {
+
+}
+
 /* see YewToolkit.buttonized() */
 .buttonized-hover-overlay:hover {
     opacity: 100 !important;

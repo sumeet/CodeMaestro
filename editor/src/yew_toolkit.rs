@@ -502,6 +502,8 @@ impl UiToolkit for YewToolkit {
 
         let context_menu_ref = NodeRef::default();
         let context_menu_ref2 = context_menu_ref.clone();
+        let context_menu_trigger_ref = NodeRef::default();
+        let context_menu_trigger_ref2 = context_menu_trigger_ref.clone();
 
         // TODO: border color is hardcoded, ripped from imgui
         html! {
@@ -511,15 +513,17 @@ impl UiToolkit for YewToolkit {
                 </div>
 
                 <div style={ format!("border: 1px solid #6a6a6a; white-space: nowrap; background-color: {}; overflow: auto; {}", rgba(bg), height_css) },
+                    ref={context_menu_trigger_ref},
                     tabindex=0,
                     class="context_menu_trigger",
                     oncontextmenu=|e| {
                         let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
+                        let context_menu_trigger_el : Element = (&context_menu_trigger_ref2).try_into().unwrap();
                         if is_context_menu {
                             e.prevent_default();
                             js! {
                                 var e = @{&e};
-                                @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
+                                @{show_right_click_menu}(@{context_menu_el}, @{context_menu_trigger_el}, e.clientX, e.clientY);
                             }
                         }
                         Msg::DontRedraw
@@ -1145,20 +1149,22 @@ impl UiToolkit for YewToolkit {
                     -> Self::DrawResult {
         let context_menu_ref = NodeRef::default();
         let context_menu_ref2 = context_menu_ref.clone();
+        let context_menu_trigger_ref = NodeRef::default();
+        let context_menu_trigger_ref2 = context_menu_trigger_ref.clone();
         html! {
-            // w/o pointer-events, the click handlers inside won't work
             <div>
                 <div ref={context_menu_ref}, class="context_menu", style="display: none;",>
                     { draw_context_menu() }
                 </div>
 
-                <div class="context_menu_trigger", oncontextmenu=|e| {
+                <div ref={context_menu_trigger_ref}, class="context_menu_trigger", oncontextmenu=|e| {
                     let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
+                    let context_menu_trigger_el : Element = (&context_menu_trigger_ref2).try_into().unwrap();
                     e.prevent_default();
                     e.stop_propagation();
                     js! {
                         var e = @{&e};
-                        @{show_right_click_menu}(@{context_menu_el}, e.clientX, e.clientY);
+                        @{show_right_click_menu}(@{context_menu_el}, @{context_menu_trigger_el}, e.clientX, e.clientY);
                     }
                     Msg::DontRedraw
                 }, >
@@ -1380,11 +1386,15 @@ fn raw_html(raw_html: &str) -> Html<Model> {
     VNode::VRef(node)
 }
 
-fn show_right_click_menu(el: stdweb::Value, page_x: stdweb::Value, page_y: stdweb::Value) {
+fn show_right_click_menu(el1: stdweb::Value,
+                         el2: stdweb::Value,
+                         page_x: stdweb::Value,
+                         page_y: stdweb::Value) {
     let page_x = num!(i32, page_x);
     let page_y = num!(i32, page_y);
-    let context_menu_el: Element = el.try_into().unwrap();
+    let context_menu_el: Element = el1.try_into().unwrap();
+    let context_menu_trigger_el: Element = el2.try_into().unwrap();
     js! {
-        showRightClickMenu(@{&context_menu_el}, @{&page_x}, @{&page_y});
+        showRightClickMenu(@{&context_menu_el}, @{&context_menu_trigger_el}, @{&page_x}, @{&page_y});
     };
 }

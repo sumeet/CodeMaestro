@@ -676,12 +676,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                -> T::DrawResult {
         match code_node {
             CodeNode::FunctionReference(_)
-            | CodeNode::FunctionCall(_)
-            | CodeNode::Argument(_)
             | CodeNode::StringLiteral(_)
             | CodeNode::NullLiteral(_)
             | CodeNode::Assignment(_)
-            | CodeNode::Block(_)
             | CodeNode::VariableReference(_)
             | CodeNode::Placeholder(_)
             | CodeNode::StructLiteral(_)
@@ -702,11 +699,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                   })
                                })
             }
+            CodeNode::FunctionCall(_) | CodeNode::Block(_) | CodeNode::Argument(_) => {
+                draw_code_fn()
+            }
         }
     }
 
     // this identifies the current selection to the UI, so it can remember the scroll of the current
-    // item. blahblahblahblah
+    // item
     fn code_node_cursor_scroll_hash(&self, code_node: &lang::CodeNode) -> String {
         format!("{:?}:{}", self.code_editor.location, code_node.id())
     }
