@@ -506,6 +506,7 @@ impl UiToolkit for YewToolkit {
         let context_menu_trigger_ref2 = context_menu_trigger_ref.clone();
 
         // TODO: border color is hardcoded, ripped from imgui
+        // TODO: this isn't using the button_active color from the colorscheme
         html! {
             <div style={ container_css },>
                 <div ref={context_menu_ref}, class="context_menu", style="display: none;",>

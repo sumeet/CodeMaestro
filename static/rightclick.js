@@ -10,14 +10,16 @@ function showRightClickMenu(contextMenuEl, contextMenuTriggerEl, pageX, pageY) {
     }
 
     if (contextMenuTriggerEl) {
-        console.log(contextMenuTriggerEl);
+        showContextMenuActiveOverlay(contextMenuTriggerEl);
     }
 }
 
 function showContextMenuActiveOverlay(contextMenuTriggerEl) {
+    contextMenuTriggerEl.classList.add('triggered');
 }
 
 function hideContextMenuActiveOverlay(contextMenuTriggerEl) {
+    contextMenuTriggerEl.classList.remove('triggered');
 }
 
 // hide context menus after clicking on anything
@@ -32,6 +34,8 @@ function removeContextMenuDivIfPresent() {
     if (contextMenuDiv) {
         contextMenuDiv.remove();
     }
+
+    document.querySelectorAll('.context_menu_trigger.triggered').forEach(hideContextMenuActiveOverlay);
 }
 
 function insertContextMenuIntoGlobalDiv(el) {

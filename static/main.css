@@ -124,7 +124,21 @@ replaceonhoverhack {
 }
 
 .context_menu_trigger.triggered {
+    position: relative;
+}
 
+.context_menu_trigger.triggered:after {
+  content: " ";
+  z-index: 10;
+  display: block;
+  position: absolute;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* TODO: this isn't using the button_active color from the colorscheme */
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.5);
 }
 
 /* see YewToolkit.buttonized() */
