@@ -610,7 +610,8 @@ impl InsertLiteralOptionGenerator {
                           return_type: &lang::Type)
                           -> InsertCodeMenuOption {
         InsertCodeMenuOption { group_name: LITERALS_GROUP,
-                               sort_key: format!("placeholder{}", input_str),
+                               // placeholder should also show up last, but before null literal
+                               sort_key: format!("zzzzplaceholder{}", input_str),
                                is_selected: false,
                                new_node: code_generation::new_placeholder(input_str,
                                                                           return_type.clone()) }
