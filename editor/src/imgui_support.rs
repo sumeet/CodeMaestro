@@ -3,13 +3,15 @@ use glium::glutin::Event;
 use glium::glutin::VirtualKeyCode as Key;
 use glium::glutin::WindowEvent::*;
 use imgui::{
-    FontConfig, FontGlyphRange, FontGlyphRanges, FontSource, ImFontConfig, ImGui, ImGuiCol, Ui,
+    Context, FontConfig, FontGlyphRange, FontGlyphRanges, FontSource, ImFontConfig, ImGui,
+    ImGuiCol, Ui,
 };
 use std::time::Instant;
 
 use super::editor::{Key as AppKey, Keypress};
 use crate::colorscheme;
 use imgui_winit_support;
+use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
 pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                                                     clear_color: [f32; 4],
@@ -29,10 +31,16 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     let display = Display::new(builder, context, &events_loop).unwrap();
     let window = display.gl_window();
 
-    let mut imgui = ImGui::init();
+    let mut imgui = Context::create();
     imgui.set_ini_filename(None);
 
-    let hidpi_factor = window.get_hidpi_factor();
+    let mut platform = WinitPlatform::init(&mut imgui);
+    {
+        let gl_window = display.gl_window();
+        platform.attach_window(imgui.io_mut(), &window.window(), HiDpiMode::Rounded);
+    }
+
+    let hidpi_factor = platform.hidpi_factor();
     //let hidpi_factor = 1.0;
 
     let font_size = (17.0 * hidpi_factor) as f32;
@@ -172,7 +180,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
 
     let mut renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
 
-    imgui_winit_support::configure_keys(&mut imgui);
+    // TODO: not sure if i need this in some form or if i can totally get rid of this line
+    //imgui_winit_support::configure_keys(&mut imgui);
 
     let mut last_frame = Instant::now();
     let mut quit = false;
@@ -193,10 +202,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
         let mut keypress: Option<Keypress> = None;
 
         events_loop.poll_events(|event| {
-                       imgui_winit_support::handle_event(&mut imgui,
-                                                         &event,
-                                                         window.get_hidpi_factor(),
-                                                         hidpi_factor);
+                       platform.handle_event(imgui.io_mut(), &window.window(), &event);
 
                        if let Event::WindowEvent { event, .. } = event {
                            match event {
@@ -222,26 +228,20 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
                        }
                    });
 
-        let now = Instant::now();
-        let delta = now - last_frame;
-        let delta_s = delta.as_secs() as f32 + delta.subsec_nanos() as f32 / 1_000_000_000.0;
-        last_frame = now;
-
-        imgui_winit_support::update_mouse_cursor(&imgui, &window);
-
-        let frame_size = imgui_winit_support::get_frame_size(&window, hidpi_factor).unwrap();
-
-        let ui = imgui.frame(frame_size, delta_s);
+        let io = imgui.io_mut();
+        platform.prepare_frame(io, &window.window())
+                .expect("Failed to start frame");
+        last_frame = io.update_delta_time(last_frame);
+        let ui = imgui.frame();
         if !run_ui(&ui, keypress) {
             break;
         }
 
         let mut target = display.draw();
-        target.clear_color(clear_color[0],
-                           clear_color[1],
-                           clear_color[2],
-                           clear_color[3]);
-        renderer.render(&mut target, ui).expect("Rendering failed");
+        target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+        platform.prepare_render(&ui, &window.window());
+        renderer.render(&mut target, ui.render())
+                .expect("Rendering failed");
         target.finish().unwrap();
 
         if quit {

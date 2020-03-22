@@ -9,6 +9,7 @@ use nfd;
 use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use imgui::*;
+use imgui_sys::ImGuiStyleVar_ItemSpacing;
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
@@ -21,8 +22,8 @@ use std::sync::Mutex;
 
 // forgot why we need this exactly, but it needs to be passed in some places to imgui support
 const CLEAR_COLOR: [f32; 4] = [1.0, 1.0, 1.0, 0.0];
-const BUTTON_SIZE: (f32, f32) = (0.0, 0.0);
-const INITIAL_WINDOW_SIZE: (f32, f32) = (400.0, 500.0);
+const BUTTON_SIZE: [f32; 2] = [0.0, 0.0];
+const INITIAL_WINDOW_SIZE: [f32; 2] = [400.0, 500.0];
 // from http://jkorpela.fi/chars/spaces.html, used for indentation
 const SPACE: &'static str = "\u{3000}";
 
@@ -223,18 +224,18 @@ impl<'a> ImguiToolkit<'a> {
     fn is_last_drawn_item_totally_visible(&self) -> bool {
         let window_min = self.ui.get_window_pos();
         let window_size = self.ui.get_window_size();
-        let window_max = (window_min.0 + window_size.0, window_min.1 + window_size.1);
+        let window_max = (window_min[0] + window_size[0], window_min[1] + window_size[1]);
 
         let item_min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let item_max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
 
-        (window_min.0 <= item_min.x)
+        (window_min[0] <= item_min.x)
         && (item_min.x <= window_max.0)
-        && (window_min.0 <= item_max.x)
+        && (window_min[0] <= item_max.x)
         && (item_max.x <= window_max.0)
-        && (window_min.1 <= item_min.y)
+        && (window_min[1] <= item_min.y)
         && (item_min.y <= window_max.1)
-        && (window_min.1 <= item_max.y)
+        && (window_min[1] <= item_max.y)
         && (item_max.y <= window_max.1)
     }
 
@@ -265,7 +266,7 @@ impl<'a> ImguiToolkit<'a> {
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui
             .get_window_draw_list()
-            .add_rect(min, max, colorscheme!(button_active_color))
+            .add_rect(min.into(), max.into(), colorscheme!(button_active_color))
             .filled(true)
             .build();
     }
@@ -354,18 +355,18 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         // TODO: explain wtf all this code is for!!!
         let style = self.ui.imgui().style();
         let padding = style.frame_padding;
-        let x_padding = padding.x;
+        let x_padding = padding[0];
 
         let current_cursor_pos = self.ui.get_cursor_pos();
 
-        let x_pos_to_indent_first_line = current_cursor_pos.0 + x_padding;
+        let x_pos_to_indent_first_line = current_cursor_pos[0] + x_padding;
 
-        let width_of_one_space = self.ui.calc_text_size(&SPACE_IMSTR, false, 0.).x;
+        let width_of_one_space = self.ui.calc_text_size(&SPACE_IMSTR, false, 0.)[0];
         let number_of_spaces_to_prepad = (x_pos_to_indent_first_line / width_of_one_space).floor();
         let text = SPACE.repeat(number_of_spaces_to_prepad as usize) + text;
 
         self.ui
-            .set_cursor_pos((x_padding * 2., current_cursor_pos.1));
+            .set_cursor_pos([x_padding * 2., current_cursor_pos[1]]);
         //unsafe { imgui_sys::igAlignTextToFramePadding() };
 
         self.ui.with_text_wrap_pos(0., &|| {
@@ -398,7 +399,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         unsafe {
             // HACK: the igIsAnyItemHovered allows me to click buttons while focusing a text field.
             // good enough for now.
-            if imgui_sys::igIsItemHovered(imgui_sys::ImGuiHoveredFlags::empty())
+            if self.ui.is_item_hovered()
                || (!imgui_sys::igIsAnyItemActive() && !imgui_sys::igIsAnyItemHovered())
             {
                 imgui_sys::igSetKeyboardFocusHere(-1)
@@ -415,7 +416,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
             self.ui
                 .get_window_draw_list()
-                .add_rect(min, max, colorscheme!(button_hover_color))
+                .add_rect(min.into(), max.into(), colorscheme!(button_hover_color))
                 .filled(true)
                 .build();
         }
@@ -438,8 +439,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let status_height = (y_padding * 2.0) + font_size;
 
         let display_size = self.ui.imgui().display_size();
-        let window_pos = (0.0, display_size.1 - status_height);
-        let window_size = (display_size.0, status_height);
+        let window_pos = [0.0, display_size.1 - status_height];
+        let window_size = [display_size.0, status_height];
 
         self.ui.with_style_vars(&[StyleVar::WindowRounding(0.0),
                                   StyleVar::WindowPadding([x_padding, y_padding])],
@@ -479,8 +480,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        let width = unsafe { imgui_sys::igGetContentRegionMax_nonUDT2().x } - frame_padding.x * 2.;
-        self.ui.dummy((width, max.y - min.y))
+        let width = unsafe { imgui_sys::igGetContentRegionMax_nonUDT2().x } - frame_padding[0] * 2.;
+        self.ui.dummy([width, max.y - min.y])
     }
 
     fn draw_with_bgcolor(&self, bgcolor: Color, draw_fn: DrawFnRef<Self>) {
@@ -494,7 +495,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let style = self.ui.imgui().style();
         let mut blankoutbgcolor = style.colors[ImGuiCol::FrameBg as usize];
         // if framebg color is transparent, then make it opaque
-        blankoutbgcolor.w = 1.;
+        blankoutbgcolor[3] = 1.;
 
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
@@ -502,10 +503,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         // tbh
         {
             let drawlist = self.ui.get_window_draw_list();
-            drawlist.add_rect(min, max, blankoutbgcolor)
+            drawlist.add_rect(min.into(), max.into(), blankoutbgcolor)
                     .filled(true)
                     .build();
-            drawlist.add_rect(min, max, bgcolor).filled(true).build();
+            drawlist.add_rect(min.into(), max.into(), bgcolor)
+                    .filled(true)
+                    .build();
         }
 
         self.ui.set_cursor_pos(orig_cursor_pos);
@@ -516,7 +519,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        self.ui.set_cursor_screen_pos((min.x, max.y));
+        self.ui.set_cursor_screen_pos([min.x, max.y]);
     }
 
     fn draw_full_width_heading(&self, bgcolor: Color, inner_padding: (f32, f32), text: &str) {
@@ -524,16 +527,18 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let style = self.ui.imgui().style();
         let padding = style.frame_padding;
 
-        let full_width = unsafe { imgui_sys::igGetContentRegionAvailWidth() };
+        //let full_width = unsafe { imgui_sys::igGetContentRegionAvailWidth() };
+        let full_width = unsafe { imgui_sys::igGetContentRegionAvail_nonUDT2().x };
 
         let original_cursor_pos = self.ui.get_cursor_pos();
         let label = im_str!("{}", text);
         let text_size = self.ui.calc_text_size(&label, false, 0.);
-        let total_size = (full_width, text_size.y + (padding.y * 2.) + (inner_padding.1 * 2.));
+        let total_size = [full_width,
+                          text_size[1] + (padding[1] * 2.) + (inner_padding.1 * 2.)];
 
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
-        let end_of_button_bg_rect =
-            (draw_cursor_pos.0 + total_size.0, draw_cursor_pos.1 + total_size.1);
+        let end_of_button_bg_rect = [draw_cursor_pos[0] + total_size[0],
+                                     draw_cursor_pos[1] + total_size[1]];
         self.ui
             .get_window_draw_list()
             .add_rect(draw_cursor_pos, end_of_button_bg_rect, bgcolor)
@@ -542,8 +547,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
 
-        let buttony_text_start_cursor_pos = (draw_cursor_pos.0 + padding.x + inner_padding.0,
-                                             draw_cursor_pos.1 + padding.y + inner_padding.1);
+        let buttony_text_start_cursor_pos = [draw_cursor_pos[0] + padding[0] + inner_padding.0,
+                                             draw_cursor_pos[1] + padding[1] + inner_padding.1];
 
         let draw_list = self.ui.get_window_draw_list();
         let text_color = style.colors[ImGuiCol::Text as usize];
@@ -557,27 +562,27 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let orig_cursor_pos = self.ui.get_cursor_pos();
 
         let mut starting_point_for_cursor = orig_cursor_pos;
-        starting_point_for_cursor.0 += margin.0 / 2.;
-        starting_point_for_cursor.1 += margin.1 / 2.;
+        starting_point_for_cursor[0] += margin.0 / 2.;
+        starting_point_for_cursor[1] += margin.1 / 2.;
         self.ui.set_cursor_pos(starting_point_for_cursor);
         self.ui.group(draw_fn);
         let drawn_rect_size = self.ui.get_item_rect_size();
 
         self.ui.set_cursor_pos(orig_cursor_pos);
         self.ui
-            .dummy((drawn_rect_size.0 + margin.0, drawn_rect_size.1 + margin.1))
+            .dummy([drawn_rect_size[0] + margin.0, drawn_rect_size[1] + margin.1])
     }
 
     fn draw_text_with_label(&self, text: &str, label: &str) -> Self::DrawResult {
         self.ui
-            .label_text(im_str!("{}", label), im_str!("{}", text))
+            .label_text(&im_str!("{}", label), &im_str!("{}", text))
     }
 
     fn draw_all_on_same_line(&self, draw_fns: &[&dyn Fn()]) {
         if let Some((last_draw_fn, first_draw_fns)) = draw_fns.split_last() {
             for draw_fn in first_draw_fns {
                 draw_fn();
-                self.ui.same_line_spacing(0.0, 0.0);
+                self.ui.same_line_with_spacing(0.0, 0.0);
             }
             last_draw_fn();
         }
@@ -600,12 +605,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let (first_rhs, rest) = rhss.split_first().unwrap();
         let (last_rhs, inner_rhs) = rest.split_last().unwrap();
 
-        unsafe {
-            imgui_sys::igPushStyleVarVec2(imgui_sys::ImGuiStyleVar::ItemSpacing, (0.0, -1.0).into())
-        };
+        let mut style_var = self.ui.push_style_var(StyleVar::ItemSpacing([0.0, -1.0]));
         self.ui.group(|| lhs());
 
-        self.ui.same_line_spacing(0., 0.);
+        self.ui.same_line_with_spacing(0., 0.);
         let cursor_pos = unsafe { imgui_sys::igGetCursorPosX() };
 
         first_rhs();
@@ -614,7 +617,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             unsafe { imgui_sys::igSetCursorPosX(cursor_pos) };
             draw();
         }
-        unsafe { imgui_sys::igPopStyleVar(1) };
+        // this pops the style var
+        std::mem::drop(style_var);
         unsafe { imgui_sys::igSetCursorPosX(cursor_pos) };
         last_rhs();
     }
@@ -627,9 +631,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui
             .window(&self.imlabel("draw_centered_popup"))
             .size(INITIAL_WINDOW_SIZE, ImGuiCond::Always)
-            .position((display_size_x * 0.5, display_size_y * 0.5),
+            .position([display_size_x * 0.5, display_size_y * 0.5],
                       ImGuiCond::Always)
-            .position_pivot((0.5, 0.5))
+            .position_pivot([0.5, 0.5])
             .resizable(false)
             .scrollable(true)
             .title_bar(false)
@@ -654,9 +658,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .window(&self.imlabel("top_right_overlay"))
             .flags(ImGuiWindowFlags::NoNav)
             .position(// 2.5: HARDCODE HAX, taking into account menubar height
-                      (display_size_x - distance, distance * 2.5),
+                      [display_size_x - distance, distance * 2.5],
                       ImGuiCond::Always)
-            .position_pivot((1.0, 0.0))
+            .position_pivot([1.0, 0.0])
             .movable(false)
             .title_bar(false)
             .resizable(false)
@@ -673,9 +677,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .window(&self.imlabel("top_left"))
             .flags(ImGuiWindowFlags::NoNav)
             .position(// 2.5: HARDCODE HAX, taking into account menubar height
-                      (distance * 2.5, distance * 2.5),
+                      [distance * 2.5, distance * 2.5],
                       ImGuiCond::Always)
-            .position_pivot((1.0, 0.0))
+            .position_pivot([1.0, 0.0])
             .movable(false)
             .title_bar(false)
             .resizable(false)
@@ -712,16 +716,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             // size == (0, 0) means don't interfere with the window size, let imgui do its thing
             if window.size != (size.0 as f32, size.1 as f32) && (size != (0, 0)) {
                 window_builder =
-                    window_builder.size((size.0 as f32, size.1 as f32), ImGuiCond::Always)
+                    window_builder.size([size.0 as f32, size.1 as f32], ImGuiCond::Always)
             }
             if window.pos != (pos.0 as f32, pos.1 as f32) {
                 window_builder =
-                    window_builder.position((pos.0 as f32, pos.1 as f32), ImGuiCond::Always);
+                    window_builder.position([pos.0 as f32, pos.1 as f32], ImGuiCond::Always);
             }
         } else {
             window_builder =
-                window_builder.size((size.0 as f32, size.1 as f32), ImGuiCond::FirstUseEver)
-                              .position((pos.0 as f32, pos.1 as f32), ImGuiCond::FirstUseEver);
+                window_builder.size([size.0 as f32, size.1 as f32], ImGuiCond::FirstUseEver)
+                              .position([pos.0 as f32, pos.1 as f32], ImGuiCond::FirstUseEver);
         }
 
         let mut should_stay_open = true;
@@ -739,12 +743,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
                           let mut cache = TK_CACHE.lock().unwrap();
                           let prev_window = cache.windows.get(window_name_str);
-                          let drawn_window = Window { pos: self.ui.get_window_pos(),
-                                                      size: self.ui.get_window_size(),
-                                                      remaining_size:
-                                                          self.ui.get_content_region_avail(),
-                                                      content_size,
-                                                      flex: cache.current_flex };
+                          let window_pos = self.ui.get_window_pos();
+                          let window_size = self.ui.get_window_size();
+                          let remaining_size = self.ui.get_content_region_avail();
+                          let drawn_window =
+                              Window { pos: (window_pos[0], window_pos[1]),
+                                       size: (window_size[0], window_size[1]),
+                                       remaining_size: (remaining_size[0], remaining_size[1]),
+                                       content_size: (content_size[0], content_size[1]),
+                                       flex: cache.current_flex };
                           if prev_window.is_some() && prev_window.unwrap() != &drawn_window {
                               onwindowchange((drawn_window.pos.0 as isize,
                                               drawn_window.pos.1 as isize),
@@ -813,9 +820,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         };
 
         // TODO: this is hardcoded and can't be shared with wasm or any other system
-        let default_bg = (0.5, 0.5, 0.5, 0.5);
+        let default_bg = [0.5, 0.5, 0.5, 0.5];
         let f = 1.5;
-        let brighter_bg = (default_bg.0 * f, default_bg.1 * f, default_bg.2 * f, default_bg.3);
+        let brighter_bg = [default_bg[0] * f,
+                           default_bg[1] * f,
+                           default_bg[2] * f,
+                           default_bg[3]];
 
         let color = if TkCache::is_focused(child_frame_id.as_ref()) {
             brighter_bg
@@ -826,15 +836,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.with_color_vars(
                                 &[
             (ImGuiCol::Border, color),
-            (ImGuiCol::ChildBg, (bg[0], bg[1], bg[2], bg[3])),
+            (ImGuiCol::ChildBg, [bg[0], bg[1], bg[2], bg[3]]),
         ],
                                 &|| {
                                     self.ui
-                    .child_frame(&child_frame_id, (0., height))
+                    .child_frame(&child_frame_id, [0., height])
                     .show_borders(true)
                     .scrollbar_horizontal(true)
                     .build(&|| {
-                        let child_region_height = self.ui.get_content_region_avail().1;
+                        let child_region_height = self.ui.get_content_region_avail()[1];
                         self.ui.group(draw_fn);
 
                         if let Some(keypress) = self.keypress {
@@ -875,7 +885,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                    draw_bottom_bar_fn: &dyn Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
         self.ui
-            .child_frame(&self.imlabel(""), (0.0, -frame_height))
+            .child_frame(&self.imlabel(""), [0.0, -frame_height])
             .build(draw_content_fn);
         draw_bottom_bar_fn()
     }
@@ -891,26 +901,26 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     // HAX: this is awfully specific to have in a UI toolkit library... whatever
     fn draw_code_line_separator(&self, plus_char: char, width: f32, height: f32, color: [f32; 4]) {
         self.ui
-            .invisible_button(&self.imlabel("code_line_separator"), (width, height));
+            .invisible_button(&self.imlabel("code_line_separator"), [width, height]);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
 
         let draw_list = self.ui.get_window_draw_list();
 
-        let center_of_line = (min.x, (min.y + max.y) / 2.);
-        let mut line = (center_of_line, (max.x, center_of_line.1));
+        let center_of_line = [min.x, (min.y + max.y) / 2.];
+        let mut line = (center_of_line, [max.x, center_of_line[1]]);
         // idk why exactly, but these -0.5s get the line to match up nicely with the circle
-        (line.0).1 -= 0.5;
-        (line.1).1 -= 0.5;
+        (line.0)[1] -= 0.5;
+        (line.1)[1] -= 0.5;
         draw_list.add_line(line.0, line.1, color).build();
 
         let mut buf = [0; 4];
         let plus_char = plus_char.encode_utf8(&mut buf);
 
         // draw the text second so it draws over the line
-        let text_size = self.ui.calc_text_size(im_str!("{}", plus_char), false, 0.);
-        let where_to_put_symbol_y = center_of_line.1 - ((text_size.y / 2.) - 1.5);
-        let textpos = (center_of_line.0, where_to_put_symbol_y);
+        let text_size = self.ui.calc_text_size(&im_str!("{}", plus_char), false, 0.);
+        let where_to_put_symbol_y = center_of_line[1] - ((2. / text_size[1]) - 1.5);
+        let textpos = [center_of_line[0], where_to_put_symbol_y];
 
         draw_list.add_text(textpos, color, plus_char);
     }
@@ -934,7 +944,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui
             .get_window_draw_list()
-            .add_rect(min, max, color)
+            .add_rect(min.into(), max.into(), color)
             .filled(true)
             .build();
     }
@@ -945,7 +955,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui
             .get_window_draw_list()
-            .add_rect(min, (max.x, min.y + thickness as f32 - 1.), color)
+            .add_rect(min.into(), [max.x, min.y + thickness as f32 - 1.], color)
             .thickness(1.)
             .filled(true)
             .build();
@@ -957,7 +967,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui
             .get_window_draw_list()
-            .add_rect((max.x - thickness as f32, min.y), max, color)
+            .add_rect([max.x - thickness as f32, min.y], max.into(), color)
             .thickness(1.)
             .filled(true)
             .build()
@@ -969,7 +979,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui
             .get_window_draw_list()
-            .add_rect(min, (min.x - thickness as f32, max.y), color)
+            .add_rect(min.into(), [min.x - thickness as f32, max.y], color)
             .thickness(1.)
             .filled(true)
             .build()
@@ -981,7 +991,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
         self.ui
             .get_window_draw_list()
-            .add_rect((min.x, max.y - thickness as f32), max, color)
+            .add_rect([min.x, max.y - thickness as f32], max.into(), color)
             .thickness(1.)
             .filled(true)
             .build()
@@ -998,11 +1008,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let original_cursor_pos = self.ui.get_cursor_pos();
         let label = im_str!("{}", label);
         let text_size = self.ui.calc_text_size(&label, false, 0.);
-        let total_size = (text_size.x + (padding.x * 2.), text_size.y + (padding.y * 2.));
+        let total_size = [text_size[0] + (padding[0] * 2.),
+                          text_size[1] + (padding[1] * 2.)];
 
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
-        let end_of_button_bg_rect =
-            (draw_cursor_pos.0 + total_size.0, draw_cursor_pos.1 + total_size.1);
+        let end_of_button_bg_rect = [draw_cursor_pos[0] + total_size[0],
+                                     draw_cursor_pos[1] + total_size[1]];
         self.ui
             .get_window_draw_list()
             .add_rect(draw_cursor_pos, end_of_button_bg_rect, color)
@@ -1010,8 +1021,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build();
 
         let draw_cursor_pos = self.ui.get_cursor_screen_pos();
-        let buttony_text_start_cursor_pos =
-            (draw_cursor_pos.0 + padding.x, draw_cursor_pos.1 + padding.y);
+        let buttony_text_start_cursor_pos = [draw_cursor_pos[0] + padding[0],
+                                             draw_cursor_pos[1] + padding[1]];
         let draw_list = self.ui.get_window_draw_list();
         let text_color = style.colors[ImGuiCol::Text as usize];
         draw_list.add_text(buttony_text_start_cursor_pos, text_color, label);
@@ -1088,7 +1099,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                                          onchange: F) {
         let mut box_input = buf(existing_value);
         self.ui
-            .input_text_multiline(&self.imlabel(label), &mut box_input, (0., 100.))
+            .input_text_multiline(&self.imlabel(label), &mut box_input, [0., 100.])
             .build();
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
@@ -1155,7 +1166,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         self.ui.combo(&self.imlabel(label),
                       &mut selected_item_in_combo_box,
-                      &formatted_items.iter().map(|s| s.as_ref()).collect_vec(),
+                      &formatted_items.iter().collect_vec(),
                       5);
         if selected_item_in_combo_box != previous_selection {
             onchange(items[selected_item_in_combo_box as usize])
@@ -1176,7 +1187,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             if self.ui.selectable(&self.imlabel(&format_item(item)),
                                   is_item_selected(item),
                                   ImGuiSelectableFlags::empty(),
-                                  (0., 0.))
+                                  [0., 0.])
             {
                 onchange(item)
             }
@@ -1200,7 +1211,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     if self.ui.selectable(&self.imlabel(&label),
                                           is_selected,
                                           ImGuiSelectableFlags::empty(),
-                                          (0., 0.))
+                                          [0., 0.])
                     {
                         onselect(&item)
                     }
@@ -1247,7 +1258,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             unsafe { imgui_sys::igEndPopup() };
             self.ui
                 .get_window_draw_list()
-                .add_rect(min, max, colorscheme!(button_active_color))
+                .add_rect(min.into(), max.into(), colorscheme!(button_active_color))
                 .filled(true)
                 .build();
         }
