@@ -7,6 +7,11 @@ function CS_EVAL__(js_code, locals) {
 // CS_FETCH__(@{request_url}, @{request_method}, @{request_headers}, @{request_body});
 
 async function CS_FETCH__(url, method, headers, body) {
+    // the fetch API doesn't support doing a GET request with a body specified.
+    if (method == "GET") {
+        body = undefined;
+    }
+
     var resp = await fetch(url, {method, headers, body});
     return {
         text: await resp.text(),

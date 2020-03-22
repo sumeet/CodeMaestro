@@ -6,12 +6,8 @@ use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 use stdweb::unstable::TryInto;
 
-// this conflicts with the js_deserializable macro definition if it's called Result, hence the rename
-// to EZResult
-#[allow(dead_code)] // bug in rustc warns for this
-type EZResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
-pub async fn fetch(request: Request<String>) -> EZResult<Response<String>> {
+pub async fn fetch(request: Request<String>)
+                   -> Result<Response<String>, Box<dyn std::error::Error>> {
     let js_resp = js_fetch(request).await?;
     let mut resp_builder = Response::builder();
     resp_builder.status(js_resp.status);
