@@ -26,13 +26,13 @@ uuid = { git = "https://github.com/uuid-rs/uuid", tag = "0.7.1", features = ["se
 backtrace = "*"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-glium = { version = "0.24", default-features = true }
-# matching the dep of the glium from above
-glutin = { version = "0.20.1" }
-imgui = {git = "https://github.com/sumeet/imgui-rs", branch="glium0.24" }
-imgui-sys = {git = "https://github.com/sumeet/imgui-rs", branch="glium0.24" }
-imgui-glium-renderer = {git = "https://github.com/sumeet/imgui-rs", branch="glium0.24" }
-imgui-winit-support = {git = "https://github.com/sumeet/imgui-rs", branch="glium0.24" }
+glium = { version = "0.25.1", default-features = true }
+# matching the dep of the glium from above imgui
+glutin = { version = "0.21.2" }
+imgui = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.1.0" }
+imgui-sys = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.1.0" }
+imgui-glium-renderer = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.1.0" }
+imgui-winit-support = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.1.0" }
 tokio-current-thread = {version = "0.1.4" }
 tokio-reactor = {version = "0.1.7" }
 tokio-timer = {version = "0.2.10" }

@@ -442,7 +442,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let window_size = (display_size.0, status_height);
 
         self.ui.with_style_vars(&[StyleVar::WindowRounding(0.0),
-                                  StyleVar::WindowPadding(ImVec2::new(x_padding, y_padding))],
+                                  StyleVar::WindowPadding([x_padding, y_padding])],
                                 &|| {
                                     self.ui
                                         .window(&self.imlabel("statusbar"))
