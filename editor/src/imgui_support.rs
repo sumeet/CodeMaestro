@@ -2,10 +2,7 @@ use glium::glutin::ElementState::Pressed;
 use glium::glutin::Event;
 use glium::glutin::VirtualKeyCode as Key;
 use glium::glutin::WindowEvent::*;
-use imgui::{
-    Context, FontConfig, FontGlyphRange, FontGlyphRanges, FontSource, ImFontConfig, ImGui,
-    ImGuiCol, Ui,
-};
+use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, StyleColor, Ui};
 use std::time::Instant;
 
 use super::editor::{Key as AppKey, Keypress};
@@ -13,9 +10,7 @@ use crate::colorscheme;
 use imgui_winit_support;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
-pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
-                                                    clear_color: [f32; 4],
-                                                    mut run_ui: F) {
+pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F) {
     use glium::{Display, Surface};
     use imgui_glium_renderer::Renderer;
 
@@ -35,17 +30,14 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     imgui.set_ini_filename(None);
 
     let mut platform = WinitPlatform::init(&mut imgui);
-    {
-        let gl_window = display.gl_window();
-        platform.attach_window(imgui.io_mut(), &window.window(), HiDpiMode::Rounded);
-    }
+    platform.attach_window(imgui.io_mut(), &window.window(), HiDpiMode::Rounded);
 
     let hidpi_factor = platform.hidpi_factor();
     //let hidpi_factor = 1.0;
 
-    let font_size = (17.0 * hidpi_factor) as f32;
+    let font_size = (15.0 * hidpi_factor) as f32;
     let icon_font_size = font_size / 1.75;
-    let icon_y_offset = (-2.0 * hidpi_factor) as f32;
+    let icon_y_offset = (-3.0 * hidpi_factor) as f32;
 
     unsafe {
         imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
@@ -53,130 +45,100 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     let mut style = imgui.style_mut();
     // currently duped in the loop so we can do it on every frame
     // TODO: clean that up
-    style.colors[ImGuiCol::WindowBg as usize] = colorscheme!(window_bg_color).into();
-    style.colors[ImGuiCol::ButtonActive as usize] = colorscheme!(button_active_color).into();
-    style.colors[ImGuiCol::ButtonHovered as usize] = colorscheme!(button_hover_color).into();
-    style.colors[ImGuiCol::MenuBarBg as usize] = colorscheme!(menubar_color).into();
-    style.colors[ImGuiCol::TitleBg as usize] = colorscheme!(titlebar_bg_color).into();
-    style.colors[ImGuiCol::TitleBgCollapsed as usize] = colorscheme!(titlebar_bg_color).into();
-    style.colors[ImGuiCol::TitleBgActive as usize] = colorscheme!(titlebar_active_bg_color).into();
+    style.colors[StyleColor::WindowBg as usize] = colorscheme!(window_bg_color).into();
+    style.colors[StyleColor::ButtonActive as usize] = colorscheme!(button_active_color).into();
+    style.colors[StyleColor::ButtonHovered as usize] = colorscheme!(button_hover_color).into();
+    style.colors[StyleColor::MenuBarBg as usize] = colorscheme!(menubar_color).into();
+    style.colors[StyleColor::TitleBg as usize] = colorscheme!(titlebar_bg_color).into();
+    style.colors[StyleColor::TitleBgCollapsed as usize] = colorscheme!(titlebar_bg_color).into();
+    style.colors[StyleColor::TitleBgActive as usize] =
+        colorscheme!(titlebar_active_bg_color).into();
 
     // debug code to print colors
-    //    println!("titlebg: {:?}", style.colors[ImGuiCol::TitleBg as usize]);
+    //    println!("titlebg: {:?}", style.colors[StyleColor::TitleBg as usize]);
     //    println!("titlebgactive: {:?}",
-    //             style.colors[ImGuiCol::TitleBgActive as usize]);
+    //             style.colors[StyleColor::TitleBgActive as usize]);
     //    println!("titlebgcollapsed: {:?}",
-    //             style.colors[ImGuiCol::TitleBgCollapsed as usize]);
+    //             style.colors[StyleColor::TitleBgCollapsed as usize]);
 
     // merge mode off for the first entry, should be on for the rest of them
     // TODO: also i think you have to add the fonts in such a way that the more specific ranges are
     // listed first... idk, i'm testing it out
-    imgui.fonts().add_font(&[
-        FontSource::DefaultFontData {
-                    config: Some(FontConfig {
-                        size_pixels: font_size,
-                        ..FontConfig::default()
-                        }),
-            },
-            FontSource::TtfData {
-                data: include_bytes!("../../fonts/calibri.ttf"),
-                size_pixels: font_size,
-                config: Some(FontConfig {
-                    rasterizer_multiply: 1.75,
-                    glyph_ranges: FontGlyphRanges::default(),
-                    pixel_snap_h: true,
-                    oversample_h: 1,
-                    ..FontConfig::default()
-                }),
-            },
+    let font_sources =
+        [FontSource::TtfData { data: include_bytes!("../../fonts/calibri.ttf"),
+                               size_pixels: font_size,
+                               config: Some(FontConfig { rasterizer_multiply: 1.75,
+                                                         glyph_ranges:
+                                                             FontGlyphRanges::default(),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) },
+         FontSource::TtfData { data: include_bytes!("../../fonts/fontcustom.ttf"),
+                               size_pixels: font_size,
+                               config: Some(FontConfig { glyph_offset: [0.0, icon_y_offset],
+                                                         rasterizer_multiply: 1.75,
+                                                         glyph_ranges:
+                                                             FontGlyphRanges::from_slice(&[0xf100,
+                                                                                           0xf104, // the range for custom fonts, small because it's only the ones we use
+                                                                                           0]),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) },
+         FontSource::TtfData { data: include_bytes!("../../fonts/NanumGothic.ttf"),
+                               size_pixels: font_size,
+                               config: Some(FontConfig { rasterizer_multiply: 1.75,
+                                                         glyph_ranges:
+                                                             FontGlyphRanges::korean(),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) },
+         FontSource::TtfData { data: include_bytes!("../../fonts/Osaka-UI-03.ttf"),
+                               size_pixels: font_size,
+                               config: Some(FontConfig { rasterizer_multiply: 1.75,
+                                                         glyph_ranges:
+                                                             FontGlyphRanges::japanese(),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) },
+         FontSource::TtfData { data: include_bytes!("../../fonts/fa-regular-400.ttf"),
+                               size_pixels: icon_font_size,
+                               config: Some(FontConfig { rasterizer_multiply: 1.75,
+                                                         glyph_offset: [0.0, icon_y_offset],
+                                                         glyph_ranges:
+                                                             FontGlyphRanges::from_slice(&[0xf004,
+                                                                                           0xf5c8, // the range for font awesome regular 400
+                                                                                           0]),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) },
+         FontSource::TtfData { data: include_bytes!("../../fonts/fa-solid-900.ttf"),
+                               size_pixels: icon_font_size,
+                               config: Some(FontConfig { glyph_offset: [0.0, icon_y_offset],
+                                                         rasterizer_multiply: 1.75,
+                                                         glyph_ranges:
+                                                             FontGlyphRanges::from_slice(&[0xf000,
+                                                                                           0xf72f, // the range for font awesome solid 900
+                                                                                           0]),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) },
+         FontSource::TtfData { data: include_bytes!("../../fonts/fa-brands-400.ttf"),
+                               size_pixels: icon_font_size,
+                               config: Some(FontConfig { glyph_offset: [0.0, icon_y_offset],
+                                                         rasterizer_multiply: 1.75,
+                                                         glyph_ranges:
+                                                             FontGlyphRanges::from_slice(&[0xf298,
+                                                                                           0xf298, // the range for font awesome brands 400 (that we use)
+                                                                                           0]),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) }];
 
-        FontSource::TtfData {
-            data: include_bytes!("../../fonts/fontcustom.ttf"),
-            size_pixels: font_size,
-            config: Some(FontConfig {
-                glyph_offset: [0.0, icon_y_offset],
-                rasterizer_multiply: 1.75,
-                glyph_ranges: FontGlyphRanges::from_slice(&[0xf100,
-                    0xf104, // the range for custom fonts, small because it's only the ones we use
-                    0]),
-                pixel_snap_h: true,
-                oversample_h: 1,
-                ..FontConfig::default()
-            }),
-        },
+    //font_sources.reverse();
 
-        FontSource::TtfData {
-            data: include_bytes!("../../fonts/NanumGothic.ttf"),
-            size_pixels: font_size,
-            config: Some(FontConfig {
-                glyph_offset: [0.0, icon_y_offset],
-                rasterizer_multiply: 1.75,
-                glyph_ranges: FontGlyphRanges::korean(),
-                pixel_snap_h: true,
-                oversample_h: 1,
-                ..FontConfig::default()
-            }),
-        },
+    imgui.fonts().add_font(&font_sources);
 
-        FontSource::TtfData {
-            data: include_bytes!("../../fonts/Osaka-UI-03.ttf"),
-            size_pixels: font_size,
-            config: Some(FontConfig {
-                rasterizer_multiply: 1.75,
-                glyph_ranges: FontGlyphRanges::japanese(),
-                pixel_snap_h: true,
-                oversample_h: 1,
-                ..FontConfig::default()
-            }),
-        },
-
-        FontSource::TtfData {
-            data: include_bytes!("../../fonts/fa-regular-400.ttf"),
-            size_pixels: font_size,
-            config: Some(FontConfig {
-                rasterizer_multiply: 1.75,
-                glyph_offset: [0.0, icon_y_offset],
-                glyph_ranges: FontGlyphRanges::from_slice(&[0xf004,
-                    0xf5c8, // the range for font awesome regular 400
-                    0]),
-                pixel_snap_h: true,
-                oversample_h: 1,
-                ..FontConfig::default()
-            }),
-        },
-
-        FontSource::TtfData {
-            data: include_bytes!("../../fonts/fa-regular-400.ttf"),
-            size_pixels: font_size,
-            config: Some(FontConfig {
-                glyph_offset: [0.0, icon_y_offset],
-                rasterizer_multiply: 1.75,
-                glyph_ranges: FontGlyphRanges::from_slice(&[0xf000,
-                    0xf72f, // the range for font awesome solid 900
-                    0]),
-                pixel_snap_h: true,
-                oversample_h: 1,
-                ..FontConfig::default()
-            }),
-        },
-
-        FontSource::TtfData {
-            data: include_bytes!("../../fonts/fa-brands-400.ttf"),
-            size_pixels: font_size,
-            config: Some(FontConfig {
-                glyph_offset: [0.0, icon_y_offset],
-                rasterizer_multiply: 1.75,
-                glyph_ranges: FontGlyphRanges::from_slice(&[0xf298,
-                    0xf298, // the range for font awesome brands 400 (that we use)
-                    0]),
-                pixel_snap_h: true,
-                oversample_h: 1,
-                ..FontConfig::default()
-            }),
-        },
-    ]);
-
-    imgui.set_font_global_scale((1.0 / hidpi_factor) as f32);
+    imgui.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
 
     let mut renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
 
@@ -189,15 +151,16 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String,
     loop {
         // duped above... clean this up TODO
         let mut style = imgui.style_mut();
-        style.colors[ImGuiCol::WindowBg as usize] = colorscheme!(window_bg_color).into();
-        style.colors[ImGuiCol::ButtonActive as usize] = colorscheme!(button_active_color).into();
-        style.colors[ImGuiCol::ButtonHovered as usize] = colorscheme!(button_hover_color).into();
-        style.colors[ImGuiCol::MenuBarBg as usize] = colorscheme!(menubar_color).into();
-        style.colors[ImGuiCol::TitleBg as usize] = colorscheme!(titlebar_bg_color).into();
-        style.colors[ImGuiCol::TitleBgCollapsed as usize] = colorscheme!(titlebar_bg_color).into();
-        style.colors[ImGuiCol::TitleBgActive as usize] =
+        style.colors[StyleColor::WindowBg as usize] = colorscheme!(window_bg_color).into();
+        style.colors[StyleColor::ButtonActive as usize] = colorscheme!(button_active_color).into();
+        style.colors[StyleColor::ButtonHovered as usize] = colorscheme!(button_hover_color).into();
+        style.colors[StyleColor::MenuBarBg as usize] = colorscheme!(menubar_color).into();
+        style.colors[StyleColor::TitleBg as usize] = colorscheme!(titlebar_bg_color).into();
+        style.colors[StyleColor::TitleBgCollapsed as usize] =
+            colorscheme!(titlebar_bg_color).into();
+        style.colors[StyleColor::TitleBgActive as usize] =
             colorscheme!(titlebar_active_bg_color).into();
-        style.colors[ImGuiCol::FrameBg as usize] = colorscheme!(input_bg_color).into();
+        style.colors[StyleColor::FrameBg as usize] = colorscheme!(input_bg_color).into();
 
         let mut keypress: Option<Keypress> = None;
 

@@ -9,7 +9,6 @@ use nfd;
 use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use imgui::*;
-use imgui_sys::ImGuiStyleVar_ItemSpacing;
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
@@ -164,7 +163,7 @@ impl TkCache {
 }
 
 pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::AsyncExecutor) {
-    imgui_support::run("cs".to_string(), CLEAR_COLOR, |ui, keypress| {
+    imgui_support::run("cs".to_string(), |ui, keypress| {
         let mut app = app.borrow_mut();
         app.flush_commands(&mut async_executor);
         async_executor.turn();
@@ -254,7 +253,7 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn was_left_button_released(&self) -> bool {
-        self.ui.imgui().is_mouse_released(ImMouseButton::Left)
+        Ui::is_mouse_released(self.ui, MouseButton::Left)
     }
 
     fn is_left_button_down(&self) -> bool {
@@ -605,7 +604,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let (first_rhs, rest) = rhss.split_first().unwrap();
         let (last_rhs, inner_rhs) = rest.split_last().unwrap();
 
-        let mut style_var = self.ui.push_style_var(StyleVar::ItemSpacing([0.0, -1.0]));
+        let style_var = self.ui.push_style_var(StyleVar::ItemSpacing([0.0, -1.0]));
         self.ui.group(|| lhs());
 
         self.ui.same_line_with_spacing(0., 0.);
@@ -919,7 +918,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         // draw the text second so it draws over the line
         let text_size = self.ui.calc_text_size(&im_str!("{}", plus_char), false, 0.);
-        let where_to_put_symbol_y = center_of_line[1] - ((2. / text_size[1]) - 1.5);
+        // XXX: this is magic that aligns the plus sign drawn with the line
+        let y_align_magic = -4.;
+        let where_to_put_symbol_y = center_of_line[1] - ((2. / text_size[1]) - y_align_magic);
         let textpos = [center_of_line[0], where_to_put_symbol_y];
 
         draw_list.add_text(textpos, color, plus_char);
