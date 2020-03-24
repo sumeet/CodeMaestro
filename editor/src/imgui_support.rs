@@ -29,6 +29,9 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     let mut imgui = Context::create();
     imgui.set_ini_filename(None);
 
+    let backend = init_clipboard().unwrap();
+    imgui.set_clipboard_backend(Box::new(backend));
+
     let mut platform = WinitPlatform::init(&mut imgui);
     platform.attach_window(imgui.io_mut(), &window.window(), HiDpiMode::Rounded);
 
@@ -236,5 +239,23 @@ fn map_key(key: Key) -> Option<AppKey> {
         Key::Left => Some(AppKey::LeftArrow),
         Key::Right => Some(AppKey::RightArrow),
         _ => None,
+    }
+}
+
+// from https://github.com/Gekkio/imgui-rs/blob/master/imgui-examples/examples/support/clipboard.rs
+use clipboard::{ClipboardContext, ClipboardProvider};
+use imgui::{ClipboardBackend, ImStr, ImString};
+pub struct ClipboardSupport(ClipboardContext);
+
+pub fn init_clipboard() -> Option<ClipboardSupport> {
+    ClipboardContext::new().ok()
+                           .map(|ctx| ClipboardSupport(ctx))
+}
+impl ClipboardBackend for ClipboardSupport {
+    fn get(&mut self) -> Option<ImString> {
+        self.0.get_contents().ok().map(|text| text.into())
+    }
+    fn set(&mut self, text: &ImStr) {
+        let _ = self.0.set_contents(text.to_str().to_owned());
     }
 }
