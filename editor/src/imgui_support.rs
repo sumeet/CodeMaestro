@@ -179,10 +179,10 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                        match input.virtual_keycode {
                                            Some(key) => {
                                                if let Some(key) = map_key(key) {
-                                                   keypress =
-                                                       Some(Keypress::new(key,
-                                                                          imgui.key_ctrl(),
-                                                                          imgui.key_shift()));
+                                                   let io = imgui.io();
+                                                   keypress = Some(Keypress::new(key,
+                                                                                 io.key_ctrl,
+                                                                                 io.key_shift))
                                                }
                                            }
                                            _ => {}

@@ -567,9 +567,10 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
             // discover everything they can do from the menu
 
             // TODO: wanna boost up null if there's null anywhere
-            // if search_params.search_matches_identifier("null") {
-            options.push(self.null_literal_option());
-            // }
+            // XXX: why did i have this conditional commented out before?
+            if search_params.search_matches_identifier("null") {
+                options.push(self.null_literal_option());
+            }
 
             if let Some(number) = search_params.parse_number_input() {
                 options.push(self.number_literal_option(number));
