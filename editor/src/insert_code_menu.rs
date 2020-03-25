@@ -113,10 +113,8 @@ impl InsertCodeMenu {
                                -> Vec<InsertCodeMenuOptionsGroup> {
         let all_options = self.list_options(code_genie, env_genie);
 
-        let selected_index = self.selected_index(all_options.len());
-
         let mut options_groups = vec![];
-        let mut num_options_seen = 0;
+        let selected_index = self.selected_index(all_options.len());
         for (group_name, options) in all_options.into_iter()
                                                 .group_by(|o| o.group_name)
                                                 .into_iter()
@@ -124,16 +122,24 @@ impl InsertCodeMenu {
             let mut options = options.collect::<Vec<_>>();
             // TODO: sorting should actually be decided by weights... but this will at least
             // keep the sorting order stable so the menu doesn't flicker
-            options.sort_by_key(|o| o.sort_key.clone());
-            if selected_index >= num_options_seen
-               && selected_index - num_options_seen <= options.len() - 1
-            {
-                options[selected_index - num_options_seen].is_selected = true;
-            }
-            num_options_seen += options.len();
+            options.sort_by(|a, b| a.sort_key.cmp(&b.sort_key));
             options_groups.push(InsertCodeMenuOptionsGroup { group_name,
                                                              options });
         }
+
+        // then, sort the groups of options by the lowest option in each group
+        options_groups.sort_by(|a, b| {
+                          a.earliest_sort_key()
+                           .unwrap()
+                           .cmp(b.earliest_sort_key().unwrap())
+                      });
+
+        // then set the selected option
+        options_groups.iter_mut()
+                      .flat_map(|og| &mut og.options)
+                      .nth(selected_index)
+                      .map(|o| o.is_selected = true);
+
         options_groups
     }
 
@@ -281,6 +287,12 @@ clone_trait_object!(InsertCodeMenuOptionGenerator);
 pub struct InsertCodeMenuOptionsGroup {
     pub group_name: &'static str,
     pub options: Vec<InsertCodeMenuOption>,
+}
+
+impl InsertCodeMenuOptionsGroup {
+    fn earliest_sort_key(&self) -> Option<&str> {
+        self.options.iter().map(|o| o.sort_key.as_ref()).min()
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -751,12 +763,21 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
             return vec![];
         }
 
+        let lowercased_trimmed_search_str = search_params.lowercased_trimmed_search_str();
+
         let variable_name = if let Some(var_alias) = search_params.search_prefix("let") {
             var_alias
         } else {
-            search_params.lowercased_trimmed_search_str()
-                         .trim_end_matches(|c| c == '=' || c == ' ')
-                         .to_string()
+            lowercased_trimmed_search_str.trim_end_matches(|c| c == '=' || c == ' ')
+                                         .to_string()
+        };
+
+        let sort_key_prefix = if lowercased_trimmed_search_str.contains('=') {
+            // if the user typed a =, then it's very likely they wanted an assignment statement. sort
+            // this up to the top, in that case
+            "000"
+        } else {
+            "zzz"
         };
 
         // don't show this option when there's no variable name typed in!
@@ -766,7 +787,7 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
 
         vec![InsertCodeMenuOption {
             group_name: ASSIGN_VARIABLE_GROUP,
-            sort_key: format!("newvariable{}", variable_name),
+            sort_key: format!("{}newvariable{}", sort_key_prefix, variable_name),
             is_selected: false,
             new_node: code_generation::new_assignment(
                 variable_name.clone(),
