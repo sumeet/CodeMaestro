@@ -359,7 +359,7 @@ impl UiToolkit for YewToolkit {
         // which we don't need because we already differentiate active windows w/ a different titlebar
         // bg color
         let window_style = format!(
-            "outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;",
+            "border: 1px solid grey; outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;",
             pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1);
         run_after_render::run(html! {
                                  <div class="window",
