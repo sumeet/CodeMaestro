@@ -335,7 +335,10 @@ impl UiToolkit for YewToolkit {
                 let pos_d = (num!(isize, pos_dx), num!(isize, pos_dy));
                 let new_pos = (pos.0 + pos_d.0, pos.1 + pos_d.1);
                 let new_size = if new_width.is_null() && new_height.is_null() {
-                    size
+                    let current_width = num!(usize, js! { return parseFloat(@{&el}.style.width); });
+                    let current_height =
+                        num!(usize, js! { return parseFloat(@{&el}.style.height); });
+                    (current_width, current_height)
                 } else {
                     (num!(usize, new_width), num!(usize, new_height))
                 };
