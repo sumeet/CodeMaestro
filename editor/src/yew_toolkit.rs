@@ -18,7 +18,7 @@ use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::unstable::TryInto;
 use stdweb::web::html_element::InputElement;
-use stdweb::web::{document, Element, IEventTarget, IHtmlElement};
+use stdweb::web::{document, Element, HtmlElement, IEventTarget, IHtmlElement};
 use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
@@ -317,7 +317,7 @@ impl UiToolkit for YewToolkit {
         // RC :/
         let onwindowchange = Rc::new(onwindowchange);
         let renderer_state = Rc::clone(&self.renderer_state);
-        let run_after: Box<dyn Fn(&Element)> = Box::new(move |el| {
+        let run_after: Box<dyn Fn(&HtmlElement)> = Box::new(move |el| {
             let renderer_state = Rc::clone(&renderer_state);
             let onwindowchange = Rc::clone(&onwindowchange);
             let onwindowchange = move |target: stdweb::Value,
@@ -325,7 +325,8 @@ impl UiToolkit for YewToolkit {
                                        pos_dy: stdweb::Value,
                                        new_width: stdweb::Value,
                                        new_height: stdweb::Value| {
-                let el: Element = target.try_into().unwrap();
+                let el: HtmlElement = target.try_into().unwrap();
+
                 let current_pos_x = num!(isize, js! { return parseFloat(@{&el}.style.left); });
                 let current_pos_y = num!(isize, js! { return parseFloat(@{&el}.style.top); });
                 let pos = (current_pos_x, current_pos_y);
@@ -346,7 +347,20 @@ impl UiToolkit for YewToolkit {
                 onwindowchange(new_pos, new_size);
                 renderer_state.borrow().send_msg(Msg::Redraw);
             };
+
             js! { setupInteract(@{el}, @{onwindowchange}); };
+
+            // auto-focus this new window on the first draw
+            let dataset = el.dataset();
+            let previous_draw_count = dataset.get("drawcount")
+                                             .and_then(|s| s.parse::<isize>().ok())
+                                             .unwrap_or(-1);
+            if previous_draw_count == -1 {
+                el.focus();
+            }
+            let next_draw_count = previous_draw_count + 1;
+            dataset.insert("drawcount", next_draw_count.to_string().as_ref())
+                   .ok();
         });
 
         // if there's a keypress handler provided, then send those keypresses into the app, and like,

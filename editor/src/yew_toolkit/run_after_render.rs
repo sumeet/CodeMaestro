@@ -1,4 +1,4 @@
-use stdweb::web::Element;
+use stdweb::web::HtmlElement;
 use yew::virtual_dom::VNode;
 use yew::Properties;
 use yew::{html, NodeRef};
@@ -13,16 +13,16 @@ pub struct RunAfterRenderProps {
     #[props(required)]
     pub node_ref: NodeRef,
     #[props(required)]
-    pub run: Box<dyn Fn(&Element)>,
+    pub run: Box<dyn Fn(&HtmlElement)>,
 }
 
 #[allow(unused_must_use)]
-pub fn run<T: Component>(html: Html<T>, func: impl Fn(&Element) + 'static) -> Html<T> {
+pub fn run<T: Component>(html: Html<T>, func: impl Fn(&HtmlElement) + 'static) -> Html<T> {
     let node_ref = match &html {
         VNode::VTag(box tag) => tag.node_ref.clone(),
         _ => panic!("this only works w/ tags"),
     };
-    let func: Box<dyn Fn(&Element)> = Box::new(func);
+    let func: Box<dyn Fn(&HtmlElement)> = Box::new(func);
     html! {
         <>
             {{ html }}
@@ -40,7 +40,7 @@ impl Component for RunAfterRender {
     }
 
     fn mounted(&mut self) -> bool {
-        if let Some(element) = self.props.node_ref.try_into::<Element>() {
+        if let Some(element) = self.props.node_ref.try_into::<HtmlElement>() {
             (self.props.run)(&element);
         }
         // TODO: hmm might need to rerender from inside of mounted huh
