@@ -302,6 +302,10 @@ impl ExecutionEnvironment {
         self.functions.remove(&id).unwrap();
     }
 
+    pub fn delete_typespec(&mut self, id: lang::ID) {
+        self.typespecs.remove(&id).unwrap();
+    }
+
     pub fn list_functions(&self) -> impl Iterator<Item = &Box<dyn lang::Function>> {
         self.functions.iter().map(|(_, func)| func)
     }

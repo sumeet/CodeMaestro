@@ -403,6 +403,21 @@ impl CommandBuffer {
             })
     }
 
+    pub fn remove_struct_field(&mut self, strukt_id: lang::ID, field_index: usize) {
+        self.add_environment_command(move |env| {
+                let mut new_strukt = env.find_struct(strukt_id).unwrap().clone();
+                new_strukt.fields.remove(field_index);
+                env.add_typespec(new_strukt);
+            });
+    }
+
+    pub fn remove_typespec(&mut self, id: lang::ID) {
+        self.add_integrating_command(move |_controller, interpreter, _, _| {
+                let mut env = interpreter.env.borrow_mut();
+                env.delete_typespec(id)
+            });
+    }
+
     pub fn remove_function(&mut self, id: lang::ID) {
         self.add_integrating_command(move |controller, interpreter, _, _| {
                 let mut env = interpreter.env.borrow_mut();
@@ -1502,9 +1517,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                      .enumerate()
                                      .map(|(current_field_index, field)| {
                                          move || {
-                                             let strukt1 = strukt.clone();
-                                             let cont1 = Rc::clone(&self.command_buffer);
-                                             self.ui_toolkit.draw_text_input_with_label(
+                                             self.ui_toolkit.draw_all(&[
+                            &move || {
+                                let strukt1 = strukt.clone();
+                                let cont1 = Rc::clone(&self.command_buffer);
+                                self.ui_toolkit.draw_text_input_with_label(
                           "Name",
                           &field.name,
                           move |newvalue| {
@@ -1513,8 +1530,33 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                               newfield.name = newvalue.to_string();
                               cont1.borrow_mut().load_typespec(newstrukt)
                           },
-                          &|| {},
+                            &move || {},
                        )
+                            },
+                            &|| {
+                                let strukt1 = strukt.clone();
+                                let cont1 = Rc::clone(&self.command_buffer);
+                                self.render_type_change_combo("Type",
+                                                              &field.field_type,
+                                                              move |newtype| {
+                                                                  let mut newstrukt =
+                                                                      strukt1.clone();
+                                                                  let mut newfield =
+                                                                      &mut newstrukt.fields
+                                                                          [current_field_index];
+                                                                  newfield.field_type = newtype;
+                                                                  cont1.borrow_mut()
+                                                                       .load_typespec(newstrukt)
+                                                              })
+                            },
+                            &|| {
+                                let cont1 = Rc::clone(&self.command_buffer);
+                                let strukt_id = strukt.id;
+                                self.ui_toolkit.draw_button("\u{f068} Field",
+                                                            colorscheme!(danger_color),
+                                                            move || cont1.borrow_mut().remove_struct_field(strukt_id, current_field_index))
+                            },
+                        ])
                                          }
                                      })
                 )
@@ -1539,9 +1581,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    // TODO: a way to delete the struct :)
-    fn render_general_struct_menu(&self, _strukt: &structs::Struct) -> T::DrawResult {
-        self.ui_toolkit.draw_all(&[])
+    fn render_general_struct_menu(&self, strukt: &structs::Struct) -> T::DrawResult {
+        self.ui_toolkit.draw_all(&[&|| {
+                                     let cont1 = Rc::clone(&self.command_buffer);
+                                     let strukt_id = strukt.id;
+                                     self.ui_toolkit.draw_button("\u{f1f8} Delete Struct",
+                                                                 colorscheme!(danger_color),
+                                                                 move || {
+                                                                     cont1.borrow_mut()
+                                                                          .remove_typespec(strukt_id);
+                                                                 })
+                                 }])
     }
 
     fn render_edit_enum(&self, eneom: &enums::Enum, window: &Window) -> T::DrawResult {
