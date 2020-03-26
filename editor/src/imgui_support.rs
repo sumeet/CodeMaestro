@@ -40,7 +40,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
 
     let font_size = (15.0 * hidpi_factor) as f32;
     let icon_font_size = font_size / 1.75;
-    let icon_y_offset = (-3.0 * hidpi_factor) as f32;
+    let icon_y_offset = (-2.0 * hidpi_factor) as f32;
 
     unsafe {
         imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
