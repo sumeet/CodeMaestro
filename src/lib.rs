@@ -104,7 +104,7 @@ fn _save_builtins(env: &ExecutionEnvironment) -> Result<(), Box<dyn std::error::
                        // Chat Message
                        uuid::Uuid::parse_str("cc430c68-1eba-4dd7-a3a8-0ee8e202ee83").unwrap(),
                        // HTTP Response
-                       uuid::Uuid::parse_str("31d96c85-5966-4866-a90a-e6db3707b140").unwrap()];
+                       *builtins::HTTP_RESPONSE_STRUCT_ID];
     let enum_ids = &[// Result
                      uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap()];
 

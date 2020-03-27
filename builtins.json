@@ -104,7 +104,7 @@
       "name": "HTTP Response",
       "description": "",
       "id": "31d96c85-5966-4866-a90a-e6db3707b140",
-      "symbol": "",
+      "symbol": "\uF558",
       "fields": [
         {
           "id": "34268b4f-e617-4e94-adbe-f5f0c9357865",
@@ -118,7 +118,7 @@
         {
           "id": "5e6cd734-fe98-47d2-9182-601a5a62e4d2",
           "name": "status code",
-          "description": "HTTP status code",
+          "description": "HTTP status code. e.g. 200, 400, 500. This usually indicates whether or not the request was successful.",
           "field_type": {
             "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
             "params": []

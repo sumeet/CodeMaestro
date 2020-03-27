@@ -134,7 +134,7 @@ use std::collections::BTreeMap;
 use std::pin::Pin;
 
 pub type ValueFuture = Shared<Pin<Box<dyn Future<Output = Value>>>>;
-type StructValues = HashMap<ID, Value>;
+pub type StructValues = HashMap<ID, Value>;
 #[derive(Clone, Debug)]
 pub enum Value {
     Null,

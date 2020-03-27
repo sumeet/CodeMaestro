@@ -10,10 +10,18 @@ use super::structs;
 
 use http;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
 use std::future::Future;
+
+lazy_static! {
+    static ref HTTP_FORM_PARAM_KEY_FIELD_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("886a86df-1211-47c5-83c0-f9a410a6fdc8").unwrap();
+    static ref HTTP_FORM_PARAM_VALUE_FIELD_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("57607724-a63a-458e-9253-1e3efeb4de63").unwrap();
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JSONHTTPClient {
@@ -187,14 +195,19 @@ pub async fn get_json(request: http::Request<String>) -> Result<serde_json::Valu
 }
 
 fn extract_form_params(http_form_params: &lang::Value) -> Vec<(&str, &str)> {
-    http_form_params.as_vec().unwrap()
-        .iter()
-        .map(|val| val.as_struct().unwrap())
-        .map(|(_id, struct_values)| {
-            (
-                struct_values.get(&uuid::Uuid::parse_str("886a86df-1211-47c5-83c0-f9a410a6fdc8").unwrap()).unwrap().as_str().unwrap(),
-                struct_values.get(&uuid::Uuid::parse_str("57607724-a63a-458e-9253-1e3efeb4de63").unwrap()).unwrap().as_str().unwrap(),
-            )
-        })
-        .collect_vec()
+    http_form_params.as_vec()
+                    .unwrap()
+                    .iter()
+                    .map(|val| val.as_struct().unwrap())
+                    .map(|(_id, struct_values)| {
+                        (struct_values.get(&HTTP_FORM_PARAM_KEY_FIELD_ID)
+                                      .unwrap()
+                                      .as_str()
+                                      .unwrap(),
+                         struct_values.get(&HTTP_FORM_PARAM_VALUE_FIELD_ID)
+                                      .unwrap()
+                                      .as_str()
+                                      .unwrap())
+                    })
+                    .collect_vec()
 }

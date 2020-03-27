@@ -14,10 +14,13 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 
-// this gets loaded through codesample.json... TODO: make a builtins.json file
+mod http_request;
+
+pub use http_request::HTTP_RESPONSE_STRUCT_ID;
+
 lazy_static! {
-    pub static ref HTTP_RESPONSE_STRUCT_ID: uuid::Uuid =
-        uuid::Uuid::parse_str("31d96c85-5966-4866-a90a-e6db3707b140").unwrap();
+    pub static ref HTTP_REQUEST_FUNC_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("04ae1441-8499-4ea1-9ecb-8a547e941e8d").unwrap();
     pub static ref RESULT_ENUM_ID: uuid::Uuid =
         uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap();
     pub static ref HTTP_FORM_PARAM_STRUCT_ID: uuid::Uuid =
@@ -84,13 +87,17 @@ struct BuiltinsDeserialize {
     pub typespecs: HashMap<lang::ID, serde_json::Value>,
 }
 
+pub fn new_struct_value(struct_id: lang::ID, values: lang::StructValues) -> lang::Value {
+    lang::Value::Struct { struct_id, values }
+}
+
 pub fn new_message(sender: String, argument_text: String, full_text: String) -> lang::Value {
-    lang::Value::Struct { struct_id: *MESSAGE_STRUCT_ID,
-                          values: hashmap! {
-                              uuid::Uuid::parse_str("e01e6346-5c8f-4b1b-9723-cde0abf77ec0").unwrap() => lang::Value::String(sender),
-                              uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(argument_text),
-                              uuid::Uuid::parse_str("9a8d9059-a729-4660-b440-8ee7c411e70a").unwrap() => lang::Value::String(full_text),
-                          } }
+    new_struct_value(*MESSAGE_STRUCT_ID,
+                     hashmap! {
+                         uuid::Uuid::parse_str("e01e6346-5c8f-4b1b-9723-cde0abf77ec0").unwrap() => lang::Value::String(sender),
+                         uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(argument_text),
+                         uuid::Uuid::parse_str("9a8d9059-a729-4660-b440-8ee7c411e70a").unwrap() => lang::Value::String(full_text),
+                     })
 }
 
 pub fn ok_result(value: lang::Value) -> lang::Value {
