@@ -340,6 +340,9 @@ impl ExecutionEnvironment {
     }
 
     pub fn println(&mut self, ln: &str) {
+        // TODO: hopefully i never need this actual println ever again, because the in-editor rich
+        // debug window is good
+        println!("{}", ln);
         self.console.push_str(ln);
         self.console.push_str("\n")
     }

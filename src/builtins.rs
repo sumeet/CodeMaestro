@@ -16,6 +16,7 @@ use std::sync::{Arc, Mutex};
 
 mod http_request;
 
+pub use http_request::HTTPRequest;
 pub use http_request::HTTP_RESPONSE_STRUCT_ID;
 
 lazy_static! {

@@ -11,6 +11,9 @@
     },
     "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d": {
       "type": "Print"
+    },
+    "04ae1441-8499-4ea1-9ecb-8a547e941e8d": {
+      "type": "HTTPRequest"
     }
   },
   "typespecs": {

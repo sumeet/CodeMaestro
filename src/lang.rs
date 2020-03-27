@@ -216,11 +216,11 @@ impl Value {
         }
     }
 
-    pub fn into_enum(self) -> Option<(ID, Value)> {
+    pub fn into_enum(self) -> Result<(ID, Value), Box<dyn std::error::Error>> {
         match self {
             Value::Enum { variant_id,
-                          box value, } => Some((variant_id, value)),
-            _ => None,
+                          box value, } => Ok((variant_id, value)),
+            _ => Err(format!("expected enum, but got {:?}", self).into()),
         }
     }
 }

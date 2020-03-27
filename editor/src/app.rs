@@ -38,9 +38,12 @@ impl App {
     pub fn new() -> Self {
         let interpreter = init_interpreter();
         let mut command_buffer = editor::CommandBuffer::new();
-        let controller = init_controller(&interpreter);
+        // let controller = init_controller(&interpreter);
 
-        //load_saved_code_from_disk(&mut controller, &mut interpreter.env.borrow_mut());
+        // this is usually commented out
+        let mut controller = init_controller(&interpreter);
+        _load_saved_code_from_disk(&mut controller, &mut interpreter.env.borrow_mut());
+
         init_save_state(&mut command_buffer, &mut interpreter.env.borrow_mut());
 
         let command_buffer = Rc::new(RefCell::new(command_buffer));
