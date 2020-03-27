@@ -1213,11 +1213,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             || {},
                         )
                 },
+                &|| self.render_arguments_selector(client),
                 &|| self.ui_toolkit.draw_text("Base URL:"),
                 &|| self.render_code(client.gen_url.id),
                 &|| self.ui_toolkit.draw_text("URL params:"),
                 &|| self.render_code(client.gen_url_params.id),
-                &|| self.render_arguments_selector(client),
                 &|| {
                     self.ui_toolkit
                         .draw_text(&format!("Current return type: {}", current_return_type_name))
