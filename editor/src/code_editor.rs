@@ -33,6 +33,7 @@ pub enum CodeLocation {
     Function(lang::ID),
     Script(lang::ID),
     Test(lang::ID),
+    JSONHTTPClientTestSection(lang::ID),
     JSONHTTPClientURLParams(lang::ID),
     JSONHTTPClientURL(lang::ID),
     ChatProgram(lang::ID),
@@ -1247,6 +1248,12 @@ pub fn update_code_in_env(location: CodeLocation,
             let env_genie = EnvGenie::new(&env);
             let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
             client.gen_url = code.into_block().unwrap().clone();
+            env.add_function(client);
+        }
+        CodeLocation::JSONHTTPClientTestSection(client_id) => {
+            let env_genie = EnvGenie::new(&env);
+            let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
+            client.test_code = code.into_block().unwrap().clone();
             env.add_function(client);
         }
         CodeLocation::ChatProgram(chat_program_id) => {

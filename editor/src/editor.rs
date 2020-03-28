@@ -1243,7 +1243,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| self.ui_toolkit.draw_separator(),
                 &|| {
                     self.ui_toolkit
-                        .draw_text("Return type generator and test section")
+                        .draw_text("Return type")
                 },
                 &|| {
                     let cmd_buffer3 = Rc::clone(&self.command_buffer);

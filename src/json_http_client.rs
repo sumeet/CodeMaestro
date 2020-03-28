@@ -93,6 +93,7 @@ pub struct JSONHTTPClient {
     pub method: HTTPMethod,
     pub description: String,
     pub gen_url_params: lang::Block,
+    pub test_code: lang::Block,
     pub args: Vec<lang::ArgumentDefinition>,
     pub return_type: lang::Type,
 }
@@ -149,23 +150,33 @@ impl function::SettableArgs for JSONHTTPClient {
     }
 }
 
-fn default_url() -> lang::Block {
-    code_generation::new_block(vec![code_generation::new_string_literal(
-        "https://httpbin.org/anything".to_string(),
-    )])
-}
-
 impl JSONHTTPClient {
+    fn default_url() -> lang::Block {
+        code_generation::new_block(vec![code_generation::new_string_literal(
+            "https://httpbin.org/anything".to_string(),
+        )])
+    }
+
+    fn initial_test_code(&self) -> lang::Block {
+        code_generation::new_block(
+            vec![code_generation::new_function_call_with_placeholder_args(self)]
+        )
+    }
+
     pub fn new() -> Self {
-        Self { id: lang::new_id(),
-               method: HTTPMethod::Get,
-               url: "https://httpbin.org/get".to_string(),
-               name: "JSON HTTP Get Client".to_string(),
-               description: "".to_string(),
-               gen_url: default_url(),
-               gen_url_params: lang::Block::new(),
-               args: vec![],
-               return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC) }
+        let id = lang::new_id();
+        let mut client = Self { id,
+                                method: HTTPMethod::Get,
+                                url: "https://httpbin.org/get".to_string(),
+                                name: "JSON HTTP Get Client".to_string(),
+                                description: "".to_string(),
+                                gen_url: Self::default_url(),
+                                gen_url_params: lang::Block::new(),
+                                test_code: lang::Block::new(),
+                                args: vec![],
+                                return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC) };
+        client.test_code = client.initial_test_code();
+        client
     }
 
     pub fn http_request(&self,
