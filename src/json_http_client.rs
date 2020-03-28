@@ -8,6 +8,7 @@ use super::lang;
 use super::result::Result;
 use super::structs;
 
+use crate::code_generation;
 use http;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -148,6 +149,12 @@ impl function::SettableArgs for JSONHTTPClient {
     }
 }
 
+fn default_url() -> lang::Block {
+    code_generation::new_block(vec![code_generation::new_string_literal(
+        "https://httpbin.org/anything".to_string(),
+    )])
+}
+
 impl JSONHTTPClient {
     pub fn new() -> Self {
         Self { id: lang::new_id(),
@@ -155,7 +162,7 @@ impl JSONHTTPClient {
                url: "https://httpbin.org/get".to_string(),
                name: "JSON HTTP Get Client".to_string(),
                description: "".to_string(),
-               gen_url: lang::Block::new(),
+               gen_url: default_url(),
                gen_url_params: lang::Block::new(),
                args: vec![],
                return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC) }

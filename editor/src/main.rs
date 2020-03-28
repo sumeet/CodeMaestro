@@ -15,7 +15,6 @@ mod chat;
 mod chat_test_window;
 mod code_editor;
 mod code_editor_renderer;
-mod code_generation;
 mod code_validation;
 mod color_schemes;
 mod edit_types;
@@ -50,6 +49,10 @@ mod stdweb_executor;
 mod async_executor {
     pub use super::stdweb_executor::*;
 }
+
+// TODO: this is a holdover because this module used to be part of this package...
+// so we'd have to update all imports
+pub use cs::code_generation;
 
 // uses for this module
 use crate::color_schemes::set_colorscheme;

@@ -1,6 +1,6 @@
-use cs::enums::Enum;
-use cs::lang;
-use cs::structs;
+use crate::enums::Enum;
+use crate::lang;
+use crate::structs;
 use std::collections::BTreeMap;
 
 pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::CodeNode {
@@ -116,6 +116,12 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
         true_branch: Box::new(new_placeholder("True branch".to_string(), branch_type)),
         else_branch: None,
     })
+}
+
+pub fn new_block(inside_block: Vec<lang::CodeNode>) -> lang::Block {
+    let mut block = lang::Block::new();
+    block.expressions = inside_block;
+    block
 }
 
 pub fn new_match(eneom: &Enum,

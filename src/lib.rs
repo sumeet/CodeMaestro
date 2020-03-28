@@ -29,6 +29,7 @@ pub mod validation;
 extern crate diesel;
 pub mod chat_program;
 pub mod code_function;
+pub mod code_generation;
 pub mod external_func;
 pub mod function;
 #[cfg(feature = "python")]
