@@ -402,17 +402,23 @@ impl CommandBuffer {
                 let mut env = interpreter.env.borrow_mut();
                 controller
                 .load_json_http_client_builder(JSONHTTPClientBuilder::new(json_http_client.id()));
+
                 let generate_url_params_code =
                     lang::CodeNode::Block(json_http_client.gen_url_params.clone());
                 controller.load_code(
                 generate_url_params_code,
-                code_editor::CodeLocation::JSONHTTPClientURLParams(json_http_client.id()),
-            );
+                code_editor::CodeLocation::JSONHTTPClientURLParams(json_http_client.id()));
+
                 let gen_url_code = lang::CodeNode::Block(json_http_client.gen_url.clone());
                 controller.load_code(
                 gen_url_code,
-                code_editor::CodeLocation::JSONHTTPClientURL(json_http_client.id()),
-            );
+                code_editor::CodeLocation::JSONHTTPClientURL(json_http_client.id()));
+
+                let test_code = lang::CodeNode::Block(json_http_client.test_code.clone());
+                controller.load_code(
+                test_code,
+                code_editor::CodeLocation::JSONHTTPClientTestSection(json_http_client.id()));
+
                 env.add_function(json_http_client);
             })
     }
@@ -1243,28 +1249,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| self.ui_toolkit.draw_separator(),
                 &|| {
                     self.ui_toolkit
-                        .draw_text("Return type")
+                        .draw_text("Test section")
                 },
                 &|| {
-                    let cmd_buffer3 = Rc::clone(&self.command_buffer);
-                    let builder1 = builder.clone();
-                    self.ui_toolkit.draw_text_input_with_label(
-                                                               "Test URL",
-                                                               &builder.test_url,
-                                                               move |newvalue| {
-                                                                   let builder1 = builder1.clone();
-                                                                   let newvalue =
-                                                                       newvalue.to_string();
-                                                                   cmd_buffer3
-                                    .borrow_mut()
-                                    .add_controller_command(move |cont| {
-                                        let mut builder = builder1.clone();
-                                        builder.test_url = newvalue;
-                                        cont.load_json_http_client_builder(builder);
-                                    })
-                                                               },
-                                                               || {},
-                    )
+                    self.render_code(client.test_code.id)
                 },
                 &|| {
                     let cmd_buffer4 = Rc::clone(&self.command_buffer);

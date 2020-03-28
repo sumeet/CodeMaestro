@@ -12,7 +12,6 @@ use cs::structs;
 
 #[derive(Clone)]
 pub struct JSONHTTPClientBuilder {
-    pub test_url: String,
     pub test_run_result: Option<Result<serde_json::Value, String>>,
     pub test_run_parsed_doc: Option<json2::ParsedDocument>,
     pub json_http_client_id: lang::ID,
@@ -31,8 +30,7 @@ impl JSONHTTPClientBuilder {
     // TODO: this will need to change to not make a GET request, but use the method from the
     // client
     pub fn new(json_http_client_id: lang::ID) -> Self {
-        Self { test_url: "https://httpbin.org/anything".to_string(),
-               test_run_result: None,
+        Self { test_run_result: None,
                test_run_parsed_doc: None,
                return_type_candidate: None,
                json_http_client_id,
@@ -81,16 +79,16 @@ impl JSONHTTPClientBuilder {
     pub fn run_test<F: FnOnce(JSONHTTPClientBuilder) + 'static>(&self,
                                                                 async_executor: &mut AsyncExecutor,
                                                                 callback: F) {
-        let url = self.test_url.clone();
-        let mut new_builder = self.clone();
-        async_executor.exec(async move {
-                          let val = do_get_request(url).await;
-                          let result = val.map_err(|e| e.to_string());
-                          new_builder.set_test_result(result);
-                          callback(new_builder);
-                          let ok: Result<(), ()> = Ok(());
-                          ok
-                      });
+        // let url = self.test_url.clone();
+        // let mut new_builder = self.clone();
+        // async_executor.exec(async move {
+        //                   let val = do_get_request(url).await;
+        //                   let result = val.map_err(|e| e.to_string());
+        //                   new_builder.set_test_result(result);
+        //                   callback(new_builder);
+        //                   let ok: Result<(), ()> = Ok(());
+        //                   ok
+        //               });
     }
 }
 
