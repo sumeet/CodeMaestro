@@ -28,8 +28,10 @@ pub struct SelectedField {
 }
 
 impl JSONHTTPClientBuilder {
+    // TODO: this will need to change to not make a GET request, but use the method from the
+    // client
     pub fn new(json_http_client_id: lang::ID) -> Self {
-        Self { test_url: "https://httpbin.org/get".to_string(),
+        Self { test_url: "https://httpbin.org/anything".to_string(),
                test_run_result: None,
                test_run_parsed_doc: None,
                return_type_candidate: None,

@@ -42,7 +42,7 @@ use cs::env_genie;
 use cs::external_func;
 use cs::function;
 use cs::http_client;
-use cs::json_http_client::JSONHTTPClient;
+use cs::json_http_client::{JSONHTTPClient, HTTP_METHOD_LIST};
 use cs::jsstuff;
 use cs::lang;
 use cs::lang::{CodeNode, Function, Value, ID};
@@ -369,6 +369,20 @@ impl CommandBuffer {
                 let mut chat_program = env_genie.get_chat_program(chat_program_id).unwrap().clone();
                 change(&mut chat_program);
                 env.add_function(chat_program);
+            })
+    }
+
+    pub fn change_http_client(&mut self,
+                              http_client_id: lang::ID,
+                              change: impl Fn(&mut JSONHTTPClient) + 'static) {
+        self.add_integrating_command(move |_controller, interpreter, _, _| {
+                let mut env = interpreter.env.borrow_mut();
+                let env_genie = env_genie::EnvGenie::new(&env);
+                let mut http_client = env_genie.get_json_http_client(http_client_id)
+                                               .unwrap()
+                                               .clone();
+                change(&mut http_client);
+                env.add_function(http_client);
             })
     }
 
@@ -1193,11 +1207,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                              .unwrap();
                                      let client_id = client.id();
 
-                                     let current_return_type_name =
-                                         self.env_genie
-                                             .get_name_for_type(&client.returns())
-                                             .unwrap();
-
                                      self.ui_toolkit.draw_all(&[
                 &|| {
                     let cmd_buffer1 = Rc::clone(&self.command_buffer);
@@ -1216,12 +1225,21 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| self.render_arguments_selector(client),
                 &|| self.ui_toolkit.draw_text("Base URL:"),
                 &|| self.render_code(client.gen_url.id),
+                                         &|| {
+                                             let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                                             self.ui_toolkit.draw_combo_box_with_label("HTTP Method",
+                                                                                       |method| method == &client.method,
+                                                                                       |ts| ts.to_display().to_owned(),
+                                                                                       &HTTP_METHOD_LIST,
+                                                                                       move |newmethod| {
+                                                                                           let newmethod = *newmethod;
+                                                                                           cmd_buffer1.borrow_mut().change_http_client(client_id, move |http_client| {
+                                                                                               http_client.method = newmethod;
+                                                                                           })
+                                                                                       })
+                                         },
                 &|| self.ui_toolkit.draw_text("URL params:"),
                 &|| self.render_code(client.gen_url_params.id),
-                &|| {
-                    self.ui_toolkit
-                        .draw_text(&format!("Current return type: {}", current_return_type_name))
-                },
                 &|| self.ui_toolkit.draw_separator(),
                 &|| {
                     self.ui_toolkit

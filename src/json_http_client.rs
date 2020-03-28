@@ -23,6 +23,63 @@ lazy_static! {
         uuid::Uuid::parse_str("57607724-a63a-458e-9253-1e3efeb4de63").unwrap();
 }
 
+// list from http::Method
+#[derive(Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub enum HTTPMethod {
+    Get,
+    Post,
+    Put,
+    Delete,
+    Head,
+    Trace,
+    Connect,
+    Patch,
+    Options,
+}
+
+// ranked in order of common-ness
+pub const HTTP_METHOD_LIST: [&HTTPMethod; 9] = [&HTTPMethod::Get,
+                                                &HTTPMethod::Post,
+                                                &HTTPMethod::Put,
+                                                &HTTPMethod::Delete,
+                                                &HTTPMethod::Patch,
+                                                &HTTPMethod::Head,
+                                                &HTTPMethod::Trace,
+                                                &HTTPMethod::Connect,
+                                                &HTTPMethod::Options];
+
+impl HTTPMethod {
+    pub fn to_display(&self) -> &str {
+        match self {
+            HTTPMethod::Get => "GET",
+            HTTPMethod::Post => "POST",
+            HTTPMethod::Put => "PUT",
+            HTTPMethod::Delete => "DELETE",
+            HTTPMethod::Head => "HEAD",
+            HTTPMethod::Trace => "TRACE",
+            HTTPMethod::Connect => "CONNECT",
+            HTTPMethod::Patch => "PATCH",
+            HTTPMethod::Options => "OPTIONS",
+        }
+    }
+}
+
+impl From<HTTPMethod> for http::Method {
+    fn from(method: HTTPMethod) -> Self {
+        match method {
+            HTTPMethod::Get => http::Method::GET,
+            HTTPMethod::Post => http::Method::POST,
+            HTTPMethod::Put => http::Method::PUT,
+            HTTPMethod::Delete => http::Method::DELETE,
+            HTTPMethod::Head => http::Method::HEAD,
+            HTTPMethod::Trace => http::Method::TRACE,
+            HTTPMethod::Connect => http::Method::CONNECT,
+            HTTPMethod::Patch => http::Method::PATCH,
+            HTTPMethod::Options => http::Method::OPTIONS,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JSONHTTPClient {
     id: lang::ID,
@@ -32,7 +89,7 @@ pub struct JSONHTTPClient {
     // for body params, we can use a JSON enum strings, ints, bools, etc.
     pub name: String,
     // hardcoded to GET for now
-    //    pub method: http::Method,
+    pub method: HTTPMethod,
     pub description: String,
     pub gen_url_params: lang::Block,
     pub args: Vec<lang::ArgumentDefinition>,
@@ -94,6 +151,7 @@ impl function::SettableArgs for JSONHTTPClient {
 impl JSONHTTPClient {
     pub fn new() -> Self {
         Self { id: lang::new_id(),
+               method: HTTPMethod::Get,
                url: "https://httpbin.org/get".to_string(),
                name: "JSON HTTP Get Client".to_string(),
                description: "".to_string(),
@@ -112,6 +170,7 @@ impl JSONHTTPClient {
         }
         let gen_url_params = self.gen_url_params.clone();
         let gen_url = self.gen_url.clone();
+        let method = self.method;
         async move {
             let base_url_value =
                 await_eval_result!(interpreter.evaluate(&lang::CodeNode::Block(gen_url)));
@@ -127,7 +186,8 @@ impl JSONHTTPClient {
                     pairs.append_pair(key, value);
                 }
             }
-            http_request::get(&url.to_string()).unwrap()
+            let none: Option<&String> = None;
+            http_request::new_req(&url.as_str(), method, none).unwrap()
         }
     }
 }
