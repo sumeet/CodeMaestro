@@ -762,7 +762,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                      cmd_buffer.add_integrating_command(move |cont, interp, async_executor, _cmd_buffer| {
                                                         cont.chat_test_window.borrow_mut().add_message("\u{f406}".to_string(), entered_text.clone()) ;
 
-                                                         let interp = interp.dup();
+                                                         let interp = interp.shallow_copy();
                                                          let chat_test_window = Rc::clone(&cont.chat_test_window);
                                                          async_executor.exec(async move {
                                                              message_received(&interp, "\u{f406}".to_string(), entered_text).await;
@@ -1261,10 +1261,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         .draw_button("Run test", colorscheme!(action_color), move || {
                             let cmd_buffer5 = Rc::clone(&cmd_buffer5);
                             cmd_buffer4.borrow_mut().add_integrating_command(
-                                    move |cont, _interp, async_executor, _| {
+                                    move |cont, interp, async_executor, _| {
                                         let builder =
                                             cont.get_json_http_client_builder(client_id).unwrap();
-                                        builder.run_test(async_executor, move |newbuilder| {
+                                        builder.run_test(interp, async_executor, move |newbuilder| {
                                             cmd_buffer5.borrow_mut().add_controller_command(
                                                 move |cont| {
                                                     cont.load_json_http_client_builder(newbuilder);

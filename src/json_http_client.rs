@@ -104,11 +104,11 @@ impl lang::Function for JSONHTTPClient {
             interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let request = self.http_request(interpreter.dup(), args);
+        let request = self.http_request(interpreter.shallow_copy(), args);
         let returns = self.return_type.clone();
         lang::Value::new_future(async move {
             let request = request.await;
-            match get_json(request).await {
+            match fetch_json(request).await {
                 Ok(json_value) => match ex(json_value, &returns, &interpreter.env.borrow()) {
                     Ok(value) => builtins::ok_result(value),
                     Err(e) => builtins::err_result(e),
@@ -140,7 +140,10 @@ impl lang::Function for JSONHTTPClient {
     }
 
     fn cs_code(&self) -> Box<dyn Iterator<Item = &lang::Block> + '_> {
-        Box::new(std::iter::once(&self.gen_url_params).chain(std::iter::once(&self.gen_url)))
+        Box::new(
+            std::iter::once(&self.gen_url_params).
+                chain(std::iter::once(&self.gen_url)
+                    .chain(std::iter::once(&self.test_code))))
     }
 }
 
@@ -267,7 +270,7 @@ fn serde_value_into_struct(mut value: serde_json::Value,
     None
 }
 
-pub async fn get_json(request: http::Request<String>) -> Result<serde_json::Value> {
+pub async fn fetch_json(request: http::Request<String>) -> Result<serde_json::Value> {
     let resp = http_client::fetch(request).await?;
     Ok(serde_json::from_str(resp.body())?)
 }

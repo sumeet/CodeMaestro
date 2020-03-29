@@ -249,12 +249,17 @@ impl Interpreter {
         }
     }
 
-    pub fn dup(&self) -> Self {
+    pub fn shallow_copy(&self) -> Self {
         Self::with_env(Rc::clone(&self.env))
+    }
+
+    pub fn deep_clone_env(&self) -> Self {
+        let env = self.env.as_ref();
+        Self::with_env(Rc::new(RefCell::new(env.borrow().clone())))
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExecutionEnvironment {
     pub console: String,
     // TODO: lol, this is going to end up being stack frames, or smth like that

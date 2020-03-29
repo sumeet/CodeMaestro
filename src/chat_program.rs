@@ -139,7 +139,9 @@ pub fn message_received(interp: &Interpreter,
     };
     let triggered_values =
         chat_programs.iter()
-                     .filter_map(|cp| cp.try_to_trigger(interp.dup(), sender.clone(), text.clone()))
+                     .filter_map(|cp| {
+                         cp.try_to_trigger(interp.shallow_copy(), sender.clone(), text.clone())
+                     })
                      .collect_vec();
 
     Box::pin(async move {

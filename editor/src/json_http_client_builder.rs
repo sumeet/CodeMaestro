@@ -4,11 +4,14 @@ use std::collections::BTreeMap;
 
 use super::async_executor::AsyncExecutor;
 use super::json2;
+use cs::await_eval_result;
+use cs::env;
 use cs::env_genie::EnvGenie;
-use cs::http_request;
-use cs::json_http_client;
+use cs::json_http_client::fetch_json;
 use cs::lang;
 use cs::structs;
+
+mod fake_http_client;
 
 #[derive(Clone)]
 pub struct JSONHTTPClientBuilder {
@@ -76,11 +79,39 @@ impl JSONHTTPClientBuilder {
         self.selected_fields.clear()
     }
 
-    pub fn run_test<F: FnOnce(JSONHTTPClientBuilder) + 'static>(&self,
-                                                                async_executor: &mut AsyncExecutor,
-                                                                callback: F) {
-        // let url = self.test_url.clone();
-        // let mut new_builder = self.clone();
+    pub fn run_test<F: FnOnce(Self) + 'static>(&self,
+                                               interp: &env::Interpreter,
+                                               async_executor: &mut AsyncExecutor,
+                                               callback: F) {
+        let mut fake_interp = interp.deep_clone_env();
+
+        let mut fake_http_client = {
+            let mut fake_env = fake_interp.env.borrow_mut();
+            let real_http_client = {
+                let env_genie = EnvGenie::new(&fake_env);
+                env_genie.get_json_http_client(self.json_http_client_id)
+                         .unwrap()
+                         .clone()
+            };
+            let fake_http_client = fake_http_client::FakeHTTPClient::new(real_http_client);
+            fake_env.add_function(fake_http_client.clone());
+            fake_http_client
+        };
+
+        let fut = fake_interp.evaluate(&fake_http_client.test_code());
+        let mut new_builder = self.clone();
+        async_executor.exec(async move {
+            await_eval_result!(fut);
+            let req =
+                fake_http_client.take_made_request()
+                                .expect("need to handle when there was no request, probably a popup");
+            let json_value_result = fetch_json(req).await;
+            new_builder.set_test_result(json_value_result.map_err(|e| e.to_string()));
+            callback(new_builder);
+            let ok: Result<(), ()> = Ok(());
+            ok
+        });
+
         // async_executor.exec(async move {
         //                   let val = do_get_request(url).await;
         //                   let result = val.map_err(|e| e.to_string());
@@ -110,9 +141,10 @@ fn build_return_type(env_genie: &EnvGenie,
     Some(ReturnTypeBuilder::new(env_genie, &return_type_spec).build())
 }
 
-async fn do_get_request(url: String) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-    json_http_client::get_json(http_request::get(&url)?).await
-}
+// probably don't need this anymore:
+// async fn do_get_request(url: String) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
+//     json_http_client::fetch_json(http_request::get(&url)?).await
+// }
 
 pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {
     use json2::ParsedDocument;
