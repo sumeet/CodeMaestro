@@ -101,7 +101,8 @@ fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionE
             }
             CodeLocation::JSONHTTPClientURLParams(id)
             | CodeLocation::JSONHTTPClientURL(id)
-            | CodeLocation::JSONHTTPClientTestSection(id) => {
+            | CodeLocation::JSONHTTPClientTestSection(id)
+            | CodeLocation::JSONHTTPClientTransform(id) => {
                 env_genie.get_json_http_client(*id)
                          .map(|client| command_buffer.load_json_http_client(client.clone()));
             }

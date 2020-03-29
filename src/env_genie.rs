@@ -205,9 +205,9 @@ fn get_args_for_code_block(code_block_id: lang::ID,
             return code_func.takes_args().into_iter();
         }
     } else if let Some(json_http_client) = function.downcast_ref::<JSONHTTPClient>() {
-        if json_http_client.gen_url_params.id == code_block_id {
+        if json_http_client.gen_url_params_code.id == code_block_id {
             return json_http_client.takes_args().into_iter();
-        } else if json_http_client.gen_url.id == code_block_id {
+        } else if json_http_client.gen_url_code.id == code_block_id {
             return json_http_client.takes_args().into_iter();
         }
     } else if let Some(chat_program) = function.downcast_ref::<ChatProgram>() {

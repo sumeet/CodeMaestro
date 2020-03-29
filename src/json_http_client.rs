@@ -1,5 +1,4 @@
 use super::builtins;
-use super::builtins::new_result;
 use super::env;
 use super::function;
 use super::http_client;
@@ -86,16 +85,18 @@ pub struct JSONHTTPClient {
     id: lang::ID,
     // TODO: get rid of URL
     pub url: String,
-    pub gen_url: lang::Block,
+    pub gen_url_code: lang::Block,
+    pub gen_url_params_code: lang::Block,
+    pub test_code: lang::Block,
+    pub transform_code: lang::Block,
     // for body params, we can use a JSON enum strings, ints, bools, etc.
     pub name: String,
     // hardcoded to GET for now
     pub method: HTTPMethod,
     pub description: String,
-    pub gen_url_params: lang::Block,
-    pub test_code: lang::Block,
     pub args: Vec<lang::ArgumentDefinition>,
-    pub return_type: lang::Type,
+    pub intermediate_parse_schema: lang::Type,
+    pub return_type_after_transform: lang::Type,
 }
 
 #[typetag::serde]
@@ -105,7 +106,7 @@ impl lang::Function for JSONHTTPClient {
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
         let request = self.http_request(interpreter.shallow_copy(), args);
-        let returns = self.return_type.clone();
+        let returns = self.intermediate_parse_schema.clone();
         lang::Value::new_future(async move {
             let request = request.await;
             match fetch_json(request).await {
@@ -136,14 +137,15 @@ impl lang::Function for JSONHTTPClient {
     }
 
     fn returns(&self) -> lang::Type {
-        new_result(self.return_type.clone())
+        self.return_type_after_transform.clone()
     }
 
     fn cs_code(&self) -> Box<dyn Iterator<Item = &lang::Block> + '_> {
         Box::new(
-            std::iter::once(&self.gen_url_params).
-                chain(std::iter::once(&self.gen_url)
-                    .chain(std::iter::once(&self.test_code))))
+            std::iter::once(&self.gen_url_params_code).
+                chain(std::iter::once(&self.gen_url_code)
+                    .chain(std::iter::once(&self.test_code))
+                    .chain(std::iter::once(&self.transform_code))))
     }
 }
 
@@ -168,16 +170,19 @@ impl JSONHTTPClient {
 
     pub fn new() -> Self {
         let id = lang::new_id();
-        let mut client = Self { id,
-                                method: HTTPMethod::Get,
-                                url: "https://httpbin.org/get".to_string(),
-                                name: "JSON HTTP Get Client".to_string(),
-                                description: "".to_string(),
-                                gen_url: Self::default_url(),
-                                gen_url_params: lang::Block::new(),
-                                test_code: lang::Block::new(),
-                                args: vec![],
-                                return_type: lang::Type::from_spec(&*lang::NULL_TYPESPEC) };
+        let mut client =
+            Self { id,
+                   method: HTTPMethod::Get,
+                   url: "https://httpbin.org/get".to_string(),
+                   name: "JSON HTTP Get Client".to_string(),
+                   description: "".to_string(),
+                   gen_url_code: Self::default_url(),
+                   gen_url_params_code: lang::Block::new(),
+                   test_code: lang::Block::new(),
+                   args: vec![],
+                   intermediate_parse_schema: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                   transform_code: lang::Block::new(),
+                   return_type_after_transform: lang::Type::from_spec(&*lang::NULL_TYPESPEC) };
         client.test_code = client.initial_test_code();
         client
     }
@@ -189,8 +194,8 @@ impl JSONHTTPClient {
         for (id, value) in args {
             interpreter.set_local_variable(id, value)
         }
-        let gen_url_params = self.gen_url_params.clone();
-        let gen_url = self.gen_url.clone();
+        let gen_url_params = self.gen_url_params_code.clone();
+        let gen_url = self.gen_url_code.clone();
         let method = self.method;
         async move {
             let base_url_value =

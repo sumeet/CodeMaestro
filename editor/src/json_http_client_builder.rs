@@ -111,15 +111,6 @@ impl JSONHTTPClientBuilder {
             let ok: Result<(), ()> = Ok(());
             ok
         });
-
-        // async_executor.exec(async move {
-        //                   let val = do_get_request(url).await;
-        //                   let result = val.map_err(|e| e.to_string());
-        //                   new_builder.set_test_result(result);
-        //                   callback(new_builder);
-        //                   let ok: Result<(), ()> = Ok(());
-        //                   ok
-        //               });
     }
 }
 

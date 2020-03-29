@@ -35,8 +35,10 @@ fn all_code<'a>(env_genie: &'a EnvGenie)
         (CodeLocation::Function(code_func.id()), &code_func.block)
     }).chain(chat_programs).chain(
         env_genie.list_json_http_clients().flat_map(|json_http_client| {
-            once((CodeLocation::JSONHTTPClientURLParams(json_http_client.id()), &json_http_client.gen_url_params))
-                .chain(once((CodeLocation::JSONHTTPClientURL(json_http_client.id()), &json_http_client.gen_url)))
+            once((CodeLocation::JSONHTTPClientURLParams(json_http_client.id()), &json_http_client.gen_url_params_code))
+                .chain(once((CodeLocation::JSONHTTPClientURL(json_http_client.id()), &json_http_client.gen_url_code)))
+                .chain(once((CodeLocation::JSONHTTPClientTestSection(json_http_client.id()), &json_http_client.test_code)))
+                .chain(once((CodeLocation::JSONHTTPClientTransform(json_http_client.id()), &json_http_client.transform_code)))
         })
     )
 }
@@ -130,17 +132,22 @@ impl<'a> Validator<'a> {
             CodeLocation::Test(_) => panic!("we don't check tests atm"),
             CodeLocation::JSONHTTPClientURLParams(id) => {
                 let mut json_http_client = self.env_genie.get_json_http_client(id).unwrap().clone();
-                json_http_client.gen_url_params = block;
+                json_http_client.gen_url_params_code = block;
                 self.cmd_buffer.load_json_http_client(json_http_client)
             }
             CodeLocation::JSONHTTPClientURL(id) => {
                 let mut json_http_client = self.env_genie.get_json_http_client(id).unwrap().clone();
-                json_http_client.gen_url = block;
+                json_http_client.gen_url_code = block;
                 self.cmd_buffer.load_json_http_client(json_http_client)
             }
             CodeLocation::JSONHTTPClientTestSection(id) => {
                 let mut json_http_client = self.env_genie.get_json_http_client(id).unwrap().clone();
-                json_http_client.gen_url = block;
+                json_http_client.gen_url_code = block;
+                self.cmd_buffer.load_json_http_client(json_http_client)
+            }
+            CodeLocation::JSONHTTPClientTransform(id) => {
+                let mut json_http_client = self.env_genie.get_json_http_client(id).unwrap().clone();
+                json_http_client.transform_code = block;
                 self.cmd_buffer.load_json_http_client(json_http_client)
             }
             CodeLocation::ChatProgram(id) => {
@@ -193,6 +200,12 @@ impl<'a> FixableProblemFinder<'a> {
         match location {
             CodeLocation::Function(func_id) => {
                 Some(self.env_genie.get_code_func(func_id).unwrap().returns())
+            }
+            CodeLocation::JSONHTTPClientTransform(client_id) => {
+                Some(self.env_genie
+                         .get_json_http_client(client_id)
+                         .unwrap()
+                         .returns())
             }
             CodeLocation::JSONHTTPClientURLParams(_) => Some(LIST_OF_FORM_PARAMS.clone()),
             CodeLocation::JSONHTTPClientURL(_) => {

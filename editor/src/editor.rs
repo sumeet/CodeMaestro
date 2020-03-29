@@ -404,12 +404,12 @@ impl CommandBuffer {
                 .load_json_http_client_builder(JSONHTTPClientBuilder::new(json_http_client.id()));
 
                 let generate_url_params_code =
-                    lang::CodeNode::Block(json_http_client.gen_url_params.clone());
+                    lang::CodeNode::Block(json_http_client.gen_url_params_code.clone());
                 controller.load_code(
                 generate_url_params_code,
                 code_editor::CodeLocation::JSONHTTPClientURLParams(json_http_client.id()));
 
-                let gen_url_code = lang::CodeNode::Block(json_http_client.gen_url.clone());
+                let gen_url_code = lang::CodeNode::Block(json_http_client.gen_url_code.clone());
                 controller.load_code(
                 gen_url_code,
                 code_editor::CodeLocation::JSONHTTPClientURL(json_http_client.id()));
@@ -418,6 +418,11 @@ impl CommandBuffer {
                 controller.load_code(
                 test_code,
                 code_editor::CodeLocation::JSONHTTPClientTestSection(json_http_client.id()));
+
+                let transform_code = lang::CodeNode::Block(json_http_client.transform_code.clone());
+                controller.load_code(
+                transform_code,
+                code_editor::CodeLocation::JSONHTTPClientTransform(json_http_client.id()));
 
                 env.add_function(json_http_client);
             })
@@ -1230,7 +1235,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 },
                 &|| self.render_arguments_selector(client),
                 &|| self.ui_toolkit.draw_text("Base URL:"),
-                &|| self.render_code(client.gen_url.id),
+                &|| self.render_code(client.gen_url_code.id),
                                          &|| {
                                              let cmd_buffer1 = Rc::clone(&self.command_buffer);
                                              self.ui_toolkit.draw_combo_box_with_label("HTTP Method",
@@ -1245,12 +1250,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                                        })
                                          },
                 &|| self.ui_toolkit.draw_text("URL params:"),
-                &|| self.render_code(client.gen_url_params.id),
+                &|| self.render_code(client.gen_url_params_code.id),
                 &|| self.ui_toolkit.draw_separator(),
-                &|| {
-                    self.ui_toolkit
-                        .draw_text("Test section")
-                },
+                &|| self.ui_toolkit.draw_text("Test section"),
                 &|| {
                     self.render_code(client.test_code.id)
                 },
@@ -1278,6 +1280,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| self.render_test_request_results(builder),
                 &|| self.render_json_return_type_selector(builder),
                 &|| self.ui_toolkit.draw_separator(),
+                &|| self.ui_toolkit.draw_text("Final transform of HTTP response"),
+                &|| self.render_code(client.transform_code.id),
+                &|| {
+                     let client_id = client.id();
+                     let cmd_buffer = Rc::clone(&self.command_buffer);
+                     self.render_type_change_combo("Return type", &client.return_type_after_transform, move |newtype| {
+                         cmd_buffer.borrow_mut().change_http_client(client_id, move |client| {
+                             client.return_type_after_transform = newtype.clone();
+                         })
+                     })
+                 },
                 &|| self.render_general_function_menu(client),
             ])
                                  },
@@ -1328,7 +1341,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                           for strukt in return_type_candidate.structs_to_be_added {
                                               env.add_typespec(strukt);
                                           }
-                                          json_http_client.return_type = return_type_candidate.typ;
+                                          json_http_client.intermediate_parse_schema = return_type_candidate.typ;
                                           env.add_function(json_http_client);
                                       })
                                                 },
