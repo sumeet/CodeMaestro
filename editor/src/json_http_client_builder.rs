@@ -141,11 +141,6 @@ fn build_return_type(env_genie: &EnvGenie,
     Some(ReturnTypeBuilder::new(env_genie, &return_type_spec).build())
 }
 
-// probably don't need this anymore:
-// async fn do_get_request(url: String) -> Result<serde_json::Value, Box<dyn std::error::Error>> {
-//     json_http_client::fetch_json(http_request::get(&url)?).await
-// }
-
 pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {
     use json2::ParsedDocument;
     match parsed_doc {
