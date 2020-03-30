@@ -83,6 +83,13 @@ impl JSONHTTPClientBuilder {
                                                interp: &env::Interpreter,
                                                async_executor: &mut AsyncExecutor,
                                                callback: F) {
+        // this is very tricky, we're going to call out to the actual implementation of the HTTP
+        // client (which is a work in progress). we don't want to actually execute the function
+        // though, we instead want to intercept the HTTP request it makes and grab the response.
+
+        // so this is a crazy mess os closures, Arc<Mutex<>> and we even clone the
+        // ExecutionEnvironment (interpreter environment) and include a fake version of this
+        // Function
         let mut fake_interp = interp.deep_clone_env();
 
         let mut fake_http_client = {
@@ -157,7 +164,8 @@ fn make_return_type_spec(selected_fields: &[SelectedField]) -> Result<ReturnType
         return Ok(ReturnTypeSpec::Scalar { typespec_id: selected_fields[0].typespec_id });
     }
 
-    // this is a placeholder, really this could be anything
+    // this is a placeholder, really this could be anything, it has to be initialized to something,
+    // it'll be mutated below
     let mut return_type_spec = ReturnTypeSpec::Struct(BTreeMap::new());
     for selected_field in selected_fields {
         let scalar = ReturnTypeSpec::Scalar { typespec_id: selected_field.typespec_id };

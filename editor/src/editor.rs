@@ -1252,13 +1252,15 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 &|| self.ui_toolkit.draw_text("URL params:"),
                 &|| self.render_code(client.gen_url_params_code.id),
                 &|| self.ui_toolkit.draw_separator(),
-                &|| self.ui_toolkit.draw_text("Test section"),
+                &|| self.ui_toolkit.draw_text("Test out this client below, and we'll try and figure out the response schema"),
                 &|| {
                     self.render_code(client.test_code.id)
                 },
                 &|| {
                     let cmd_buffer4 = Rc::clone(&self.command_buffer);
                     let cmd_buffer5 = Rc::clone(&self.command_buffer);
+                    // XXX: this is super messy. the main thing going on in here is that `builder.run_test`
+                    // is being called, so look there v
                     self.ui_toolkit
                         .draw_button("Run test", colorscheme!(action_color), move || {
                             let cmd_buffer5 = Rc::clone(&cmd_buffer5);
@@ -1266,6 +1268,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                     move |cont, interp, async_executor, _| {
                                         let builder =
                                             cont.get_json_http_client_builder(client_id).unwrap();
+
+                                        // THIS is where the logic is ^^
                                         builder.run_test(interp, async_executor, move |newbuilder| {
                                             cmd_buffer5.borrow_mut().add_controller_command(
                                                 move |cont| {
@@ -1299,63 +1303,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_json_return_type_selector(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
-        if let Some(return_type_candidate) = &builder.return_type_candidate {
-            let type_description = if let Some(type_name) =
-                self.env_genie.get_name_for_type(&return_type_candidate.typ)
-            {
-                type_name
-            } else {
-                let new_struct_for_return_type =
-                    return_type_candidate.structs_to_be_added
-                                         .iter()
-                                         .find(|s| s.id == return_type_candidate.typ.typespec_id)
-                                         .unwrap();
-                new_struct_for_return_type.name.clone()
-            };
-            let client_id = builder.json_http_client_id;
-            self.ui_toolkit.draw_all(&[
-                &|| {
-                    self.ui_toolkit
-                        .draw_text(&format!("Return type: {}", type_description))
-                },
-                &|| {
-                    let cmd_buffer = Rc::clone(&self.command_buffer);
-                    self.ui_toolkit.draw_button(
-                                                "Apply return type",
-                                                colorscheme!(action_color),
-                                                move || {
-                                                    cmd_buffer.borrow_mut()
-                                      .add_integrating_command(move |cont, interp, _, _| {
-                                          let mut env = interp.env.borrow_mut();
-                                          let mut json_http_client = {
-                                              let env_genie = env_genie::EnvGenie::new(&env);
-                                              env_genie.get_json_http_client(client_id)
-                                                       .unwrap()
-                                                       .clone()
-                                          };
-
-                                          let builder =
-                                              cont.get_json_http_client_builder(client_id).unwrap();
-                                          let return_type_candidate =
-                                              builder.return_type_candidate.clone().unwrap();
-                                          for strukt in return_type_candidate.structs_to_be_added {
-                                              env.add_typespec(strukt);
-                                          }
-                                          json_http_client.intermediate_parse_schema = return_type_candidate.typ;
-                                          env.add_function(json_http_client);
-                                      })
-                                                },
-                    )
-                },
-                &|| self.ui_toolkit.draw_text("Structs to be added:"),
-                &|| {
-                    self.ui_toolkit
-                        .draw_text(&format!("{:#?}", return_type_candidate.structs_to_be_added))
-                },
-            ])
-        } else {
-            self.ui_toolkit.draw_text("")
+        if builder.return_type_candidate.is_none() {
+            return self.ui_toolkit.draw_text("");
         }
+        let return_type_candidate = builder.return_type_candidate.as_ref().unwrap();
+        self.ui_toolkit
+            .draw_all(&[&|| self.ui_toolkit.draw_text("Example response:"), &|| {
+                          self.ui_toolkit
+                              .draw_text(&format!("{:#?}",
+                                                  return_type_candidate.structs_to_be_added))
+                      }])
     }
 
     fn render_test_request_results(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {

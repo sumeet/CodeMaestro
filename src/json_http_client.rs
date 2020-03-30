@@ -238,7 +238,7 @@ fn ex(value: serde_json::Value,
         }
     } else if into_type.matches_spec(&lang::LIST_TYPESPEC) {
         if value.is_array() {
-            // why do we need to clone here??? should our conversion methods take
+            // TODO: why do we need to clone here??? should our conversion methods take
             // references?
             let vec = value.as_array().unwrap().clone();
             let collection_type = into_type.params.first().unwrap();
@@ -253,26 +253,28 @@ fn ex(value: serde_json::Value,
             return Ok(value);
         }
     }
-    Err(format!("couldn't decode {:?}", value))
+    Err(format!("couldn't decode {:?} into {:?}", value, into_type))
 }
 
 fn serde_value_into_struct(mut value: serde_json::Value,
                            strukt: &structs::Struct,
                            env: &env::ExecutionEnvironment)
                            -> Option<lang::Value> {
-    if let Some(map) = value.as_object_mut() {
-        let values: Option<_> = strukt.fields
-                                      .iter()
-                                      .map(|strukt_field| {
-                                          let js_obj = map.remove(&strukt_field.name)?;
-                                          Some((strukt_field.id,
-                                                ex(js_obj, &strukt_field.field_type, env).ok()?))
-                                      })
-                                      .collect();
-        return Some(lang::Value::Struct { struct_id: strukt.id,
-                                          values: values? });
+    let value = value.as_object_mut();
+    if value.is_none() {
+        return None;
     }
-    None
+    let map = value.unwrap();
+    let values: Option<_> = strukt.fields
+                                  .iter()
+                                  .map(|strukt_field| {
+                                      let js_obj = map.remove(&strukt_field.name)?;
+                                      Some((strukt_field.id,
+                                            ex(js_obj, &strukt_field.field_type, env).ok()?))
+                                  })
+                                  .collect();
+    return Some(lang::Value::Struct { struct_id: strukt.id,
+                                      values: values? });
 }
 
 pub async fn fetch_json(request: http::Request<String>) -> Result<serde_json::Value> {
