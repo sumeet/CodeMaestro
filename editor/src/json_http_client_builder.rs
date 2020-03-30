@@ -136,7 +136,7 @@ fn build_return_type(env_genie: &EnvGenie,
                      selected_fields: &[SelectedField])
                      -> Option<ReturnTypeBuilderResult> {
     let return_type_spec = make_return_type_spec(selected_fields).ok()?;
-    Some(ReturnTypeBuilder::new(env_genie, &return_type_spec).build())
+    Some(ReturnTypeBuilder::new("Response", env_genie, &return_type_spec).build())
 }
 
 pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {
@@ -218,14 +218,19 @@ impl ReturnTypeSpec {
 }
 
 pub struct ReturnTypeBuilder<'a> {
+    current_field_name: &'a str,
     pub built_structs: Vec<structs::Struct>,
     pub env_genie: &'a EnvGenie<'a>,
     pub return_type_spec: &'a ReturnTypeSpec,
 }
 
 impl<'a> ReturnTypeBuilder<'a> {
-    pub fn new(env_genie: &'a EnvGenie<'a>, return_type: &'a ReturnTypeSpec) -> Self {
-        Self { env_genie,
+    pub fn new(current_field_name: &'a str,
+               env_genie: &'a EnvGenie<'a>,
+               return_type: &'a ReturnTypeSpec)
+               -> Self {
+        Self { current_field_name,
+               env_genie,
                built_structs: vec![],
                return_type_spec: return_type }
     }
@@ -237,8 +242,9 @@ impl<'a> ReturnTypeBuilder<'a> {
                                           typ: lang::Type::from_spec_id(*typespec_id, vec![]) }
             }
             ReturnTypeSpec::List(returntypespec) => {
-                let mut result =
-                    ReturnTypeBuilder::new(self.env_genie, returntypespec.as_ref()).build();
+                let mut result = ReturnTypeBuilder::new(self.current_field_name,
+                                                        self.env_genie,
+                                                        returntypespec.as_ref()).build();
                 result.typ = lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![result.typ]);
                 result
             }
@@ -247,7 +253,8 @@ impl<'a> ReturnTypeBuilder<'a> {
                 let struct_fields = map.iter()
                                        .map(|(key, returntypespec)| {
                                            let result =
-                                               ReturnTypeBuilder::new(self.env_genie,
+                                               ReturnTypeBuilder::new(key,
+                                                                      self.env_genie,
                                                                       returntypespec).build();
                                            structs_to_be_added.extend(result.structs_to_be_added);
                                            structs::StructField::new(key.clone(),
@@ -258,6 +265,7 @@ impl<'a> ReturnTypeBuilder<'a> {
                                       .map(|strukt| strukt.id)
                                       .unwrap_or_else(|| {
                                           let mut strukt = structs::Struct::new();
+                                          strukt.name = self.current_field_name.to_owned();
                                           strukt.fields = struct_fields;
                                           let id = strukt.id;
                                           structs_to_be_added.push(strukt);
