@@ -110,7 +110,7 @@ impl lang::Function for JSONHTTPClient {
         lang::Value::new_future(async move {
             let request = request.await;
             match fetch_json(request).await {
-                Ok(json_value) => match ex(json_value, &returns, &interpreter.env.borrow()) {
+                Ok(json_value) => match ex(&json_value, &returns, &interpreter.env.borrow()) {
                     Ok(value) => builtins::ok_result(value),
                     Err(e) => builtins::err_result(e),
                 },
@@ -218,7 +218,7 @@ impl JSONHTTPClient {
     }
 }
 
-fn ex(value: serde_json::Value,
+fn ex(value: &serde_json::Value,
       into_type: &lang::Type,
       env: &env::ExecutionEnvironment)
       -> std::result::Result<lang::Value, String> {
@@ -244,7 +244,7 @@ fn ex(value: serde_json::Value,
             let collection_type = into_type.params.first().unwrap();
             let collected: std::result::Result<Vec<lang::Value>, String> =
                 vec.into_iter()
-                   .map(|value| ex(value, collection_type, env))
+                   .map(|value| ex(&value, collection_type, env))
                    .collect();
             return Ok(lang::Value::List(collected?));
         }
@@ -270,7 +270,7 @@ fn serde_value_into_struct(mut value: serde_json::Value,
                                   .map(|strukt_field| {
                                       let js_obj = map.remove(&strukt_field.name)?;
                                       Some((strukt_field.id,
-                                            ex(js_obj, &strukt_field.field_type, env).ok()?))
+                                            ex(&js_obj, &strukt_field.field_type, env).ok()?))
                                   })
                                   .collect();
     return Some(lang::Value::Struct { struct_id: strukt.id,
