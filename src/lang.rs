@@ -109,6 +109,8 @@ pub enum CodeNode {
     ListIndex(ListIndex),
 }
 
+// TODO: pretty sure this needs to be reworked to be types / structs defined within the language, not
+// rust enums...
 #[derive(Clone, Debug)]
 pub enum Error {
     ArgumentError,

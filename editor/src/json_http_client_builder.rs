@@ -7,11 +7,45 @@ use super::json2;
 use cs::await_eval_result;
 use cs::env;
 use cs::env_genie::EnvGenie;
-use cs::json_http_client::fetch_json;
+use cs::json_http_client::{fetch_json, serde_value_to_lang_value};
 use cs::lang;
 use cs::structs;
 
 mod fake_http_client;
+
+// TODO: move this one func somewhere else? or keep it in this file?
+// i think this is always going to be a Result, because an HTTP request can always fail
+pub fn value_response_for_test_output(env: &env::ExecutionEnvironment,
+                                      serde_json_value: &serde_json::Value,
+                                      return_type_candidate: &ReturnTypeBuilderResult)
+                                      -> HTTPResponseIntermediateValue {
+    let mut new_fake_env = env.clone();
+    for strukt in &return_type_candidate.structs_to_be_added {
+        new_fake_env.add_typespec(strukt.clone());
+    }
+    let value = serde_value_to_lang_value(serde_json_value,
+                                          &return_type_candidate.typ,
+                                          &new_fake_env).unwrap();
+    HTTPResponseIntermediateValue { env: new_fake_env,
+                                    value }
+}
+
+// TODO: this should probably contain the raw HTTP response as well
+pub struct HTTPResponseIntermediateValue {
+    // note that the Value only works with the env from before
+    pub value: lang::Value,
+    pub env: env::ExecutionEnvironment,
+}
+
+impl HTTPResponseIntermediateValue {
+    pub fn from_builder(env: &env::ExecutionEnvironment,
+                        builder: &JSONHTTPClientBuilder)
+                        -> Option<Self> {
+        Some(value_response_for_test_output(env,
+                                            builder.test_run_result.as_ref()?.as_ref().ok()?,
+                                            builder.return_type_candidate.as_ref()?))
+    }
+}
 
 #[derive(Clone)]
 pub struct JSONHTTPClientBuilder {

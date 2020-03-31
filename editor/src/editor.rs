@@ -23,6 +23,7 @@ use crate::chat::example_chat_program;
 use crate::chat_test_window::ChatTestWindow;
 use crate::colorscheme;
 use crate::draw_all_iter;
+use crate::json_http_client_builder::HTTPResponseIntermediateValue;
 use crate::opener::MenuItem;
 use crate::opener::Opener;
 use crate::send_to_server_overlay::{SendToServerOverlay, SendToServerOverlayStatus};
@@ -51,6 +52,9 @@ use cs::scripts;
 use cs::structs;
 use cs::tests;
 use cs::{await_eval_result, EnvGenie};
+
+mod value_renderer;
+use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Keypress {
@@ -1282,7 +1286,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         })
                 },
                 &|| self.render_test_request_results(builder),
-                &|| self.render_json_return_type_selector(builder),
+                &|| self.render_json_return_type_value_display(builder),
                 &|| self.ui_toolkit.draw_separator(),
                 &|| self.ui_toolkit.draw_text("Final transform of HTTP response"),
                 &|| self.render_code(client.transform_code.id),
@@ -1302,16 +1306,21 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         )
     }
 
-    fn render_json_return_type_selector(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
-        if builder.return_type_candidate.is_none() {
+    fn render_json_return_type_value_display(&self,
+                                             builder: &JSONHTTPClientBuilder)
+                                             -> T::DrawResult {
+        let intermediate_value =
+            HTTPResponseIntermediateValue::from_builder(&self.env_genie.env, &builder);
+        if intermediate_value.is_none() {
             return self.ui_toolkit.draw_text("");
         }
-        let return_type_candidate = builder.return_type_candidate.as_ref().unwrap();
+
+        let intermediate_value = intermediate_value.unwrap();
         self.ui_toolkit
             .draw_all(&[&|| self.ui_toolkit.draw_text("Example response:"), &|| {
-                          self.ui_toolkit
-                              .draw_text(&format!("{:#?}",
-                                                  return_type_candidate.structs_to_be_added))
+                          ValueRenderer::new(&intermediate_value.env,
+                                             &intermediate_value.value,
+                                             self.ui_toolkit).render()
                       }])
     }
 

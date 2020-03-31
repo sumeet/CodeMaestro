@@ -11,13 +11,24 @@ use super::structs;
 
 use itertools::Itertools;
 
+pub struct TypeDisplayInfo {
+    pub name: String,
+    pub symbol: String,
+}
+
 pub struct EnvGenie<'a> {
-    env: &'a env::ExecutionEnvironment,
+    pub env: &'a env::ExecutionEnvironment,
 }
 
 impl<'a> EnvGenie<'a> {
     pub fn new(env: &'a env::ExecutionEnvironment) -> Self {
         Self { env }
+    }
+
+    // TODO: this could be faster
+    pub fn get_type_display_info(&self, typ: &lang::Type) -> Option<TypeDisplayInfo> {
+        Some(TypeDisplayInfo { symbol: self.get_symbol_for_type(typ),
+                               name: self.get_name_for_type(typ)? })
     }
 
     pub fn get_symbol_for_type(&self, t: &lang::Type) -> String {

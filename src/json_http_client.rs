@@ -110,7 +110,10 @@ impl lang::Function for JSONHTTPClient {
         lang::Value::new_future(async move {
             let request = request.await;
             match fetch_json(request).await {
-                Ok(json_value) => match ex(&json_value, &returns, &interpreter.env.borrow()) {
+                Ok(json_value) => match serde_value_to_lang_value(&json_value,
+                                                                  &returns,
+                                                                  &interpreter.env.borrow())
+                {
                     Ok(value) => builtins::ok_result(value),
                     Err(e) => builtins::err_result(e),
                 },
@@ -218,10 +221,10 @@ impl JSONHTTPClient {
     }
 }
 
-fn ex(value: &serde_json::Value,
-      into_type: &lang::Type,
-      env: &env::ExecutionEnvironment)
-      -> std::result::Result<lang::Value, String> {
+pub fn serde_value_to_lang_value(value: &serde_json::Value,
+                                 into_type: &lang::Type,
+                                 env: &env::ExecutionEnvironment)
+                                 -> std::result::Result<lang::Value, String> {
     if into_type.matches_spec(&lang::STRING_TYPESPEC) {
         if let Some(string) = value.as_str() {
             return Ok(lang::Value::String(string.to_owned()));
@@ -244,7 +247,7 @@ fn ex(value: &serde_json::Value,
             let collection_type = into_type.params.first().unwrap();
             let collected: std::result::Result<Vec<lang::Value>, String> =
                 vec.into_iter()
-                   .map(|value| ex(&value, collection_type, env))
+                   .map(|value| serde_value_to_lang_value(&value, collection_type, env))
                    .collect();
             return Ok(lang::Value::List(collected?));
         }
@@ -256,6 +259,7 @@ fn ex(value: &serde_json::Value,
     Err(format!("couldn't decode {:?} into {:?}", value, into_type))
 }
 
+// helper function to `serde_value_to_lang_value`
 fn serde_value_into_struct(mut value: serde_json::Value,
                            strukt: &structs::Struct,
                            env: &env::ExecutionEnvironment)
@@ -265,16 +269,17 @@ fn serde_value_into_struct(mut value: serde_json::Value,
         return None;
     }
     let map = value.unwrap();
-    let values: Option<_> = strukt.fields
-                                  .iter()
-                                  .map(|strukt_field| {
-                                      let js_obj = map.remove(&strukt_field.name)?;
-                                      Some((strukt_field.id,
-                                            ex(&js_obj, &strukt_field.field_type, env).ok()?))
-                                  })
-                                  .collect();
-    return Some(lang::Value::Struct { struct_id: strukt.id,
-                                      values: values? });
+    let values: Option<_> =
+        strukt.fields
+              .iter()
+              .map(|strukt_field| {
+                  let js_obj = map.remove(&strukt_field.name)?;
+                  Some((strukt_field.id,
+                        serde_value_to_lang_value(&js_obj, &strukt_field.field_type, env).ok()?))
+              })
+              .collect();
+    Some(lang::Value::Struct { struct_id: strukt.id,
+                               values: values? })
 }
 
 pub async fn fetch_json(request: http::Request<String>) -> Result<serde_json::Value> {
