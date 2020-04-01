@@ -221,6 +221,20 @@ macro_rules! draw_all_iter {
     }};
 }
 
+#[macro_export]
+macro_rules! draw_iter_to_vec {
+    ($t:ident::$ui_toolkit:expr, $iterator:expr) => {{
+        $iterator.map(|f| {
+                     let b: Box<dyn Fn() -> $t::DrawResult> = std::boxed::Box::new(f);
+                     b
+                 })
+                 .collect_vec()
+                 .iter()
+                 .map(|boxed_draw_fn| boxed_draw_fn.as_ref())
+                 .collect_vec()
+    }};
+}
+
 //pub struct Column<'a, T: UiToolkit + ?Sized> {
 //    pub draw_fn: DrawFnRef<'a, T>,
 //    pub percentage: f32,
