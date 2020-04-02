@@ -222,16 +222,20 @@ macro_rules! draw_all_iter {
 }
 
 #[macro_export]
-macro_rules! draw_iter_to_vec {
-    ($t:ident::$ui_toolkit:expr, $iterator:expr) => {{
-        $iterator.map(|f| {
-                     let b: Box<dyn Fn() -> $t::DrawResult> = std::boxed::Box::new(f);
-                     b
-                 })
-                 .collect_vec()
-                 .iter()
-                 .map(|boxed_draw_fn| boxed_draw_fn.as_ref())
-                 .collect_vec()
+macro_rules! align {
+    // creates a new scope so the variable doesn't leak out
+    ($t:ident::$ui_toolkit:expr, $lhs_draw_fn_ref: expr, $rhs_iterator:expr) => {{
+        use itertools::Itertools;
+        let __boxeds = $rhs_iterator.map(|f| {
+                                        let b: Box<dyn Fn() -> $t::DrawResult> =
+                                            std::boxed::Box::new(f);
+                                        b
+                                    })
+                                    .collect_vec();
+        $ui_toolkit.align($lhs_draw_fn_ref,
+                          &__boxeds.iter()
+                                   .map(|boxed_draw_fn| boxed_draw_fn.as_ref())
+                                   .collect_vec())
     }};
 }
 

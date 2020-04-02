@@ -1,5 +1,5 @@
+use crate::align;
 use crate::colorscheme;
-use crate::draw_iter_to_vec;
 use crate::ui_toolkit::{DrawFnRef, UiToolkit};
 use cs::env::ExecutionEnvironment;
 use cs::lang::{StructValues, Value};
@@ -49,15 +49,14 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                 panic!("let's worry about lists later, they're not even in the example")
             }
             Value::Struct { struct_id, values } => {
-                use itertools::Itertools;
-                let v = {
-                    draw_iter_to_vec!(T::self.ui_toolkit,
-                                                     values.iter().map(|(struct_field_id, value)| {
-                                                               move || self.render_struct_field_value(struct_field_id, value)
-                                                           }))
-                };
-                return self.ui_toolkit
-                           .align(&|| self.render_struct_symbol_and_name_button(struct_id), &v);
+                return align!(T::self.ui_toolkit,
+                              &|| self.render_struct_symbol_and_name_button(struct_id),
+                              values.iter().map(|(struct_field_id, value)| {
+                                               move || {
+                                                   self.render_struct_field_value(struct_field_id,
+                                                                                  value)
+                                               }
+                                           }))
             }
             Value::Future(_) => {
                 panic!("let's worry about lists later, they're not even in the example")
@@ -80,7 +79,6 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                                  struct_field_id: &lang::ID,
                                  value: &lang::Value)
                                  -> T::DrawResult {
-        unimplemented!()
     }
 
     fn draw_buttony_text(&self, label: &str) -> T::DrawResult {
