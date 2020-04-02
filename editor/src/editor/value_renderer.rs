@@ -53,7 +53,8 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                               &|| self.render_struct_symbol_and_name_button(struct_id),
                               values.iter().map(|(struct_field_id, value)| {
                                                move || {
-                                                   self.render_struct_field_value(struct_field_id,
+                                                   self.render_struct_field_value(struct_id,
+                                                                                  struct_field_id,
                                                                                   value)
                                                }
                                            }))
@@ -72,13 +73,25 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
         let typ = lang::Type::from_spec_id(*struct_id, vec![]);
         let type_display_info = self.env_genie.get_type_display_info(&typ).unwrap();
         self.draw_buttony_text(&format!("{:?} {:?}",
-                                        type_display_info.symbol, type_display_info.symbol))
+                                        type_display_info.symbol, type_display_info.name))
     }
 
     fn render_struct_field_value(&self,
+                                 struct_id: &lang::ID,
                                  struct_field_id: &lang::ID,
                                  value: &lang::Value)
                                  -> T::DrawResult {
+        let (_strukt, strukt_field) = self.env_genie
+                                          .get_struct_and_field(*struct_id, *struct_field_id)
+                                          .unwrap();
+        let type_display_info = self.env_genie
+                                    .get_type_display_info(&strukt_field.field_type)
+                                    .unwrap();
+        let arg_name = &strukt_field.name;
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &|| self.draw_buttony_text(&format!("{:?} {:?}", type_display_info.symbol, arg_name)),
+            &|| Self::new(self.env, value, self.ui_toolkit).render(),
+        ])
     }
 
     fn draw_buttony_text(&self, label: &str) -> T::DrawResult {

@@ -78,6 +78,17 @@ impl<'a> EnvGenie<'a> {
             .find(|field| field.id == struct_field_id)
     }
 
+    pub fn get_struct_and_field(&self,
+                                struct_id: lang::ID,
+                                struct_field_id: lang::ID)
+                                -> Option<(&structs::Struct, &structs::StructField)> {
+        let strukt = self.find_struct(struct_id)?;
+        let field = strukt.fields
+                          .iter()
+                          .find(|field| field.id == struct_field_id)?;
+        Some((strukt, field))
+    }
+
     pub fn find_struct_and_field(&self,
                                  struct_field_id: lang::ID)
                                  -> Option<(&structs::Struct, &structs::StructField)> {
