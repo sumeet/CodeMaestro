@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use crate::builtins::err_result;
 use crate::builtins::ok_result;
+use failure::_core::fmt::Formatter;
 use itertools::Itertools;
 use std::convert::TryInto;
 
@@ -356,3 +357,21 @@ impl ExecutionEnvironment {
         &self.console
     }
 }
+
+#[derive(Debug, Copy, Clone)]
+pub enum ExecutionError {
+    ArgumentNotFound,
+    ArgumentWrongType,
+}
+
+impl std::fmt::Display for ExecutionError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+                        ExecutionError::ArgumentNotFound => "ArgumentNotFound",
+                        ExecutionError::ArgumentWrongType => "ArgumentWrongType",
+                    })?;
+        Ok(())
+    }
+}
+
+impl std::error::Error for ExecutionError {}

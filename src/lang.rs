@@ -182,6 +182,13 @@ impl Value {
         }
     }
 
+    pub fn into_string(self) -> Result<String, Self> {
+        match self {
+            Self::String(s) => Ok(s),
+            _ => Err(self),
+        }
+    }
+
     pub fn into_vec(self) -> Option<Vec<Value>> {
         match self {
             Value::List(v) => Some(v),

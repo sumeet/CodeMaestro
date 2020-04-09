@@ -16,6 +16,7 @@ use std::sync::{Arc, Mutex};
 
 mod http_request;
 
+use crate::env::ExecutionError;
 pub use http_request::HTTPRequest;
 pub use http_request::HTTP_RESPONSE_STRUCT_ID;
 
@@ -116,19 +117,45 @@ pub fn err_result(string: String) -> lang::Value {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Print {}
 
+lazy_static! {
+    static ref PRINT_FUNC_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("b5c18d63-f9a0-4f08-8ee7-e35b3db9122d").unwrap();
+    static ref PRINT_ARG_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("feff08f0-7319-4b47-964e-1f470eca81df").unwrap();
+}
+
+pub fn get_args<const N: usize>(mut arg_by_id: HashMap<lang::ID, lang::Value>,
+                                arg_id: [lang::ID; N])
+                                -> Result<[lang::Value; N], ExecutionError> {
+    let mut args: [lang::Value; N] = unsafe { std::mem::MaybeUninit::zeroed().assume_init() };
+    for (i, arg_id) in arg_id.iter().enumerate() {
+        match arg_by_id.remove(arg_id) {
+            None => return Err(ExecutionError::ArgumentNotFound),
+            Some(value) => args[i] = value,
+        }
+    }
+    Ok(args)
+}
+
+fn get_string(v: lang::Value) -> Result<String, ExecutionError> {
+    match v.into_string() {
+        Ok(s) => Ok(s),
+        Err(_) => Err(ExecutionError::ArgumentWrongType),
+    }
+}
+
 #[typetag::serde]
 impl lang::Function for Print {
     fn call(&self,
             interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        match args.get(&self.takes_args()[0].id) {
-            Some(lang::Value::String(ref string)) => {
-                interpreter.env.borrow_mut().println(string);
-                lang::Value::Null
-            }
-            _ => lang::Value::Error(lang::Error::ArgumentError),
-        }
+        // TODO: not always gonna be an unwrap, we're going to change around the interpreter to
+        // accept Result types
+        let [arg] = get_args(args, [*PRINT_ARG_ID]).unwrap();
+        let string = get_string(arg).unwrap();
+        interpreter.env.borrow_mut().println(&string);
+        lang::Value::Null
     }
 
     fn name(&self) -> &str {
@@ -140,17 +167,13 @@ impl lang::Function for Print {
     }
 
     fn id(&self) -> lang::ID {
-        uuid::Uuid::parse_str("b5c18d63-f9a0-4f08-8ee7-e35b3db9122d").unwrap()
+        *PRINT_FUNC_ID
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("feff08f0-7319-4b47-964e-1f470eca81df").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "Text".to_string()
-            )
-        ]
+        vec![lang::ArgumentDefinition::new_with_id(*PRINT_ARG_ID,
+                                                   lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                                                   "Text".to_string())]
     }
 
     fn returns(&self) -> lang::Type {

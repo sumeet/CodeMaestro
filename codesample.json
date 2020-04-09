@@ -163,5 +163,23 @@
       }
     }
   ],
-  "typespecs": []
+  "typespecs": [
+    {
+      "type": "Enum",
+      "name": "Runtime error",
+      "description": "",
+      "id": "9ca20dbf-4268-4849-a0e4-cbb75a4ac2e2",
+      "symbol": "",
+      "variants": [
+        {
+          "name": "Argument not found",
+          "id": "5ed5a968-f32a-4226-81c5-b8ae632cfc62",
+          "variant_type": {
+            "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+            "params": []
+          }
+        }
+      ]
+    }
+  ]
 }

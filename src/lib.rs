@@ -1,3 +1,5 @@
+#![allow(incomplete_features)]
+#![feature(const_generics)]
 #![feature(trait_alias)]
 #![feature(unboxed_closures)]
 #![feature(specialization)]
