@@ -52,7 +52,10 @@ impl Interpreter {
         let code_node = code_node.clone();
         match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
-                Box::pin(self.evaluate_function_call(&function_call))
+                // TODO: get rid of the unwrap and bubble up the error
+                use futures_util::TryFutureExt;
+                Box::pin(self.evaluate_function_call(&function_call)
+                             .unwrap_or_else(|e| panic!(e)))
             }
             lang::CodeNode::Argument(argument) => Box::pin(self.evaluate(argument.expr.borrow())),
             lang::CodeNode::StringLiteral(string_literal) => {
@@ -221,7 +224,7 @@ impl Interpreter {
 
     fn evaluate_function_call(&mut self,
                               function_call: &lang::FunctionCall)
-                              -> impl Future<Output = lang::Value> {
+                              -> impl Future<Output = Result<lang::Value, ExecutionError>> {
         let args_futures =
             function_call.args
                          .iter()
@@ -243,9 +246,9 @@ impl Interpreter {
             match func {
                 Some(function) => {
                     let interp = Self::with_env(Rc::clone(&env));
-                    function.call(interp, args)
+                    Ok(function.call(interp, args))
                 }
-                None => lang::Value::Error(lang::Error::UndefinedFunctionError(function_id)),
+                None => Err(ExecutionError::UndefinedFunction),
             }
         }
     }
@@ -362,6 +365,7 @@ impl ExecutionEnvironment {
 pub enum ExecutionError {
     ArgumentNotFound,
     ArgumentWrongType,
+    UndefinedFunction,
 }
 
 impl std::fmt::Display for ExecutionError {
@@ -369,6 +373,7 @@ impl std::fmt::Display for ExecutionError {
         f.write_str(match self {
                         ExecutionError::ArgumentNotFound => "ArgumentNotFound",
                         ExecutionError::ArgumentWrongType => "ArgumentWrongType",
+                        ExecutionError::UndefinedFunction => "UndefinedFunction",
                     })?;
         Ok(())
     }
