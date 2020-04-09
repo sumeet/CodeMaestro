@@ -10,7 +10,7 @@ use super::editor;
 use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::editor::Controller;
-use cs::builtins::new_result;
+use cs::builtins::new_result_with_null_error;
 use cs::code_function;
 use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
@@ -528,7 +528,7 @@ impl CodeGenie {
             }
             CodeNode::ListIndex(list_index) => {
                 let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie);
-                new_result(get_type_from_list(list_typ).unwrap_or_else(|| {
+                new_result_with_null_error(get_type_from_list(list_typ).unwrap_or_else(|| {
                                let list_typ =
                                    self.guess_type(list_index.list_expr.as_ref(), env_genie);
                                panic!(format!("couldn't extract list element from {:?}", list_typ))

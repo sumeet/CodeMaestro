@@ -200,9 +200,14 @@ impl lang::Function for Capitalize {
     }
 }
 
-pub fn new_result(ok_type: lang::Type) -> lang::Type {
+pub fn new_result_with_null_error(ok_type: lang::Type) -> lang::Type {
+    let null_type = lang::Type::from_spec(&*lang::NULL_TYPESPEC);
+    new_result(ok_type, null_type)
+}
+
+pub fn new_result(ok_type: lang::Type, error_type: lang::Type) -> lang::Type {
     lang::Type { typespec_id: *RESULT_ENUM_ID,
-                 params: vec![ok_type] }
+                 params: vec![ok_type, error_type] }
 }
 
 #[derive(Clone)]

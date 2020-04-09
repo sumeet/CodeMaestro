@@ -1,4 +1,4 @@
-use crate::builtins::{new_result, new_struct_value};
+use crate::builtins::{new_result_with_null_error, new_struct_value};
 use crate::env::Interpreter;
 use crate::http_client;
 use crate::lang;
@@ -91,6 +91,7 @@ impl lang::Function for HTTPRequest {
     }
 
     fn returns(&self) -> Type {
-        new_result(lang::Type::from_spec_id(*super::HTTP_RESPONSE_STRUCT_ID, Vec::new()))
+        new_result_with_null_error(lang::Type::from_spec_id(*super::HTTP_RESPONSE_STRUCT_ID,
+                                                            Vec::new()))
     }
 }

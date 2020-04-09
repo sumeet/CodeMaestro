@@ -178,6 +178,10 @@ impl<'a> Controller {
     }
 
     pub fn is_builtin(&self, id: lang::ID) -> bool {
+        // temporarily let us change the Result enum type
+        if *builtins::RESULT_ENUM_ID == id {
+            return false;
+        }
         self.builtins.is_builtin(id)
     }
 
@@ -1648,6 +1652,24 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                     &|| {},
                                 )
                             },
+                            &|| {
+                                if variant.is_parameterized() {
+                                    self.ui_toolkit.draw_all(&[])
+                                } else {
+                                    let eneom1 = eneom.clone();
+                                    let cont1 = Rc::clone(&self.command_buffer);
+                                    self.render_type_change_combo(
+                                        "Type",
+                                        variant.variant_type.as_ref().unwrap(),
+                                        move |newtype| {
+                                            let mut neweneom = eneom1.clone();
+                                            let mut newvariant = &mut neweneom.variants[current_variant_index];
+                                            newvariant.variant_type = Some(newtype);
+                                            cont1.borrow_mut().load_typespec(neweneom)
+                                        },
+                                    )
+                                }
+                            },
                             // TODO: add this checkbox logic to other types?
                             &|| {
                                 let eneom1 = eneom.clone();
@@ -1669,24 +1691,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                 )
                             },
                             &|| {
-                                if !variant.is_parameterized() {
-                                    self.ui_toolkit.draw_all(&[])
-                                } else {
-                                    let eneom1 = eneom.clone();
-                                    let cont1 = Rc::clone(&self.command_buffer);
-                                    self.render_type_change_combo(
-                                        "Type",
-                                        variant.variant_type.as_ref().unwrap(),
-                                        move |newtype| {
-                                            let mut neweneom = eneom1.clone();
-                                            let mut newvariant = &mut neweneom.variants[current_variant_index];
-                                            newvariant.variant_type = Some(newtype);
-                                            cont1.borrow_mut().load_typespec(neweneom)
-                                        },
-                                    )
-                                }
-                            },
-                            &|| {
                                 let eneom1 = eneom.clone();
                                 let cont1 = Rc::clone(&self.command_buffer);
                                 self.ui_toolkit.draw_button("Delete", colorscheme!(danger_color), move || {
@@ -1695,22 +1699,22 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                     cont1.borrow_mut().load_typespec(neweneom)
                                 })
                             },
-                            &|| {
-                                let eneom1 = eneom.clone();
-                                let cont1 = Rc::clone(&self.command_buffer);
-                                self.ui_toolkit
-                                    .draw_button("Add another variant", colorscheme!(action_color), move || {
-                                        let mut neweneom = eneom1.clone();
-                                        neweneom.variants.push(enums::EnumVariant::new(
-                                            format!("variant{}", neweneom.variants.len()),
-                                            None,
-                                        ));
-                                        cont1.borrow_mut().load_typespec(neweneom);
-                                    })
-                            }
                        ])
                    })
                 )
+            },
+            &|| {
+                let eneom1 = eneom.clone();
+                let cont1 = Rc::clone(&self.command_buffer);
+                self.ui_toolkit
+                    .draw_button("Add another variant", colorscheme!(action_color), move || {
+                        let mut neweneom = eneom1.clone();
+                        neweneom.variants.push(enums::EnumVariant::new(
+                            format!("variant{}", neweneom.variants.len()),
+                            None,
+                        ));
+                        cont1.borrow_mut().load_typespec(neweneom);
+                    })
             }
         ])
     }
