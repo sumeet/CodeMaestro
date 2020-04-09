@@ -1,4 +1,4 @@
-use crate::builtins::{new_result_with_null_error, new_struct_value};
+use crate::builtins::{get_args, get_string, new_result_with_null_error, new_struct_value};
 use crate::env::Interpreter;
 use crate::http_client;
 use crate::lang;
@@ -34,14 +34,8 @@ lazy_static! {
 #[typetag::serde]
 impl lang::Function for HTTPRequest {
     fn call(&self, _interpreter: Interpreter, args: HashMap<ID, Value>) -> Value {
-        let http_method = match args.get(&HTTP_METHOD_ARG_ID) {
-            Some(lang::Value::String(ref string)) => string,
-            _ => return lang::Value::Error(lang::Error::ArgumentError),
-        };
-        let url = match args.get(&URL_ARG_ID) {
-            Some(lang::Value::String(ref string)) => string,
-            _ => return lang::Value::Error(lang::Error::ArgumentError),
-        };
+        let [arg1, arg2] = get_args(args, [*HTTP_METHOD_ARG_ID, *URL_ARG_ID]).unwrap();
+        let [http_method, url] = [get_string(arg1).unwrap(), get_string(arg2).unwrap()];
 
         // build HTTP request
         let mut request_builder = http::Request::builder();

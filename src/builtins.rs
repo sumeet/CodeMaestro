@@ -127,7 +127,7 @@ lazy_static! {
 pub fn get_args<const N: usize>(mut arg_by_id: HashMap<lang::ID, lang::Value>,
                                 arg_id: [lang::ID; N])
                                 -> Result<[lang::Value; N], ExecutionError> {
-    let mut args: [lang::Value; N] = unsafe { std::mem::MaybeUninit::zeroed().assume_init() };
+    let mut args: [lang::Value; N] = array_init::array_init(|_| lang::Value::Null);
     for (i, arg_id) in arg_id.iter().enumerate() {
         match arg_by_id.remove(arg_id) {
             None => return Err(ExecutionError::ArgumentNotFound),
@@ -190,10 +190,9 @@ impl lang::Function for Capitalize {
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        match args.get(&self.takes_args()[0].id) {
-            Some(lang::Value::String(ref string)) => lang::Value::String(string.to_uppercase()),
-            _ => lang::Value::Error(lang::Error::ArgumentError),
-        }
+        let [arg] = get_args(args, [*PRINT_ARG_ID]).unwrap();
+        let string = get_string(arg).unwrap();
+        lang::Value::String(string.to_uppercase())
     }
 
     fn name(&self) -> &str {

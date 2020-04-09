@@ -55,6 +55,7 @@ url = "1.7.2"
 maplit = "1.0.1"
 pyo3 = { version = "0.5.2", optional = true }
 regex = {version = "1.1.0"}
+array-init = {git = "https://github.com/sumeet/array-init", branch = "const-generics"}
 
 # wow i can't believe i need this
 futures-util = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat", "sink"] }

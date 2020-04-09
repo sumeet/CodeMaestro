@@ -113,7 +113,6 @@ pub enum CodeNode {
 // rust enums...
 #[derive(Clone, Debug)]
 pub enum Error {
-    ArgumentError,
     UndefinedFunctionError(ID),
     // TODO: add metadata into here
     PythonError(String, String),
