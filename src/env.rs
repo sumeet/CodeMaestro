@@ -366,6 +366,8 @@ pub enum ExecutionError {
     ArgumentNotFound,
     ArgumentWrongType,
     UndefinedFunction,
+    PythonError,
+    PythonDeserializationError,
 }
 
 impl std::fmt::Display for ExecutionError {
@@ -374,6 +376,8 @@ impl std::fmt::Display for ExecutionError {
                         ExecutionError::ArgumentNotFound => "ArgumentNotFound",
                         ExecutionError::ArgumentWrongType => "ArgumentWrongType",
                         ExecutionError::UndefinedFunction => "UndefinedFunction",
+                        ExecutionError::PythonError => "PythonError",
+                        ExecutionError::PythonDeserializationError => "PythonDeserializationError",
                     })?;
         Ok(())
     }

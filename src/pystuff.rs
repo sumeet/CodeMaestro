@@ -15,6 +15,7 @@ use super::external_func::ValueWithEnv;
 use super::function;
 use super::lang;
 use super::structs;
+use crate::env::ExecutionError;
 
 thread_local! {
     pub static GILGUARD: Rc<GILGuard> = Rc::new(Python::acquire_gil());
@@ -142,7 +143,7 @@ impl PyFunc {
           pyobjectref: &PyObjectRef,
           into_type: &lang::Type,
           env: &env::ExecutionEnvironment)
-          -> lang::Value {
+          -> Result<lang::Value, ExecutionError> {
         let gil = getgil();
         let py = gil.python();
 
@@ -150,15 +151,15 @@ impl PyFunc {
         // verbose bullshit
         if into_type.matches_spec(&lang::STRING_TYPESPEC) {
             if let Ok(string) = pyobjectref.extract() {
-                return lang::Value::String(string);
+                return Ok(lang::Value::String(string));
             }
         } else if into_type.matches_spec(&lang::NUMBER_TYPESPEC) {
             if let Ok(int) = pyobjectref.extract() {
-                return lang::Value::Number(int);
+                return Ok(lang::Value::Number(int));
             }
         } else if into_type.matches_spec(&lang::NULL_TYPESPEC) {
             if pyobjectref.is_none() {
-                return lang::Value::Null;
+                return Ok(lang::Value::Null);
             }
         } else if into_type.matches_spec(&lang::LIST_TYPESPEC) {
             let pyobj: PyObject = pyobjectref.extract().unwrap();
@@ -169,13 +170,13 @@ impl PyFunc {
             let collected: Vec<lang::Value> =
                 iter.map(|pyresult| self.ex(pyresult.unwrap(), collection_type, env))
                     .collect();
-            return lang::Value::List(collected);
+            return Ok(lang::Value::List(collected));
         } else if let Some(strukt) = env.find_struct(into_type.typespec_id) {
             if let Ok(value) = self.pyobject_into_struct(pyobjectref, strukt, env) {
-                return value;
+                return Ok(value);
             }
         }
-        lang::Value::Error(lang::Error::PythonDeserializationError)
+        Err(ExecutionError::PythonDeserializationError)
     }
 
     fn pyobject_into_struct(&self,
@@ -195,13 +196,13 @@ impl PyFunc {
                                  values: values? })
     }
 
-    fn py_exception_to_error(&self, pyerror: &PyErr) -> lang::Error {
+    fn py_exception_to_error(&self, pyerror: &PyErr) -> (String, String) {
         let gil = getgil();
         let py = gil.python();
         let error_obj = pyerror.into_object(py);
         let error_cls = error_obj.getattr(py, "__class__").unwrap();
         let error_cls_name = error_cls.getattr(py, "__name__").unwrap();
-        lang::Error::PythonError(self.str(error_cls_name), self.str(error_obj))
+        (self.str(error_cls_name), self.str(error_obj))
     }
 
     fn str(&self, pyobj: PyObject) -> String {
@@ -243,13 +244,13 @@ impl lang::Function for PyFunc {
         // not passing in any locals so that the struct gets loaded into the module namespace
         let result = py.run(include_str!("maestro_struct.py"), None, None);
         if let Err(e) = result {
-            return lang::Value::Error(self.py_exception_to_error(&e));
+            return panic!(self.py_exception_to_error(&e));
         }
 
         // TODO: only run the prelude once, instead of every time the func is called
         let result = py.run(&self.prelude, None, Some(locals));
         if let Err(e) = result {
-            return lang::Value::Error(self.py_exception_to_error(&e));
+            return panic!(self.py_exception_to_error(&e));
         }
 
         let named_args: HashMap<String, ValueWithEnv> =
@@ -264,7 +265,7 @@ impl lang::Function for PyFunc {
         let locals_with_params = mix_args_with_locals(py, locals, args_dict);
         let eval_result = py.eval(self.eval.as_ref(), None, Some(locals_with_params));
         if let Err(pyerr) = eval_result {
-            return lang::Value::Error(self.py_exception_to_error(&pyerr));
+            panic!(self.py_exception_to_error(&pyerr));
         }
 
         let eval_result = eval_result.unwrap();

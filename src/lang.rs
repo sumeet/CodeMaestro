@@ -113,10 +113,6 @@ pub enum CodeNode {
 // rust enums...
 #[derive(Clone, Debug)]
 pub enum Error {
-    UndefinedFunctionError(ID),
-    // TODO: add metadata into here
-    PythonError(String, String),
-    PythonDeserializationError,
     JavaScriptDeserializationError,
     JavaScriptError(String, String),
     // TODO: will need to think harder about this... just need this for code to specify errors
