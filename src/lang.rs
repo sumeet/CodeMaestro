@@ -109,22 +109,6 @@ pub enum CodeNode {
     ListIndex(ListIndex),
 }
 
-// TODO: pretty sure this needs to be reworked to be types / structs defined within the language, not
-// rust enums...
-#[derive(Clone, Debug)]
-pub enum Error {
-    JavaScriptDeserializationError,
-    JavaScriptError(String, String),
-    // TODO: will need to think harder about this... just need this for code to specify errors
-    Custom(String),
-}
-
-impl Error {
-    fn _to_string(&self) -> String {
-        format!("{:?}", self)
-    }
-}
-
 use futures_util::future::Shared;
 use futures_util::FutureExt;
 use std::collections::BTreeMap;
@@ -137,7 +121,6 @@ pub enum Value {
     Null,
     Boolean(bool),
     String(String),
-    Error(Error),
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Vec<Value>),

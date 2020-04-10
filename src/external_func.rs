@@ -59,7 +59,6 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
             }
             lang::Value::Null
             | lang::Value::String(_)
-            | lang::Value::Error(_)
             | lang::Value::Number(_)
             | lang::Value::Boolean(_) => value,
         }
@@ -89,7 +88,6 @@ fn contains_futures(val: &lang::Value) -> bool {
         lang::Value::Enum { box value, .. } => contains_futures(value),
         lang::Value::Null
         | lang::Value::String(_)
-        | lang::Value::Error(_)
         | lang::Value::Number(_)
         | lang::Value::Boolean(_) => false,
     }

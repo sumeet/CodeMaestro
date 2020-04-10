@@ -5,6 +5,7 @@ use super::function;
 use super::lang;
 use super::structs;
 
+use crate::env::ExecutionError;
 use serde;
 use serde::ser::{SerializeMap, SerializeSeq};
 use serde_derive::{Deserialize, Serialize};
@@ -43,19 +44,19 @@ impl JSFunc {
           value: stdweb::Value,
           into_type: &lang::Type,
           env: &env::ExecutionEnvironment)
-          -> lang::Value {
+          -> Result<lang::Value, ExecutionError> {
         if into_type.matches_spec(&lang::STRING_TYPESPEC) {
             if let Some(string) = value.into_string() {
-                return lang::Value::String(string);
+                return Ok(lang::Value::String(string));
             }
         } else if into_type.matches_spec(&lang::NUMBER_TYPESPEC) {
             if let Ok(int) = value.try_into() {
                 let val: i64 = int;
-                return lang::Value::Number(val as i128);
+                return Ok(lang::Value::Number(val as i128));
             }
         } else if into_type.matches_spec(&lang::NULL_TYPESPEC) {
             if value.is_null() {
-                return lang::Value::Null;
+                return Ok(lang::Value::Null);
             }
         } else if into_type.matches_spec(&lang::LIST_TYPESPEC) {
             if value.is_array() {
@@ -65,14 +66,14 @@ impl JSFunc {
                     vec.into_iter()
                        .map(|value| self.ex(value, collection_type, env))
                        .collect();
-                return lang::Value::List(collected);
+                return Ok(lang::Value::List(collected));
             }
         } else if let Some(strukt) = env.find_struct(into_type.typespec_id) {
             if let Some(value) = self.stdweb_value_into_struct(value, strukt, env) {
                 return value;
             }
         }
-        lang::Value::Error(lang::Error::JavaScriptDeserializationError)
+        panic!(ExecutionError::JavaScriptDeserializationError)
     }
 
     fn stdweb_value_into_struct(&self,
@@ -107,7 +108,6 @@ impl<'a> serde::Serialize for ValueWithEnv<'a> {
             (_, Boolean(b)) => serializer.serialize_bool(*b),
             (_, String(s)) => serializer.serialize_str(&s),
             // not quite sure what to do with these...
-            (_, Error(e)) => serializer.serialize_str(&format!("{:?}", e)),
             // TODO: fix this i128 to i64 cast...
             (_, Number(i)) => serializer.serialize_i64(*i as i64),
             (env, List(v)) => {
@@ -182,9 +182,7 @@ impl lang::Function for JSFunc {
                                                     .collect();
 
         match eval(&self.eval, named_args) {
-            Err((err_name, err_string)) => {
-                lang::Value::Error(lang::Error::JavaScriptError(err_name, err_string))
-            }
+            Err((err_name, err_string)) => panic!(ExecutionError::JavascriptError),
             Ok(value) => self.extract(value, &env),
         }
     }

@@ -43,7 +43,6 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                 }
             }
             Value::String(string) => return self.render_string(string),
-            Value::Error(e) => format!("Error: {:?}", e),
             Value::Number(num) => return self.render_number(num),
             Value::List(_) => {
                 panic!("let's worry about lists later, they're not even in the example")

@@ -77,7 +77,6 @@ impl<'a> IntoPyObject for ValueWithEnv<'a> {
             (_, Boolean(b)) => b.into_object(py),
             (_, String(s)) => s.into_object(py),
             // not quite sure what to do with these...
-            (_, Error(e)) => format!("{:?}", e).into_object(py),
             (_, Number(i)) => i.into_object(py),
             (env, Enum { box value, .. }) => Self { value, env }.into_object(py),
             (env, List(v)) => v.into_iter()
@@ -255,9 +254,7 @@ impl lang::Function for PyFunc {
 
         let named_args: HashMap<String, ValueWithEnv> =
             external_func::to_named_args(self, args).map(|(name, value)| {
-                                                        (name,
-                                                         ValueWithEnv { env: &env,
-                                                                        value: value })
+                                                        (name, ValueWithEnv { env: &env, value })
                                                     })
                                                     .collect();
 

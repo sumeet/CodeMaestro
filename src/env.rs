@@ -368,6 +368,8 @@ pub enum ExecutionError {
     UndefinedFunction,
     PythonError,
     PythonDeserializationError,
+    JavaScriptError,
+    JavaScriptDeserializationError,
 }
 
 impl std::fmt::Display for ExecutionError {
@@ -378,6 +380,10 @@ impl std::fmt::Display for ExecutionError {
                         ExecutionError::UndefinedFunction => "UndefinedFunction",
                         ExecutionError::PythonError => "PythonError",
                         ExecutionError::PythonDeserializationError => "PythonDeserializationError",
+                        ExecutionError::JavaScriptDeserializationError => {
+                            "JavaScriptDeserializationError"
+                        }
+                        ExecutionError::JavaScriptError => "JavaScriptError",
                     })?;
         Ok(())
     }
