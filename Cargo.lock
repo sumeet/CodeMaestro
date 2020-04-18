@@ -873,7 +873,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "gen-iter"
 version = "0.1.2"
-source = "git+https://github.com/sumeet/gen-iter#ba1464de7ea5d259c324abc8a4959ddcdcbc6000"
+source = "git+https://github.com/sumeet/gen-iter#53b98fcfc06d01d148bc2615001868043c1e221c"
 
 [[package]]
 name = "generic-array"

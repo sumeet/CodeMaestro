@@ -35,7 +35,10 @@ impl JSFunc {
                args: vec![] }
     }
 
-    fn extract(&self, value: stdweb::Value, env: &env::ExecutionEnvironment) -> lang::Value {
+    fn extract(&self,
+               value: stdweb::Value,
+               env: &env::ExecutionEnvironment)
+               -> Result<lang::Value, ExecutionError> {
         use self::lang::Function;
         self.ex(value, &self.returns(), env)
     }
@@ -64,16 +67,17 @@ impl JSFunc {
                 let collection_type = into_type.params.first().unwrap();
                 let collected: Vec<lang::Value> =
                     vec.into_iter()
-                       .map(|value| self.ex(value, collection_type, env))
+                       // TODO: really need to get rid of the unwrap here
+                       .map(|value| self.ex(value, collection_type, env).unwrap())
                        .collect();
                 return Ok(lang::Value::List(collected));
             }
         } else if let Some(strukt) = env.find_struct(into_type.typespec_id) {
             if let Some(value) = self.stdweb_value_into_struct(value, strukt, env) {
-                return value;
+                return Ok(value);
             }
         }
-        panic!(ExecutionError::JavaScriptDeserializationError)
+        Err(ExecutionError::JavaScriptDeserializationError)
     }
 
     fn stdweb_value_into_struct(&self,
@@ -88,7 +92,9 @@ impl JSFunc {
                                           .map(|strukt_field| {
                                               let js_obj = map.remove(&strukt_field.name)?;
                                               Some((strukt_field.id,
-                                                    self.ex(js_obj, &strukt_field.field_type, env)))
+                                                    // TODO: get rid of this unwrap
+                                                    self.ex(js_obj, &strukt_field.field_type, env)
+                                                        .unwrap()))
                                           })
                                           .collect();
             return Some(lang::Value::Struct { struct_id: strukt.id,
@@ -182,8 +188,9 @@ impl lang::Function for JSFunc {
                                                     .collect();
 
         match eval(&self.eval, named_args) {
-            Err((err_name, err_string)) => panic!(ExecutionError::JavascriptError),
-            Ok(value) => self.extract(value, &env),
+            Err((_err_name, _err_string)) => panic!(ExecutionError::JavaScriptError),
+            // TODO: real errors
+            Ok(value) => self.extract(value, &env).unwrap(),
         }
     }
 

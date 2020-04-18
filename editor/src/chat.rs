@@ -7,7 +7,7 @@ use rand::rngs::OsRng;
 use rand::seq::SliceRandom;
 
 lazy_static! {
-    static ref VERBS: Vec<&'static str> = { include_str!("../verbs.txt").lines().collect() };
+    static ref VERBS: Vec<&'static str> = include_str!("../verbs.txt").lines().collect();
 }
 
 pub fn example_chat_program() -> ChatProgram {

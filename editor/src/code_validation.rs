@@ -14,9 +14,9 @@ use std::iter::once;
 
 lazy_static! {
     static ref HTTP_FORM_PARAM_TYPE: lang::Type =
-        { lang::Type::from_spec_id(*builtins::HTTP_FORM_PARAM_STRUCT_ID, vec![]) };
+        lang::Type::from_spec_id(*builtins::HTTP_FORM_PARAM_STRUCT_ID, vec![]);
     static ref LIST_OF_FORM_PARAMS: lang::Type =
-        { lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![HTTP_FORM_PARAM_TYPE.clone()]) };
+        lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![HTTP_FORM_PARAM_TYPE.clone()]);
 }
 
 // TODO: instead of applying fixes right away, show them in a popup modal and ask the user to either

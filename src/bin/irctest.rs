@@ -387,7 +387,7 @@ pub fn exec_async<T, E, F, R>(f: F) -> impl Future<Item = T, Error = E>
           <R as IntoFuture>::Future: Send
 {
     lazy_static! {
-        static ref THREAD_POOL: CpuPool = { CpuPool::new_num_cpus() };
+        static ref THREAD_POOL: CpuPool = CpuPool::new_num_cpus();
     }
 
     let pool = DIESEL_CONN_POOL.clone();
