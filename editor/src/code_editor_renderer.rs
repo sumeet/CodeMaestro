@@ -322,7 +322,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         .unwrap();
                 self.ui_toolkit.draw_all_on_same_line(&[
                     &|| self.draw_operation_label("Struct field insertion"),
-                    &|| self.render_struct_identifier(strukt),
+                    &|| self.render_typespec_identifier(strukt),
                     &|| self.ui_toolkit.draw_text("for"),
                     &|| self.render_struct_literal_field_label(struct_field),
                 ])
@@ -1134,7 +1134,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                          .unwrap();
 
         if struct_literal.fields.is_empty() {
-            return self.render_struct_identifier(&strukt);
+            return self.render_typespec_identifier(strukt);
         }
         let rhs = self.render_struct_literal_fields(&strukt, struct_literal.fields());
         let rhs: Vec<Box<dyn Fn() -> T::DrawResult>> =
@@ -1144,14 +1144,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                    b
                })
                .collect_vec();
-        self.ui_toolkit.align(
-                              &|| {
-                                  self.set_selected_on_click(
-                    &|| self.render_struct_identifier(&strukt),
-                    struct_literal.id)
+        self.ui_toolkit.align(&|| {
+                                  self.set_selected_on_click(&|| {
+                                                             self.render_typespec_identifier(strukt)
+                                                         },
+                                                         struct_literal.id)
                               },
-                              &rhs.iter().map(|b| b.as_ref()).collect_vec(),
-        )
+                              &rhs.iter().map(|b| b.as_ref()).collect_vec())
     }
 
     fn render_list_index(&self, list_index: &lang::ListIndex) -> T::DrawResult {
@@ -1191,9 +1190,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         )
     }
 
-    fn render_struct_identifier(&self, strukt: &structs::Struct) -> T::DrawResult {
-        let typ = lang::Type::from_spec(strukt);
-        self.render_name_with_type_definition(&strukt.name, colorscheme!(cool_color), &typ)
+    fn render_typespec_identifier(&self, typespec: &impl lang::TypeSpec) -> T::DrawResult {
+        let typ = lang::Type::from_spec(typespec);
+        self.render_name_with_type_definition(typespec.readable_name(),
+                                              colorscheme!(cool_color),
+                                              &typ)
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
