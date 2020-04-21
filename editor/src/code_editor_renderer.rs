@@ -9,6 +9,9 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
+use crate::code_rendering::{
+    darken, draw_nested_borders_around, render_name_with_type_definition, render_struct_identifier,
+};
 use crate::colorscheme;
 use crate::draw_all_iter;
 use crate::editor::Keypress;
@@ -322,7 +325,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         .unwrap();
                 self.ui_toolkit.draw_all_on_same_line(&[
                     &|| self.draw_operation_label("Struct field insertion"),
-                    &|| self.render_typespec_identifier(strukt),
+                    &|| self.render_struct_identifier(strukt),
                     &|| self.ui_toolkit.draw_text("for"),
                     &|| self.render_struct_literal_field_label(struct_field),
                 ])
@@ -418,7 +421,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                           Some(help_text) if !help_text.is_empty() => {
                               self.ui_toolkit.draw_all(&[
                                     &|| self.render_code(&option.new_node),
-                                    &|| self.ui_toolkit.draw_wrapped_text(self.darken(colorscheme!(text_color)), &help_text),
+                                    &|| self.ui_toolkit.draw_wrapped_text(darken(colorscheme!(text_color)), &help_text),
                               ])
                           }
                           _ => self.render_code(&option.new_node),
@@ -536,23 +539,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                   draw_element_fn: &dyn Fn() -> T::DrawResult)
                                   -> T::DrawResult {
         let nesting_level = *self.arg_nesting_level.borrow();
-        if nesting_level == 0 {
-            return draw_element_fn();
-        }
-
-        let top_border_thickness = 1 + nesting_level + 1;
-        let right_border_thickness = 1;
-        let left_border_thickness = 1;
-        let bottom_border_thickness = 1;
-
-        let drawn = self.ui_toolkit.draw_top_border_inside(BLACK_COLOR, top_border_thickness as u8, &|| {
-            self.ui_toolkit.draw_right_border_inside(BLACK_COLOR, right_border_thickness, &|| {
-                self.ui_toolkit.draw_left_border_inside(BLACK_COLOR, left_border_thickness, &|| {
-                    self.ui_toolkit.draw_bottom_border_inside(BLACK_COLOR, bottom_border_thickness, draw_element_fn)
-                })
-            })
-        });
-        drawn
+        draw_nested_borders_around(self.ui_toolkit, draw_element_fn, nesting_level as u8)
     }
 
     fn is_selected(&self, code_node_id: lang::ID) -> bool {
@@ -768,17 +755,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.set_selected_on_click(draw, variable_reference.id)
     }
 
-    fn darken(&self, mut color: Color) -> Color {
-        color[0] *= 0.75;
-        color[1] *= 0.75;
-        color[2] *= 0.75;
-        color
-    }
-
     fn render_function_name(&self, name: &str, color: Color, typ: &lang::Type) -> T::DrawResult {
         let sym = self.env_genie.get_symbol_for_type(typ);
-        //        let darker_color = self.darken(self.darken(self.darken(color)));
-        let darker_color = self.darken(self.darken(color));
+        let darker_color = darken(darken(color));
 
         self.draw_nested_borders_around(&|| {
             self.ui_toolkit.draw_top_border_inside(darker_color, 2, &|| {
@@ -814,41 +793,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                         color: Color,
                                         typ: &lang::Type)
                                         -> T::DrawResult {
-        let sym = self.env_genie.get_symbol_for_type(typ);
-
-        let darker_color = self.darken(color);
         self.draw_nested_borders_around(&|| {
-                // UHHHH: even though i went throuhg a lot of effort to get the borders working, i
-                // think it looks better without them honestly. and also there's this bug when this
-                // is on a line by itself on web, it takes up the whole line for some reason. so
-                // let's live without the borders, either for now, or permanently.
-
-                //                self.ui_toolkit
-                //                    .draw_top_border_inside(darker_color, 2, &|| {
-                //                        self.ui_toolkit
-                //                            .draw_right_border_inside(darker_color, 1, &|| {
-                //                                self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
-                //                            self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
-                //
-                // AAAAAAAAAND this doesn't need buttonize
-                //                self.ui_toolkit.buttonize(
-                //                                          &|| {
-                self.ui_toolkit.draw_all_on_same_line(&[&|| {
-                                                            self.ui_toolkit
-                                                                .draw_buttony_text(&sym,
-                                                                                   darker_color)
-                                                        },
-                                                        &|| {
-                                                            self.ui_toolkit
-                                                                .draw_buttony_text(name, color)
-                                                        }])
-                //                                          },
-                //                                          || {},
-                //            )
-                //                            })
-                //                        })
-                //                            })
-                //                    })
+                render_name_with_type_definition(self.ui_toolkit, self.env_genie, name, color, typ)
             })
     }
 
@@ -1134,7 +1080,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                          .unwrap();
 
         if struct_literal.fields.is_empty() {
-            return self.render_typespec_identifier(strukt);
+            return self.render_struct_identifier(strukt);
         }
         let rhs = self.render_struct_literal_fields(&strukt, struct_literal.fields());
         let rhs: Vec<Box<dyn Fn() -> T::DrawResult>> =
@@ -1146,7 +1092,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                .collect_vec();
         self.ui_toolkit.align(&|| {
                                   self.set_selected_on_click(&|| {
-                                                             self.render_typespec_identifier(strukt)
+                                                             self.render_struct_identifier(strukt)
                                                          },
                                                          struct_literal.id)
                               },
@@ -1190,11 +1136,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         )
     }
 
-    fn render_typespec_identifier(&self, typespec: &impl lang::TypeSpec) -> T::DrawResult {
-        let typ = lang::Type::from_spec(typespec);
-        self.render_name_with_type_definition(typespec.readable_name(),
-                                              colorscheme!(cool_color),
-                                              &typ)
+    fn render_struct_identifier(&self, strukt: &structs::Struct) -> T::DrawResult {
+        render_struct_identifier::<T>(strukt, &|name, color, typ| {
+            self.render_name_with_type_definition(name, color, typ)
+        })
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {

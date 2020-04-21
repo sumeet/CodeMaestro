@@ -2,12 +2,14 @@
 // ... i couldn't find a good way of sharing the code, but i think i might need to eventually.
 // for now it's just copy+paste
 use crate::align;
+use crate::code_rendering::{render_name_with_type_definition, render_struct_identifier};
 use crate::colorscheme;
 use crate::ui_toolkit::{Color, UiToolkit};
 use cs::env::ExecutionEnvironment;
 use cs::lang::Value;
 use cs::{lang, EnvGenie};
 use lazy_static::lazy_static;
+use std::cell::RefCell;
 
 lazy_static! {
     static ref TRUE_LABEL: String = format!("{} True", lang::BOOLEAN_TYPESPEC.symbol);
@@ -16,6 +18,7 @@ lazy_static! {
 }
 
 pub struct ValueRenderer<'a, T: UiToolkit> {
+    nesting_level: RefCell<u8>,
     env_genie: EnvGenie<'a>,
     #[allow(unused)]
     env: &'a ExecutionEnvironment,
@@ -28,6 +31,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
         let env_genie = EnvGenie::new(env);
         Self { env,
                env_genie,
+               nesting_level: RefCell::new(0),
                value,
                ui_toolkit }
     }
@@ -79,11 +83,10 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
     }
 
     fn render_struct_symbol_and_name_button(&self, struct_id: &lang::ID) -> T::DrawResult {
-        let typ = lang::Type::from_spec_id(*struct_id, vec![]);
-        let type_display_info = self.env_genie.get_type_display_info(&typ).unwrap();
-        self.draw_buttony_text_hardcoded_color(&format!("{} {}",
-                                                        type_display_info.symbol,
-                                                        type_display_info.name))
+        let strukt = self.env_genie.find_struct(*struct_id).unwrap();
+        render_struct_identifier::<T>(strukt, &|name, color, typ| {
+            render_name_with_type_definition(self.ui_toolkit, &self.env_genie, name, color, typ)
+        })
     }
 
     fn render_struct_field_value(&self,

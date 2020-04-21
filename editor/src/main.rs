@@ -16,6 +16,7 @@ mod chat;
 mod chat_test_window;
 mod code_editor;
 mod code_editor_renderer;
+mod code_rendering;
 mod code_validation;
 mod color_schemes;
 mod edit_types;
