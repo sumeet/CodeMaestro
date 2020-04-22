@@ -249,7 +249,7 @@ pub fn serde_value_to_lang_value(value: &serde_json::Value,
                 vec.into_iter()
                    .map(|value| serde_value_to_lang_value(&value, collection_type, env))
                    .collect();
-            return Ok(lang::Value::List(collected?));
+            return Ok(lang::Value::List(collection_type.clone(), collected?));
         }
     } else if let Some(strukt) = env.find_struct(into_type.typespec_id) {
         if let Some(value) = serde_value_into_struct(value.clone(), strukt, env) {

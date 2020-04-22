@@ -170,7 +170,7 @@ impl Interpreter {
                     for future in futures.into_iter() {
                         output_vec.push(await_eval_result!(future))
                     }
-                    lang::Value::List(output_vec)
+                    lang::Value::List(list_literal.element_type, output_vec)
                 })
             }
             lang::CodeNode::StructFieldGet(sfg) => {

@@ -51,7 +51,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             }
             Value::String(string) => return self.render_string(string),
             Value::Number(num) => return self.render_number(num),
-            Value::List(_) => {
+            Value::List(typ, values) => {
                 panic!("let's worry about lists later, they're not even in the example")
             }
             Value::Struct { struct_id, values } => return self.render_struct(struct_id, values),

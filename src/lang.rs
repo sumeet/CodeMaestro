@@ -123,7 +123,7 @@ pub enum Value {
     String(String),
     // TODO: be smarter amount infinite precision ints
     Number(i128),
-    List(Vec<Value>),
+    List(Type, Vec<Value>),
     Struct { struct_id: ID, values: StructValues },
     Future(ValueFuture),
     Enum { variant_id: ID, value: Box<Value> },
@@ -155,7 +155,7 @@ impl Value {
 
     pub fn as_vec(&self) -> Option<&Vec<Value>> {
         match self {
-            Value::List(v) => Some(v),
+            Value::List(_, v) => Some(v),
             _ => None,
         }
     }
@@ -169,7 +169,7 @@ impl Value {
 
     pub fn into_vec(self) -> Option<Vec<Value>> {
         match self {
-            Value::List(v) => Some(v),
+            Value::List(_, v) => Some(v),
             _ => None,
         }
     }

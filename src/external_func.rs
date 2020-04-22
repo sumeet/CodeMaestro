@@ -43,7 +43,9 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
                     awaited_value
                 }
             }
-            lang::Value::List(v) => lang::Value::List(v.into_iter().map(resolve_futures).collect()),
+            lang::Value::List(typ, v) => {
+                lang::Value::List(typ, v.into_iter().map(resolve_futures).collect())
+            }
             lang::Value::Struct { values, struct_id } => {
                 lang::Value::Struct { struct_id,
                                       values: values.into_iter()
@@ -83,7 +85,7 @@ fn contains_futures(val: &lang::Value) -> bool {
             // future, the Value could contain MORE nested futures!
             true
         }
-        lang::Value::List(v) => v.iter().any(contains_futures),
+        lang::Value::List(_typ, v) => v.iter().any(contains_futures),
         lang::Value::Struct { values, .. } => values.iter().any(|(_id, val)| contains_futures(val)),
         lang::Value::Enum { box value, .. } => contains_futures(value),
         lang::Value::Null
