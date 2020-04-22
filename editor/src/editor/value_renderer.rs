@@ -3,8 +3,8 @@
 // for now it's just copy+paste
 use crate::align;
 use crate::code_rendering::{
-    render_name_with_type_definition, render_struct_field, render_struct_field_label,
-    render_struct_identifier,
+    render_list_literal_label, render_list_literal_value, render_name_with_type_definition,
+    render_struct_field, render_struct_field_label, render_struct_identifier,
 };
 use crate::colorscheme;
 use crate::ui_toolkit::{Color, UiToolkit};
@@ -51,9 +51,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             }
             Value::String(string) => return self.render_string(string),
             Value::Number(num) => return self.render_number(num),
-            Value::List(typ, values) => {
-                panic!("let's worry about lists later, they're not even in the example")
-            }
+            Value::List(typ, values) => return self.render_list(typ, values),
             Value::Struct { struct_id, values } => return self.render_struct(struct_id, values),
             Value::Future(_) => {
                 panic!("let's worry about futures later, they're not even in the example")
@@ -63,6 +61,20 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             }
         };
         self.draw_buttony_text_hardcoded_color(&label)
+    }
+
+    fn render_list(&self, typ: &lang::Type, values: &[lang::Value]) -> T::DrawResult {
+        align!(T::self.ui_toolkit,
+               &|| {
+                   render_list_literal_label(self.ui_toolkit, &self.env_genie, &lang::Type::list_of(typ.clone()))
+               },
+               values.iter()
+                     .enumerate()
+                     .map(|(pos, value)| {
+                         move || {
+                             render_list_literal_value(self.ui_toolkit, pos, &|| self.render_value(value))
+                         }
+                     }))
     }
 
     fn render_struct(&self, struct_id: &lang::ID, values: &StructValues) -> T::DrawResult {
@@ -103,7 +115,11 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                                                           &self.env_genie,
                                                           strukt_field)
                             },
-                            &|| Self::new(self.env, value, self.ui_toolkit).render())
+                            &|| self.render_value(value))
+    }
+
+    fn render_value(&'a self, value: &'a lang::Value) -> T::DrawResult {
+        Self::new(self.env, value, self.ui_toolkit).render()
     }
 
     fn draw_buttony_text(&self, label: &str, color: Color) -> T::DrawResult {

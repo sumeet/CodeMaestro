@@ -505,8 +505,7 @@ impl CodeGenie {
                       .clone()
             }
             CodeNode::ListLiteral(list_literal) => {
-                lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                        vec![list_literal.element_type.clone()])
+                lang::Type::list_of(list_literal.element_type.clone())
             }
             // this means that both branches of a conditional must be of the same type.we need to
             // add a validation for that

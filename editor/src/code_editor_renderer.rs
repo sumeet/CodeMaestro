@@ -10,7 +10,8 @@ use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
 use crate::code_rendering::{
-    darken, draw_nested_borders_around, render_name_with_type_definition, render_struct_field,
+    darken, draw_nested_borders_around, render_list_literal_label, render_list_literal_position,
+    render_list_literal_value, render_name_with_type_definition, render_struct_field,
     render_struct_field_label, render_struct_identifier,
 };
 use crate::colorscheme;
@@ -458,17 +459,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let t = self.code_editor
                     .code_genie
                     .guess_type(code_node, self.env_genie);
-        // TODO: we can use smth better to express the nesting than ascii art, like our nesting scheme
-        //       with the black lines (can actually make that generic so we can swap it with something
-        //       else
-        let type_symbol = self.env_genie.get_symbol_for_type(&t);
-        self.ui_toolkit
-            .draw_buttony_text(&type_symbol, colorscheme!(cool_color))
+        render_list_literal_label(self.ui_toolkit, self.env_genie, &t)
     }
 
     fn render_list_literal_position(&self, pos: usize) -> T::DrawResult {
-        self.ui_toolkit
-            .draw_buttony_text(&pos.to_string(), BLACK_COLOR)
+        render_list_literal_position(self.ui_toolkit, pos)
     }
 
     fn render_list_literal(&self,
@@ -498,21 +493,19 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         while i <= list_literal.elements.len() {
             if insert_pos.map_or(false, |insert_pos| insert_pos == i) {
                 rhs.push(Box::new(move || {
-                       self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| self.render_list_literal_position(position_label),
-                        &|| self.render_nested(&|| self.render_insert_code_node()),
-                    ])
-                   }));
+                             render_list_literal_value(self.ui_toolkit, position_label, &|| {
+                                 self.render_nested(&|| self.render_insert_code_node())
+                             })
+                         }));
                 position_label += 1;
             }
 
             list_literal.elements.get(i).map(|el| {
                                             rhs.push(Box::new(move || {
-                                                   self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| self.render_list_literal_position(position_label),
-                        &|| self.render_nested(&|| self.render_code(el)),
-                    ])
-                                               }));
+                    render_list_literal_value(self.ui_toolkit, position_label, &|| {
+                        self.render_nested(&|| self.render_code(el))
+                    })
+                }));
                                             position_label += 1;
                                         });
             i += 1;

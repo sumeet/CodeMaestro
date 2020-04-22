@@ -3,6 +3,29 @@ use crate::colorscheme;
 use crate::ui_toolkit::{Color, DrawFnRef, UiToolkit};
 use cs::{lang, structs, EnvGenie};
 
+pub fn render_list_literal_value<T: UiToolkit>(ui_toolkit: &T,
+                                               pos: usize,
+                                               render_value_fn: DrawFnRef<T>)
+                                               -> T::DrawResult {
+    ui_toolkit.draw_all_on_same_line(&[&|| render_list_literal_position(ui_toolkit, pos),
+                                       render_value_fn])
+}
+
+pub fn render_list_literal_position<T: UiToolkit>(ui_toolkit: &T, pos: usize) -> T::DrawResult {
+    ui_toolkit.draw_buttony_text(&pos.to_string(), BLACK_COLOR)
+}
+
+pub fn render_list_literal_label<T: UiToolkit>(ui_toolkit: &T,
+                                               env_genie: &EnvGenie,
+                                               typ: &lang::Type)
+                                               -> T::DrawResult {
+    // TODO: we can use smth better to express the nesting than ascii art, like our nesting scheme
+    //       with the black lines (can actually make that generic so we can swap it with something
+    //       else
+    let type_symbol = env_genie.get_symbol_for_type(typ);
+    ui_toolkit.draw_buttony_text(&type_symbol, colorscheme!(cool_color))
+}
+
 pub fn render_struct_field<T: UiToolkit>(ui_toolkit: &T,
                                          render_label_fn: DrawFnRef<T>,
                                          render_value_fn: DrawFnRef<T>)

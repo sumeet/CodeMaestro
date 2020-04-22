@@ -278,6 +278,10 @@ pub struct Type {
 }
 
 impl Type {
+    pub fn list_of(typ: Self) -> Self {
+        Self::with_params(&*LIST_TYPESPEC, vec![typ])
+    }
+
     // for types with no params
     pub fn from_spec<T: TypeSpec>(spec: &T) -> Self {
         Self::with_params(spec, vec![])
