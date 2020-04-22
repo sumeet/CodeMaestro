@@ -2,12 +2,15 @@
 // ... i couldn't find a good way of sharing the code, but i think i might need to eventually.
 // for now it's just copy+paste
 use crate::align;
-use crate::code_rendering::{render_name_with_type_definition, render_struct_identifier};
+use crate::code_rendering::{
+    render_name_with_type_definition, render_struct_field, render_struct_field_label,
+    render_struct_identifier,
+};
 use crate::colorscheme;
 use crate::ui_toolkit::{Color, UiToolkit};
 use cs::env::ExecutionEnvironment;
-use cs::lang::Value;
-use cs::{lang, EnvGenie};
+use cs::lang::{StructValues, Value};
+use cs::{lang, structs, EnvGenie};
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 
@@ -51,25 +54,27 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::List(_) => {
                 panic!("let's worry about lists later, they're not even in the example")
             }
-            Value::Struct { struct_id, values } => {
-                return align!(T::self.ui_toolkit,
-                              &|| self.render_struct_symbol_and_name_button(struct_id),
-                              values.iter().map(|(struct_field_id, value)| {
-                                               move || {
-                                                   self.render_struct_field_value(struct_id,
-                                                                                  struct_field_id,
-                                                                                  value)
-                                               }
-                                           }))
-            }
+            Value::Struct { struct_id, values } => return self.render_struct(struct_id, values),
             Value::Future(_) => {
-                panic!("let's worry about lists later, they're not even in the example")
+                panic!("let's worry about futures later, they're not even in the example")
             }
             Value::Enum { .. } => {
-                panic!("let's worry about lists later, they're not even in the example")
+                panic!("let's worry about enums later, they're not even in the example")
             }
         };
         self.draw_buttony_text_hardcoded_color(&label)
+    }
+
+    fn render_struct(&self, struct_id: &lang::ID, values: &StructValues) -> T::DrawResult {
+        let strukt = self.env_genie.find_struct(*struct_id).unwrap();
+        align!(T::self.ui_toolkit,
+               &|| self.render_struct_identifier(strukt),
+               strukt.fields.iter().map(|strukt_field| {
+                                       move || {
+                                           let value = values.get(&strukt_field.id).unwrap();
+                                           self.render_struct_field_value(strukt_field, value)
+                                       }
+                                   }))
     }
 
     fn render_number(&self, value: &i128) -> T::DrawResult {
@@ -82,29 +87,23 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                                colorscheme!(literal_bg_color))
     }
 
-    fn render_struct_symbol_and_name_button(&self, struct_id: &lang::ID) -> T::DrawResult {
-        let strukt = self.env_genie.find_struct(*struct_id).unwrap();
+    fn render_struct_identifier(&self, strukt: &structs::Struct) -> T::DrawResult {
         render_struct_identifier::<T>(strukt, &|name, color, typ| {
             render_name_with_type_definition(self.ui_toolkit, &self.env_genie, name, color, typ)
         })
     }
 
     fn render_struct_field_value(&self,
-                                 struct_id: &lang::ID,
-                                 struct_field_id: &lang::ID,
+                                 strukt_field: &structs::StructField,
                                  value: &lang::Value)
                                  -> T::DrawResult {
-        let (_strukt, strukt_field) = self.env_genie
-                                          .get_struct_and_field(*struct_id, *struct_field_id)
-                                          .unwrap();
-        let type_display_info = self.env_genie
-                                    .get_type_display_info(&strukt_field.field_type)
-                                    .unwrap();
-        let arg_name = &strukt_field.name;
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| self.draw_buttony_text_hardcoded_color(&format!("{} {}", type_display_info.symbol, arg_name)),
-            &|| Self::new(self.env, value, self.ui_toolkit).render(),
-        ])
+        render_struct_field(self.ui_toolkit,
+                            &|| {
+                                render_struct_field_label(self.ui_toolkit,
+                                                          &self.env_genie,
+                                                          strukt_field)
+                            },
+                            &|| Self::new(self.env, value, self.ui_toolkit).render())
     }
 
     fn draw_buttony_text(&self, label: &str, color: Color) -> T::DrawResult {

@@ -10,7 +10,8 @@ use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
 use crate::code_rendering::{
-    darken, draw_nested_borders_around, render_name_with_type_definition, render_struct_identifier,
+    darken, draw_nested_borders_around, render_name_with_type_definition, render_struct_field,
+    render_struct_field_label, render_struct_identifier,
 };
 use crate::colorscheme;
 use crate::draw_all_iter;
@@ -1019,31 +1020,27 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_struct_literal_field_label(&self, field: &structs::StructField) -> T::DrawResult {
-        let field_text = format!("{} {}",
-                                 self.env_genie.get_symbol_for_type(&field.field_type),
-                                 field.name);
-        self.ui_toolkit.draw_buttony_text(&field_text, BLACK_COLOR)
+        render_struct_field_label(self.ui_toolkit, self.env_genie, field)
     }
 
     fn render_struct_literal_field(&self,
                                    field: &structs::StructField,
                                    literal_field: &lang::StructLiteralField)
                                    -> T::DrawResult {
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| {
-                self.set_selected_on_click(&|| self.render_struct_literal_field_label(field),
+        render_struct_field(self.ui_toolkit,
+                            &|| {
+                                self.set_selected_on_click(&|| self.render_struct_literal_field_label(field),
                                            literal_field.id)
-            },
-            &|| {
-                self.render_nested(&|| {
-                        if self.is_editing(literal_field.id) {
-                            self.render_insert_code_node()
-                        } else {
-                            self.render_code(&literal_field.expr)
-                        }
-                    })
-            },
-        ])
+                            },
+                            &|| {
+                                self.render_nested(&|| {
+                                        if self.is_editing(literal_field.id) {
+                                            self.render_insert_code_node()
+                                        } else {
+                                            self.render_code(&literal_field.expr)
+                                        }
+                                    })
+                            })
     }
 
     fn render_struct_literal_fields(

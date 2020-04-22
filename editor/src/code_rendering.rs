@@ -3,6 +3,23 @@ use crate::colorscheme;
 use crate::ui_toolkit::{Color, DrawFnRef, UiToolkit};
 use cs::{lang, structs, EnvGenie};
 
+pub fn render_struct_field<T: UiToolkit>(ui_toolkit: &T,
+                                         render_label_fn: DrawFnRef<T>,
+                                         render_value_fn: DrawFnRef<T>)
+                                         -> T::DrawResult {
+    ui_toolkit.draw_all_on_same_line(&[render_label_fn, render_value_fn])
+}
+
+pub fn render_struct_field_label<T: UiToolkit>(ui_toolkit: &T,
+                                               env_genie: &EnvGenie,
+                                               field: &structs::StructField)
+                                               -> T::DrawResult {
+    let field_text = format!("{} {}",
+                             env_genie.get_symbol_for_type(&field.field_type),
+                             field.name);
+    ui_toolkit.draw_buttony_text(&field_text, BLACK_COLOR)
+}
+
 pub fn render_struct_identifier<T: UiToolkit>(strukt: &structs::Struct,
                                               render_name_with_type_fn: &dyn Fn(&str,
                                                       Color,
