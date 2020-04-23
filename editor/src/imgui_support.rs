@@ -40,7 +40,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
 
     let font_size = (15.0 * hidpi_factor) as f32;
     let icon_font_size = font_size / 1.75;
-    let icon_y_offset = (-2.0 * hidpi_factor) as f32;
+    let fontawesome_icon_y_offset = (-2.0 * hidpi_factor) as f32;
+    let custom_icon_y_offset = 1.; //(-0.25 * hidpi_factor) as f32;
 
     unsafe {
         imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
@@ -78,7 +79,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                                          ..FontConfig::default() }) },
          FontSource::TtfData { data: include_bytes!("../../fonts/fontcustom.ttf"),
                                size_pixels: font_size,
-                               config: Some(FontConfig { glyph_offset: [0.0, icon_y_offset],
+                               config: Some(FontConfig { glyph_offset:
+                                                             [0.0, custom_icon_y_offset],
                                                          rasterizer_multiply: 1.75,
                                                          glyph_ranges:
                                                              FontGlyphRanges::from_slice(&[0xf100,
@@ -106,7 +108,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
          FontSource::TtfData { data: include_bytes!("../../fonts/fa-regular-400.ttf"),
                                size_pixels: icon_font_size,
                                config: Some(FontConfig { rasterizer_multiply: 1.75,
-                                                         glyph_offset: [0.0, icon_y_offset],
+                                                         glyph_offset:
+                                                             [0.0, fontawesome_icon_y_offset],
                                                          glyph_ranges:
                                                              FontGlyphRanges::from_slice(&[0xf004,
                                                                                            0xf5c8, // the range for font awesome regular 400
@@ -116,7 +119,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                                          ..FontConfig::default() }) },
          FontSource::TtfData { data: include_bytes!("../../fonts/fa-solid-900.ttf"),
                                size_pixels: icon_font_size,
-                               config: Some(FontConfig { glyph_offset: [0.0, icon_y_offset],
+                               config: Some(FontConfig { glyph_offset:
+                                                             [0.0, fontawesome_icon_y_offset],
                                                          rasterizer_multiply: 1.75,
                                                          glyph_ranges:
                                                              FontGlyphRanges::from_slice(&[0xf000,
@@ -127,7 +131,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                                          ..FontConfig::default() }) },
          FontSource::TtfData { data: include_bytes!("../../fonts/fa-brands-400.ttf"),
                                size_pixels: icon_font_size,
-                               config: Some(FontConfig { glyph_offset: [0.0, icon_y_offset],
+                               config: Some(FontConfig { glyph_offset:
+                                                             [0.0, fontawesome_icon_y_offset],
                                                          rasterizer_multiply: 1.75,
                                                          glyph_ranges:
                                                              FontGlyphRanges::from_slice(&[0xf298,

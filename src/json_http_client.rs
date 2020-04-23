@@ -239,6 +239,10 @@ pub fn serde_value_to_lang_value(value: &serde_json::Value,
         if value.is_null() {
             return Ok(lang::Value::Null);
         }
+    } else if into_type.matches_spec(&lang::BOOLEAN_TYPESPEC) {
+        if let Some(b) = value.as_bool() {
+            return Ok(lang::Value::Boolean(b));
+        }
     } else if into_type.matches_spec(&lang::LIST_TYPESPEC) {
         if value.is_array() {
             // TODO: why do we need to clone here??? should our conversion methods take

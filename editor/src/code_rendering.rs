@@ -3,6 +3,8 @@ use crate::colorscheme;
 use crate::ui_toolkit::{Color, DrawFnRef, UiToolkit};
 use cs::{lang, structs, EnvGenie};
 
+const ARGUMENT_GREY_COLOR: Color = [0.411, 0.411, 0.411, 1.];
+
 pub fn render_list_literal_value<T: UiToolkit>(ui_toolkit: &T,
                                                pos: usize,
                                                render_value_fn: DrawFnRef<T>)
@@ -12,7 +14,7 @@ pub fn render_list_literal_value<T: UiToolkit>(ui_toolkit: &T,
 }
 
 pub fn render_list_literal_position<T: UiToolkit>(ui_toolkit: &T, pos: usize) -> T::DrawResult {
-    ui_toolkit.draw_buttony_text(&pos.to_string(), BLACK_COLOR)
+    render_argument_label(ui_toolkit, &pos.to_string())
 }
 
 pub fn render_list_literal_label<T: UiToolkit>(ui_toolkit: &T,
@@ -40,7 +42,7 @@ pub fn render_struct_field_label<T: UiToolkit>(ui_toolkit: &T,
     let field_text = format!("{} {}",
                              env_genie.get_symbol_for_type(&field.field_type),
                              field.name);
-    ui_toolkit.draw_buttony_text(&field_text, BLACK_COLOR)
+    render_argument_label(ui_toolkit, &field_text)
 }
 
 pub fn render_struct_identifier<T: UiToolkit>(strukt: &structs::Struct,
@@ -93,4 +95,8 @@ pub fn darken(mut color: Color) -> Color {
     color[1] *= 0.75;
     color[2] *= 0.75;
     color
+}
+
+fn render_argument_label<T: UiToolkit>(ui_toolkit: &T, label: &str) -> T::DrawResult {
+    ui_toolkit.draw_buttony_text(label, ARGUMENT_GREY_COLOR)
 }
