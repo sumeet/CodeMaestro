@@ -5,6 +5,7 @@ use crate::align;
 use crate::code_rendering::{
     render_list_literal_label, render_list_literal_value, render_name_with_type_definition,
     render_null, render_struct_field, render_struct_field_label, render_struct_identifier,
+    NestingRenderer,
 };
 use crate::colorscheme;
 use crate::ui_toolkit::{Color, UiToolkit};
@@ -12,7 +13,6 @@ use cs::env::ExecutionEnvironment;
 use cs::lang::{StructValues, Value};
 use cs::{lang, structs, EnvGenie};
 use lazy_static::lazy_static;
-use std::cell::RefCell;
 
 lazy_static! {
     static ref TRUE_LABEL: String = format!("{} True", lang::BOOLEAN_TYPESPEC.symbol);
@@ -21,7 +21,7 @@ lazy_static! {
 }
 
 pub struct ValueRenderer<'a, T: UiToolkit> {
-    nesting_level: RefCell<u8>,
+    nesting_renderer: NestingRenderer<'a, T>,
     env_genie: EnvGenie<'a>,
     #[allow(unused)]
     env: &'a ExecutionEnvironment,
@@ -34,7 +34,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
         let env_genie = EnvGenie::new(env);
         Self { env,
                env_genie,
-               nesting_level: RefCell::new(0),
+               nesting_renderer: NestingRenderer::new(ui_toolkit),
                value,
                ui_toolkit }
     }
@@ -72,7 +72,9 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                      .enumerate()
                      .map(|(pos, value)| {
                          move || {
-                             render_list_literal_value(self.ui_toolkit, pos, &|| self.render_value(value))
+                             render_list_literal_value(self.ui_toolkit, pos, &|| {
+                                 self.nesting_renderer.draw_nested(&|| self.render_value(value))
+                             })
                          }
                      }))
     }
@@ -115,7 +117,10 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                                                           &self.env_genie,
                                                           strukt_field)
                             },
-                            &|| self.render_value(value))
+                            &|| {
+                                self.nesting_renderer
+                                    .draw_nested(&|| self.render_value(value))
+                            })
     }
 
     fn render_value(&'a self, value: &'a lang::Value) -> T::DrawResult {

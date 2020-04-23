@@ -3,11 +3,13 @@ use crate::colorscheme;
 use crate::ui_toolkit::{Color, DrawFnRef, UiToolkit};
 use cs::{lang, structs, EnvGenie};
 use lazy_static::lazy_static;
+use std::cell::RefCell;
 
 lazy_static! {
     static ref NULL_TEXT: String = format!(" {} ", lang::NULL_TYPESPEC.symbol);
 }
-const ARGUMENT_GREY_COLOR: Color = [0.411, 0.411, 0.411, 1.];
+// const ARGUMENT_GREY_COLOR: Color = [0.411, 0.411, 0.411, 1.];
+const ARGUMENT_GREY_COLOR: Color = [0., 0., 0., 1.];
 
 pub fn render_null<T: UiToolkit>(ui_toolkit: &T) -> T::DrawResult {
     ui_toolkit.draw_text(&NULL_TEXT)
@@ -22,7 +24,9 @@ pub fn render_list_literal_value<T: UiToolkit>(ui_toolkit: &T,
 }
 
 pub fn render_list_literal_position<T: UiToolkit>(ui_toolkit: &T, pos: usize) -> T::DrawResult {
-    render_argument_label(ui_toolkit, &pos.to_string())
+    draw_border_inside(ui_toolkit, BLACK_COLOR, [2, 1, 1, 1], &|| {
+        render_argument_label(ui_toolkit, &pos.to_string())
+    })
 }
 
 pub fn render_list_literal_label<T: UiToolkit>(ui_toolkit: &T,
@@ -73,6 +77,49 @@ pub fn render_name_with_type_definition<T: UiToolkit>(ui_toolkit: &T,
     let darker_color = darken(color);
     ui_toolkit.draw_all_on_same_line(&[&|| ui_toolkit.draw_buttony_text(&sym, darker_color),
                                        &|| ui_toolkit.draw_buttony_text(name, color)])
+}
+
+pub struct NestingRenderer<'a, T: UiToolkit> {
+    ui_toolkit: &'a T,
+    // this is a RefCell because this function is going to call itself recursively... it would
+    // violate the exclusive lock to have a mutable reference to this guy, and then need to call
+    // it recursively
+    nesting_level: RefCell<u8>,
+}
+
+impl<'a, T: UiToolkit> NestingRenderer<'a, T> {
+    pub fn new(ui_toolkit: &'a T) -> Self {
+        Self { ui_toolkit,
+               nesting_level: RefCell::new(0) }
+    }
+
+    pub fn draw_nested(&self, draw_fn: DrawFnRef<T>) -> T::DrawResult {
+        let previous_nesting_level = self.nesting_level.replace_with(|l| *l + 1);
+        let current_nesting_level = previous_nesting_level + 1;
+        let res = draw_nested_borders_around(self.ui_toolkit, draw_fn, current_nesting_level);
+        self.nesting_level.replace_with(|l| *l - 1);
+        res
+    }
+}
+
+// TODO: move this into the UiToolkit itself?
+// XXX: i think there's a bug here and the top border gets cut off by 1 or smth, every place we
+// call this, we have to bump the top border size by 1... will have to look into why that is, later
+pub fn draw_border_inside<'a, T: UiToolkit>(ui_toolkit: &'a T,
+                                            color: Color,
+                                            // trbl: top right bottom left
+                                            thickness_trbl: [u8; 4],
+                                            draw_fn: DrawFnRef<'a, T>)
+                                            -> T::DrawResult {
+    ui_toolkit.draw_top_border_inside(color, thickness_trbl[0], &|| {
+                  ui_toolkit.draw_right_border_inside(color, thickness_trbl[1], &|| {
+                                ui_toolkit.draw_bottom_border_inside(color, thickness_trbl[2], &|| {
+                                    ui_toolkit.draw_left_border_inside(color,
+                                                                       thickness_trbl[3],
+                                                                       draw_fn)
+                                })
+                            })
+              })
 }
 
 pub fn draw_nested_borders_around<T: UiToolkit>(ui_toolkit: &T,
