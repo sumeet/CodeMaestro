@@ -4,7 +4,7 @@
 use crate::align;
 use crate::code_rendering::{
     render_list_literal_label, render_list_literal_value, render_name_with_type_definition,
-    render_struct_field, render_struct_field_label, render_struct_identifier,
+    render_null, render_struct_field, render_struct_field_label, render_struct_identifier,
 };
 use crate::colorscheme;
 use crate::ui_toolkit::{Color, UiToolkit};
@@ -40,27 +40,27 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
     }
 
     pub fn render(&self) -> T::DrawResult {
-        let label = match self.value {
-            Value::Null => NULL_LABEL.clone(),
+        match self.value {
+            Value::Null => render_null(self.ui_toolkit),
             Value::Boolean(bool) => {
-                if *bool {
-                    TRUE_LABEL.clone()
+                let label = if *bool {
+                    TRUE_LABEL.as_ref()
                 } else {
-                    FALSE_LABEL.clone()
-                }
+                    FALSE_LABEL.as_ref()
+                };
+                self.draw_buttony_text(label, colorscheme!(literal_bg_color))
             }
-            Value::String(string) => return self.render_string(string),
-            Value::Number(num) => return self.render_number(num),
-            Value::List(typ, values) => return self.render_list(typ, values),
-            Value::Struct { struct_id, values } => return self.render_struct(struct_id, values),
+            Value::String(string) => self.render_string(string),
+            Value::Number(num) => self.render_number(num),
+            Value::List(typ, values) => self.render_list(typ, values),
+            Value::Struct { struct_id, values } => self.render_struct(struct_id, values),
             Value::Future(_) => {
                 panic!("let's worry about futures later, they're not even in the example")
             }
             Value::Enum { .. } => {
                 panic!("let's worry about enums later, they're not even in the example")
             }
-        };
-        self.draw_buttony_text_hardcoded_color(&label)
+        }
     }
 
     fn render_list(&self, typ: &lang::Type, values: &[lang::Value]) -> T::DrawResult {
@@ -124,9 +124,5 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
 
     fn draw_buttony_text(&self, label: &str, color: Color) -> T::DrawResult {
         self.ui_toolkit.draw_buttony_text(label, color)
-    }
-
-    fn draw_buttony_text_hardcoded_color(&self, label: &str) -> T::DrawResult {
-        self.draw_buttony_text(label, colorscheme!(menubar_color))
     }
 }

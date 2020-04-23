@@ -2,8 +2,16 @@ use crate::code_editor_renderer::BLACK_COLOR; // TODO: maybe this should be part
 use crate::colorscheme;
 use crate::ui_toolkit::{Color, DrawFnRef, UiToolkit};
 use cs::{lang, structs, EnvGenie};
+use lazy_static::lazy_static;
 
+lazy_static! {
+    static ref NULL_TEXT: String = format!(" {} ", lang::NULL_TYPESPEC.symbol);
+}
 const ARGUMENT_GREY_COLOR: Color = [0.411, 0.411, 0.411, 1.];
+
+pub fn render_null<T: UiToolkit>(ui_toolkit: &T) -> T::DrawResult {
+    ui_toolkit.draw_text(&NULL_TEXT)
+}
 
 pub fn render_list_literal_value<T: UiToolkit>(ui_toolkit: &T,
                                                pos: usize,

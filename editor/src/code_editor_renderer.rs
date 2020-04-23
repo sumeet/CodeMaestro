@@ -11,7 +11,7 @@ use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_list_literal_label, render_list_literal_position,
-    render_list_literal_value, render_name_with_type_definition, render_struct_field,
+    render_list_literal_value, render_name_with_type_definition, render_null, render_struct_field,
     render_struct_field_label, render_struct_identifier,
 };
 use crate::colorscheme;
@@ -693,7 +693,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_null_literal(&self, null_literal_id: &lang::ID) -> T::DrawResult {
-        self.set_selected_on_click(&|| self.draw_text(&format!(" {} ", lang::NULL_TYPESPEC.symbol)),
+        self.set_selected_on_click(&|| {
+                                       self.draw_nested_borders_around(&|| {
+                                               render_null(self.ui_toolkit)
+                                           })
+                                   },
                                    *null_literal_id)
     }
 
