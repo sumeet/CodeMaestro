@@ -19,7 +19,7 @@ impl Struct {
                description: "".to_string(),
                id: lang::new_id(),
                // lol
-               symbol: "\u{f103}".to_string(),
+               symbol: "\u{f1b2}".to_string(),
                fields: vec![] }
     }
 
