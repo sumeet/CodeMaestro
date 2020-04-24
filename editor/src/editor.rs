@@ -1323,8 +1323,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit
             .draw_all(&[&|| self.ui_toolkit.draw_text("Example response:"), &|| {
                           ValueRenderer::new(&intermediate_value.env,
-                                             &intermediate_value.value,
-                                             self.ui_toolkit).render()
+
+                                             self.ui_toolkit).render(&intermediate_value.value)
                       }])
     }
 

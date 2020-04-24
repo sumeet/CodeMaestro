@@ -25,22 +25,20 @@ pub struct ValueRenderer<'a, T: UiToolkit> {
     env_genie: EnvGenie<'a>,
     #[allow(unused)]
     env: &'a ExecutionEnvironment,
-    value: &'a lang::Value,
     ui_toolkit: &'a T,
 }
 
 impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
-    pub fn new(env: &'a ExecutionEnvironment, value: &'a lang::Value, ui_toolkit: &'a T) -> Self {
+    pub fn new(env: &'a ExecutionEnvironment, ui_toolkit: &'a T) -> Self {
         let env_genie = EnvGenie::new(env);
         Self { env,
                env_genie,
                nesting_renderer: NestingRenderer::new(ui_toolkit),
-               value,
                ui_toolkit }
     }
 
-    pub fn render(&self) -> T::DrawResult {
-        match self.value {
+    pub fn render(&'a self, value: &'a lang::Value) -> T::DrawResult {
+        match value {
             Value::Null => render_null(self.ui_toolkit),
             Value::Boolean(bool) => {
                 let label = if *bool {
@@ -63,6 +61,25 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
         }
     }
 
+    fn render_nested_value(&self, value: &lang::Value) -> T::DrawResult {
+        let is_scalar = match value {
+            Value::Null
+            | Value::Boolean(_)
+            | Value::String(_)
+            | Value::Number(_)
+            | Value::Future(_) => true,
+            Value::Enum { .. } | Value::List(_, _) | Value::Struct { .. } => false,
+        };
+        if is_scalar {
+            self.nesting_renderer.draw_nested(&|| self.render(value))
+        } else {
+            self.nesting_renderer.incr_nesting_level();
+            let rendered = self.render(value);
+            self.nesting_renderer.decr_nesting_level();
+            rendered
+        }
+    }
+
     fn render_list(&self, typ: &lang::Type, values: &[lang::Value]) -> T::DrawResult {
         align!(T::self.ui_toolkit,
                &|| {
@@ -73,7 +90,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                      .map(|(pos, value)| {
                          move || {
                              render_list_literal_value(self.ui_toolkit, pos, &|| {
-                                 self.nesting_renderer.draw_nested(&|| self.render_value(value))
+                                 self.render_nested_value(value)
                              })
                          }
                      }))
@@ -82,7 +99,10 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
     fn render_struct(&self, struct_id: &lang::ID, values: &StructValues) -> T::DrawResult {
         let strukt = self.env_genie.find_struct(*struct_id).unwrap();
         align!(T::self.ui_toolkit,
-               &|| self.render_struct_identifier(strukt),
+               &|| {
+                   self.nesting_renderer
+                       .draw_nested_with_existing_level(&|| self.render_struct_identifier(strukt))
+               },
                strukt.fields.iter().map(|strukt_field| {
                                        move || {
                                            let value = values.get(&strukt_field.id).unwrap();
@@ -117,14 +137,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                                                           &self.env_genie,
                                                           strukt_field)
                             },
-                            &|| {
-                                self.nesting_renderer
-                                    .draw_nested(&|| self.render_value(value))
-                            })
-    }
-
-    fn render_value(&'a self, value: &'a lang::Value) -> T::DrawResult {
-        Self::new(self.env, value, self.ui_toolkit).render()
+                            &|| self.render_nested_value(value))
     }
 
     fn draw_buttony_text(&self, label: &str, color: Color) -> T::DrawResult {

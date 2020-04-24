@@ -93,12 +93,27 @@ impl<'a, T: UiToolkit> NestingRenderer<'a, T> {
                nesting_level: RefCell::new(0) }
     }
 
-    pub fn draw_nested(&self, draw_fn: DrawFnRef<T>) -> T::DrawResult {
-        let previous_nesting_level = self.nesting_level.replace_with(|l| *l + 1);
-        let current_nesting_level = previous_nesting_level + 1;
-        let res = draw_nested_borders_around(self.ui_toolkit, draw_fn, current_nesting_level);
+    pub fn current_nesting_level(&self) -> u8 {
+        *self.nesting_level.borrow()
+    }
+
+    pub fn incr_nesting_level(&self) {
+        self.nesting_level.replace_with(|l| *l + 1);
+    }
+
+    pub fn decr_nesting_level(&self) {
         self.nesting_level.replace_with(|l| *l - 1);
+    }
+
+    pub fn draw_nested(&self, draw_fn: DrawFnRef<T>) -> T::DrawResult {
+        self.incr_nesting_level();
+        let res = self.draw_nested_with_existing_level(draw_fn);
+        self.decr_nesting_level();
         res
+    }
+
+    pub fn draw_nested_with_existing_level(&self, draw_fn: DrawFnRef<T>) -> T::DrawResult {
+        draw_nested_borders_around(self.ui_toolkit, draw_fn, *self.nesting_level.borrow())
     }
 }
 
