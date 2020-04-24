@@ -121,7 +121,7 @@ impl JSONHTTPClientBuilder {
         // client (which is a work in progress). we don't want to actually execute the function
         // though, we instead want to intercept the HTTP request it makes and grab the response.
 
-        // so this is a crazy mess os closures, Arc<Mutex<>> and we even clone the
+        // so this is a crazy mess of closures, Arc<Mutex<>> and we even clone the
         // ExecutionEnvironment (interpreter environment) and include a fake version of this
         // Function
         let mut fake_interp = interp.deep_clone_env();
