@@ -93,10 +93,6 @@ impl<'a, T: UiToolkit> NestingRenderer<'a, T> {
                nesting_level: RefCell::new(0) }
     }
 
-    pub fn current_nesting_level(&self) -> u8 {
-        *self.nesting_level.borrow()
-    }
-
     pub fn incr_nesting_level(&self) {
         self.nesting_level.replace_with(|l| *l + 1);
     }

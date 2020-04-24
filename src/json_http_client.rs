@@ -96,6 +96,7 @@ pub struct JSONHTTPClient {
     pub description: String,
     pub args: Vec<lang::ArgumentDefinition>,
     pub intermediate_parse_schema: lang::Type,
+    pub intermediate_parse_structs: Vec<structs::Struct>,
     pub return_type_after_transform: lang::Type,
 }
 
@@ -185,7 +186,8 @@ impl JSONHTTPClient {
                    args: vec![],
                    intermediate_parse_schema: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
                    transform_code: lang::Block::new(),
-                   return_type_after_transform: lang::Type::from_spec(&*lang::NULL_TYPESPEC) };
+                   return_type_after_transform: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                   intermediate_parse_structs: vec![] };
         client.test_code = client.initial_test_code();
         client
     }

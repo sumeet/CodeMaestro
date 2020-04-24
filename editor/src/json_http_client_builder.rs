@@ -80,7 +80,9 @@ impl JSONHTTPClientBuilder {
             .find(|field| &field.nesting == nesting)
     }
 
-    pub fn add_selected_field(&mut self, nesting: json2::Nesting, env_genie: &EnvGenie) {
+    pub fn add_selected_field(&mut self,
+                              nesting: json2::Nesting,
+                              env: &mut env::ExecutionEnvironment) {
         let field = self.test_run_parsed_doc
                         .as_ref()
                         .unwrap()
@@ -90,17 +92,22 @@ impl JSONHTTPClientBuilder {
             .push(SelectedField { name: gen_field_name(&nesting),
                                   nesting,
                                   typespec_id: get_typespec_id(field) });
-        self.rebuild_return_type(env_genie)
+        self.rebuild_return_type(env)
     }
 
-    pub fn remove_selected_field(&mut self, nesting: json2::Nesting, env_genie: &EnvGenie) {
+    pub fn remove_selected_field(&mut self,
+                                 nesting: json2::Nesting,
+                                 env: &mut env::ExecutionEnvironment) {
         self.selected_fields
             .drain_filter(|field| field.nesting == nesting);
-        self.rebuild_return_type(env_genie)
+        self.rebuild_return_type(env)
     }
 
-    fn rebuild_return_type(&mut self, env_genie: &EnvGenie) {
-        self.return_type_candidate = build_return_type(env_genie, &self.selected_fields)
+    fn rebuild_return_type(&mut self, env: &mut env::ExecutionEnvironment) {
+        let env_genie = EnvGenie::new(env);
+        self.return_type_candidate = build_return_type(&env_genie, &self.selected_fields)
+        // TODO: inside here, append the structs to the actual JSON HTTP function, and also
+        // stick them into the environment
     }
 
     fn set_test_result(&mut self, result: Result<serde_json::Value, String>) {
@@ -295,6 +302,8 @@ impl<'a> ReturnTypeBuilder<'a> {
                                               "Auto derived by JSON inspector".into(), result.typ)
                                        })
                                        .collect_vec();
+                // TODO: should kill off this find existing struct matching part... because now the
+                // struct is an intermediate representation. no need to match it with external structs
                 let typespec_id = self.find_existing_struct_matching(&struct_fields)
                                       .map(|strukt| strukt.id)
                                       .unwrap_or_else(|| {

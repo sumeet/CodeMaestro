@@ -178,10 +178,10 @@ impl<'a> Controller {
     }
 
     pub fn is_builtin(&self, id: lang::ID) -> bool {
-        // temporarily let us change the Result enum type
-        if *builtins::RESULT_ENUM_ID == id {
-            return false;
-        }
+        // uncomment this to temporarily let us change the Result enum type
+        // if *builtins::RESULT_ENUM_ID == id {
+        //     return false;
+        // }
         self.builtins.is_builtin(id)
     }
 
@@ -1414,17 +1414,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     move |newvalue| {
                         let nesting = nesting.clone();
                         cmd_buffer.borrow_mut().add_integrating_command(
-                            move |cont, interp, _executor, _| {
-                                let env = interp.env.borrow();
-                                let env_genie = env_genie::EnvGenie::new(&env);
+                            move |cont, interp, _executor, _cmd_buffer| {
+                                let mut env = interp.env.borrow_mut();
                                 let mut builder = cont
                                     .get_json_http_client_builder(client_id)
                                     .unwrap()
                                     .clone();
                                 if newvalue {
-                                    builder.add_selected_field(nesting, &env_genie)
+                                    builder.add_selected_field(nesting, &mut env)
                                 } else {
-                                    builder.remove_selected_field(nesting, &env_genie)
+                                    builder.remove_selected_field(nesting, &mut env)
                                 }
                                 cont.load_json_http_client_builder(builder)
                             },

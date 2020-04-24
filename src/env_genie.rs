@@ -231,6 +231,8 @@ fn get_args_for_code_block(code_block_id: lang::ID,
             return json_http_client.takes_args().into_iter();
         } else if json_http_client.gen_url_code.id == code_block_id {
             return json_http_client.takes_args().into_iter();
+        } else if json_http_client.transform_code.id == code_block_id {
+            todo!()
         }
     } else if let Some(chat_program) = function.downcast_ref::<ChatProgram>() {
         if chat_program.code.id == code_block_id {
