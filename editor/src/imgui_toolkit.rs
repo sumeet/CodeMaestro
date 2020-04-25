@@ -918,7 +918,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         // draw the text second so it draws over the line
         let text_size = self.ui.calc_text_size(&im_str!("{}", plus_char), false, 0.);
         // XXX: this is magic that aligns the plus sign drawn with the line
-        let y_align_magic = -5.0;
+        // when height is 15, magic is -5
+        // when height is 20, magic is -8
+        // y = (-3/5)x+4
+        let y_align_magic = ((-3. / 5.) * text_size[1]) + 4.;
         let where_to_put_symbol_y = center_of_line[1] - ((2. / text_size[1]) - y_align_magic);
         let textpos = [center_of_line[0], where_to_put_symbol_y];
 
