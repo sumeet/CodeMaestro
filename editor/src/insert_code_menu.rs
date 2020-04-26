@@ -559,7 +559,7 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
             // lowercasing isn't good enough
             let lowercased_trimmed_search_str = search_params.lowercased_trimmed_search_str();
             let matching_struct_options =
-                env_genie.find_structs_matching(&lowercased_trimmed_search_str)
+                env_genie.find_public_structs_matching(&lowercased_trimmed_search_str)
                          .map(|strukt| self.strukt_option(strukt));
             options.extend(matching_struct_options);
 

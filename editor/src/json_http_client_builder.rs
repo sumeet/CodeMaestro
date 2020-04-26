@@ -104,10 +104,29 @@ impl JSONHTTPClientBuilder {
     }
 
     fn rebuild_return_type(&mut self, env: &mut env::ExecutionEnvironment) {
+        // TODO: might not want to denormalize structs, but instead read them off the client
+        // but for now we'll denormalize
+        if let Some(return_type_candidate) = self.return_type_candidate.as_ref() {
+            for strukt in &return_type_candidate.structs_to_be_added {
+                env.delete_typespec(strukt.id);
+            }
+        }
+
         let env_genie = EnvGenie::new(env);
-        self.return_type_candidate = build_return_type(&env_genie, &self.selected_fields)
+
+        self.return_type_candidate = build_return_type(&env_genie, &self.selected_fields);
         // TODO: inside here, append the structs to the actual JSON HTTP function, and also
         // stick them into the environment
+        if self.return_type_candidate.is_none() {
+            return;
+        }
+        let return_type_candidate = self.return_type_candidate.as_ref().unwrap();
+        let mut http_client = env_genie.get_json_http_client(self.json_http_client_id)
+                                       .unwrap()
+                                       .clone();
+        http_client.intermediate_parse_structs = return_type_candidate.structs_to_be_added.clone();
+        http_client.intermediate_parse_schema = return_type_candidate.typ.clone();
+        env.add_function(http_client);
     }
 
     fn set_test_result(&mut self, result: Result<serde_json::Value, String>) {

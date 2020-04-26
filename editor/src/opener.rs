@@ -284,8 +284,10 @@ impl MenuCategory for Structs {
     fn items<'a>(&'a self,
                  options_lister: &'a OptionsLister<'a>)
                  -> Box<dyn Iterator<Item = MenuItem> + 'a> {
-        Box::new(options_lister.env_genie.list_structs()
+        Box::new(options_lister.env_genie.list_public_structs()
             .filter_map(move |strukt| {
+                // TODO: should probably move this check into list_public_structs, see the comment
+                // there for more info
                 if options_lister.controller.is_builtin(strukt.id()) {
                     return None
                 }

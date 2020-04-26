@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use super::chat_program::ChatProgram;
 use super::code_function;
 use super::enums;
@@ -187,10 +189,19 @@ impl<'a> EnvGenie<'a> {
             .map(|ts| lang::Type::from_spec_id(ts.id(), vec![]))
     }
 
-    pub fn find_structs_matching(&'a self,
-                                 str: &'a str)
-                                 -> impl Iterator<Item = &structs::Struct> + 'a {
+    // TODO: probably this should filter out builtins too, because the two callers of this are
+    // filtering it out themselves. and then maybe rename this func to public_editable instead of
+    // just public
+    pub fn list_public_structs(&self) -> impl Iterator<Item = &structs::Struct> {
+        let private_struct_ids = self.private_struct_ids();
         self.list_structs()
+            .filter(move |strukt| private_struct_ids.contains(&strukt.id))
+    }
+
+    pub fn find_public_structs_matching(&'a self,
+                                        str: &'a str)
+                                        -> impl Iterator<Item = &structs::Struct> + 'a {
+        self.list_public_structs()
             .filter(move |strukt| strukt.name.to_lowercase().contains(str))
     }
 
@@ -217,6 +228,14 @@ impl<'a> EnvGenie<'a> {
         self.all_functions()
             .flat_map(move |f| get_args_for_code_block(root_id, f.as_ref()))
     }
+
+    // TODO: save this cache somewhere, it's probably expensive to compute this on every frame
+    fn private_struct_ids(&self) -> HashSet<lang::ID> {
+        self.list_json_http_clients()
+            .map(|client| &client.intermediate_parse_structs)
+            .flat_map(|structs| structs.iter().map(|strukt| strukt.id))
+            .collect()
+    }
 }
 
 fn get_args_for_code_block(code_block_id: lang::ID,
@@ -232,7 +251,7 @@ fn get_args_for_code_block(code_block_id: lang::ID,
         } else if json_http_client.gen_url_code.id == code_block_id {
             return json_http_client.takes_args().into_iter();
         } else if json_http_client.transform_code.id == code_block_id {
-            todo!()
+            return std::iter::once(json_http_client.intermediate_parse_argument.clone()).collect_vec().into_iter();
         }
     } else if let Some(chat_program) = function.downcast_ref::<ChatProgram>() {
         if chat_program.code.id == code_block_id {

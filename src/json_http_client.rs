@@ -97,6 +97,7 @@ pub struct JSONHTTPClient {
     pub args: Vec<lang::ArgumentDefinition>,
     pub intermediate_parse_schema: lang::Type,
     pub intermediate_parse_structs: Vec<structs::Struct>,
+    pub intermediate_parse_argument: lang::ArgumentDefinition,
     pub return_type_after_transform: lang::Type,
 }
 
@@ -172,22 +173,32 @@ impl JSONHTTPClient {
         )
     }
 
+    fn build_intermediate_parse_argument(intermediate_parse_schema: lang::Type)
+                                         -> lang::ArgumentDefinition {
+        lang::ArgumentDefinition::new(intermediate_parse_schema, "Response".to_string())
+    }
+
     pub fn new() -> Self {
         let id = lang::new_id();
-        let mut client =
-            Self { id,
-                   method: HTTPMethod::Get,
-                   url: "https://httpbin.org/get".to_string(),
-                   name: "JSON HTTP Get Client".to_string(),
-                   description: "".to_string(),
-                   gen_url_code: Self::default_url(),
-                   gen_url_params_code: lang::Block::new(),
-                   test_code: lang::Block::new(),
-                   args: vec![],
-                   intermediate_parse_schema: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
-                   transform_code: lang::Block::new(),
-                   return_type_after_transform: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
-                   intermediate_parse_structs: vec![] };
+        // TODO: should this be an Option and set to None instead? probably
+        let intermediate_parse_schema = lang::Type::from_spec(&*lang::NULL_TYPESPEC);
+        let intermediate_parse_argument =
+            Self::build_intermediate_parse_argument(intermediate_parse_schema.clone());
+        let mut client = Self { id,
+                                method: HTTPMethod::Get,
+                                url: "https://httpbin.org/get".to_string(),
+                                name: "JSON HTTP Get Client".to_string(),
+                                description: "".to_string(),
+                                gen_url_code: Self::default_url(),
+                                gen_url_params_code: lang::Block::new(),
+                                test_code: lang::Block::new(),
+                                args: vec![],
+                                intermediate_parse_schema,
+                                intermediate_parse_argument,
+                                transform_code: lang::Block::new(),
+                                return_type_after_transform:
+                                    lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                                intermediate_parse_structs: vec![] };
         client.test_code = client.initial_test_code();
         client
     }
