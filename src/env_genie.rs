@@ -62,17 +62,6 @@ impl<'a> EnvGenie<'a> {
                      joined_params))
     }
 
-    pub fn get_type_for_arg(&self, argument_definition_id: lang::ID) -> Option<lang::Type> {
-        for function in self.env.list_functions() {
-            for arg_def in function.takes_args() {
-                if arg_def.id == argument_definition_id {
-                    return Some(arg_def.arg_type);
-                }
-            }
-        }
-        None
-    }
-
     // ONEDAY: this search could be made faster if we kept an index!
     pub fn find_struct_field(&self, struct_field_id: lang::ID) -> Option<&structs::StructField> {
         self.list_structs()
@@ -212,14 +201,26 @@ impl<'a> EnvGenie<'a> {
     pub fn get_arg_definition(&self,
                               argument_definition_id: lang::ID)
                               -> Option<lang::ArgumentDefinition> {
-        for function in self.all_functions() {
-            for arg_def in function.takes_args() {
-                if arg_def.id == argument_definition_id {
-                    return Some(arg_def);
-                }
-            }
-        }
-        None
+        self.iterate_all_function_arguments()
+            .find(|arg| arg.id == argument_definition_id)
+    }
+
+    // TODO: this is the place that needs to be changed
+    pub fn get_type_for_arg(&self, argument_definition_id: lang::ID) -> Option<lang::Type> {
+        let argument_definition = self.get_arg_definition(argument_definition_id)?;
+        Some(argument_definition.arg_type)
+    }
+
+    pub fn iterate_all_function_arguments(
+        &self)
+        -> impl Iterator<Item = lang::ArgumentDefinition> + '_ {
+        self.env.list_functions().flat_map(move |func| {
+                                     let args_for_func = get_args_for_func(func.as_ref());
+                                     args_for_func.into_iter()
+                                                  .flat_map(move |(_block_id, get_args)| {
+                                                      get_args(func.as_ref())
+                                                  })
+                                 })
     }
 
     pub fn code_takes_args(&'a self,
@@ -241,22 +242,46 @@ impl<'a> EnvGenie<'a> {
 fn get_args_for_code_block(code_block_id: lang::ID,
                            function: &dyn lang::Function)
                            -> impl Iterator<Item = lang::ArgumentDefinition> {
-    if let Some(code_func) = function.downcast_ref::<code_function::CodeFunction>() {
-        if code_func.code_id() == code_block_id {
-            return code_func.takes_args().into_iter();
-        }
-    } else if let Some(json_http_client) = function.downcast_ref::<JSONHTTPClient>() {
-        if json_http_client.gen_url_params_code.id == code_block_id {
-            return json_http_client.takes_args().into_iter();
-        } else if json_http_client.gen_url_code.id == code_block_id {
-            return json_http_client.takes_args().into_iter();
-        } else if json_http_client.transform_code.id == code_block_id {
-            return std::iter::once(json_http_client.intermediate_parse_argument.clone()).collect_vec().into_iter();
-        }
-    } else if let Some(chat_program) = function.downcast_ref::<ChatProgram>() {
-        if chat_program.code.id == code_block_id {
-            return chat_program.takes_args().into_iter();
+    for (current_code_block_id, get_args) in get_args_for_func(function) {
+        if current_code_block_id == code_block_id {
+            return get_args(function).into_iter();
         }
     }
     vec![].into_iter()
+}
+
+fn get_args_for_func(
+    function: &dyn lang::Function)
+    -> Vec<(lang::ID, &dyn Fn(&dyn lang::Function) -> Vec<lang::ArgumentDefinition>)> {
+    if let Some(code_func) = function.downcast_ref::<code_function::CodeFunction>() {
+        return vec![(code_func.code_id(),
+                     &|function| {
+                         let code_func = function.downcast_ref::<code_function::CodeFunction>()
+                                                 .unwrap();
+                         code_func.takes_args()
+                     })];
+    } else if let Some(json_http_client) = function.downcast_ref::<JSONHTTPClient>() {
+        return vec![(json_http_client.gen_url_params_code.id,
+                     &|function| {
+                         let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
+                         json_http_client.takes_args()
+                     }),
+                    (json_http_client.gen_url_code.id,
+                     &|function| {
+                         let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
+                         json_http_client.takes_args()
+                     }),
+                    (json_http_client.transform_code.id,
+                     &|function| {
+                         let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
+                         vec![json_http_client.intermediate_parse_argument.clone()]
+                     }),];
+    } else if let Some(chat_program) = function.downcast_ref::<ChatProgram>() {
+        return vec![(chat_program.code.id,
+                     &|function| {
+                         let chat_program = function.downcast_ref::<ChatProgram>().unwrap();
+                         chat_program.takes_args()
+                     }),];
+    }
+    vec![]
 }

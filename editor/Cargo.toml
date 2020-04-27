@@ -16,8 +16,8 @@ lazy_static = "*"
 serde_json = "*"
 objekt = "*"
 http = "*"
-
 gen-iter = {git = "https://github.com/sumeet/gen-iter"}
+
 matches = "0.1.8"
 rand = {version = "0.7.0", features = ["stdweb"]}
 # gotta copy and paste this from super for some reason

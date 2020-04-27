@@ -173,8 +173,8 @@ impl JSONHTTPClient {
         )
     }
 
-    fn build_intermediate_parse_argument(intermediate_parse_schema: lang::Type)
-                                         -> lang::ArgumentDefinition {
+    pub fn build_intermediate_parse_argument(intermediate_parse_schema: lang::Type)
+                                             -> lang::ArgumentDefinition {
         lang::ArgumentDefinition::new(intermediate_parse_schema, "Response".to_string())
     }
 

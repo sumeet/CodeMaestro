@@ -7,7 +7,7 @@ use super::json2;
 use cs::await_eval_result;
 use cs::env;
 use cs::env_genie::EnvGenie;
-use cs::json_http_client::{fetch_json, serde_value_to_lang_value};
+use cs::json_http_client::{fetch_json, serde_value_to_lang_value, JSONHTTPClient};
 use cs::lang;
 use cs::structs;
 
@@ -126,6 +126,8 @@ impl JSONHTTPClientBuilder {
                                        .clone();
         http_client.intermediate_parse_structs = return_type_candidate.structs_to_be_added.clone();
         http_client.intermediate_parse_schema = return_type_candidate.typ.clone();
+        http_client.intermediate_parse_argument =
+            JSONHTTPClient::build_intermediate_parse_argument(return_type_candidate.typ.clone());
         env.add_function(http_client);
     }
 
