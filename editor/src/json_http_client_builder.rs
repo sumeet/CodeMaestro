@@ -128,6 +128,9 @@ impl JSONHTTPClientBuilder {
         http_client.intermediate_parse_schema = return_type_candidate.typ.clone();
         http_client.intermediate_parse_argument =
             JSONHTTPClient::build_intermediate_parse_argument(return_type_candidate.typ.clone());
+        for strukt in &http_client.intermediate_parse_structs {
+            env.add_typespec(strukt.clone());
+        }
         env.add_function(http_client);
     }
 
