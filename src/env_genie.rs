@@ -243,45 +243,51 @@ fn get_args_for_code_block(code_block_id: lang::ID,
                            function: &dyn lang::Function)
                            -> impl Iterator<Item = lang::ArgumentDefinition> {
     for (current_code_block_id, get_args) in get_args_for_func(function) {
-        if current_code_block_id == code_block_id {
+        if current_code_block_id == Some(code_block_id) {
             return get_args(function).into_iter();
         }
     }
     vec![].into_iter()
 }
 
+// returns a vector containing tuples of (code block ID, and a rust function that takes that lang::Function,
+// returns a vector of arguments -- the idea is to be lazy with evaluating those)
+//
+// and the ID (first value of tuple) is None if there's no code block associated with that function
+// (for built-in functions written in Rust)
 fn get_args_for_func(
     function: &dyn lang::Function)
-    -> Vec<(lang::ID, &dyn Fn(&dyn lang::Function) -> Vec<lang::ArgumentDefinition>)> {
+    -> Vec<(Option<lang::ID>, &dyn Fn(&dyn lang::Function) -> Vec<lang::ArgumentDefinition>)> {
     if let Some(code_func) = function.downcast_ref::<code_function::CodeFunction>() {
-        return vec![(code_func.code_id(),
-                     &|function| {
-                         let code_func = function.downcast_ref::<code_function::CodeFunction>()
-                                                 .unwrap();
-                         code_func.takes_args()
-                     })];
+        vec![(Some(code_func.code_id()),
+              &|function| {
+                  let code_func = function.downcast_ref::<code_function::CodeFunction>()
+                                          .unwrap();
+                  code_func.takes_args()
+              })]
     } else if let Some(json_http_client) = function.downcast_ref::<JSONHTTPClient>() {
-        return vec![(json_http_client.gen_url_params_code.id,
-                     &|function| {
-                         let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
-                         json_http_client.takes_args()
-                     }),
-                    (json_http_client.gen_url_code.id,
-                     &|function| {
-                         let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
-                         json_http_client.takes_args()
-                     }),
-                    (json_http_client.transform_code.id,
-                     &|function| {
-                         let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
-                         vec![json_http_client.intermediate_parse_argument.clone()]
-                     }),];
+        vec![(Some(json_http_client.gen_url_params_code.id),
+              &|function| {
+                  let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
+                  json_http_client.takes_args()
+              }),
+             (Some(json_http_client.gen_url_code.id),
+              &|function| {
+                  let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
+                  json_http_client.takes_args()
+              }),
+             (Some(json_http_client.transform_code.id),
+              &|function| {
+                  let json_http_client = function.downcast_ref::<JSONHTTPClient>().unwrap();
+                  vec![json_http_client.intermediate_parse_argument.clone()]
+              }),]
     } else if let Some(chat_program) = function.downcast_ref::<ChatProgram>() {
-        return vec![(chat_program.code.id,
-                     &|function| {
-                         let chat_program = function.downcast_ref::<ChatProgram>().unwrap();
-                         chat_program.takes_args()
-                     }),];
+        vec![(Some(chat_program.code.id),
+              &|function| {
+                  let chat_program = function.downcast_ref::<ChatProgram>().unwrap();
+                  chat_program.takes_args()
+              }),]
+    } else {
+        vec![(None, &|function| function.takes_args())]
     }
-    vec![]
 }
