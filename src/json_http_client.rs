@@ -120,22 +120,23 @@ impl lang::Function for JSONHTTPClient {
         lang::Value::new_future(async move {
             let request = request.await;
             match fetch_json(request).await {
-                Ok(json_value) => match serde_value_to_lang_value(&json_value,
-                                                                  &returns,
-                                                                  &interpreter.env.borrow())
-                {
-                    Ok(value) => {
-                        // HAPPY CASE: let's do out work side of here
-                        // builtins::ok_result(value) <= TODO: use the result later, but for now, we
-                        // just need to run the transformation code
-                        // what's the argument definition ID for the intermediate representation????
-                        let mut interpreter = interpreter.shallow_copy();
-                        interpreter.set_local_variable(intermediate_parse_argument_id, value);
-                        interpreter.evaluate(&lang::CodeNode::Block(transform_code))
-                                   .await
+                Ok(json_value) => {
+                    let converted_lang_value =
+                        serde_value_to_lang_value(&json_value, &returns, &interpreter.env.borrow());
+                    match converted_lang_value {
+                        Ok(value) => {
+                            // HAPPY CASE: let's do out work side of here
+                            // builtins::ok_result(value) <= TODO: use the result later, but for now, we
+                            // just need to run the transformation code
+                            // what's the argument definition ID for the intermediate representation????
+                            let mut interpreter = interpreter.shallow_copy();
+                            interpreter.set_local_variable(intermediate_parse_argument_id, value);
+                            interpreter.evaluate(&lang::CodeNode::Block(transform_code))
+                                       .await
+                        }
+                        Err(e) => builtins::err_result(e),
                     }
-                    Err(e) => builtins::err_result(e),
-                },
+                }
                 Err(err_string) => builtins::err_result(err_string.to_string()),
             }
         })
