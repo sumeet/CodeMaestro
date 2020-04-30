@@ -42,7 +42,11 @@ pub fn can_be_run(func: &dyn lang::Function, env_genie: &EnvGenie) -> bool {
                       // TODO: find a way not to clone in here
                       let code = lang::CodeNode::Block(code.clone());
                       let all_referred_functions_can_be_run =
-                          find_functions_referred_to_by(&code, env_genie).all(|func| {
+                          find_functions_referred_to_by(&code, env_genie)
+                              // in the case of the JSON HTTP client, the test code refers to itself. 
+                              // so we want to skip it here or else we'll get a stack overflow
+                              .filter(|found_func| found_func.id() != func.id())
+                              .all(|func| {
                               can_be_run(func.as_ref(), env_genie)
                           });
                       all_referred_functions_can_be_run
