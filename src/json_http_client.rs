@@ -89,7 +89,7 @@ pub struct JSONHTTPClient {
     pub gen_url_params_code: lang::Block,
     pub test_code: lang::Block,
     pub transform_code: lang::Block,
-    // for body params, we can use a JSON enum strings, ints, bools, etc.
+    // TODO: for body params, we can use a JSON enum strings, ints, bools, etc.
     pub name: String,
     // hardcoded to GET for now
     pub method: HTTPMethod,
@@ -109,6 +109,14 @@ impl lang::Function for JSONHTTPClient {
             -> lang::Value {
         let request = self.http_request(interpreter.shallow_copy(), args);
         let returns = self.intermediate_parse_schema.clone();
+
+        // some issues here:
+        // FIRST this returns a result, but that's not reflected in the type
+        // signatures anywhere.
+        // SECONDLY, this needs to go through the transformation processing
+        // let's start with SECONDLY just to wire the badboy up end to end
+        let intermediate_parse_argument_id = self.intermediate_parse_argument.id;
+        let transform_code = self.transform_code.clone();
         lang::Value::new_future(async move {
             let request = request.await;
             match fetch_json(request).await {
@@ -116,7 +124,16 @@ impl lang::Function for JSONHTTPClient {
                                                                   &returns,
                                                                   &interpreter.env.borrow())
                 {
-                    Ok(value) => builtins::ok_result(value),
+                    Ok(value) => {
+                        // HAPPY CASE: let's do out work side of here
+                        // builtins::ok_result(value) <= TODO: use the result later, but for now, we
+                        // just need to run the transformation code
+                        // what's the argument definition ID for the intermediate representation????
+                        let mut interpreter = interpreter.shallow_copy();
+                        interpreter.set_local_variable(intermediate_parse_argument_id, value);
+                        interpreter.evaluate(&lang::CodeNode::Block(transform_code))
+                                   .await
+                    }
                     Err(e) => builtins::err_result(e),
                 },
                 Err(err_string) => builtins::err_result(err_string.to_string()),
