@@ -1,13 +1,15 @@
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use serde_json;
 use std::collections::BTreeMap;
 
 use super::async_executor::AsyncExecutor;
 use super::json2;
 use cs::await_eval_result;
+use cs::builtins::new_result;
 use cs::env;
 use cs::env_genie::EnvGenie;
-use cs::json_http_client::{fetch_json, serde_value_to_lang_value, JSONHTTPClient};
+use cs::json_http_client::{fetch_json, serde_value_to_lang_value_wrapped_in_enum, JSONHTTPClient};
 use cs::lang;
 use cs::structs;
 
@@ -23,10 +25,11 @@ pub fn value_response_for_test_output(env: &env::ExecutionEnvironment,
     for strukt in &return_type_candidate.structs_to_be_added {
         new_fake_env.add_typespec(strukt.clone());
     }
-    let value = serde_value_to_lang_value(serde_json_value,
-                                          &return_type_candidate.typ,
-                                          &new_fake_env).unwrap();
+    let value = serde_value_to_lang_value_wrapped_in_enum(serde_json_value,
+                                                          &return_type_candidate.typ,
+                                                          &new_fake_env).unwrap();
     HTTPResponseIntermediateValue { env: new_fake_env,
+                                    // and wrap it inside a response enum
                                     value }
 }
 
@@ -103,6 +106,7 @@ impl JSONHTTPClientBuilder {
         self.rebuild_return_type(env)
     }
 
+    // this function is where i need to strike next
     fn rebuild_return_type(&mut self, env: &mut env::ExecutionEnvironment) {
         // TODO: might not want to denormalize structs, but instead read them off the client
         // but for now we'll denormalize
@@ -125,9 +129,9 @@ impl JSONHTTPClientBuilder {
                                        .unwrap()
                                        .clone();
         http_client.intermediate_parse_structs = return_type_candidate.structs_to_be_added.clone();
-        http_client.intermediate_parse_schema = return_type_candidate.typ.clone();
+        http_client.intermediate_parse_schema = return_type_candidate.type_wrapped_in_result_enum();
         http_client.intermediate_parse_argument =
-            JSONHTTPClient::build_intermediate_parse_argument(return_type_candidate.typ.clone());
+            JSONHTTPClient::build_intermediate_parse_argument(return_type_candidate.type_wrapped_in_result_enum());
         for strukt in &http_client.intermediate_parse_structs {
             env.add_typespec(strukt.clone());
         }
@@ -357,6 +361,13 @@ impl<'a> ReturnTypeBuilder<'a> {
     }
 }
 
+lazy_static! {
+    static ref HTTP_ERROR_TYPESPEC_ID: lang::ID =
+        uuid::Uuid::parse_str("5e9e5cec-415f-4949-b178-7793fba5ad5c").unwrap();
+    static ref HTTP_ERROR_TYPE: lang::Type =
+        lang::Type::from_spec_id(*HTTP_ERROR_TYPESPEC_ID, vec![]);
+}
+
 fn normalize_struct_fields(fields: &[structs::StructField]) -> BTreeMap<String, lang::ID> {
     fields.iter()
           .map(|field| (field.name.clone(), field.field_type.id()))
@@ -366,5 +377,11 @@ fn normalize_struct_fields(fields: &[structs::StructField]) -> BTreeMap<String, 
 #[derive(Debug, Clone)]
 pub struct ReturnTypeBuilderResult {
     pub structs_to_be_added: Vec<structs::Struct>,
-    pub typ: lang::Type,
+    typ: lang::Type,
+}
+
+impl ReturnTypeBuilderResult {
+    pub fn type_wrapped_in_result_enum(&self) -> lang::Type {
+        new_result(self.typ.clone(), HTTP_ERROR_TYPE.clone())
+    }
 }

@@ -122,6 +122,31 @@
           }
         }
       ]
+    },
+    "5e9e5cec-415f-4949-b178-7793fba5ad5c": {
+      "type": "Enum",
+      "name": "HTTP Error",
+      "description": "",
+      "id": "5e9e5cec-415f-4949-b178-7793fba5ad5c",
+      "symbol": "",
+      "variants": [
+        {
+          "name": "Host resolution error",
+          "id": "420dafed-a5c9-4699-aa65-857419d58f52",
+          "variant_type": {
+            "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+            "params": []
+          }
+        },
+        {
+          "name": "Unable to parse the retrieved document",
+          "id": "29c3cb8d-a807-4a37-afb9-197f71d2b9b2",
+          "variant_type": {
+            "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+            "params": []
+          }
+        }
+      ]
     }
   }
 }

@@ -53,12 +53,16 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::List(typ, values) => self.render_list(typ, values),
             Value::Struct { struct_id, values } => self.render_struct(struct_id, values),
             Value::Future(_) => {
-                panic!("let's worry about futures later, they're not even in the example")
+                panic!("let's worry about futures later, they're not even in the example. we may never have to do anything here")
             }
-            Value::Enum { .. } => {
-                panic!("let's worry about enums later, they're not even in the example")
+            Value::Enum { variant_id, value } => {
+                self.render_enum(variant_id, value)
             }
         }
+    }
+
+    fn render_enum(&self, variant_id: &lang::ID, value: &lang::Value) -> T::DrawResult {
+        unimplemented!()
     }
 
     fn render_nested_value(&self, value: &lang::Value) -> T::DrawResult {

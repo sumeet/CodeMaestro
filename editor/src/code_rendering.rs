@@ -1,7 +1,7 @@
 use crate::code_editor_renderer::BLACK_COLOR; // TODO: maybe this should be part of this module instead?
 use crate::colorscheme;
 use crate::ui_toolkit::{Color, DrawFnRef, UiToolkit};
-use cs::{lang, structs, EnvGenie};
+use cs::{enums, lang, structs, EnvGenie};
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 
@@ -10,6 +10,22 @@ lazy_static! {
 }
 // const ARGUMENT_GREY_COLOR: Color = [0.411, 0.411, 0.411, 1.];
 const ARGUMENT_GREY_COLOR: Color = [0., 0., 0., 1.];
+
+pub fn render_enum_variant_identifier<T: UiToolkit>(ui_toolkit: &T,
+                                                    env_genie: &EnvGenie,
+                                                    enum_variant: &enums::EnumVariant,
+                                                    typ: &lang::Type)
+                                                    -> T::DrawResult {
+    ui_toolkit.draw_all_on_same_line(&[&|| {
+                                           let type_symbol = env_genie.get_symbol_for_type(typ);
+                                           ui_toolkit.draw_button(&type_symbol, BLACK_COLOR, &|| {})
+                                       },
+                                       &|| {
+                                           ui_toolkit.draw_button(&enum_variant.name,
+                                                                  colorscheme!(variable_color),
+                                                                  &|| {})
+                                       }])
+}
 
 pub fn render_null<T: UiToolkit>(ui_toolkit: &T) -> T::DrawResult {
     ui_toolkit.draw_text(&NULL_TEXT)

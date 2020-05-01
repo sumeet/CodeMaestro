@@ -7,6 +7,7 @@ use super::lang;
 use super::result::Result;
 use super::structs;
 
+use crate::builtins::ok_result;
 use crate::code_generation;
 use http;
 use itertools::Itertools;
@@ -251,10 +252,18 @@ impl JSONHTTPClient {
     }
 }
 
-pub fn serde_value_to_lang_value(value: &serde_json::Value,
-                                 into_type: &lang::Type,
-                                 env: &env::ExecutionEnvironment)
-                                 -> std::result::Result<lang::Value, String> {
+// TODO: probably need to do something at the response level
+pub fn serde_value_to_lang_value_wrapped_in_enum(value: &serde_json::Value,
+                                                 into_type: &lang::Type,
+                                                 env: &env::ExecutionEnvironment)
+                                                 -> std::result::Result<lang::Value, String> {
+    Ok(ok_result(serde_value_to_lang_value(value, into_type, env)?))
+}
+
+fn serde_value_to_lang_value(value: &serde_json::Value,
+                             into_type: &lang::Type,
+                             env: &env::ExecutionEnvironment)
+                             -> std::result::Result<lang::Value, String> {
     if into_type.matches_spec(&lang::STRING_TYPESPEC) {
         if let Some(string) = value.as_str() {
             return Ok(lang::Value::String(string.to_owned()));

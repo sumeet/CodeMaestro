@@ -10,9 +10,9 @@ use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
 use crate::code_rendering::{
-    darken, draw_nested_borders_around, render_list_literal_label, render_list_literal_position,
-    render_list_literal_value, render_name_with_type_definition, render_null, render_struct_field,
-    render_struct_field_label, render_struct_identifier,
+    darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
+    render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
+    render_null, render_struct_field, render_struct_field_label, render_struct_identifier,
 };
 use crate::colorscheme;
 use crate::draw_all_iter;
@@ -1180,21 +1180,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                            self.render_indented(&|| {
                                                    self.ui_toolkit.draw_all(&[
                                 &|| {
-                                    self.ui_toolkit.draw_all_on_same_line(&[
-                                        &|| {
-                                            let type_symbol =
-                                                self.env_genie
-                                                    .get_symbol_for_type(&match_variant.typ);
-                                            self.ui_toolkit
-                                                .draw_button(&type_symbol, BLACK_COLOR, &|| {})
-                                        },
-                                        &|| {
-                                            self.ui_toolkit
-                                                .draw_button(&match_variant.enum_variant.name,
-                                                             colorscheme!(variable_color),
-                                                             &|| {})
-                                        },
-                                    ])
+                                    render_enum_variant_identifier(self.ui_toolkit,
+                                        self.env_genie,
+                                        &match_variant.enum_variant,
+                                        &match_variant.typ)
                                 },
                                 &|| self.render_indented(&|| self.render_code(branch)),
                             ])
