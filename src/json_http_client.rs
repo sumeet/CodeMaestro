@@ -127,8 +127,7 @@ impl lang::Function for JSONHTTPClient {
                         Ok(value) => {
                             // HAPPY CASE: let's do out work side of here
                             // builtins::ok_result(value) <= TODO: use the result later, but for now, we
-                            // just need to run the transformation code
-                            // what's the argument definition ID for the intermediate representation????
+                            // TODO: get error handling working
                             let mut interpreter = interpreter.shallow_copy();
                             interpreter.set_local_variable(intermediate_parse_argument_id, value);
                             interpreter.evaluate(&lang::CodeNode::Block(transform_code))

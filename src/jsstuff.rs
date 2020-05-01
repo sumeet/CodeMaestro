@@ -70,7 +70,7 @@ impl JSFunc {
                        // TODO: really need to get rid of the unwrap here
                        .map(|value| self.ex(value, collection_type, env).unwrap())
                        .collect();
-                return Ok(lang::Value::List(collected));
+                return Ok(lang::Value::List(collection_type.clone(), collected));
             }
         } else if let Some(strukt) = env.find_struct(into_type.typespec_id) {
             if let Some(value) = self.stdweb_value_into_struct(value, strukt, env) {
@@ -116,7 +116,7 @@ impl<'a> serde::Serialize for ValueWithEnv<'a> {
             // not quite sure what to do with these...
             // TODO: fix this i128 to i64 cast...
             (_, Number(i)) => serializer.serialize_i64(*i as i64),
-            (env, List(v)) => {
+            (env, List(_typ, v)) => {
                 let mut seq = serializer.serialize_seq(Some(v.len()))?;
                 for item in v {
                     // TODO: ugh this clone...
