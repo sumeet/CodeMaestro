@@ -11,6 +11,7 @@ use super::lang::Function;
 use super::pystuff;
 use super::structs;
 
+use crate::lang::Value;
 use itertools::Itertools;
 
 pub struct TypeDisplayInfo {
@@ -25,6 +26,26 @@ pub struct EnvGenie<'a> {
 impl<'a> EnvGenie<'a> {
     pub fn new(env: &'a env::ExecutionEnvironment) -> Self {
         Self { env }
+    }
+
+    pub fn guess_type_of_value(&self, value: &lang::Value) -> lang::Type {
+        match value {
+            Value::Null => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+            Value::Boolean(_) => lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC),
+            Value::String(_) => lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+            Value::Number(_) => lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+            Value::List(list_of_type, _val) => {
+                lang::Type::from_spec_id(lang::LIST_TYPESPEC.id, vec![list_of_type.clone()])
+            }
+            // this may need to change if structs can have generics
+            Value::Struct { struct_id,
+                            values: _values, } => lang::Type::from_spec_id(*struct_id, vec![]),
+            Value::Future(_) => {
+                panic!("currently unimplemented for futures, not sure if we'll ever need this")
+            }
+            Value::Enum { variant_id: _variant_id,
+                          value, } => self.guess_type_of_value(value),
+        }
     }
 
     // TODO: this could be faster

@@ -3,9 +3,9 @@
 // for now it's just copy+paste
 use crate::align;
 use crate::code_rendering::{
-    render_list_literal_label, render_list_literal_value, render_name_with_type_definition,
-    render_null, render_struct_field, render_struct_field_label, render_struct_identifier,
-    NestingRenderer,
+    render_enum_variant_identifier, render_list_literal_label, render_list_literal_value,
+    render_name_with_type_definition, render_null, render_struct_field, render_struct_field_label,
+    render_struct_identifier, NestingRenderer,
 };
 use crate::colorscheme;
 use crate::ui_toolkit::{Color, UiToolkit};
@@ -62,7 +62,21 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
     }
 
     fn render_enum(&self, variant_id: &lang::ID, value: &lang::Value) -> T::DrawResult {
-        unimplemented!()
+        // TODO: perhaps share this later with the enum literal code (no enum literal yet)
+        self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                    let enum_variant =
+                                                        self.env_genie
+                                                            .find_enum_variant(*variant_id)
+                                                            .unwrap();
+                                                    // TODO: how to get a type for the value???
+                                                    let typ =
+                                                        self.env_genie.guess_type_of_value(value);
+                                                    render_enum_variant_identifier(self.ui_toolkit,
+                                                                                   &self.env_genie,
+                                                                                   enum_variant,
+                                                                                   &typ)
+                                                },
+                                                &|| self.render_nested_value(value)])
     }
 
     fn render_nested_value(&self, value: &lang::Value) -> T::DrawResult {
