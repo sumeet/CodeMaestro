@@ -707,30 +707,52 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         //        if !search_str.starts_with("match") {
         //            return vec![];
         //        }
+
         let (insertion_id, is_search_inclusive) =
             assignment_search_position(search_params.insertion_point);
-        code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
-                  .into_iter()
-                  .filter_map(|assignment| {
-                      // TODO: also add a method similar to search_matches_identifier for search_prefix
-                      // searches
-                      if let Some(var_name_to_match) = search_params.search_prefix("match") {
-                          if !assignment.name
-                                        .to_lowercase()
-                                        .contains(var_name_to_match.as_str())
-                          {
-                              return None;
+        let mut from_old_system =
+            code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
+                      .into_iter()
+                      .filter_map(|assignment| {
+                          // TODO: also add a method similar to search_matches_identifier for search_prefix
+                          // searches
+                          if let Some(var_name_to_match) = search_params.search_prefix("match") {
+                              if !assignment.name
+                                            .to_lowercase()
+                                            .contains(var_name_to_match.as_str())
+                              {
+                                  return None;
+                              }
                           }
-                      }
 
-                      let guessed_type =
+                          let guessed_type =
                           code_genie.guess_type(&lang::CodeNode::Assignment(assignment.clone()),
                                                 env_genie);
-                      self.new_option_if_enum(env_genie, &guessed_type, || {
-                              code_generation::new_variable_reference(assignment.id)
-                          })
-                  })
-                  .collect()
+                          self.new_option_if_enum(env_genie, &guessed_type, || {
+                                  println!("old system, id is {}", assignment.id);
+                                  code_generation::new_variable_reference(assignment.id)
+                              })
+                      })
+                      .collect_vec();
+
+        // CURRENTLYWORKINGON: the code underneath here uses find_assignments_that_come_before_node...
+        // however, that is too low level of a function. it would be good if we could instead use
+        // find_all_locals_preceding, which takes into account enum variants, and function args...
+        let from_new_system = find_all_locals_preceding(search_params.insertion_point,
+                                                        code_genie,
+                                                        env_genie).filter_map(|variable| {
+                                  self.new_option_if_enum(env_genie, &variable.typ, || {
+                                      println!("new system, id is {}", variable.locals_id);
+                                      code_generation::new_variable_reference(variable.locals_id)
+                                  })
+                              })
+                              .collect_vec();
+        // from_old_system.extend_from_slice(&from_new_system);
+        // from_old_system
+        println!("from old system: {:?}", from_old_system);
+        println!("from new system: {:?}", from_new_system);
+
+        from_new_system
     }
 }
 
