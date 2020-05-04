@@ -33,6 +33,10 @@ lazy_static! {
         uuid::Uuid::parse_str("36052afd-cf12-4146-bbc7-f9df04148b73").unwrap();
     pub static ref CHAT_REPLY_MESSAGE_ARG_ID: uuid::Uuid =
         uuid::Uuid::parse_str("95bbed9a-6757-43c5-8e74-b15862e300c8").unwrap();
+    pub static ref RESULT_OK_VARIANT_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("f70c799a-1d63-4293-889d-55c07a7456a0").unwrap();
+    pub static ref RESULT_ERROR_VARIANT_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("9f22e23e-d9b9-49c2-acf2-43a59598ea86").unwrap();
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -102,16 +106,26 @@ pub fn new_message(sender: String, argument_text: String, full_text: String) -> 
                      })
 }
 
-pub fn ok_result(value: lang::Value) -> lang::Value {
-    lang::Value::Enum { variant_id:
-                            uuid::Uuid::parse_str("f70c799a-1d63-4293-889d-55c07a7456a0").unwrap(),
+pub fn ok_result_value(value: lang::Value) -> lang::Value {
+    lang::Value::Enum { variant_id: *RESULT_OK_VARIANT_ID,
                         value: Box::new(value) }
 }
 
-pub fn err_result(string: String) -> lang::Value {
-    lang::Value::Enum { variant_id:
-                            uuid::Uuid::parse_str("9f22e23e-d9b9-49c2-acf2-43a59598ea86").unwrap(),
+pub fn err_result_value(string: String) -> lang::Value {
+    lang::Value::Enum { variant_id: *RESULT_ERROR_VARIANT_ID,
                         value: Box::new(lang::Value::String(string)) }
+}
+
+pub fn convert_lang_value_to_rust_result(value: &lang::Value)
+                                         -> Result<&lang::Value, &lang::Value> {
+    let (variant_id, inner_value) = value.as_enum().unwrap();
+    if variant_id == *RESULT_OK_VARIANT_ID {
+        Ok(inner_value)
+    } else if variant_id == *RESULT_ERROR_VARIANT_ID {
+        Err(inner_value)
+    } else {
+        panic!("that's an enum, but not a Result: {:?}", inner_value)
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -230,6 +244,20 @@ pub fn new_result_with_null_error(ok_type: lang::Type) -> lang::Type {
 pub fn new_result(ok_type: lang::Type, error_type: lang::Type) -> lang::Type {
     lang::Type { typespec_id: *RESULT_ENUM_ID,
                  params: vec![ok_type, error_type] }
+}
+
+pub fn get_ok_type_from_result_type(result_type: &lang::Type) -> &lang::Type {
+    if result_type.typespec_id != *RESULT_ENUM_ID {
+        panic!("wrong typespec ID")
+    }
+    &result_type.params[0]
+}
+
+pub fn get_error_type_from_result_type(result_type: &lang::Type) -> &lang::Type {
+    if result_type.typespec_id != *RESULT_ENUM_ID {
+        panic!("wrong typespec ID")
+    }
+    &result_type.params[1]
 }
 
 #[derive(Clone)]

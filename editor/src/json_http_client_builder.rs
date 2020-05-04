@@ -29,7 +29,6 @@ pub fn value_response_for_test_output(env: &env::ExecutionEnvironment,
                                                           &return_type_candidate.typ,
                                                           &new_fake_env).unwrap();
     HTTPResponseIntermediateValue { env: new_fake_env,
-                                    // and wrap it inside a response enum
                                     value }
 }
 

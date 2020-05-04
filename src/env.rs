@@ -8,8 +8,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
 
-use crate::builtins::err_result;
-use crate::builtins::ok_result;
+use crate::builtins::err_result_value;
+use crate::builtins::ok_result_value;
 use failure::_core::fmt::Formatter;
 use itertools::Itertools;
 use std::convert::TryInto;
@@ -187,21 +187,21 @@ impl Interpreter {
                 Box::pin(async move {
                     let index = await_eval_result!(index_fut).into_i128().unwrap();
                     if index.is_negative() {
-                        return err_result(format!("can't index into a list with a negative index: {}", index));
+                        return err_result_value(format!("can't index into a list with a negative index: {}", index));
                     }
                     let index_usize: Option<usize> = index.try_into().ok();
                     if index_usize.is_none() {
-                        return err_result(format!("{} isn't a valid index", index));
+                        return err_result_value(format!("{} isn't a valid index", index));
                     }
 
                     let index_usize = index_usize.unwrap();
                     let mut vec = await_eval_result!(list_fut).into_vec().unwrap();
                     if vec.len() == 0 || index_usize > vec.len() - 1 {
-                        return err_result(format!("list of size {} doesn't contain index {}",
-                                                  vec.len(),
-                                                  index));
+                        return err_result_value(format!("list of size {} doesn't contain index {}",
+                                                        vec.len(),
+                                                        index));
                     }
-                    ok_result(vec.remove(index_usize))
+                    ok_result_value(vec.remove(index_usize))
                 })
             }
         }

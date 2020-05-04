@@ -51,13 +51,13 @@ impl lang::Function for HTTPRequest {
                     let status_code = resp.status().as_u16();
                     let body = resp.body();
                     // build up the response struct here
-                    super::ok_result(new_struct_value(*super::HTTP_RESPONSE_STRUCT_ID,
-                                                      hashmap! {
-                                                          *HTTP_RESPONSE_BODY_STRING_FIELD_ID => Value::String(body.clone()),
-                                                          *HTTP_RESPONSE_STATUS_CODE_INT_FIELD_ID => Value::Number(status_code as _),
-                                                      }))
+                    super::ok_result_value(new_struct_value(*super::HTTP_RESPONSE_STRUCT_ID,
+                                                            hashmap! {
+                                                                *HTTP_RESPONSE_BODY_STRING_FIELD_ID => Value::String(body.clone()),
+                                                                *HTTP_RESPONSE_STATUS_CODE_INT_FIELD_ID => Value::Number(status_code as _),
+                                                            }))
                 }
-                Err(err) => super::err_result(err.to_string()),
+                Err(err) => super::err_result_value(err.to_string()),
             }
         })
     }

@@ -7,7 +7,7 @@ use super::lang;
 use super::result::Result;
 use super::structs;
 
-use crate::builtins::ok_result;
+use crate::builtins::{get_ok_type_from_result_type, ok_result_value};
 use crate::code_generation;
 use http;
 use itertools::Itertools;
@@ -123,9 +123,13 @@ impl lang::Function for JSONHTTPClient {
             match fetch_json(request).await {
                 Ok(json_value) => {
                     let converted_lang_value =
-                        serde_value_to_lang_value(&json_value, &returns, &interpreter.env.borrow());
+                        serde_value_to_lang_value(&json_value,
+                                                  get_ok_type_from_result_type(&returns),
+                                                  &interpreter.env.borrow());
                     match converted_lang_value {
-                        Ok(value) => {
+                        Ok(inner_ok_value) => {
+                            let value = ok_result_value(inner_ok_value);
+
                             // HAPPY CASE: let's do out work side of here
                             // builtins::ok_result(value) <= TODO: use the result later, but for now, we
                             // TODO: get error handling working
@@ -134,10 +138,10 @@ impl lang::Function for JSONHTTPClient {
                             interpreter.evaluate(&lang::CodeNode::Block(transform_code))
                                        .await
                         }
-                        Err(e) => builtins::err_result(e),
+                        Err(e) => builtins::err_result_value(e),
                     }
                 }
-                Err(err_string) => builtins::err_result(err_string.to_string()),
+                Err(err_string) => builtins::err_result_value(err_string.to_string()),
             }
         })
     }
@@ -257,7 +261,7 @@ pub fn serde_value_to_lang_value_wrapped_in_enum(value: &serde_json::Value,
                                                  into_type: &lang::Type,
                                                  env: &env::ExecutionEnvironment)
                                                  -> std::result::Result<lang::Value, String> {
-    Ok(ok_result(serde_value_to_lang_value(value, into_type, env)?))
+    Ok(ok_result_value(serde_value_to_lang_value(value, into_type, env)?))
 }
 
 fn serde_value_to_lang_value(value: &serde_json::Value,
