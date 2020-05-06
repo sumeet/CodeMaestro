@@ -742,7 +742,7 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
                                                         code_genie,
                                                         env_genie).filter_map(|variable| {
                                   self.new_option_if_enum(env_genie, &variable.typ, || {
-                                      println!("new system, id is {}", variable.locals_id);
+                                      println!("new system, locals id is {}", variable.locals_id);
                                       code_generation::new_variable_reference(variable.locals_id)
                                   })
                               })
@@ -750,7 +750,9 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         // from_old_system.extend_from_slice(&from_new_system);
         // from_old_system
         println!("from old system: {:?}", from_old_system);
-        println!("from new system: {:?}", from_new_system);
+        println!("from new system (len {}): {:?}",
+                 from_new_system.len(),
+                 from_new_system);
 
         from_new_system
     }
