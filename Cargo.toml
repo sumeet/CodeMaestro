@@ -43,7 +43,7 @@ serde_derive = "1.0.88"
 serde_json = "1.0.31"
 typetag = "0.1.1"
 failure = "0.1.2"
-uuid = { git = "https://github.com/uuid-rs/uuid", tag = "0.7.1", features = ["serde", "v4", "v5"] }
+uuid = { git = "https://github.com/uuid-rs/uuid", tag = "0.8.1", features = ["serde", "v4", "v5"] }
 lazy_static = "1.1.0"
 itertools = "*"
 downcast-rs = "1.0.3"

@@ -21,7 +21,7 @@ gen-iter = {git = "https://github.com/sumeet/gen-iter"}
 matches = "0.1.8"
 rand = {version = "0.7.0", features = ["stdweb"]}
 # gotta copy and paste this from super for some reason
-uuid = { git = "https://github.com/uuid-rs/uuid", tag = "0.7.1", features = ["serde", "v4", "v5"] }
+uuid = { git = "https://github.com/uuid-rs/uuid", tag = "0.8.1", features = ["serde", "v4", "v5"] }
 # might get rid of this after i try it
 backtrace = "*"
 
