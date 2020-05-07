@@ -729,8 +729,13 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
                           code_genie.guess_type(&lang::CodeNode::Assignment(assignment.clone()),
                                                 env_genie);
                           self.new_option_if_enum(env_genie, &guessed_type, || {
-                                  println!("old system, id is {}", assignment.id);
-                                  code_generation::new_variable_reference(assignment.id)
+                                  // println!("old system, id is {}", assignment.id);
+                                  let genned_code =
+                                      code_generation::new_variable_reference(assignment.id);
+                                  let json = serde_json::to_string_pretty(&genned_code).unwrap();
+                                  println!("code for assignment ID  (old system) {}: {}",
+                                           assignment.id, json);
+                                  genned_code
                               })
                       })
                       .collect_vec();
@@ -742,19 +747,21 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
                                                         code_genie,
                                                         env_genie).filter_map(|variable| {
                                   self.new_option_if_enum(env_genie, &variable.typ, || {
-                                      println!("new system, locals id is {}", variable.locals_id);
-                                      code_generation::new_variable_reference(variable.locals_id)
+                                      let genned_code = code_generation::new_variable_reference(variable.locals_id);
+                                      let json = serde_json::to_string_pretty(&genned_code).unwrap();
+                                      println!("code for assignment ID (new system) {}: {}", variable.locals_id, json);
+                                      genned_code
                                   })
                               })
                               .collect_vec();
-        // from_old_system.extend_from_slice(&from_new_system);
-        // from_old_system
-        println!("from old system: {:?}", from_old_system);
-        println!("from new system (len {}): {:?}",
-                 from_new_system.len(),
-                 from_new_system);
+        from_old_system.extend_from_slice(&from_new_system);
+        from_old_system
+        // println!("from old system: {:?}", from_old_system);
+        // println!("from new system (len {}): {:?}",
+        //          from_new_system.len(),
+        //          from_new_system);
 
-        from_new_system
+        // from_new_system
     }
 }
 

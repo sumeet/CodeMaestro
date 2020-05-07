@@ -477,8 +477,11 @@ impl CodeGenie {
                                  self.find_enum_variant_preceding_by_assignment_id(vr.id,
                                                                                    vr.assignment_id,
                                                                                    env_genie)
-                                     .expect(&format!("unable to find arg for assignment ID {}",
-                                                      vr.assignment_id))
+                                     .unwrap_or_else(|| {
+                                         let f = "hi";
+                                         panic!(format!("unable to find arg for assignment ID {}",
+                                                        vr.assignment_id));
+                                     })
                                      .typ
                              })
                     //                        .expect(&format!("couldn't find arg for assignment {}", vr.assignment_id))
