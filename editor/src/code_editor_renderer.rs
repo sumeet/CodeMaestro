@@ -9,7 +9,6 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
-use crate::code_editor::CodeEditor;
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,

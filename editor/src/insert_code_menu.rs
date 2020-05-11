@@ -722,68 +722,14 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         //            return vec![];
         //        }
 
-        let (insertion_id, is_search_inclusive) =
-            assignment_search_position(search_params.insertion_point);
-        let mut from_old_system =
-            code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
-                      .into_iter()
-                      .filter_map(|assignment| {
-                          // TODO: also add a method similar to search_matches_identifier for search_prefix
-                          // searches
-                          if let Some(var_name_to_match) = search_params.search_prefix("match") {
-                              if !assignment.name
-                                            .to_lowercase()
-                                            .contains(var_name_to_match.as_str())
-                              {
-                                  return None;
-                              }
-                          }
-
-                          let guessed_type =
-                          code_genie.guess_type(&lang::CodeNode::Assignment(assignment.clone()),
-                                                env_genie).unwrap();
-                          let typ_str = env_genie.get_name_for_type(&guessed_type).unwrap();
-                          self.new_option_if_enum(env_genie, &guessed_type, || {
-                                  println!("old system, id is type {}, id {}",
-                                           typ_str, assignment.id);
-                                  let genned_code =
-                                      code_generation::new_variable_reference(assignment.id);
-                                  let json = serde_json::to_string_pretty(&genned_code).unwrap();
-                                  // println!("code for assignment ID  (old system) {}: {}",
-                                  //          assignment.id, json);
-                                  genned_code
-                              })
-                      })
-                      .collect_vec();
-
-        // CURRENTLYWORKINGON: the code underneath here uses find_assignments_that_come_before_node...
-        // however, that is too low level of a function. it would be good if we could instead use
-        // find_all_locals_preceding, which takes into account enum variants, and function args...
-        let all_preceding_locals = find_all_locals_preceding(search_params.insertion_point,
-                                                             code_genie,
-                                                             env_genie).collect_vec();
-        println!("all preceding locals: {:?}", all_preceding_locals);
-        let from_new_system = find_all_locals_preceding(search_params.insertion_point,
+        find_all_locals_preceding(search_params.insertion_point,
                                                         code_genie,
                                                         env_genie).filter_map(|variable| {
-            let typ_str = env_genie.get_name_for_type(&variable.typ).unwrap();
                                   self.new_option_if_enum(env_genie, &variable.typ, || {
-                                      println!("new system, id is type {}, locals id {}", typ_str, variable.locals_id);
-                                      let genned_code = code_generation::new_variable_reference(variable.locals_id);
-                                      let json = serde_json::to_string_pretty(&genned_code).unwrap();
-                                      // println!("code for assignment ID (new system) {}: {}", variable.locals_id, json);
-                                      genned_code
+                                      code_generation::new_variable_reference(variable.locals_id)
                                   })
                               })
-                              .collect_vec();
-        from_old_system.extend_from_slice(&from_new_system);
-        from_old_system
-        // println!("from old system: {:?}", from_old_system);
-        // println!("from new system (len {}): {:?}",
-        //          from_new_system.len(),
-        //          from_new_system);
-
-        // from_new_system
+                              .collect()
     }
 }
 

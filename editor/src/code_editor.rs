@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::iter;
 
 use gen_iter::GenIter;
-use itertools::{chain, Itertools};
+use itertools::Itertools;
 use serde_derive::{Deserialize, Serialize};
 
 use super::editor;
@@ -18,7 +18,6 @@ use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::CodeNode;
 use cs::scripts;
-use std::iter::once;
 
 #[derive(Clone)]
 pub struct CodeEditor {
@@ -510,8 +509,6 @@ impl CodeGenie {
                         if match_variant.is_some() {
                             Ok(match_variant.unwrap().typ)
                         } else {
-                            let json = serde_json::to_string_pretty(&self.code).unwrap();
-                            let assignment_id_we_are_searching_for = vr.assignment_id.to_string();
                             Err("unable to guess type for variable by assignment ID")
                         }
                     }
@@ -576,14 +573,7 @@ impl CodeGenie {
                                        mach: &lang::Match,
                                        env_genie: &EnvGenie)
                                        -> HashMap<lang::ID, MatchVariant> {
-        // let enum_type = self.guess_type(&mach.match_expression, env_genie).unwrap();
-        // just for debugging, otherwise use above ^
-        println!("looking for: {:?}", mach.match_expression);
-        let enum_type = self.guess_type(&mach.match_expression, env_genie);
-        if enum_type.is_err() {
-            return HashMap::new();
-        }
-        let enum_type = enum_type.unwrap();
+        let enum_type = self.guess_type(&mach.match_expression, env_genie).unwrap();
         let eneom = env_genie.find_enum(enum_type.typespec_id).unwrap();
         eneom.variant_types(&enum_type.params)
              .into_iter()
@@ -626,18 +616,8 @@ impl CodeGenie {
                                                             assignment_id: lang::ID,
                                                             env_genie: &'a EnvGenie)
                                                             -> Option<MatchVariant> {
-        println!("this is the assignment ID we're looking for: {}",
-                 assignment_id);
-        println!("this is the ID we're looking behind: {}", behind_id);
-        println!("code we're looking back in: {:?}",
-                 serde_json::to_string_pretty(&self.code));
-
         self.find_enum_variants_preceding_iter(behind_id, env_genie)
-            .find(|match_variant| {
-                println!("looking for assignment ID {}, comparing it against assignment_id of {} from {:?}",
-                         assignment_id, match_variant.assignment_id(), match_variant);
-                match_variant.assignment_id() == assignment_id
-            })
+            .find(|match_variant| match_variant.assignment_id() == assignment_id)
     }
 
     pub fn find_enum_variant_by_assignment_id(&self,
@@ -679,9 +659,7 @@ pub struct MatchVariant {
 
 impl MatchVariant {
     pub fn assignment_id(&self) -> lang::ID {
-        let var_id = lang::Match::make_variable_id(self.match_id, self.enum_variant.id);
-        println!("var_id {} generated from {:?}", var_id, self);
-        var_id
+        lang::Match::make_variable_id(self.match_id, self.enum_variant.id)
     }
 }
 
