@@ -20,13 +20,15 @@ use cs::lang::CodeNode;
 use cs::scripts;
 use std::iter::once;
 
+#[derive(Clone)]
 pub struct CodeEditor {
     pub code_genie: CodeGenie,
     pub editing: bool,
     selected_node_id: Option<lang::ID>,
     pub insert_code_menu: Option<InsertCodeMenu>,
     mutation_master: MutationMaster,
-    pub location: CodeLocation,
+    // HACK: None when used to display code in Insert Code Menu
+    pub location: Option<CodeLocation>,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
@@ -42,13 +44,27 @@ pub enum CodeLocation {
 }
 
 impl CodeEditor {
+    pub fn for_insert_code_preview(&self,
+                                   new_node: &lang::CodeNode,
+                                   insertion_point: InsertionPoint)
+                                   -> Self {
+        let mut new_editor = Self { code_genie: self.code_genie.clone(),
+                                    editing: false,
+                                    selected_node_id: None,
+                                    insert_code_menu: None,
+                                    mutation_master: MutationMaster::new(),
+                                    location: None };
+        new_editor.insert_code(new_node, insertion_point);
+        new_editor
+    }
+
     pub fn new(code: lang::CodeNode, location: CodeLocation) -> Self {
         Self { code_genie: CodeGenie::new(code),
                editing: false,
                selected_node_id: None,
                insert_code_menu: None,
                mutation_master: MutationMaster::new(),
-               location }
+               location: Some(location) }
     }
 
     pub fn id(&self) -> lang::ID {
@@ -296,12 +312,18 @@ impl CodeEditor {
         }
     }
 
-    // TODO: return a result instead of returning nothing? it seems like there might be places this
-    // thing can error
-    pub fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
+    pub fn insert_code(&mut self, code_node: &CodeNode, insertion_point: InsertionPoint) {
         let new_root = self.mutation_master
                            .insert_code(&code_node, insertion_point, &self.code_genie);
         self.replace_code(new_root);
+    }
+
+    // TODO: return a result instead of returning nothing? it seems like there might be places this
+    // thing can error
+    pub fn insert_code_and_set_where_cursor_ends_up_next(&mut self,
+                                                         code_node: CodeNode,
+                                                         insertion_point: InsertionPoint) {
+        self.insert_code(&code_node, insertion_point);
         match post_insertion_cursor(&code_node, &self.code_genie) {
             PostInsertionAction::SelectNode(id) => {
                 self.set_selected_node_id(Some(id));
@@ -347,6 +369,7 @@ impl CodeEditor {
 }
 
 // the code genie traverses through the code, giving callers various information
+#[derive(Clone)]
 pub struct CodeGenie {
     code: lang::CodeNode,
 }
@@ -876,7 +899,7 @@ impl<'a> Navigation<'a> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct MutationMaster {
     history: RefCell<undo::UndoHistory>,
 }

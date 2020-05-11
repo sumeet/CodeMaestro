@@ -9,6 +9,7 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
+use crate::code_editor::CodeEditor;
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
@@ -16,7 +17,7 @@ use crate::code_rendering::{
 };
 use crate::colorscheme;
 use crate::draw_all_iter;
-use crate::editor::Keypress;
+use crate::editor::{CommandBuffer, Keypress};
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use cs::env_genie::EnvGenie;
@@ -187,8 +188,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                         let new_code_node = new_code_node.clone();
                                                         cmdb.add_editor_command(move |editor| {
                             editor.hide_insert_code_menu();
-                            editor.insert_code(new_code_node.clone(),
-                                               insertion_point);
+                            editor.insert_code_and_set_where_cursor_ends_up_next(new_code_node.clone(),
+                                                                                 insertion_point);
                         });
                                                     } else {
                                                         cmdb.add_editor_command(|editor| {
@@ -423,11 +424,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                       match &self.help_text(&option.new_node) {
                           Some(help_text) if !help_text.is_empty() => {
                               self.ui_toolkit.draw_all(&[
-                                    &|| self.render_code(&option.new_node),
+                                    &|| self.render_code_for_insertion_menu_preview(option.new_node.clone(), insertion_point),
                                     &|| self.ui_toolkit.draw_wrapped_text(darken(colorscheme!(text_color)), &help_text),
                               ])
                           }
-                          _ => self.render_code(&option.new_node),
+                          _ => self.render_code_for_insertion_menu_preview(option.new_node.clone(), insertion_point),
                       }
                   })
                                       },
@@ -435,8 +436,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                           let ncn = new_code_node.clone();
                                           cmdb.borrow_mut().add_editor_command(move |editor| {
                                                                editor.hide_insert_code_menu();
-                                                               editor.insert_code(ncn.clone(),
-                                                                                  insertion_point);
+                                                               editor.insert_code_and_set_where_cursor_ends_up_next(ncn.clone(),
+                                                                                                                    insertion_point);
                                                            });
                                       },
             )
@@ -446,6 +447,20 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         } else {
             draw()
         }
+    }
+
+    fn render_code_for_insertion_menu_preview(&self,
+                                              new_node: lang::CodeNode,
+                                              insertion_point: InsertionPoint)
+                                              -> T::DrawResult {
+        let new_editor = self.code_editor
+                             .for_insert_code_preview(&new_node, insertion_point);
+        let command_buffer_that_does_nothing = Rc::new(RefCell::new(CommandBuffer::new()));
+        let new_renderer = CodeEditorRenderer::new(self.ui_toolkit,
+                                                   &new_editor,
+                                                   command_buffer_that_does_nothing,
+                                                   self.env_genie);
+        new_renderer.render_code(&new_node)
     }
 
     fn insertion_option_menu_hash(&self,
@@ -1409,7 +1424,7 @@ impl PerEditorCommandBuffer {
 
                 let editor = cont.get_editor_mut(editor_id).unwrap();
                 let code = editor.get_code().clone();
-                code_editor::update_code_in_env(editor.location, code, cont, &mut env)
+                code_editor::update_code_in_env(editor.location.unwrap(), code, cont, &mut env)
             });
     }
 }

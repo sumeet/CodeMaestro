@@ -35,6 +35,7 @@ const LITERALS_GROUP: &str = "Create new value";
 const CONTROL_FLOW_GROUP: &str = "Control flow";
 const ASSIGN_VARIABLE_GROUP: &str = "New local variable";
 
+#[derive(Clone)]
 pub struct InsertCodeMenu {
     input_str: String,
     selected_option_index: isize,

@@ -6,7 +6,7 @@ pub struct UndoHistoryCell {
     pub cursor_position: Option<lang::ID>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UndoHistory {
     undo_stack: Vec<UndoHistoryCell>,
     redo_stack: Vec<UndoHistoryCell>,

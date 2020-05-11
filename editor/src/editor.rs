@@ -163,7 +163,7 @@ impl<'a> Controller {
     fn save_state(&self) {
         let open_code_editors = self.code_editor_by_id
                                     .values()
-                                    .map(|editor| editor.location)
+                                    .map(|editor| editor.location.unwrap())
                                     .collect_vec();
         save_state::save(&self.window_positions, &open_code_editors)
     }
