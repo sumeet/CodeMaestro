@@ -168,12 +168,12 @@ impl InsertCodeMenu {
             | InsertionPoint::BeginningOfBlock(_) => self.new_params(None),
             InsertionPoint::StructLiteralField(field_id) => {
                 let node = code_genie.find_node(field_id).unwrap();
-                let exact_type = code_genie.guess_type(node, env_genie);
+                let exact_type = code_genie.guess_type(node, env_genie).unwrap();
                 self.new_params(Some(exact_type))
             }
             InsertionPoint::Replace(node_id_to_replace) => {
                 let node = code_genie.find_node(node_id_to_replace).unwrap();
-                let exact_type = code_genie.guess_type(node, env_genie);
+                let exact_type = code_genie.guess_type(node, env_genie).unwrap();
                 let parent = code_genie.find_parent(node.id());
                 if let Some(lang::CodeNode::Assignment(assignment)) = parent {
                     // if we're replacing the value of an assignment statement, and that assignment
@@ -187,8 +187,8 @@ impl InsertCodeMenu {
             }
             InsertionPoint::Wrap(node_id_to_wrap) => {
                 let node = code_genie.find_node(node_id_to_wrap).unwrap();
-                let wrapped_node_type = code_genie.guess_type(node, env_genie);
-                let exact_type = code_genie.guess_type(node, env_genie);
+                let wrapped_node_type = code_genie.guess_type(node, env_genie).unwrap();
+                let exact_type = code_genie.guess_type(node, env_genie).unwrap();
                 let parent = code_genie.find_parent(node.id());
                 if let Some(lang::CodeNode::Assignment(assignment)) = &parent {
                     // if we're replacing the value of an assignment statement, and that assignment
@@ -410,7 +410,17 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
 #[derive(Clone)]
 struct InsertVariableReferenceOptionGenerator {}
 
+// just need this for debugging, tho maybe i'll keep it around, it's probably good to have
+#[derive(Debug)]
+enum VariableType {
+    Assignment,
+    Argument,
+    MatchVariant,
+}
+
+#[derive(Debug)]
 struct Variable {
+    variable_type: VariableType,
     locals_id: lang::ID,
     typ: lang::Type,
     name: String,
@@ -500,11 +510,13 @@ fn find_assignments_and_function_args_preceding<'a>(insertion_point: InsertionPo
                       code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone),
                                             env_genie);
                   Variable { locals_id: assignment.id,
-                             typ: guessed_type,
+                             variable_type: VariableType::Assignment,
+                             typ: guessed_type.unwrap(),
                              name: assignment.name.clone() }
               })
               .chain(env_genie.code_takes_args(code_genie.root().id())
                               .map(|arg| Variable { locals_id: arg.id,
+                                                    variable_type: VariableType::Argument,
                                                     typ: arg.arg_type,
                                                     name: arg.short_name }))
 }
@@ -516,6 +528,7 @@ fn find_enum_variants_preceding<'a>(insertion_point: InsertionPoint,
     let (node_id, _) = assignment_search_position(insertion_point);
     code_genie.find_enum_variants_preceding_iter(node_id, env_genie)
               .map(|match_variant| Variable { locals_id: match_variant.assignment_id(),
+                                              variable_type: VariableType::MatchVariant,
                                               typ: match_variant.typ,
                                               name: match_variant.enum_variant.name })
 }
@@ -727,14 +740,16 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
 
                           let guessed_type =
                           code_genie.guess_type(&lang::CodeNode::Assignment(assignment.clone()),
-                                                env_genie);
+                                                env_genie).unwrap();
+                          let typ_str = env_genie.get_name_for_type(&guessed_type).unwrap();
                           self.new_option_if_enum(env_genie, &guessed_type, || {
-                                  // println!("old system, id is {}", assignment.id);
+                                  println!("old system, id is type {}, id {}",
+                                           typ_str, assignment.id);
                                   let genned_code =
                                       code_generation::new_variable_reference(assignment.id);
                                   let json = serde_json::to_string_pretty(&genned_code).unwrap();
-                                  println!("code for assignment ID  (old system) {}: {}",
-                                           assignment.id, json);
+                                  // println!("code for assignment ID  (old system) {}: {}",
+                                  //          assignment.id, json);
                                   genned_code
                               })
                       })
@@ -743,13 +758,19 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         // CURRENTLYWORKINGON: the code underneath here uses find_assignments_that_come_before_node...
         // however, that is too low level of a function. it would be good if we could instead use
         // find_all_locals_preceding, which takes into account enum variants, and function args...
+        let all_preceding_locals = find_all_locals_preceding(search_params.insertion_point,
+                                                             code_genie,
+                                                             env_genie).collect_vec();
+        println!("all preceding locals: {:?}", all_preceding_locals);
         let from_new_system = find_all_locals_preceding(search_params.insertion_point,
                                                         code_genie,
                                                         env_genie).filter_map(|variable| {
+            let typ_str = env_genie.get_name_for_type(&variable.typ).unwrap();
                                   self.new_option_if_enum(env_genie, &variable.typ, || {
+                                      println!("new system, id is type {}, locals id {}", typ_str, variable.locals_id);
                                       let genned_code = code_generation::new_variable_reference(variable.locals_id);
                                       let json = serde_json::to_string_pretty(&genned_code).unwrap();
-                                      println!("code for assignment ID (new system) {}: {}", variable.locals_id, json);
+                                      // println!("code for assignment ID (new system) {}: {}", variable.locals_id, json);
                                       genned_code
                                   })
                               })

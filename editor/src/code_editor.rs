@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::iter;
 
 use gen_iter::GenIter;
-use itertools::Itertools;
+use itertools::{chain, Itertools};
 use serde_derive::{Deserialize, Serialize};
 
 use super::editor;
@@ -18,6 +18,7 @@ use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::CodeNode;
 use cs::scripts;
+use std::iter::once;
 
 pub struct CodeEditor {
     pub code_genie: CodeGenie,
@@ -446,25 +447,28 @@ impl CodeGenie {
             .filter(move |vr| vr.assignment_id == assignment_id)
     }
 
-    pub fn guess_type(&self, code_node: &lang::CodeNode, env_genie: &EnvGenie) -> lang::Type {
+    pub fn guess_type(&self,
+                      code_node: &lang::CodeNode,
+                      env_genie: &EnvGenie)
+                      -> Result<lang::Type, &'static str> {
         match code_node {
             CodeNode::FunctionCall(function_call) => {
                 let func_id = function_call.function_reference().function_id;
                 match env_genie.find_function(func_id) {
-                    Some(ref func) => func.returns().clone(),
+                    Some(ref func) => Ok(func.returns().clone()),
                     // TODO: do we really want to just return Null if we couldn't find the function?
-                    None => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                    None => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
                 }
             }
-            CodeNode::StringLiteral(_) => lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-            CodeNode::NumberLiteral(_) => lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+            CodeNode::StringLiteral(_) => Ok(lang::Type::from_spec(&*lang::STRING_TYPESPEC)),
+            CodeNode::NumberLiteral(_) => Ok(lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)),
             CodeNode::Assignment(assignment) => self.guess_type(&*assignment.expression, env_genie),
             CodeNode::Block(block) => {
                 if block.expressions.len() > 0 {
                     let last_expression_in_block = &block.expressions[block.expressions.len() - 1];
                     self.guess_type(last_expression_in_block, env_genie)
                 } else {
-                    lang::Type::from_spec(&*lang::NULL_TYPESPEC)
+                    Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC))
                 }
             }
             CodeNode::VariableReference(vr) => {
@@ -472,29 +476,32 @@ impl CodeGenie {
                     self.guess_type(assignment, env_genie)
                 } else {
                     // couldn't find assignment with that variable name, looking for function args
-                    env_genie.get_type_for_arg(vr.assignment_id)
-                             .unwrap_or_else(|| {
-                                 self.find_enum_variant_preceding_by_assignment_id(vr.id,
-                                                                                   vr.assignment_id,
-                                                                                   env_genie)
-                                     .unwrap_or_else(|| {
-                                         let f = "hi";
-                                         panic!(format!("unable to find arg for assignment ID {}",
-                                                        vr.assignment_id));
-                                     })
-                                     .typ
-                             })
-                    //                        .expect(&format!("couldn't find arg for assignment {}", vr.assignment_id))
+                    let typ = env_genie.get_type_for_arg(vr.assignment_id);
+                    if typ.is_some() {
+                        Ok(typ.unwrap())
+                    } else {
+                        let match_variant =
+                            self.find_enum_variant_preceding_by_assignment_id(vr.id,
+                                                                              vr.assignment_id,
+                                                                              env_genie);
+                        if match_variant.is_some() {
+                            Ok(match_variant.unwrap().typ)
+                        } else {
+                            let json = serde_json::to_string_pretty(&self.code).unwrap();
+                            let assignment_id_we_are_searching_for = vr.assignment_id.to_string();
+                            Err("unable to guess type for variable by assignment ID")
+                        }
+                    }
                 }
             }
-            CodeNode::FunctionReference(_) => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+            CodeNode::FunctionReference(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::Argument(arg) => env_genie.get_type_for_arg(arg.argument_definition_id)
-                                                .unwrap(),
-            CodeNode::Placeholder(placeholder) => placeholder.typ.clone(),
-            CodeNode::NullLiteral(_) => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                                                .ok_or("unable to guess type"),
+            CodeNode::Placeholder(placeholder) => Ok(placeholder.typ.clone()),
+            CodeNode::NullLiteral(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::StructLiteral(struct_literal) => {
                 let strukt = env_genie.find_struct(struct_literal.struct_id).unwrap();
-                lang::Type::from_spec(strukt)
+                Ok(lang::Type::from_spec(strukt))
             }
             CodeNode::StructLiteralField(struct_literal_field) => {
                 let strukt_literal = self.find_parent(struct_literal_field.id)
@@ -504,12 +511,11 @@ impl CodeGenie {
                 let strukt = env_genie.find_struct(strukt_literal.struct_id).unwrap();
                 strukt.field_by_id()
                       .get(&struct_literal_field.struct_field_id)
-                      .unwrap()
-                      .field_type
-                      .clone()
+                      .map(|field| field.field_type.clone())
+                      .ok_or("unable to guess type")
             }
             CodeNode::ListLiteral(list_literal) => {
-                lang::Type::list_of(list_literal.element_type.clone())
+                Ok(lang::Type::list_of(list_literal.element_type.clone()))
             }
             // this means that both branches of a conditional must be of the same type.we need to
             // add a validation for that
@@ -526,16 +532,19 @@ impl CodeGenie {
                 self.guess_type(first_variant, env_genie)
             }
             CodeNode::StructFieldGet(sfg) => {
-                let struct_field = env_genie.find_struct_field(sfg.struct_field_id).unwrap();
-                struct_field.field_type.clone()
+                env_genie.find_struct_field(sfg.struct_field_id)
+                         .ok_or("unable to guess type")
+                         .map(|struct_field| struct_field.field_type.clone())
             }
             CodeNode::ListIndex(list_index) => {
-                let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie);
-                new_result_with_null_error(get_type_from_list(list_typ).unwrap_or_else(|| {
-                               let list_typ =
-                                   self.guess_type(list_index.list_expr.as_ref(), env_genie);
-                               panic!(format!("couldn't extract list element from {:?}", list_typ))
-                           }))
+                let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie)?;
+                let ok_type = get_type_from_list(list_typ).ok_or("unable to guess type")?;
+                Ok(new_result_with_null_error(ok_type))
+
+                // debug info that i deleted from the old implementation but might still need later:
+                //                let list_typ =
+                //                    self.guess_type(list_index.list_expr.as_ref(), env_genie);
+                //                panic!(format!("couldn't extract list element from {:?}", list_typ))
             }
         }
     }
@@ -544,7 +553,14 @@ impl CodeGenie {
                                        mach: &lang::Match,
                                        env_genie: &EnvGenie)
                                        -> HashMap<lang::ID, MatchVariant> {
+        // let enum_type = self.guess_type(&mach.match_expression, env_genie).unwrap();
+        // just for debugging, otherwise use above ^
+        println!("looking for: {:?}", mach.match_expression);
         let enum_type = self.guess_type(&mach.match_expression, env_genie);
+        if enum_type.is_err() {
+            return HashMap::new();
+        }
+        let enum_type = enum_type.unwrap();
         let eneom = env_genie.find_enum(enum_type.typespec_id).unwrap();
         eneom.variant_types(&enum_type.params)
              .into_iter()
@@ -587,8 +603,18 @@ impl CodeGenie {
                                                             assignment_id: lang::ID,
                                                             env_genie: &'a EnvGenie)
                                                             -> Option<MatchVariant> {
+        println!("this is the assignment ID we're looking for: {}",
+                 assignment_id);
+        println!("this is the ID we're looking behind: {}", behind_id);
+        println!("code we're looking back in: {:?}",
+                 serde_json::to_string_pretty(&self.code));
+
         self.find_enum_variants_preceding_iter(behind_id, env_genie)
-            .find(|match_variant| match_variant.assignment_id() == assignment_id)
+            .find(|match_variant| {
+                println!("looking for assignment ID {}, comparing it against assignment_id of {} from {:?}",
+                         assignment_id, match_variant.assignment_id(), match_variant);
+                match_variant.assignment_id() == assignment_id
+            })
     }
 
     pub fn find_enum_variant_by_assignment_id(&self,
@@ -621,6 +647,7 @@ impl CodeGenie {
     }
 }
 
+#[derive(Debug)]
 pub struct MatchVariant {
     pub typ: lang::Type,
     pub enum_variant: EnumVariant,
@@ -629,7 +656,9 @@ pub struct MatchVariant {
 
 impl MatchVariant {
     pub fn assignment_id(&self) -> lang::ID {
-        lang::Match::make_variable_id(self.match_id, self.enum_variant.id)
+        let var_id = lang::Match::make_variable_id(self.match_id, self.enum_variant.id);
+        println!("var_id {} generated from {:?}", var_id, self);
+        var_id
     }
 }
 

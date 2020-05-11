@@ -140,7 +140,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_assignment(&self, assignment: &lang::Assignment) -> T::DrawResult {
         let type_of_assignment = self.code_editor
                                      .code_genie
-                                     .guess_type(assignment.expression.as_ref(), self.env_genie);
+                                     .guess_type(assignment.expression.as_ref(), self.env_genie)
+                                     .unwrap();
         self.ui_toolkit.draw_all_on_same_line(&[
             &|| {
                 self.set_selected_on_click(&|| {
@@ -458,7 +459,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_list_literal_label(&self, code_node: &CodeNode) -> T::DrawResult {
         let t = self.code_editor
                     .code_genie
-                    .guess_type(code_node, self.env_genie);
+                    .guess_type(code_node, self.env_genie)
+                    .unwrap();
         render_list_literal_label(self.ui_toolkit, self.env_genie, &t)
     }
 
@@ -807,7 +809,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             return Some((assignment.name.clone(),
                          self.code_editor
                              .code_genie
-                             .guess_type(assignment.expression.as_ref(), self.env_genie)));
+                             .guess_type(assignment.expression.as_ref(), self.env_genie)
+                             .unwrap()));
         }
         // TODO: this searches all functions, but we could be smarter here because we already know which
         //       function we're inside
@@ -1169,6 +1172,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.code_editor
                         .code_genie
                         .match_variant_by_variant_id(mach, self.env_genie);
+                if type_and_enum_by_variant_id.len() != mach.branch_by_variant_id.len() {
+                    return self.ui_toolkit.draw_buttony_text("WOMPWOMP", colorscheme!(danger_color))
+                }
                 draw_all_iter!(
                                T::self.ui_toolkit,
                                mach.branch_by_variant_id

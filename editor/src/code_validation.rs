@@ -221,5 +221,6 @@ impl<'a> FixableProblemFinder<'a> {
     fn returned_type(&self, block: &lang::Block) -> lang::Type {
         let code_genie = CodeGenie::new(lang::CodeNode::Block(block.clone()));
         code_genie.guess_type(code_genie.root(), self.env_genie)
+                  .unwrap()
     }
 }
