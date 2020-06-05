@@ -790,11 +790,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let child_frame_id = self.imlabel("");
         let mut flex = 0;
 
-        // TODO / HAX / PROGRAM IS ACTUALLY BROKEN: just put an end to that awful accordion effect
-        if let ChildRegionHeight::ExpandFill { .. } = height {
-            height = ChildRegionHeight::Pixels(200)
-        }
-
         let height = match height {
             ChildRegionHeight::ExpandFill { min_height } => {
                 flex = 1;
