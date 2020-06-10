@@ -784,7 +784,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
                                                     draw_fn: &dyn Fn(),
-                                                    mut height: ChildRegionHeight,
+                                                    height: ChildRegionHeight,
                                                     draw_context_menu: Option<&dyn Fn()>,
                                                     handle_keypress: Option<F>) {
         let child_frame_id = self.imlabel("");
