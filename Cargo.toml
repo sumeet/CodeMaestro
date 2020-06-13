@@ -22,7 +22,7 @@ tokio = {version = "0.1.21"}
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 reqwest = {git = "https://github.com/sumeet/reqwest", branch = "master" }
-noob = {version = "1.1.0" }
+noob = {git = "https://github.com/sumeet/noob", branch = "master"}
 gotham = {version = "0.3.0" }
 http-fs = {git = "https://gitlab.com/Douman/http-fs", features = ["hyper"]}
 futures-cpupool = {version = "0.1.8"}
