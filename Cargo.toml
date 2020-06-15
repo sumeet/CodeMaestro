@@ -31,7 +31,7 @@ r2d2 = {version = "*"}
 dotenv = {version = "0.13.0"}
 branca = {version = "0.8.0"}
 futures-channel = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features=["sink"]}
-sentry = {git = "https://github.com/getsentry/sentry-rust", default-features = false, features=["backtrace"] }
+sentry = {git = "https://github.com/getsentry/sentry-rust", default-features = false, features=["backtrace", "surf"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 stdweb = { git = "https://github.com/koute/stdweb", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"] }
