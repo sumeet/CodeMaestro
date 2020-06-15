@@ -195,6 +195,13 @@ impl lang::Function for Print {
     }
 }
 
+lazy_static! {
+    static ref CAPITALIZE_FUNC_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("86ae2a51-5538-436f-b48e-3aa6c873b189").unwrap();
+    static ref CAPITALIZE_ARG_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("94e81ddc-843b-426d-847e-a215125c9593").unwrap();
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Capitalize {}
 
@@ -204,7 +211,7 @@ impl lang::Function for Capitalize {
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let [arg] = get_args(args, [*PRINT_ARG_ID]).unwrap();
+        let [arg] = get_args(args, [*CAPITALIZE_ARG_ID]).unwrap();
         let string = get_string(arg).unwrap();
         lang::Value::String(string.to_uppercase())
     }
@@ -218,17 +225,13 @@ impl lang::Function for Capitalize {
     }
 
     fn id(&self) -> lang::ID {
-        uuid::Uuid::parse_str("86ae2a51-5538-436f-b48e-3aa6c873b189").unwrap()
+        *CAPITALIZE_FUNC_ID
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("94e81ddc-843b-426d-847e-a215125c9593").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "String to capitalize".to_string(),
-            )
-        ]
+        vec![lang::ArgumentDefinition::new_with_id(*CAPITALIZE_ARG_ID,
+                                                   lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                                                   "String to capitalize".to_string())]
     }
 
     fn returns(&self) -> lang::Type {
