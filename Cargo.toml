@@ -24,14 +24,14 @@ irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 reqwest = {git = "https://github.com/sumeet/reqwest", branch = "master" }
 noob = {git = "https://github.com/sumeet/noob", branch = "master"}
 gotham = {git = "https://github.com/sumeet/gotham" }
-http-fs = {git = "https://gitlab.com/Douman/http-fs", features = ["hyper"]}
+http-fs = {git = "https://gitlab.com/sumeet4/http-fs", features = ["hyper"]}
 futures-cpupool = {version = "0.1.8"}
 diesel = {version = "1.4.1", features = ["postgres", "extras"]}
 r2d2 = {version = "*"}
 dotenv = {version = "0.13.0"}
 branca = {version = "0.8.0"}
 futures-channel = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features=["sink"]}
-sentry = {git = "https://github.com/getsentry/sentry-rust", default-features = false, features=["backtrace", "surf"] }
+sentry = {git = "https://github.com/getsentry/sentry-rust", default-features = false, features=["backtrace", "panic"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 stdweb = { git = "https://github.com/koute/stdweb", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"] }
@@ -63,6 +63,8 @@ gen-iter = {git = "https://github.com/sumeet/gen-iter"}
 futures-util = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat", "sink"] }
 
 [patch.crates-io]
+async-std = {git = "https://github.com/async-rs/async-std", tag = "v1.6.1"}
+mime_guess = {git = "https://github.com/abonander/mime_guess", rev = "41e2dee59979d48c2900ed3b900c6a4efbce36d2"}
 futures-core = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 #futures-sink = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master" }
 futures-util = { git = "https://github.com/rust-lang-nursery/futures-rs", branch = "master", features = ["compat"] }
