@@ -31,6 +31,9 @@ fn main() {
     use std::fs::File;
     use std::io::BufReader;
 
+    let _guard =
+        sentry::init("https://d8b23e4125944accaee73d0aa4663f0d@o407424.ingest.sentry.io/5276333");
+
     let mut runtime = Runtime::new().unwrap();
 
     // args for running administrative tasks
