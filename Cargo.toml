@@ -23,7 +23,7 @@ irc = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 reqwest = {git = "https://github.com/sumeet/reqwest", branch = "master" }
 noob = {git = "https://github.com/sumeet/noob", branch = "master"}
-gotham = {version = "0.3.0" }
+gotham = {git = "https://github.com/sumeet/gotham" }
 http-fs = {git = "https://gitlab.com/Douman/http-fs", features = ["hyper"]}
 futures-cpupool = {version = "0.1.8"}
 diesel = {version = "1.4.1", features = ["postgres", "extras"]}
