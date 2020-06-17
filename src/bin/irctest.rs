@@ -254,34 +254,41 @@ async fn irc_interaction_future(client: IrcClient,
 }
 
 async fn new_discord_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
-    let (client, stream) =
-        forward(noob::Client::connect(token)).await
-                                             .unwrap_or_else(|e| {
-                                                 panic!("error connecting to discord: {:?}", e)
-                                             });
-    let mut stream = stream.compat();
-    while let Some(event) = stream.next().await {
-        match event {
-            Ok(noob::Event::MessageCreate(msg)) => {
-                chat_thingy.borrow_mut()
-                           .message_received(msg.author.username, msg.content)
-                           .await;
+    'outer: loop {
+        let (client, stream) =
+            forward(noob::Client::connect(token)).await
+                                                 .unwrap_or_else(|e| {
+                                                     panic!("error connecting to discord: {:?}", e)
+                                                 });
+        let mut stream = stream.compat();
+        while let Some(event) = stream.next().await {
+            match event {
+                Ok(noob::Event::MessageCreate(msg)) => {
+                    chat_thingy.borrow_mut()
+                               .message_received(msg.author.username, msg.content)
+                               .await;
 
-                for reply in chat_thingy.borrow_mut()
-                                        .reply_buffer
-                                        .lock()
-                                        .unwrap()
-                                        .drain(..)
-                {
-                    forward(client.send_message(&noob::MessageBuilder::new(&reply), &msg.channel_id)).await
-                        .map_err(|e| println!("error sending discord message: {:?}", e)).ok();
+                    for reply in chat_thingy.borrow_mut()
+                                            .reply_buffer
+                                            .lock()
+                                            .unwrap()
+                                            .drain(..)
+                    {
+                        forward(client.send_message(&noob::MessageBuilder::new(&reply), &msg.channel_id)).await
+                            .map_err(|e| println!("error sending discord message: {:?}", e)).ok();
+                    }
                 }
+                Err(e) => {
+                    println!("there was a discord error, and we must reconnect: {:?}", e);
+                    forward(tokio_timer::sleep(Duration::from_secs(1))).await
+                                                                       .unwrap();
+                    continue 'outer;
+                }
+                _ => (),
             }
-            Err(e) => println!("there was a discord error: {:?}", e),
-            _ => (),
         }
     }
-    Ok::<(), ()>(())
+    //Ok::<(), ()>(())
 }
 
 async fn new_slack_conn(token: &str, chat_thingy: Rc<RefCell<ChatThingy>>) -> Result<(), ()> {
@@ -412,6 +419,7 @@ use http_fs::StaticFiles;
 use hyper::service::Service;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct DirectoryConfig;

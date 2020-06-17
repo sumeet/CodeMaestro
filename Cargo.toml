@@ -19,6 +19,7 @@ python = ["pyo3"]
 hyper = {version = "*"}
 slack = { git = "https://github.com/sumeet/slack-rs", features = ["future"], branch = "master" }
 tokio = {version = "0.1.21"}
+tokio-timer = "0.2.11"
 irc = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 irc-proto = {git = "https://github.com/aatxe/irc", branch = "0.14" }
 reqwest = {git = "https://github.com/sumeet/reqwest", branch = "master" }
