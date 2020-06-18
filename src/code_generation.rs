@@ -148,10 +148,14 @@ pub fn new_null_literal() -> lang::CodeNode {
     lang::CodeNode::NullLiteral(lang::new_id())
 }
 
-pub fn new_assignment(name: String, expression: lang::CodeNode) -> lang::CodeNode {
-    lang::CodeNode::Assignment(lang::Assignment { id: lang::new_id(),
-                                                  name,
-                                                  expression: Box::new(expression) })
+pub fn new_assignment(name: String, expression: lang::CodeNode) -> lang::Assignment {
+    lang::Assignment { id: lang::new_id(),
+                       name,
+                       expression: Box::new(expression) }
+}
+
+pub fn new_assignment_code_node(name: String, expression: lang::CodeNode) -> lang::CodeNode {
+    lang::CodeNode::Assignment(new_assignment(name, expression))
 }
 
 pub fn new_struct_field_get(struct_expr: lang::CodeNode,

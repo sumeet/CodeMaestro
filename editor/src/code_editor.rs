@@ -9,6 +9,7 @@ use serde_derive::{Deserialize, Serialize};
 use super::editor;
 use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
+use crate::code_generation;
 use crate::editor::Controller;
 use cs::builtins::new_result_with_null_error;
 use cs::code_function;
@@ -342,15 +343,26 @@ impl CodeEditor {
         }
     }
 
+    pub fn extract_into_variable(&mut self) -> Option<()> {
+        let mutation_result = self.mutation_master
+                                  .extract_into_variable(self.selected_node_id?, &self.code_genie);
+        // TODO: these save current state calls can go inside of the mutation master
+        self.save_current_state_to_undo_history();
+        self.replace_code(mutation_result.new_root);
+        // TODO: intelligently select a nearby node to select after deleting
+        self.set_selected_node_id(mutation_result.new_cursor_position);
+        Some(())
+    }
+
     pub fn delete_selected_code(&mut self) -> Option<()> {
-        let deletion_result = self.mutation_master.delete_code(self.selected_node_id?,
+        let mutation_result = self.mutation_master.delete_code(self.selected_node_id?,
                                                                &self.code_genie,
                                                                self.selected_node_id);
         // TODO: these save current state calls can go inside of the mutation master
         self.save_current_state_to_undo_history();
-        self.replace_code(deletion_result.new_root);
+        self.replace_code(mutation_result.new_root);
         // TODO: intelligently select a nearby node to select after deleting
-        self.set_selected_node_id(deletion_result.new_cursor_position);
+        self.set_selected_node_id(mutation_result.new_cursor_position);
         Some(())
     }
 
@@ -1021,11 +1033,52 @@ impl MutationMaster {
         }
     }
 
+    pub fn extract_into_variable(&self,
+                                 node_id_to_extract: lang::ID,
+                                 code_genie: &CodeGenie)
+                                 -> MutationResult {
+        let node_to_be_extracted = code_genie.find_node(node_id_to_extract).unwrap();
+        // this could be the node to be extracted itself...
+        let block_expression_parent_id =
+            code_genie.find_expression_inside_block_that_contains(node_id_to_extract)
+                      .unwrap();
+
+        let assignment_expression =
+            code_generation::new_assignment_code_node("extracted".to_owned(),
+                                                      node_to_be_extracted.clone());
+        let assignment_expression_id = assignment_expression.id();
+
+        // create a reference to that assignment expression
+        let variable_reference = code_generation::new_variable_reference(assignment_expression_id);
+
+        // replace the node to be extracted with a variable reference
+        let orig_block = code_genie.find_parent(block_expression_parent_id).unwrap();
+        let orig_block = orig_block.into_block().unwrap();
+        let pos = orig_block.find_position(block_expression_parent_id)
+                            .unwrap();
+
+        let mut new_block = CodeNode::Block(orig_block.clone());
+        new_block.replace_with(node_id_to_extract, variable_reference);
+
+        // next, insert the assignment expression into the block
+        if let CodeNode::Block(block) = &mut new_block {
+            block.expressions.insert(pos, assignment_expression);
+        } else {
+            panic!("new_block should have been a block");
+        }
+
+        let mut new_root = code_genie.root().clone();
+        new_root.replace(new_block);
+
+        MutationResult { new_root,
+                         new_cursor_position: Some(assignment_expression_id) }
+    }
+
     pub fn delete_code(&self,
                        node_id_to_delete: lang::ID,
                        genie: &CodeGenie,
-                       cursor_position: Option<lang::ID>)
-                       -> DeletionResult {
+                       original_cursor_position: Option<lang::ID>)
+                       -> MutationResult {
         let parent = genie.find_parent(node_id_to_delete);
         if parent.is_none() {
             panic!("idk when this happens, let's take care of this if / when it does")
@@ -1055,7 +1108,7 @@ impl MutationMaster {
                 let mut new_root = genie.root().clone();
                 new_root.replace(CodeNode::Block(new_block));
 
-                DeletionResult::new(new_root, new_cursor_position)
+                MutationResult::new(new_root, new_cursor_position)
             }
             CodeNode::ListLiteral(list_literal) => {
                 let mut new_list_literal = list_literal.clone();
@@ -1085,9 +1138,9 @@ impl MutationMaster {
                 new_root.replace(CodeNode::ListLiteral(new_list_literal));
 
                 //                self.log_new_mutation(&new_root, new_cursor_position);
-                DeletionResult::new(new_root, new_cursor_position)
+                MutationResult::new(new_root, new_cursor_position)
             }
-            _ => DeletionResult::new(genie.root().clone(), cursor_position),
+            _ => MutationResult::new(genie.root().clone(), original_cursor_position),
         }
     }
 
@@ -1116,12 +1169,12 @@ impl MutationMaster {
     }
 }
 
-struct DeletionResult {
+struct MutationResult {
     new_root: lang::CodeNode,
     new_cursor_position: Option<lang::ID>,
 }
 
-impl DeletionResult {
+impl MutationResult {
     fn new(new_root: lang::CodeNode, new_cursor_position: Option<lang::ID>) -> Self {
         Self { new_root,
                new_cursor_position }

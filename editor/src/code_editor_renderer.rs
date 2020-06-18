@@ -685,17 +685,27 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::ListLiteral(_)
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
-            | CodeNode::ListIndex(_) => {
-                self.ui_toolkit.context_menu(draw_code_fn, &|| {
-                                   let cmd_buffer = Rc::clone(&self.command_buffer);
-                                   self.ui_toolkit.draw_menu_item("Delete", move || {
-                                                      cmd_buffer.borrow_mut()
-                                                                .add_editor_command(|editor| {
-                                                                    editor.delete_selected_code();
-                                                                })
-                                                  })
-                               })
-            }
+            | CodeNode::ListIndex(_) => self.ui_toolkit.context_menu(draw_code_fn, &|| {
+                                                           self.ui_toolkit.draw_all(&[
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_menu_item("Delete", move || {
+                                           cmd_buffer.borrow_mut().add_editor_command(|editor| {
+                                                                      editor.delete_selected_code();
+                                                                  })
+                                       })
+                    },
+                    &|| {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit
+                            .draw_menu_item("Extract into variable", move || {
+                                cmd_buffer.borrow_mut().add_editor_command(|editor| {
+                                                           editor.extract_into_variable();
+                                                       })
+                            })
+                    },
+                ])
+                                                       }),
             CodeNode::FunctionCall(_) | CodeNode::Block(_) | CodeNode::Argument(_) => {
                 draw_code_fn()
             }

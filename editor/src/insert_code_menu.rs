@@ -789,7 +789,7 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
             group_name: ASSIGN_VARIABLE_GROUP,
             sort_key: format!("{}newvariable{}", sort_key_prefix, variable_name),
             is_selected: false,
-            new_node: code_generation::new_assignment(
+            new_node: code_generation::new_assignment_code_node(
                 variable_name.clone(),
                 code_generation::new_placeholder(
                     variable_name,
