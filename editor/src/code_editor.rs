@@ -346,14 +346,22 @@ impl CodeEditor {
         }
     }
 
+    fn apply_mutation_result(&mut self, mutation_result: MutationResult) {
+        // TODO: these save current state calls can go inside of the mutation master
+        self.save_current_state_to_undo_history();
+        self.replace_code(mutation_result.new_root);
+        if mutation_result.set_editing_to_true {
+            self.editing = true;
+        }
+        // TODO: intelligently select a nearby node to select after deleting
+        self.set_selected_node_id(mutation_result.new_cursor_position);
+    }
+
     pub fn extract_into_variable(&mut self, code_node_id: lang::ID) -> Option<()> {
         let mutation_result = self.mutation_master
                                   .extract_into_variable(code_node_id, &self.code_genie);
         // TODO: these save current state calls can go inside of the mutation master
-        self.save_current_state_to_undo_history();
-        self.replace_code(mutation_result.new_root);
-        // TODO: intelligently select a nearby node to select after deleting
-        self.set_selected_node_id(mutation_result.new_cursor_position);
+        self.apply_mutation_result(mutation_result);
         Some(())
     }
 
@@ -365,11 +373,7 @@ impl CodeEditor {
     pub fn delete_node_id(&mut self, id: lang::ID) -> Option<()> {
         let mutation_result = self.mutation_master
                                   .delete_code(id, &self.code_genie, self.selected_node_id);
-        // TODO: these save current state calls can go inside of the mutation master
-        self.save_current_state_to_undo_history();
-        self.replace_code(mutation_result.new_root);
-        // TODO: intelligently select a nearby node to select after deleting
-        self.set_selected_node_id(mutation_result.new_cursor_position);
+        self.apply_mutation_result(mutation_result);
         Some(())
     }
 
@@ -1056,8 +1060,7 @@ impl MutationMaster {
                       .unwrap();
 
         let assignment_expression =
-            code_generation::new_assignment_code_node("extracted".to_owned(),
-                                                      node_to_be_extracted.clone());
+            code_generation::new_assignment_code_node("".to_owned(), node_to_be_extracted.clone());
         let assignment_expression_id = assignment_expression.id();
 
         // create a reference to that assignment expression
@@ -1083,6 +1086,7 @@ impl MutationMaster {
         new_root.replace(new_block);
 
         MutationResult { new_root,
+                         set_editing_to_true: true,
                          new_cursor_position: Some(assignment_expression_id) }
     }
 
@@ -1120,7 +1124,7 @@ impl MutationMaster {
                 let mut new_root = genie.root().clone();
                 new_root.replace(CodeNode::Block(new_block));
 
-                MutationResult::new(new_root, new_cursor_position)
+                MutationResult::new(new_root, new_cursor_position, false)
             }
             CodeNode::ListLiteral(list_literal) => {
                 let mut new_list_literal = list_literal.clone();
@@ -1150,9 +1154,9 @@ impl MutationMaster {
                 new_root.replace(CodeNode::ListLiteral(new_list_literal));
 
                 //                self.log_new_mutation(&new_root, new_cursor_position);
-                MutationResult::new(new_root, new_cursor_position)
+                MutationResult::new(new_root, new_cursor_position, false)
             }
-            _ => MutationResult::new(genie.root().clone(), original_cursor_position),
+            _ => MutationResult::new(genie.root().clone(), original_cursor_position, false),
         }
     }
 
@@ -1184,12 +1188,17 @@ impl MutationMaster {
 struct MutationResult {
     new_root: lang::CodeNode,
     new_cursor_position: Option<lang::ID>,
+    set_editing_to_true: bool,
 }
 
 impl MutationResult {
-    fn new(new_root: lang::CodeNode, new_cursor_position: Option<lang::ID>) -> Self {
+    fn new(new_root: lang::CodeNode,
+           new_cursor_position: Option<lang::ID>,
+           set_editing_to_true: bool)
+           -> Self {
         Self { new_root,
-               new_cursor_position }
+               new_cursor_position,
+               set_editing_to_true }
     }
 }
 
