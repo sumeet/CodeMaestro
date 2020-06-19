@@ -1253,6 +1253,7 @@ fn map_key(key: &str) -> Option<AppKey> {
         "a" => Some(AppKey::A),
         "b" => Some(AppKey::B),
         "c" => Some(AppKey::C),
+        "e" => Some(AppKey::E),
         "h" => Some(AppKey::H),
         "j" => Some(AppKey::J),
         "k" => Some(AppKey::K),
