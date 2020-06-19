@@ -220,8 +220,12 @@ impl CodeEditor {
         }
     }
 
-    fn try_enter_wrap_for_selected_node(&mut self) -> Option<()> {
-        self.mark_as_editing(InsertionPoint::Wrap(self.selected_node_id?));
+    pub fn enter_wrap_for_node(&mut self, node_id: lang::ID) {
+        self.mark_as_editing(InsertionPoint::Wrap(node_id));
+    }
+
+    pub fn try_enter_wrap_for_selected_node(&mut self) -> Option<()> {
+        self.enter_wrap_for_node(self.selected_node_id?);
         Some(())
     }
 

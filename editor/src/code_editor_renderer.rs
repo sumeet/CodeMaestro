@@ -706,6 +706,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                        })
                             })
                     },
+                                                               &|| {
+                                                                   let cmd_buffer = Rc::clone(&self.command_buffer);
+                                                                   self.ui_toolkit
+                                                                       .draw_menu_item("Wrap with...", move || {
+                                                                           cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                                                               editor.enter_wrap_for_node(code_node_id);
+                                                                           })
+                                                                       })
+                                                               },
                 ])
                                                        }),
             CodeNode::FunctionCall(_) | CodeNode::Block(_) | CodeNode::Argument(_) => {
