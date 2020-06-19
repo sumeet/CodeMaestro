@@ -107,6 +107,9 @@ impl CodeEditor {
             (false, Key::A, false, false) => {
                 self.try_append_in_selected_node();
             }
+            (false, Key::E, true, false) => {
+                self.extract_selected_code_into_variable();
+            }
             (false, Key::W, true, false) => {
                 self.try_enter_wrap_for_selected_node();
             }
@@ -351,6 +354,11 @@ impl CodeEditor {
         self.replace_code(mutation_result.new_root);
         // TODO: intelligently select a nearby node to select after deleting
         self.set_selected_node_id(mutation_result.new_cursor_position);
+        Some(())
+    }
+
+    pub fn extract_selected_code_into_variable(&mut self) -> Option<()> {
+        self.extract_into_variable(self.selected_node_id?);
         Some(())
     }
 

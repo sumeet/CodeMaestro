@@ -75,6 +75,7 @@ pub enum Key {
     B,
     C,
     D,
+    E,
     H,
     J,
     K,
