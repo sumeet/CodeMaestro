@@ -671,6 +671,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                code_node: &CodeNode,
                                draw_code_fn: DrawFnRef<T>)
                                -> T::DrawResult {
+        let code_node_id = code_node.id();
         match code_node {
             CodeNode::FunctionReference(_)
             | CodeNode::StringLiteral(_)
@@ -690,17 +691,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     &|| {
                         let cmd_buffer = Rc::clone(&self.command_buffer);
                         self.ui_toolkit.draw_menu_item("Delete", move || {
-                                           cmd_buffer.borrow_mut().add_editor_command(|editor| {
-                                                                      editor.delete_selected_code();
-                                                                  })
+                                           cmd_buffer.borrow_mut()
+                                                     .add_editor_command(move |editor| {
+                                                         editor.delete_node_id(code_node_id);
+                                                     })
                                        })
                     },
                     &|| {
                         let cmd_buffer = Rc::clone(&self.command_buffer);
                         self.ui_toolkit
                             .draw_menu_item("Extract into variable", move || {
-                                cmd_buffer.borrow_mut().add_editor_command(|editor| {
-                                                           editor.extract_into_variable();
+                                cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                                           editor.extract_into_variable(code_node_id);
                                                        })
                             })
                     },

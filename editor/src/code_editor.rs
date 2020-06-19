@@ -343,9 +343,20 @@ impl CodeEditor {
         }
     }
 
-    pub fn extract_into_variable(&mut self) -> Option<()> {
+    pub fn extract_into_variable(&mut self, code_node_id: lang::ID) -> Option<()> {
         let mutation_result = self.mutation_master
-                                  .extract_into_variable(self.selected_node_id?, &self.code_genie);
+                                  .extract_into_variable(code_node_id, &self.code_genie);
+        // TODO: these save current state calls can go inside of the mutation master
+        self.save_current_state_to_undo_history();
+        self.replace_code(mutation_result.new_root);
+        // TODO: intelligently select a nearby node to select after deleting
+        self.set_selected_node_id(mutation_result.new_cursor_position);
+        Some(())
+    }
+
+    pub fn delete_node_id(&mut self, id: lang::ID) -> Option<()> {
+        let mutation_result = self.mutation_master
+                                  .delete_code(id, &self.code_genie, self.selected_node_id);
         // TODO: these save current state calls can go inside of the mutation master
         self.save_current_state_to_undo_history();
         self.replace_code(mutation_result.new_root);
@@ -355,14 +366,7 @@ impl CodeEditor {
     }
 
     pub fn delete_selected_code(&mut self) -> Option<()> {
-        let mutation_result = self.mutation_master.delete_code(self.selected_node_id?,
-                                                               &self.code_genie,
-                                                               self.selected_node_id);
-        // TODO: these save current state calls can go inside of the mutation master
-        self.save_current_state_to_undo_history();
-        self.replace_code(mutation_result.new_root);
-        // TODO: intelligently select a nearby node to select after deleting
-        self.set_selected_node_id(mutation_result.new_cursor_position);
+        self.delete_node_id(self.selected_node_id?);
         Some(())
     }
 
