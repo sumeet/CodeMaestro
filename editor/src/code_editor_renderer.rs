@@ -673,8 +673,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                -> T::DrawResult {
         let code_node_id = code_node.id();
         match code_node {
-            CodeNode::FunctionReference(_)
-            | CodeNode::StringLiteral(_)
+            CodeNode::FunctionReference(_) => {
+                let parent = self.code_editor
+                                 .code_genie
+                                 .find_parent(code_node_id)
+                                 .unwrap();
+                // just want to make sure this is a function reference
+                parent.as_function_call().unwrap();
+                self.render_general_code_context_menu(draw_code_fn, parent.id())
+            }
+            CodeNode::StringLiteral(_)
             | CodeNode::NullLiteral(_)
             | CodeNode::Assignment(_)
             | CodeNode::VariableReference(_)
@@ -686,41 +694,50 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::ListLiteral(_)
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
-            | CodeNode::ListIndex(_) => self.ui_toolkit.context_menu(draw_code_fn, &|| {
-                                                           self.ui_toolkit.draw_all(&[
-                    &|| {
-                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit.draw_menu_item("Delete", move || {
-                                           cmd_buffer.borrow_mut()
-                                                     .add_editor_command(move |editor| {
-                                                         editor.delete_node_id(code_node_id);
-                                                     })
-                                       })
-                    },
-                    &|| {
-                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                        self.ui_toolkit
-                            .draw_menu_item("Extract into variable", move || {
-                                cmd_buffer.borrow_mut().add_editor_command(move |editor| {
-                                                           editor.extract_into_variable(code_node_id);
-                                                       })
-                            })
-                    },
-                                                               &|| {
-                                                                   let cmd_buffer = Rc::clone(&self.command_buffer);
-                                                                   self.ui_toolkit
-                                                                       .draw_menu_item("Wrap with...", move || {
-                                                                           cmd_buffer.borrow_mut().add_editor_command(move |editor| {
-                                                                               editor.enter_wrap_for_node(code_node_id);
-                                                                           })
-                                                                       })
-                                                               },
-                ])
-                                                       }),
+            | CodeNode::ListIndex(_) => {
+                self.render_general_code_context_menu(draw_code_fn, code_node_id)
+            }
             CodeNode::FunctionCall(_) | CodeNode::Block(_) | CodeNode::Argument(_) => {
                 draw_code_fn()
             }
         }
+    }
+
+    fn render_general_code_context_menu(&self,
+                                        draw_code_fn: DrawFnRef<T>,
+                                        code_node_id_to_act_on: lang::ID)
+                                        -> <T as UiToolkit>::DrawResult {
+        self.ui_toolkit.context_menu(draw_code_fn, &|| {
+                           self.ui_toolkit.draw_all(&[
+                // Replace is probably the first menu item
+                &|| {
+                    let cmd_buffer = Rc::clone(&self.command_buffer);
+                    self.ui_toolkit
+                        .draw_menu_item("Extract into variable", move || {
+                            cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                editor.extract_into_variable(code_node_id_to_act_on);
+                            })
+                        })
+                },
+                &|| {
+                    let cmd_buffer = Rc::clone(&self.command_buffer);
+                    self.ui_toolkit.draw_menu_item("Wrap with...", move || {
+                                       cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                editor.enter_wrap_for_node(code_node_id_to_act_on);
+                            })
+                                   })
+                },
+                &|| {
+                    let cmd_buffer = Rc::clone(&self.command_buffer);
+                    self.ui_toolkit.draw_menu_item("Delete", move || {
+                                       cmd_buffer.borrow_mut()
+                                           .add_editor_command(move |editor| {
+                                               editor.delete_node_id(code_node_id_to_act_on);
+                                           })
+                                   })
+                },
+            ])
+                       })
     }
 
     // this identifies the current selection to the UI, so it can remember the scroll of the current

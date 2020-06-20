@@ -319,6 +319,13 @@ impl Type {
 }
 
 impl CodeNode {
+    pub fn as_function_call(&self) -> Result<&FunctionCall, Box<dyn std::error::Error>> {
+        match self {
+            CodeNode::FunctionCall(ref fc) => Ok(fc),
+            _ => Err(format!("expected function call, got {:?} instead", self).into()),
+        }
+    }
+
     pub fn as_function_reference(&self) -> Result<&FunctionReference, Box<dyn std::error::Error>> {
         match self {
             CodeNode::FunctionReference(ref fr) => Ok(fr),
@@ -654,7 +661,7 @@ impl FunctionCall {
     pub fn function_reference(&self) -> &FunctionReference {
         match *self.function_reference {
             CodeNode::FunctionReference(ref function_reference) => function_reference,
-            _ => panic!("tried converting into argument but this ain't an argument"),
+            _ => panic!("{:?} is not a FunctionReference", self.function_reference),
         }
     }
 
