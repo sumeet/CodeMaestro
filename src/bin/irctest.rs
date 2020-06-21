@@ -185,7 +185,7 @@ impl ChatThingy {
                             sender: String,
                             text: String)
                             -> Pin<Box<dyn std::future::Future<Output = ()>>> {
-        if text == ".letmeprogramyou" {
+        if text == "!letmeprogramyou" {
             let program_url = GenerateProgramBotUrl::new(self.instance_id).generate_url()
                                                                           .unwrap();
             self.reply_buffer
