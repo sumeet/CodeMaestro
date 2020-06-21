@@ -209,6 +209,10 @@ async fn new_irc_conn(mut config: Config, chat_thingy: Rc<RefCell<ChatThingy>>) 
                    .collect());
     let irc_client_future = IrcClient::new_future(config).unwrap();
     let PackedIrcClient(client, irc_future) = forward(irc_client_future).await.unwrap();
+
+    // must send cap_req before identify because identify sends cap_end
+    client.send_cap_req(&[Capability::Custom("twitch.tv/membership")])
+          .unwrap();
     client.identify().unwrap();
     let irc_future = backward(async move {
         forward(irc_future).await
@@ -216,6 +220,7 @@ async fn new_irc_conn(mut config: Config, chat_thingy: Rc<RefCell<ChatThingy>>) 
                            .ok();
         Ok::<(), ()>(())
     });
+
     forward(backward(irc_interaction_future(client, chat_thingy)).join(irc_future)).await
                                                                                    .ok();
     Ok::<(), ()>(())
