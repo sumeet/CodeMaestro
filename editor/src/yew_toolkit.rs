@@ -541,7 +541,7 @@ impl UiToolkit for YewToolkit {
                             e.prevent_default();
                             js! {
                                 var e = @{&e};
-                                @{show_right_click_menu}(@{context_menu_el}, @{context_menu_trigger_el}, e.clientX, e.clientY);
+                                @{show_right_click_menu}(@{context_menu_el}, @{context_menu_trigger_el}, false, e.clientX, e.clientY);
                             }
                         }
                         Msg::DontRedraw
@@ -1182,7 +1182,7 @@ impl UiToolkit for YewToolkit {
                     e.stop_propagation();
                     js! {
                         var e = @{&e};
-                        @{show_right_click_menu}(@{context_menu_el}, @{context_menu_trigger_el}, e.clientX, e.clientY);
+                        @{show_right_click_menu}(@{context_menu_el}, @{context_menu_trigger_el}, true, e.clientX, e.clientY);
                     }
                     Msg::DontRedraw
                 }, >
@@ -1407,6 +1407,7 @@ fn raw_html(raw_html: &str) -> Html<Model> {
 
 fn show_right_click_menu(el1: stdweb::Value,
                          el2: stdweb::Value,
+                         draw_overlay_around_selection: bool,
                          page_x: stdweb::Value,
                          page_y: stdweb::Value) {
     let page_x = num!(i32, page_x);
@@ -1414,6 +1415,7 @@ fn show_right_click_menu(el1: stdweb::Value,
     let context_menu_el: Element = el1.try_into().unwrap();
     let context_menu_trigger_el: Element = el2.try_into().unwrap();
     js! {
-        showRightClickMenu(@{&context_menu_el}, @{&context_menu_trigger_el}, @{&page_x}, @{&page_y});
+        showRightClickMenu(@{&context_menu_el}, @{&context_menu_trigger_el}, @{draw_overlay_around_selection},
+                           @{&page_x}, @{&page_y});
     };
 }

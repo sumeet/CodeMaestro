@@ -1,4 +1,4 @@
-function showRightClickMenu(contextMenuEl, contextMenuTriggerEl, pageX, pageY) {
+function showRightClickMenu(contextMenuEl, contextMenuTriggerEl, drawContextMenuActiveOverlay, pageX, pageY) {
     // haxx, have to account for this because of body { zoom: } in main.css
     const globalZoom = 110;
     if (contextMenuEl) {
@@ -9,7 +9,7 @@ function showRightClickMenu(contextMenuEl, contextMenuTriggerEl, pageX, pageY) {
         insertContextMenuIntoGlobalDiv(contextMenuEl);
     }
 
-    if (contextMenuTriggerEl) {
+    if (contextMenuTriggerEl && drawContextMenuActiveOverlay) {
         showContextMenuActiveOverlay(contextMenuTriggerEl);
     }
 }
