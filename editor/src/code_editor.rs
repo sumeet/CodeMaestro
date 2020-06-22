@@ -78,12 +78,14 @@ impl CodeEditor {
     pub fn handle_keypress(&mut self, keypress: editor::Keypress) {
         use super::editor::Key;
 
-        if keypress.key == Key::Escape {
-            self.handle_cancel();
-            return;
-        }
         // don't perform any commands when in edit mode
         match (self.editing, &keypress.key, &keypress.shift, &keypress.ctrl) {
+            (true, Key::Escape, _, _) => {
+                self.escape_out_of_autocomplete_and_undo();
+            }
+            (false, Key::Escape, _, _) => {
+                self.deselect_selected_code();
+            }
             (false, Key::J, false, false) | (false, Key::DownArrow, _, false) => {
                 self.try_select_down_one_node()
             }
@@ -148,15 +150,16 @@ impl CodeEditor {
         self.editing = false
     }
 
-    fn handle_cancel(&mut self) {
+    // not sure why this is in its own function
+    fn escape_out_of_autocomplete_and_undo(&mut self) {
         self.editing = false;
-        if self.insert_code_menu.is_none() {
+        if self.insert_code_menu.is_some() {
+            // TODO: oh fuckkkkk the order these things are in... what the hell, and why?
+            // so fragile...
+            self.undo();
+            self.hide_insert_code_menu();
             return;
         }
-        // TODO: oh fuckkkkk the order these things are in... what the hell, and why?
-        // so fragile...
-        self.undo();
-        self.hide_insert_code_menu()
     }
 
     pub fn mark_as_editing(&mut self, insertion_point: InsertionPoint) -> Option<()> {
@@ -383,6 +386,11 @@ impl CodeEditor {
 
     pub fn delete_selected_code(&mut self) -> Option<()> {
         self.delete_node_id(self.selected_node_id?);
+        Some(())
+    }
+
+    pub fn deselect_selected_code(&mut self) -> Option<()> {
+        self.set_selected_node_id(None);
         Some(())
     }
 

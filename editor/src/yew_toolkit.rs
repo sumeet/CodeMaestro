@@ -163,7 +163,7 @@ impl UiToolkit for YewToolkit {
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
         html! {
-            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(colorscheme!(window_bg_color))) }, >
+            <div class="window-border", style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(colorscheme!(window_bg_color))) }, >
                 {{ draw_fn() }}
             </div>
         }
@@ -376,10 +376,10 @@ impl UiToolkit for YewToolkit {
         // which we don't need because we already differentiate active windows w/ a different titlebar
         // bg color
         let window_style = format!(
-            "border: 1px solid grey; outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;",
+            "outline: none !important; left: {}px; top: {}px; color: white; background-color: {}; width: {}px; height: {}px;",
             pos.0, pos.1, rgba(colorscheme!(window_bg_color)), size.0, size.1);
         run_after_render::run(html! {
-                                 <div class="window",
+                                 <div class="window window-border",
                                       style={ window_style  },
                                       tabindex=0,
                                       onkeypress=|e| {

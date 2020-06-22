@@ -67,25 +67,47 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     pub fn render(&self) -> T::DrawResult {
         let code = self.code_editor.get_code();
-        let cmd_buffer1 = Rc::clone(&self.command_buffer);
         let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.draw_child_region(colorscheme!(child_region_bg_color),
-                                          &|| self.render_code(code),
-                                          ChildRegionHeight::ExpandFill { min_height: 100. },
-                                          Some(&move || {
-                                              let cmd_buffer1 = Rc::clone(&cmd_buffer1);
-                                              self.ui_toolkit.draw_menu_item("Insert code", move || {
-                                                  cmd_buffer1.borrow_mut().add_editor_command(move |code_editor| {
-                                                      code_editor.set_insertion_point_on_next_line_in_block();
+        self.ui_toolkit
+            .draw_child_region(colorscheme!(child_region_bg_color),
+                               &|| self.render_code(code),
+                               ChildRegionHeight::ExpandFill { min_height: 100. },
+                               Some(&move || self.draw_right_click_menu()),
+                               Some(move |keypress| {
+                                   cmd_buffer.borrow_mut()
+                                             .add_editor_command(move |code_editor| {
+                                                 code_editor.handle_keypress(keypress)
+                                             })
+                               }))
+    }
+
+    fn draw_right_click_menu(&self) -> T::DrawResult {
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                if self.code_editor.get_selected_node_id().is_some() {
+                    let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                    self.ui_toolkit.draw_menu_item("Deselect code", move || {
+                                       let cmd_buffer1 = Rc::clone(&cmd_buffer1);
+                                       let mut cmd_buffer1 = cmd_buffer1.borrow_mut();
+                                       cmd_buffer1.add_editor_command(move |code_editor| {
+                                                      code_editor.deselect_selected_code();
                                                   })
-                                              })
-                                          }),
-                                          Some(move |keypress| {
-                                              cmd_buffer.borrow_mut()
-                                                        .add_editor_command(move |code_editor| {
-                                                            code_editor.handle_keypress(keypress)
-                                                        })
-                                          }))
+                                   })
+                } else {
+                    self.ui_toolkit.draw_all(&[])
+                }
+            },
+            &|| {
+                let cmd_buffer1 = Rc::clone(&self.command_buffer);
+                self.ui_toolkit.draw_menu_item("Insert code", move || {
+                                   let cmd_buffer1 = Rc::clone(&cmd_buffer1);
+                                   let mut cmd_buffer1 = cmd_buffer1.borrow_mut();
+                                   cmd_buffer1.add_editor_command(move |code_editor| {
+                                       code_editor.set_insertion_point_on_next_line_in_block();
+                                   })
+                               })
+            },
+        ])
     }
 
     fn is_insertion_pointer_immediately_before(&self, id: lang::ID) -> bool {
