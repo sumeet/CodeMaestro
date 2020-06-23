@@ -78,7 +78,12 @@ impl Component for Model {
         }
     }
 
-    fn view(&self) -> Html<Self> {
+    fn change(&mut self, _props: Self::Properties) -> bool {
+        // not sure what this needs to be
+        false
+    }
+
+    fn view(&self) -> Html {
         if let (Some(app), Some(renderer_state)) = (&self.app, &self.renderer_state) {
             let mut tk = YewToolkit::new(Rc::clone(renderer_state));
             let drawn = app.borrow_mut().draw(&mut tk);
@@ -94,7 +99,7 @@ struct YewToolkit {
 }
 
 impl UiToolkit for YewToolkit {
-    type DrawResult = Html<Model>;
+    type DrawResult = Html;
 
     // see autoscroll.js
     fn scrolled_to_y_if_not_visible(&self,
@@ -142,16 +147,16 @@ impl UiToolkit for YewToolkit {
                 @{onchange}([rgba.r / 255, rgba.g / 255, rgba.b / 255, rgba.a]);
             };
         };
-        let input: Html<Model> = run_after_render::run(html! {
-                                                           <input type="color", name=label />
-                                                       },
-                                                       move |el| {
-                                                           js! {
-                                                               $(@{el})
-                                                                 .spectrum({change: @{&onchange_js}, move: @{&onchange_js}, showInput: true, showAlpha: true,
-                                                                            preferredFormat: "hex", color: @{rgba(existing_value)}});
-                                                           };
-                                                       });
+        let input: Html = run_after_render::run(html! {
+                                                    <input type="color", name=label />
+                                                },
+                                                move |el| {
+                                                    js! {
+                                                        $(@{el})
+                                                          .spectrum({change: @{&onchange_js}, move: @{&onchange_js}, showInput: true, showAlpha: true,
+                                                                     preferredFormat: "hex", color: @{rgba(existing_value)}});
+                                                    };
+                                                });
         html! {
             <div>
                 {{ input }}
@@ -795,7 +800,7 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn focused(&self, draw_fn: &dyn Fn() -> Html<Model>) -> Self::DrawResult {
+    fn focused(&self, draw_fn: &dyn Fn() -> Html) -> Self::DrawResult {
         run_after_render::run(draw_fn(), |element| {
             let el: &InputElement = unsafe { std::mem::transmute(element) };
             el.focus();
@@ -1310,7 +1315,7 @@ fn add_global_keydown_event_listener(renderer_state: Rc<RefCell<RendererState>>)
               });
 }
 
-fn symbolize_text(text: &str) -> Html<Model> {
+fn symbolize_text(text: &str) -> Html {
     html! {
         <span>
             { for text.chars().map(|char| {
@@ -1373,7 +1378,7 @@ fn rgba(color: [f32; 4]) -> String {
             color[3])
 }
 
-fn vtag(html: Html<Model>) -> VTag<Model> {
+fn vtag(html: Html) -> VTag {
     match html {
         VNode::VTag(box vtag) => vtag,
         _ => panic!("expected a vtag!"),
@@ -1383,7 +1388,7 @@ fn vtag(html: Html<Model>) -> VTag<Model> {
 use stdweb::unstable::TryFrom;
 use stdweb::web::Node;
 
-fn css(css: &str) -> Html<Model> {
+fn css(css: &str) -> Html {
     raw_html(&format!(
         r#"
         <style type="text/css">
@@ -1395,7 +1400,7 @@ fn css(css: &str) -> Html<Model> {
 }
 
 //badboy from https://github.com/yewstack/yew/blob/master/examples/inner_html/src/lib.rs
-fn raw_html(raw_html: &str) -> Html<Model> {
+fn raw_html(raw_html: &str) -> Html {
     let js_el = js! {
         var div = document.createElement("div");
         div.innerHTML = @{raw_html};
