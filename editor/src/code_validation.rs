@@ -114,8 +114,11 @@ impl<'a> Validator<'a> {
             if is_placeholder_expression(block.expressions.last()) {
                 block.expressions.pop();
             }
-            code_generation::new_placeholder("Return value placeholder".to_string(),
-                                             required_return_type)
+            let typename = self.env_genie
+                               .get_name_for_type(&required_return_type)
+                               .unwrap();
+            let placeholder_text = format!("The last expression must return a {}", typename);
+            code_generation::new_placeholder(placeholder_text, required_return_type)
         };
         block.expressions.push(expr_to_insert_at_the_end);
         block
