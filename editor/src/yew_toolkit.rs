@@ -23,6 +23,7 @@ use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
 use yew::virtual_dom::{VList, VNode};
+use yew::KeyPressEvent;
 
 macro_rules! num {
     ($to_type:ident, $stdweb_value:expr) => {{
@@ -32,6 +33,7 @@ macro_rules! num {
 }
 
 pub struct Model {
+    link: Option<ComponentLink<Self>>,
     app: Option<Rc<RefCell<CSApp>>>,
     async_executor: Option<AsyncExecutor>,
     renderer_state: Option<Rc<RefCell<RendererState>>>,
@@ -45,12 +47,31 @@ pub enum Msg {
     DontRedraw,
 }
 
+pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
+    yew::initialize();
+
+    // add css styles referencing code that we wouldn't be able to access from .css files
+    //    add_style_string(&format!(".buttonized {{ background-color: {}; }}",
+    //                              rgba(COLOR_SCHEME.button_hover_color)));
+
+    let yew_app = App::<Model>::new().mount_to_body();
+    let renderer_state = Rc::new(RefCell::new(RendererState::new(yew_app)));
+
+    setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&renderer_state));
+    add_global_keydown_event_listener(Rc::clone(&renderer_state));
+    renderer_state.borrow().send_msg(Msg::Init(Rc::clone(&app),
+                                               async_executor.clone(),
+                                               Rc::clone(&renderer_state)));
+    yew::run_loop();
+}
+
 impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
         Model { app: None,
+                link: Some(link),
                 async_executor: None,
                 renderer_state: None }
     }
@@ -63,6 +84,10 @@ impl Component for Model {
 
                 self.async_executor = Some(async_executor);
                 self.app = Some(app);
+                if self.link.is_none() {
+                    panic!("won't work unless there is a link now");
+                }
+                renderer_state.borrow_mut().component_link = self.link.take();
                 self.renderer_state = Some(renderer_state);
                 true
             }
@@ -205,14 +230,14 @@ impl UiToolkit for YewToolkit {
         html! {
             <div style={ format!("background-color: {}; width: 300px; height: 200px; position: absolute; top: calc(50% - 300px); left: calc(50% - 300px); color: white; overflow: auto;", rgba(colorscheme!(window_bg_color))) },
                  tabindex=0,
-                 onkeypress=|e| {
+                 onkeypress=self.callback(move |e: KeyPressEvent| {
                      if let Some(keypress) = map_keypress_event(&e) {
                          handle_keypress_1(keypress);
                      }
                      e.prevent_default();
                      Msg::Redraw
-                 },
-                 onkeydown=|e| {
+                 }),
+                 onkeydown=self.callback(move |e| {
                      global_keydown_handler(&e);
                      // lol for these special keys we have to listen on keydown, but the
                      // rest we can do keypress :/
@@ -229,7 +254,7 @@ impl UiToolkit for YewToolkit {
                      } else {
                          Msg::DontRedraw
                      }
-                 }, >
+                 }), >
                 {{ draw_fn() }}
             </div>
         }
@@ -275,7 +300,8 @@ impl UiToolkit for YewToolkit {
                                                        -> Self::DrawResult {
         html! {
             <div>
-                <input type="checkbox", checked=value, onclick=|_| { onchange(!value) ; Msg::Redraw }, />
+                <input type="checkbox", checked=value,
+                       onclick=self.callback(move |_| { onchange(!value) ; Msg::Redraw }), />
                 <label>{{ label }}</label>
             </div>
         }
@@ -298,7 +324,7 @@ impl UiToolkit for YewToolkit {
         html! {
             <div>
                 <textarea rows=5, value=existing_value,
-                          oninput=|e| { onchange(&e.value) ; Msg::Redraw }, >
+                          oninput=self.callback(move |e: InputData| { onchange(&e.value) ; Msg::Redraw }), >
                 </textarea>
                 <label>{{ label }}</label>
             </div>
@@ -322,7 +348,7 @@ impl UiToolkit for YewToolkit {
         // RC :/
         let onwindowchange = Rc::new(onwindowchange);
         let renderer_state = Rc::clone(&self.renderer_state);
-        let run_after: Box<dyn Fn(&HtmlElement)> = Box::new(move |el| {
+        let run_after = move |el: &HtmlElement| {
             let renderer_state = Rc::clone(&renderer_state);
             let onwindowchange = Rc::clone(&onwindowchange);
             let onwindowchange = move |target: stdweb::Value,
@@ -366,7 +392,7 @@ impl UiToolkit for YewToolkit {
             let next_draw_count = previous_draw_count + 1;
             dataset.insert("drawcount", next_draw_count.to_string().as_ref())
                    .ok();
-        });
+        };
 
         // if there's a keypress handler provided, then send those keypresses into the app, and like,
         // prevent the tab key from doing anything
@@ -387,14 +413,14 @@ impl UiToolkit for YewToolkit {
                                  <div class="window window-border",
                                       style={ window_style  },
                                       tabindex=0,
-                                      onkeypress=|e| {
+                                      onkeypress=self.callback(move |e: KeyPressEvent| {
                                           if let Some(keypress) = map_keypress_event(&e) {
                                               handle_keypress_1(keypress);
                                           }
                                           e.prevent_default();
                                           Msg::Redraw
-                                      },
-                                      onkeydown=|e| {
+                                      }),
+                                      onkeydown=self.callback(move |e: KeyDownEvent| {
                                           global_keydown_handler(&e);
                                           // lol for these special keys we have to listen on keydown, but the
                                           // rest we can do keypress :/
@@ -411,7 +437,7 @@ impl UiToolkit for YewToolkit {
                                           } else {
                                               Msg::DontRedraw
                                           }
-                                      }, >
+                                      }), >
 
                                       // outline: none prevents browsers from drawing a border around the window when
                                       // it's selected. there's no need because we already differentiate active windows
@@ -426,7 +452,8 @@ impl UiToolkit for YewToolkit {
                                      <div class="window-title", style="color: white;",>
                                           { if let Some(onclose) = onclose {
                                               html! {
-                                                  <div style="float: right; cursor: pointer;", onclick=|_| { onclose(); Msg::Redraw }, >
+                                                  <div style="float: right; cursor: pointer;",
+                                                       onclick=self.callback(move |_| { onclose(); Msg::Redraw }), >
                                                       { symbolize_text("🗙") }
                                                   </div>
                                               }
@@ -440,7 +467,7 @@ impl UiToolkit for YewToolkit {
                                       </div>
                                   </div>
                               },
-                              run_after)
+                              Box::new(run_after))
     }
 
     // TODO: implement these
@@ -478,8 +505,9 @@ impl UiToolkit for YewToolkit {
         // tags, and not reshow them when new stuff comes on the screen, and so we've gotta use replaceonhoverhack
         // tags instead. gonna define replaceonhoverhack to be display: block in the css file
         html! {
-            <replaceonhoverhack class="fit-content", onmouseover=|_| { hide(&not_hovered_ref3) ; show(&hovered_ref3); Msg::DontRedraw },
-                onmouseout=|_| { hide(&hovered_ref2) ; show(&not_hovered_ref2); Msg::DontRedraw }, >
+            <replaceonhoverhack class="fit-content",
+                                onmouseover=self.callback(move |_| { hide(&not_hovered_ref3) ; show(&hovered_ref3); Msg::DontRedraw }),
+                onmouseout=self.callback(move |_| { hide(&hovered_ref2) ; show(&not_hovered_ref2); Msg::DontRedraw }), >
                 <replaceonhoverhack class="fit-content", ref={not_hovered_ref}, >
                     { draw_when_not_hovered() }
                 </replaceonhoverhack>
@@ -539,9 +567,9 @@ impl UiToolkit for YewToolkit {
                     ref={context_menu_trigger_ref},
                     tabindex=0,
                     class="context_menu_trigger",
-                    oncontextmenu=|e| {
-                        let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
-                        let context_menu_trigger_el : Element = (&context_menu_trigger_ref2).try_into().unwrap();
+                    oncontextmenu=self.callback(move |e: ContextMenuEvent| {
+                        let context_menu_el : Element = (&context_menu_ref2).cast().unwrap();
+                        let context_menu_trigger_el : Element = (&context_menu_trigger_ref2).cast().unwrap();
                         if is_context_menu {
                             e.prevent_default();
                             js! {
@@ -550,15 +578,15 @@ impl UiToolkit for YewToolkit {
                             }
                         }
                         Msg::DontRedraw
-                    },
-                    onkeypress=|e| {
+                    }),
+                    onkeypress=self.callback(move |e: KeyPressEvent| {
                         if let Some(keypress) = map_keypress_event(&e) {
                             handle_keypress_1(keypress);
                         }
                         e.prevent_default();
                         Msg::Redraw
-                    },
-                    onkeydown=|e| {
+                    }),
+                    onkeydown=self.callback(move |e| {
                         global_keydown_handler(&e);
                         // lol for these special keys we have to listen on keydown, but the
                         // rest we can do keypress :/
@@ -575,7 +603,7 @@ impl UiToolkit for YewToolkit {
                         } else {
                             Msg::DontRedraw
                         }
-                    }, >
+                    }), >
 
                     { draw_fn() }
                 </div>
@@ -630,8 +658,9 @@ impl UiToolkit for YewToolkit {
             VNode::VTag(Box::new(drawn))
         };
         html! {
-            <div style="position: relative; pointer-events: none;", onclick=|_| { onclick(); Msg::Redraw },
-                 onmouseleave=|e| { js! { removeOverlays(@{e.target()}); } ; Msg::DontRedraw},>
+            <div style="position: relative; pointer-events: none;",
+                 onclick=self.callback(move |_| { onclick(); Msg::Redraw }),
+                 onmouseleave=self.callback(|e: MouseLeaveEvent| { js! { removeOverlays(@{e.target()}); } ; Msg::DontRedraw}),>
                 { draw_with_overlay_on_hover() }
                 <div style="position: absolute; top: 0px; left: 0px; display: none; height: 0px; width: 0px; pointer-events: none;",
                      class="buttonized-hover-overlay",>
@@ -667,7 +696,7 @@ impl UiToolkit for YewToolkit {
                                             -> Self::DrawResult {
         html! {
             <button style=format!("display: block; font-size: 75%; color: white; background-color: {}; border: none; outline: none;", rgba(color)),
-                 onclick=|_| { on_button_press_callback(); Msg::Redraw }, >
+                 onclick=self.callback(move |_| { on_button_press_callback(); Msg::Redraw }), >
             { label }
             </button>
         }
@@ -712,8 +741,8 @@ impl UiToolkit for YewToolkit {
                style=format!("display: block; background-color: {};", rgba(colorscheme!(input_bg_color))),
                autocomplete="off",
                value=existing_value,
-               oninput=|e| {onchange(&e.value) ; Msg::Redraw},
-               onkeypress=|e| { if e.key() == "Enter" { ondone2() } ; Msg::Redraw }, />
+               oninput=self.callback(move |e: InputData| {onchange(&e.value) ; Msg::Redraw}),
+               onkeypress=self.callback(move |e: KeyPressEvent| { if e.key() == "Enter" { ondone2() } ; Msg::Redraw }), />
         }
     }
 
@@ -726,7 +755,7 @@ impl UiToolkit for YewToolkit {
                              rgba(colorscheme!(input_bg_color))),
                autocomplete="off",
                value="",
-               onkeypress=|e| {
+               onkeypress=self.callback(move |e: KeyPressEvent| {
                    if e.key() == "Enter" {
                      // no idea how to do this safely but it works!
                      let el : InputElement = unsafe { std::mem::transmute(e.target().unwrap()) };
@@ -734,7 +763,7 @@ impl UiToolkit for YewToolkit {
                      el.set_raw_value("");
                    }
                    Msg::Redraw
-               }, />
+               }), />
         }
     }
 
@@ -894,7 +923,7 @@ impl UiToolkit for YewToolkit {
         let items = items.into_iter().map(|i| (*i).clone()).collect_vec();
         html! {
             <div>
-                <select onchange=|event| {
+                <select onchange=self.callback(move |event| {
                             match event {
                                 ChangeData::Select(elem) => {
                                     if let Some(selected_index) = elem.selected_index() {
@@ -906,7 +935,7 @@ impl UiToolkit for YewToolkit {
                                     unreachable!();
                                 }
                             }
-                        },>
+                        }),>
                     { for formatted_items.into_iter().enumerate().map(|(index, item)| {
                         let selected = Some(index) == selected_item_in_combo_box;
                         if selected {
@@ -945,7 +974,7 @@ impl UiToolkit for YewToolkit {
         let selected_item_in_combo_box = items.into_iter().position(|i| is_item_selected(i));
         let items = items.into_iter().map(|i| (*i).clone()).collect_vec();
         html! {
-            <select size={items.len().to_string()}, onchange=|event| {
+            <select size={items.len().to_string()}, onchange=self.callback(move |event| {
                         match event {
                             ChangeData::Select(elem) => {
                                 if let Some(selected_index) = elem.selected_index() {
@@ -957,7 +986,7 @@ impl UiToolkit for YewToolkit {
                                 unreachable!();
                             }
                         }
-                    },>
+                    }),>
                 { for formatted_items.into_iter().enumerate().map(|(index, item)| {
                     let selected = Some(index) == selected_item_in_combo_box;
                     if selected {
@@ -985,7 +1014,7 @@ impl UiToolkit for YewToolkit {
         let items = Rc::new(items);
         let items_rc = Rc::clone(&items);
         html! {
-            <select style="overflow: hidden;", size={items_rc.len().to_string()}, onchange=|event| {
+            <select style="overflow: hidden;", size={items_rc.len().to_string()}, onchange=self.callback(move |event| {
                 match event {
                         ChangeData::Select(elem) => {
                             if let Some(selected_index) = elem.selected_index() {
@@ -1000,7 +1029,7 @@ impl UiToolkit for YewToolkit {
                             unreachable!();
                         }
                     }
-            },>
+            }),>
                 { for items.iter().map(|item| match item {
                     SelectableItem::Selectable { label, is_selected, .. } => {
                         if *is_selected {
@@ -1180,9 +1209,10 @@ impl UiToolkit for YewToolkit {
                     { draw_context_menu() }
                 </div>
 
-                <div ref={context_menu_trigger_ref}, class="context_menu_trigger", oncontextmenu=|e| {
-                    let context_menu_el : Element = (&context_menu_ref2).try_into().unwrap();
-                    let context_menu_trigger_el : Element = (&context_menu_trigger_ref2).try_into().unwrap();
+                <div ref={context_menu_trigger_ref}, class="context_menu_trigger",
+                     oncontextmenu=self.callback(move |e: ContextMenuEvent| {
+                    let context_menu_el : Element = (&context_menu_ref2).cast().unwrap();
+                    let context_menu_trigger_el : Element = (&context_menu_trigger_ref2).cast().unwrap();
                     e.prevent_default();
                     e.stop_propagation();
                     js! {
@@ -1190,7 +1220,7 @@ impl UiToolkit for YewToolkit {
                         @{show_right_click_menu}(@{context_menu_el}, @{context_menu_trigger_el}, true, e.clientX, e.clientY);
                     }
                     Msg::DontRedraw
-                }, >
+                }), >
                     {{ draw_fn() }}
                 </div>
             </div>
@@ -1209,16 +1239,31 @@ impl YewToolkit {
             renderer_state.borrow().handle_global_key(e);
         }
     }
+
+    // func signature taken from scope.rs in yew
+    pub fn callback<F, IN, M>(&self, function: F) -> Callback<IN>
+        where M: Into<Msg>,
+              F: Fn(IN) -> M + 'static
+    {
+        self.renderer_state
+            .borrow()
+            .component_link
+            .as_ref()
+            .unwrap()
+            .callback(function)
+    }
 }
 
 pub struct RendererState {
     pub global_key_handler: Rc<RefCell<Box<dyn Fn(Keypress) + 'static>>>,
+    pub component_link: Option<ComponentLink<Model>>,
     pub yew_app: Rc<RefCell<html::Scope<Model>>>,
 }
 
 impl RendererState {
     pub fn new(yew_app: html::Scope<Model>) -> Self {
         Self { global_key_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
+               component_link: None,
                yew_app: Rc::new(RefCell::new(yew_app)) }
     }
 
@@ -1284,24 +1329,6 @@ fn was_shift_key_pressed(key: &str) -> bool {
     key.len() == 1 && key.chars().next().unwrap().is_uppercase()
 }
 
-pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
-    yew::initialize();
-
-    // add css styles referencing code that we wouldn't be able to access from .css files
-    //    add_style_string(&format!(".buttonized {{ background-color: {}; }}",
-    //                              rgba(COLOR_SCHEME.button_hover_color)));
-
-    let yew_app = App::<Model>::new().mount_to_body();
-    let renderer_state = Rc::new(RefCell::new(RendererState::new(yew_app)));
-
-    setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&renderer_state));
-    add_global_keydown_event_listener(Rc::clone(&renderer_state));
-    renderer_state.borrow().send_msg(Msg::Init(Rc::clone(&app),
-                                               async_executor.clone(),
-                                               Rc::clone(&renderer_state)));
-    yew::run_loop();
-}
-
 fn setup_ui_update_on_io_event_completion(async_executor: &mut AsyncExecutor,
                                           renderer_state: Rc<RefCell<RendererState>>) {
     async_executor.setonupdate(Rc::new(move || {
@@ -1343,7 +1370,7 @@ fn is_in_symbol_range(c: char) -> bool {
 }
 
 fn show(node_ref: &NodeRef) {
-    let element = node_ref.try_into::<Element>().unwrap();
+    let element = node_ref.cast::<Element>().unwrap();
     js! {
         let el = @{element};
         if (el) {
@@ -1353,7 +1380,7 @@ fn show(node_ref: &NodeRef) {
 }
 
 fn hide(node_ref: &NodeRef) {
-    let element = node_ref.try_into::<Element>().unwrap();
+    let element = node_ref.cast::<Element>().unwrap();
     js! {
         let el = @{element};
         if (el) {

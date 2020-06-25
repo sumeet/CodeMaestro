@@ -14,16 +14,16 @@ pub struct RunAfterRenderProps {
     // #[props(required)]
     pub node_ref: NodeRef,
     // #[props(required)]
-    pub run: Box<dyn Fn(&HtmlElement)>,
+    run: FunctionContainer,
 }
 
 #[allow(unused_must_use)]
-pub fn run(html: Html, func: impl Fn(&HtmlElement) + 'static) -> Html {
+pub fn run(html: Html, func: impl Fn(&HtmlElement) + 'static + Clone) -> Html {
     let node_ref = match &html {
         VNode::VTag(box tag) => tag.node_ref.clone(),
         _ => panic!("this only works w/ tags"),
     };
-    let func: Box<dyn Fn(&HtmlElement)> = Box::new(func);
+    let func = FunctionContainer { function: Box::new(func) };
     html! {
         <>
             {{ html }}
@@ -42,8 +42,8 @@ impl Component for RunAfterRender {
 
     fn rendered(&mut self, first_render: bool) {
         if first_render {
-            if let Some(element) = self.props.node_ref.try_into::<HtmlElement>() {
-                (self.props.run)(&element);
+            if let Some(element) = self.props.node_ref.cast::<HtmlElement>() {
+                self.props.run.call(&element);
             }
         }
     }
@@ -61,5 +61,34 @@ impl Component for RunAfterRender {
     fn change(&mut self, _props: Self::Properties) -> bool {
         // this should probably be true eh?
         false
+    }
+}
+
+// from https://github.com/rust-lang/rust/issues/24000#issuecomment-479425396
+#[derive(Clone)]
+pub struct FunctionContainer {
+    function: Box<dyn Function>,
+}
+
+impl FunctionContainer {
+    fn call(&self, html_element: &HtmlElement) {
+        (self.function)(html_element);
+    }
+}
+
+trait Function: Fn(&HtmlElement) {
+    fn clone_boxed(&self) -> Box<dyn Function>;
+}
+
+impl<T> Function for T where T: 'static + Clone + Fn(&HtmlElement)
+{
+    fn clone_boxed(&self) -> Box<dyn Function> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Function> {
+    fn clone(&self) -> Self {
+        self.clone_boxed()
     }
 }
