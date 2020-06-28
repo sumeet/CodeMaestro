@@ -49,7 +49,9 @@ impl HTTPResponseIntermediateValue {
     }
 }
 
-#[derive(Clone)]
+use serde_derive::{Deserialize, Serialize};
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct JSONHTTPClientBuilder {
     pub test_run_result: Option<Result<serde_json::Value, String>>,
     pub test_run_parsed_doc: Option<json2::ParsedDocument>,
@@ -58,7 +60,7 @@ pub struct JSONHTTPClientBuilder {
     pub return_type_candidate: Option<ReturnTypeBuilderResult>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SelectedField {
     pub name: String,
     pub nesting: json2::Nesting,
@@ -69,11 +71,16 @@ impl JSONHTTPClientBuilder {
     // TODO: this will need to change to not make a GET request, but use the method from the
     // client
     pub fn new(json_http_client_id: lang::ID) -> Self {
-        Self { test_run_result: None,
-               test_run_parsed_doc: None,
-               return_type_candidate: None,
-               json_http_client_id,
-               selected_fields: vec![] }
+        let mut new_guy: JSONHTTPClientBuilder =
+            serde_json::from_str(include_str!("../../builder.json")).unwrap();
+        new_guy.json_http_client_id = json_http_client_id;
+
+        // Self { test_run_result: None,
+        //        test_run_parsed_doc: None,
+        //        return_type_candidate: None,
+        //        json_http_client_id,
+        //        selected_fields: vec![] }
+        new_guy
     }
 
     pub fn get_selected_field(&self, nesting: &json2::Nesting) -> Option<&SelectedField> {
@@ -373,7 +380,7 @@ fn normalize_struct_fields(fields: &[structs::StructField]) -> BTreeMap<String, 
           .collect()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReturnTypeBuilderResult {
     pub structs_to_be_added: Vec<structs::Struct>,
     typ: lang::Type,

@@ -185,7 +185,7 @@ impl function::SettableArgs for JSONHTTPClient {
 impl JSONHTTPClient {
     fn default_url() -> lang::Block {
         code_generation::new_block(vec![code_generation::new_string_literal(
-            "https://httpbin.org/anything".to_string(),
+            "https://www.scorebat.com/video-api/v1/".to_string(),
         )])
     }
 

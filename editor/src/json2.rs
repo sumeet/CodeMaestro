@@ -3,9 +3,10 @@ use std::iter;
 
 use itertools::Itertools;
 use matches::matches;
+use serde_derive::{Deserialize, Serialize};
 use serde_json;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Nest {
     ListElement(usize),
     MapKey(String),
@@ -13,7 +14,7 @@ pub enum Nest {
 
 pub type Nesting = Vec<Nest>;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum ParsedDocument {
     // Scalars
     Null {

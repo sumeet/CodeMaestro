@@ -1,7 +1,10 @@
 use super::window_positions::WindowPositions;
 use crate::code_editor::CodeLocation;
+use crate::json_http_client_builder::JSONHTTPClientBuilder;
 use cfg_if::cfg_if;
+use cs::lang;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 cfg_if! {
     if #[cfg(target_arch = "wasm32")] {
@@ -17,17 +20,22 @@ cfg_if! {
 pub struct StateSerialize<'a> {
     window_positions: &'a WindowPositions,
     open_code_editors: &'a [CodeLocation],
+    json_client_builder_by_func_id: &'a HashMap<lang::ID, JSONHTTPClientBuilder>,
 }
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct StateDeserialize {
     pub window_positions: WindowPositions,
     pub open_code_editors: Vec<CodeLocation>,
+    pub json_client_builder_by_func_id: HashMap<lang::ID, JSONHTTPClientBuilder>,
 }
 
-pub fn save(window_positions: &WindowPositions, open_code_editors: &[CodeLocation]) {
+pub fn save(window_positions: &WindowPositions,
+            open_code_editors: &[CodeLocation],
+            json_client_builder_by_func_id: &HashMap<lang::ID, JSONHTTPClientBuilder>) {
     save_state(&StateSerialize { window_positions,
-                                 open_code_editors })
+                                 open_code_editors,
+                                 json_client_builder_by_func_id })
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -61,11 +69,12 @@ mod js {
     //        default
     //    }
 
-    pub fn save_state(state_serialize: &StateSerialize) {
-        STORAGE.insert("state", &serde_json::to_string(state_serialize).unwrap())
-               .unwrap()
+    pub fn save_state(_state_serialize: &StateSerialize) {
+        // use stdweb::console;
+        // console!(log, serde_json::to_string(state_serialize).unwrap());
+        // STORAGE.insert("state", &serde_json::to_string(state_serialize).unwrap())
+        //        .unwrap()
     }
-
 }
 
 #[cfg(not(target_arch = "wasm32"))]

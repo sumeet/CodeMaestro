@@ -166,7 +166,9 @@ impl<'a> Controller {
                                     .values()
                                     .map(|editor| editor.location.unwrap())
                                     .collect_vec();
-        save_state::save(&self.window_positions, &open_code_editors)
+        save_state::save(&self.window_positions,
+                         &open_code_editors,
+                         &self.json_client_builder_by_func_id)
     }
 
     pub fn handle_global_keypress(&mut self, keypress: Keypress) {

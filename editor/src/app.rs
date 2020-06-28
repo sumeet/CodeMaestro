@@ -114,9 +114,11 @@ fn init_save_state(command_buffer: &mut CommandBuffer, env: &mut env::ExecutionE
         }
     }
 
-    let window_positions = loaded_state.window_positions;
     command_buffer.add_controller_command(move |controller| {
-                      controller.load_serialized_window_positions(window_positions);
+                      controller.load_serialized_window_positions(loaded_state.window_positions);
+                      for (_, builder) in loaded_state.json_client_builder_by_func_id {
+                          controller.load_json_http_client_builder(builder);
+                      }
                   })
 }
 
