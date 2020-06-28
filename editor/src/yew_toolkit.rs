@@ -33,7 +33,6 @@ macro_rules! num {
 }
 
 pub struct Model {
-    link: Option<ComponentLink<Self>>,
     app: Option<Rc<RefCell<CSApp>>>,
     async_executor: Option<AsyncExecutor>,
     renderer_state: Option<Rc<RefCell<RendererState>>>,
@@ -59,6 +58,7 @@ pub fn draw_app(app: Rc<RefCell<CSApp>>, mut async_executor: AsyncExecutor) {
 
     setup_ui_update_on_io_event_completion(&mut async_executor, Rc::clone(&renderer_state));
     add_global_keydown_event_listener(Rc::clone(&renderer_state));
+
     renderer_state.borrow().send_msg(Msg::Init(Rc::clone(&app),
                                                async_executor.clone(),
                                                Rc::clone(&renderer_state)));
@@ -69,9 +69,8 @@ impl Component for Model {
     type Message = Msg;
     type Properties = ();
 
-    fn create(_: Self::Properties, link: ComponentLink<Self>) -> Self {
+    fn create(_: Self::Properties, _link: ComponentLink<Self>) -> Self {
         Model { app: None,
-                link: Some(link),
                 async_executor: None,
                 renderer_state: None }
     }
@@ -84,10 +83,6 @@ impl Component for Model {
 
                 self.async_executor = Some(async_executor);
                 self.app = Some(app);
-                if self.link.is_none() {
-                    panic!("won't work unless there is a link now");
-                }
-                renderer_state.borrow_mut().component_link = self.link.take();
                 self.renderer_state = Some(renderer_state);
                 true
             }
@@ -741,8 +736,17 @@ impl UiToolkit for YewToolkit {
                style=format!("display: block; background-color: {};", rgba(colorscheme!(input_bg_color))),
                autocomplete="off",
                value=existing_value,
-               oninput=self.callback(move |e: InputData| {onchange(&e.value) ; Msg::Redraw}),
-               onkeypress=self.callback(move |e: KeyPressEvent| { if e.key() == "Enter" { ondone2() } ; Msg::Redraw }), />
+               oninput=self.callback(move |e: InputData| {
+                   onchange(&e.value);
+                   Msg::Redraw
+               }),
+               onkeypress=self.callback(move |e: KeyPressEvent| {
+                   if e.key() == "Enter" {
+                       ondone2()
+                   }
+                   e.stop_propagation();
+                   Msg::Redraw
+               }), />
         }
     }
 
@@ -754,15 +758,19 @@ impl UiToolkit for YewToolkit {
                style=format!("display: block; width: 100%; background-color: {}",
                              rgba(colorscheme!(input_bg_color))),
                autocomplete="off",
-               value="",
+               // TODO: THIS ISN'T GOING TO FLY MUCH LONGER: COME BACK TO THIS:: XXXX
                onkeypress=self.callback(move |e: KeyPressEvent| {
+                   e.stop_propagation();
+
                    if e.key() == "Enter" {
                      // no idea how to do this safely but it works!
                      let el : InputElement = unsafe { std::mem::transmute(e.target().unwrap()) };
                      ondone(&el.raw_value());
                      el.set_raw_value("");
+                     return Msg::Redraw
                    }
-                   Msg::Redraw
+                   // we don't want to redraw because that'll kill the input the user typed in...
+                   Msg::DontRedraw
                }), />
         }
     }
@@ -1233,6 +1241,10 @@ impl YewToolkit {
         YewToolkit { renderer_state }
     }
 
+    // HACKKKKK: XXXX: WARNING: THIS IS A HUGE HACK
+    // this is in here because yew used to do stop_propagation(), causing us to need to implement
+    // our own global key event handler. now that yew propagates properly, we should refactor to
+    // get rid of this.
     fn global_keydown_handler(&self) -> impl Fn(&KeyDownEvent) + 'static {
         let renderer_state = Rc::clone(&self.renderer_state);
         move |e| {
@@ -1247,28 +1259,25 @@ impl YewToolkit {
     {
         self.renderer_state
             .borrow()
-            .component_link
-            .as_ref()
-            .unwrap()
+            .yew_app
+            .borrow()
             .callback(function)
     }
 }
 
 pub struct RendererState {
     pub global_key_handler: Rc<RefCell<Box<dyn Fn(Keypress) + 'static>>>,
-    pub component_link: Option<ComponentLink<Model>>,
-    pub yew_app: Rc<RefCell<html::Scope<Model>>>,
+    pub yew_app: Rc<RefCell<ComponentLink<Model>>>,
 }
 
 impl RendererState {
-    pub fn new(yew_app: html::Scope<Model>) -> Self {
+    pub fn new(yew_app: ComponentLink<Model>) -> Self {
         Self { global_key_handler: Rc::new(RefCell::new(Box::new(|_| {}))),
-               component_link: None,
                yew_app: Rc::new(RefCell::new(yew_app)) }
     }
 
     pub fn send_msg(&self, msg: Msg) {
-        self.yew_app.borrow_mut().send_message(msg);
+        self.yew_app.borrow().send_message(msg);
     }
 
     pub fn handle_global_key(&self, e: &KeyDownEvent) {
