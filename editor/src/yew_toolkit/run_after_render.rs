@@ -58,9 +58,9 @@ impl Component for RunAfterRender {
         html! {}
     }
 
-    fn change(&mut self, _props: Self::Properties) -> bool {
-        // this should probably be true eh?
-        false
+    fn change(&mut self, props: Self::Properties) -> bool {
+        self.props = props;
+        true
     }
 }
 

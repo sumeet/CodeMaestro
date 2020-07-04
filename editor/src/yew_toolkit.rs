@@ -1,5 +1,6 @@
 mod focus;
 mod run_after_render;
+mod text;
 
 use super::app::App as CSApp;
 use super::async_executor::AsyncExecutor;
@@ -8,6 +9,7 @@ use super::ui_toolkit::UiToolkit;
 use crate::code_editor_renderer::BLACK_COLOR;
 use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
+use text::{symbolize_text, Text};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -776,18 +778,8 @@ impl UiToolkit for YewToolkit {
     }
 
     fn draw_text(&self, text: &str) -> Self::DrawResult {
-        // forgot why we needed to do this, whoops, should've written a comment
-        let text = text.replace(" ", " ");
         html! {
-            <div style="padding: 0.2em;",>
-                {
-                    if text.is_empty() {
-                        html! { <span>{" "}</span> }
-                    } else {
-                       symbolize_text(&text)
-                    }
-                }
-            </div>
+            <Text text=text.to_string() />
         }
     }
 
@@ -1349,33 +1341,6 @@ fn add_global_keydown_event_listener(renderer_state: Rc<RefCell<RendererState>>)
     document().add_event_listener(move |e: KeyDownEvent| {
                   renderer_state.borrow().handle_global_key(&e);
               });
-}
-
-fn symbolize_text(text: &str) -> Html {
-    html! {
-        <span>
-            { for text.chars().map(|char| {
-                if is_in_symbol_range(char) {
-                    html! {
-                        <span style="display: inline-block; font-size: 57%; transform: translateY(-1px);",>
-                          { char }
-                        </span>
-                    }
-                } else {
-                    html! {
-                        <span>{ char }</span>
-                    }
-                }
-            })}
-        </span>
-    }
-}
-
-fn is_in_symbol_range(c: char) -> bool {
-    match c as u32 {
-        0xf000..=0xf72f => true,
-        _ => false,
-    }
 }
 
 fn show(node_ref: &NodeRef) {
