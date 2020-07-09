@@ -1,3 +1,4 @@
+mod all;
 mod focus;
 mod run_after_render;
 mod text;
@@ -1382,7 +1383,7 @@ fn rgba(color: [f32; 4]) -> String {
 fn vtag(html: Html) -> VTag {
     match html {
         VNode::VTag(box vtag) => vtag,
-        _ => panic!("expected a vtag!"),
+        _ => panic!(format!("expected a vtag, but got a {:?}!", html)),
     }
 }
 

@@ -6,10 +6,27 @@ use yew::Properties;
 
 pub struct Text {
     props: TextProps,
+    cached: Html,
 }
 #[derive(PartialEq, Properties, Clone)]
 pub struct TextProps {
     pub text: String,
+}
+
+fn gen_cache(text: &str) -> Html {
+    // forgot why we needed to do this, whoops, should've written a comment
+    let text = text.replace(" ", " ");
+    html! {
+        <div style="padding: 0.2em;",>
+            {
+                if text.is_empty() {
+                    html! { <span>{" "}</span> }
+                } else {
+                   symbolize_text(&text)
+                }
+            }
+        </div>
+    }
 }
 
 impl Component for Text {
@@ -17,7 +34,8 @@ impl Component for Text {
     type Properties = TextProps;
 
     fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
-        Self { props }
+        let cached = gen_cache(&props.text);
+        Self { props, cached }
     }
 
     fn update(&mut self, _: Self::Message) -> bool {
@@ -35,19 +53,7 @@ impl Component for Text {
     }
 
     fn view(&self) -> Html {
-        // forgot why we needed to do this, whoops, should've written a comment
-        let text = self.props.text.replace(" ", " ");
-        html! {
-            <div style="padding: 0.2em;",>
-                {
-                    if text.is_empty() {
-                        html! { <span>{" "}</span> }
-                    } else {
-                       symbolize_text(&text)
-                    }
-                }
-            </div>
-        }
+        return self.cached.clone();
     }
 }
 
