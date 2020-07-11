@@ -639,7 +639,11 @@ impl UiToolkit for YewToolkit {
                                     -> Self::DrawResult {
         //        let draw_with_overlay_on_hover = draw_fn;
         let draw_with_overlay_on_hover = || {
-            let mut drawn = vtag(draw_fn());
+            let mut drawn = vtag(html! {
+                                     <div>
+                                         { draw_fn() }
+                                     </div>
+                                 });
             // see buttonize-hover.js
             if drawn.attributes.contains_key("onmouseover") {
                 panic!("{:?} already contains onmouseover", drawn);
