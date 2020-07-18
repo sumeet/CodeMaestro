@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use stdweb::web::HtmlElement;
 use yew::virtual_dom::VNode;
 use yew::Properties;
@@ -14,16 +15,15 @@ pub struct RunAfterRenderProps {
     // #[props(required)]
     pub node_ref: NodeRef,
     // #[props(required)]
-    run: FunctionContainer,
+    run: Rc<dyn Fn(&HtmlElement)>,
 }
 
 #[allow(unused_must_use)]
-pub fn run(html: Html, func: impl Fn(&HtmlElement) + 'static + Clone) -> Html {
+pub fn run(html: Html, func: Rc<dyn Fn(&HtmlElement)>) -> Html {
     let node_ref = match &html {
         VNode::VTag(box tag) => tag.node_ref.clone(),
         _ => panic!("this only works w/ tags"),
     };
-    let func = FunctionContainer { function: Box::new(func) };
     html! {
         <>
             {{ html }}
@@ -43,7 +43,7 @@ impl Component for RunAfterRender {
     fn rendered(&mut self, first_render: bool) {
         if first_render {
             if let Some(element) = self.props.node_ref.cast::<HtmlElement>() {
-                self.props.run.call(&element);
+                (self.props.run)(&element);
             }
         }
     }
@@ -61,34 +61,5 @@ impl Component for RunAfterRender {
     fn change(&mut self, props: Self::Properties) -> bool {
         self.props = props;
         true
-    }
-}
-
-// from https://github.com/rust-lang/rust/issues/24000#issuecomment-479425396
-#[derive(Clone)]
-pub struct FunctionContainer {
-    function: Box<dyn Function>,
-}
-
-impl FunctionContainer {
-    fn call(&self, html_element: &HtmlElement) {
-        (self.function)(html_element);
-    }
-}
-
-trait Function: Fn(&HtmlElement) {
-    fn clone_boxed(&self) -> Box<dyn Function>;
-}
-
-impl<T> Function for T where T: 'static + Clone + Fn(&HtmlElement)
-{
-    fn clone_boxed(&self) -> Box<dyn Function> {
-        Box::new(self.clone())
-    }
-}
-
-impl Clone for Box<dyn Function> {
-    fn clone(&self) -> Self {
-        self.clone_boxed()
     }
 }

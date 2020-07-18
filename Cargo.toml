@@ -73,3 +73,9 @@ futures-util = { git = "https://github.com/rust-lang-nursery/futures-rs", branch
 reqwest = {git = "https://github.com/sumeet/reqwest", branch = "master"}
 stdweb = {git = "https://github.com/koute/stdweb", features = ["experimental_features_which_may_break_on_minor_version_bumps", "futures-support"]}
 
+# commented these out because have to recompile from scratch
+#[profile.release]
+#lto = "thin"
+#
+#[profile.dev]
+#lto = "thin"

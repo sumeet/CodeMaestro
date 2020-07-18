@@ -8,6 +8,7 @@ pub struct Text {
     props: TextProps,
     cached: Html,
 }
+
 #[derive(PartialEq, Properties, Clone)]
 pub struct TextProps {
     pub text: String,

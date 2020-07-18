@@ -10,6 +10,7 @@ use super::ui_toolkit::UiToolkit;
 use crate::code_editor_renderer::BLACK_COLOR;
 use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
+use all::All;
 use text::{symbolize_text, Text};
 
 use std::cell::RefCell;
@@ -173,13 +174,13 @@ impl UiToolkit for YewToolkit {
         let input: Html = run_after_render::run(html! {
                                                     <input type="color", name=label />
                                                 },
-                                                move |el| {
+                                                Rc::new(move |el| {
                                                     js! {
                                                         $(@{el})
                                                           .spectrum({change: @{&onchange_js}, move: @{&onchange_js}, showInput: true, showAlpha: true,
                                                                      preferredFormat: "hex", color: @{rgba(existing_value)}});
                                                     };
-                                                });
+                                                }));
         html! {
             <div>
                 {{ input }}
@@ -260,11 +261,11 @@ impl UiToolkit for YewToolkit {
 
     fn draw_all(&self, draw_fns: &[DrawFnRef<Self>]) -> Self::DrawResult {
         html! {
-            <div class="all-drawn", style="display: flex; flex-direction: column;",>
+            <All>
                 { for draw_fns.into_iter().map(|draw_fn| html! {
                     { draw_fn() }
                 })}
-            </div>
+            </All>
         }
     }
 
@@ -465,7 +466,7 @@ impl UiToolkit for YewToolkit {
                                       </div>
                                   </div>
                               },
-                              Box::new(run_after))
+                              Rc::new(run_after))
     }
 
     // TODO: implement these
@@ -835,10 +836,11 @@ impl UiToolkit for YewToolkit {
     }
 
     fn focused(&self, draw_fn: &dyn Fn() -> Html) -> Self::DrawResult {
-        run_after_render::run(draw_fn(), |element| {
-            let el: &InputElement = unsafe { std::mem::transmute(element) };
-            el.focus();
-        })
+        run_after_render::run(draw_fn(),
+                              Rc::new(|element| {
+                                  let el: &InputElement = unsafe { std::mem::transmute(element) };
+                                  el.focus();
+                              }))
     }
 
     // we're using droppy (https://github.com/OutlawPlz/droppy/) to help us render the dropdown.
@@ -852,7 +854,7 @@ impl UiToolkit for YewToolkit {
                                       {{ self.draw_all_on_same_line(draw_menus) }}
                                   </nav>
                               },
-                              |el| {
+                              Rc::new(|el| {
                                   js! {
                                       var existingDroppyInstance = Droppy.prototype.getInstance(@{el});
                                       if (!existingDroppyInstance) {
@@ -864,8 +866,8 @@ impl UiToolkit for YewToolkit {
                                               clickOutToClose: true
                                           });
                                       }
-                                  }
-                              })
+                                  };
+                              }))
     }
 
     fn draw_menu(&self,
