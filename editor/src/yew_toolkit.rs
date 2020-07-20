@@ -2,6 +2,7 @@ mod all;
 mod focus;
 mod overlay;
 mod run_after_render;
+mod spinner;
 mod text;
 
 use super::app::App as CSApp;
@@ -13,6 +14,7 @@ use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
 use all::All;
 use overlay::{TopLeftOverlay, TopRightOverlay};
+use spinner::Spinner;
 use text::{symbolize_text, Text};
 
 use std::cell::RefCell;
@@ -215,9 +217,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_spinner(&self) -> Self::DrawResult {
         html! {
-            <div class="spinner", >
-                {" "}
-            </div>
+            <Spinner />
         }
     }
 
