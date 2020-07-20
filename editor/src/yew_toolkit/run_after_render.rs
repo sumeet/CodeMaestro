@@ -11,10 +11,7 @@ pub struct RunAfterRender {
 
 #[derive(Properties, Clone)]
 pub struct RunAfterRenderProps {
-    // XXX: not sure if i need these annotations or not, they weren't working after i upgraded yew
-    // #[props(required)]
     pub node_ref: NodeRef,
-    // #[props(required)]
     run: Rc<dyn Fn(&HtmlElement)>,
 }
 

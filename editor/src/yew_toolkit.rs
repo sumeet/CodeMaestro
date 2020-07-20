@@ -1,5 +1,6 @@
 mod all;
 mod focus;
+mod overlay;
 mod run_after_render;
 mod text;
 
@@ -11,6 +12,7 @@ use crate::code_editor_renderer::BLACK_COLOR;
 use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
 use all::All;
+use overlay::{TopLeftOverlay, TopRightOverlay};
 use text::{symbolize_text, Text};
 
 use std::cell::RefCell;
@@ -126,6 +128,8 @@ impl UiToolkit for YewToolkit {
     type DrawResult = Html;
 
     // see autoscroll.js
+    // TODO: this impl uses MutationObserver, we could probably rewrite this to use yew components
+    // with mounted() and NodeRef... should be faster if we do that
     fn scrolled_to_y_if_not_visible(&self,
                                     _scroll_hash: String,
                                     draw_fn: &dyn Fn() -> Self::DrawResult)
@@ -191,19 +195,21 @@ impl UiToolkit for YewToolkit {
 
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
+        let background_color = rgba(colorscheme!(window_bg_color));
         html! {
-            <div class="window-border", style={ format!("padding: 0.5em; position: absolute; top: 35px; right: 10px; color: white; background-color: {}",rgba(colorscheme!(window_bg_color))) }, >
+            <TopRightOverlay top_position_px=35, right_position_px=10, background_color=background_color>
                 {{ draw_fn() }}
-            </div>
+            </TopRightOverlay>
         }
     }
 
     fn draw_top_left_overlay(&self, draw_fn: &dyn Fn() -> Self::DrawResult) -> Self::DrawResult {
         // 35px is hardcoded to dodge the menubar
+        let background_color = rgba(colorscheme!(window_bg_color));
         html! {
-            <div style={ format!("padding: 0.5em; position: absolute; top: 35px; left: 10px; color: white; background-color: {}",rgba(colorscheme!(window_bg_color))) }, >
+            <TopLeftOverlay top_position_px=35, left_position_px=10, background_color=background_color>
                 {{ draw_fn() }}
-            </div>
+            </TopLeftOverlay>
         }
     }
 
