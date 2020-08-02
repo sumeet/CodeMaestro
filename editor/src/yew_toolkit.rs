@@ -1,7 +1,9 @@
 mod all;
 mod focus;
+mod input;
 mod overlay;
 mod run_after_render;
+mod separator;
 mod spinner;
 mod text;
 
@@ -14,6 +16,7 @@ use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
 use all::All;
 use overlay::{TopLeftOverlay, TopRightOverlay};
+use separator::Separator;
 use spinner::Spinner;
 use text::{symbolize_text, Text};
 
@@ -277,7 +280,7 @@ impl UiToolkit for YewToolkit {
 
     fn draw_separator(&self) -> Self::DrawResult {
         html! {
-            <hr />
+            <Separator />
         }
     }
 
