@@ -49,12 +49,15 @@ struct Window {
 
 struct ChildRegion {
     is_focused: bool,
+    content_height: f32,
     height: f32,
 }
 
 impl ChildRegion {
-    fn new(is_focused: bool, height: f32) -> Self {
-        Self { is_focused, height }
+    fn new(is_focused: bool, height: f32, content_height: f32) -> Self {
+        Self { is_focused,
+               height,
+               content_height }
     }
 }
 
@@ -144,6 +147,14 @@ impl TkCache {
                 .child_regions
                 .get(child_window_id)
                 .map(|cr| cr.height)
+    }
+
+    pub fn get_child_region_content_height(child_window_id: &str) -> Option<f32> {
+        TK_CACHE.lock()
+                .unwrap()
+                .child_regions
+                .get(child_window_id)
+                .map(|cr| cr.content_height)
     }
 
     pub fn is_hovered(label: &str) -> bool {
@@ -791,6 +802,17 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let mut flex = 0;
 
         let height = match height {
+            ChildRegionHeight::FitContent => {
+                let current_window = TkCache::get_current_window();
+                match current_window {
+                    // initially give back 0 if the window size is totally empty
+                    None => 0.,
+                    Some(_) => {
+                        let magic = 16.;
+                        TkCache::get_child_region_content_height(child_frame_id.as_ref()).unwrap_or(0.) + magic
+                    }
+                }
+            }
             ChildRegionHeight::ExpandFill { min_height } => {
                 flex = 1;
 
@@ -849,6 +871,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build(&|| {
                 let child_region_height = self.ui.get_content_region_avail()[1];
                 self.ui.group(draw_fn);
+                let content_height = self.ui.get_item_rect_size()[1];
 
                 if let Some(keypress) = self.keypress {
                     if self.ui.is_child_window_focused() {
@@ -860,7 +883,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
                 TkCache::set_child_region_info(child_frame_id.as_ref(),
                                                ChildRegion::new(self.ui.is_child_window_focused(),
-                                                                child_region_height),
+                                                                child_region_height,
+                                                                content_height),
                                                flex);
 
                 if let Some(draw_context_menu) = draw_context_menu {

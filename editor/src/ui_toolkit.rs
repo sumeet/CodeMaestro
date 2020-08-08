@@ -196,8 +196,9 @@ pub enum SelectableItem<T: 'static> {
     },
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum ChildRegionHeight {
+    FitContent,
     ExpandFill { min_height: f32 },
     Pixels(usize),
 }

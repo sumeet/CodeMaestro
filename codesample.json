@@ -51,7 +51,7 @@
                         "argument_definition_id": "a8907c89-cf6a-4e0a-938f-f08446d6d09e",
                         "expr": {
                           "StringLiteral": {
-                            "value": "https://httpbin.org/get",
+                            "value": "https://lichess.org/api/user/smt2",
                             "id": "2100f45c-7fe0-4a6d-9d34-2833e439c4e2"
                           }
                         }

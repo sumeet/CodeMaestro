@@ -9,6 +9,7 @@ use super::structs;
 
 use crate::builtins::{get_ok_type_from_result_type, ok_result_value};
 use crate::code_generation;
+use crate::env::pp_struct;
 use http;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -25,7 +26,7 @@ lazy_static! {
 }
 
 // list from http::Method
-#[derive(Copy, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
 pub enum HTTPMethod {
     Get,
     Post,
@@ -81,7 +82,7 @@ impl From<HTTPMethod> for http::Method {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JSONHTTPClient {
     id: lang::ID,
     // TODO: get rid of URL
@@ -182,10 +183,12 @@ impl function::SettableArgs for JSONHTTPClient {
     }
 }
 
+const DEFAULT_JSON_HTTP_CLIENT_BASE_URL: &'static str = "https://lichess.org/api/user/smt2";
+
 impl JSONHTTPClient {
     fn default_url() -> lang::Block {
         code_generation::new_block(vec![code_generation::new_string_literal(
-            "https://httpbin.org/anything".to_string(),
+            DEFAULT_JSON_HTTP_CLIENT_BASE_URL.to_owned(),
         )])
     }
 

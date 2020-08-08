@@ -342,7 +342,7 @@ impl<'a> ReturnTypeBuilder<'a> {
                                           id
                                       });
                 // not sure if this actually works
-                structs_to_be_added.dedup_by_key(|s| normalize_struct_fields(&s.fields));
+                //structs_to_be_added.dedup_by_key(|s| normalize_struct_fields(&s.fields));
                 ReturnTypeBuilderResult { structs_to_be_added,
                                           typ: lang::Type::from_spec_id(typespec_id, vec![]) }
             }

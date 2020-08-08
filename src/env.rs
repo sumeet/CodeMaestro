@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use crate::builtins::err_result_value;
 use crate::builtins::ok_result_value;
+use crate::EnvGenie;
 use failure::_core::fmt::Formatter;
 use itertools::Itertools;
 use std::convert::TryInto;
@@ -370,6 +371,20 @@ pub enum ExecutionError {
     PythonDeserializationError,
     JavaScriptError,
     JavaScriptDeserializationError,
+}
+
+pub fn pp_struct(env: &ExecutionEnvironment, strukt: &structs::Struct) -> String {
+    let env_genie = EnvGenie::new(env);
+    let fields = strukt.fields
+                       .iter()
+                       .map(|field| {
+                           format!("{}: {}",
+                                   field.name,
+                                   env_genie.get_name_for_type(&field.field_type)
+                                            .unwrap_or("UnknownType".to_owned()))
+                       })
+                       .join(", ");
+    format!("{} {{{}}}", strukt.name, fields)
 }
 
 impl std::fmt::Display for ExecutionError {

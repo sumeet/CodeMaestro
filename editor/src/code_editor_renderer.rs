@@ -65,13 +65,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                render_menu_when_next_possible: RefCell::new(false) }
     }
 
-    pub fn render(&self) -> T::DrawResult {
+    pub fn render(&self, height: ChildRegionHeight) -> T::DrawResult {
         let code = self.code_editor.get_code();
         let cmd_buffer = Rc::clone(&self.command_buffer);
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| self.render_code(code),
-                               ChildRegionHeight::ExpandFill { min_height: 100. },
+                               height,
                                Some(&move || self.draw_right_click_menu()),
                                Some(move |keypress| {
                                    cmd_buffer.borrow_mut()

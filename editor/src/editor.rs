@@ -28,7 +28,7 @@ use crate::opener::MenuItem;
 use crate::opener::Opener;
 use crate::send_to_server_overlay::{SendToServerOverlay, SendToServerOverlayStatus};
 use crate::theme_editor_renderer::ThemeEditorRenderer;
-use crate::ui_toolkit::DrawFnRef;
+use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use crate::window_positions::Window;
 use cs::builtins;
 use cs::chat_program::{flush_reply_buffer, message_received, ChatProgram};
@@ -54,6 +54,7 @@ use cs::tests;
 use cs::{await_eval_result, EnvGenie};
 
 mod value_renderer;
+use crate::code_editor::CodeLocation;
 use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
@@ -1324,7 +1325,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit
             .draw_all(&[&|| self.ui_toolkit.draw_text("Example response:"), &|| {
                           ValueRenderer::new(&intermediate_value.env,
-
                                              self.ui_toolkit).render(&intermediate_value.value)
                       }])
     }
@@ -2062,10 +2062,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_code(&self, code_id: lang::ID) -> T::DrawResult {
         let code_editor = self.controller.get_editor(code_id).unwrap();
+        let height = match code_editor.location {
+            Some(CodeLocation::JSONHTTPClientURL(_))
+            | Some(CodeLocation::JSONHTTPClientTestSection(_))
+            | Some(CodeLocation::JSONHTTPClientTransform(_))
+            | Some(CodeLocation::JSONHTTPClientURLParams(_)) => ChildRegionHeight::FitContent,
+            _ => ChildRegionHeight::ExpandFill { min_height: 100. },
+        };
         CodeEditorRenderer::new(self.ui_toolkit,
                                 code_editor,
                                 Rc::clone(&self.command_buffer),
-                                self.env_genie).render()
+                                self.env_genie).render(height)
     }
 }
 
