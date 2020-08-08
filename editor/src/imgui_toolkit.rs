@@ -386,8 +386,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let token = self.ui.push_text_wrap_pos(0.);
         let token2 = self.ui.push_style_color(StyleColor::Text, color);
         self.ui.text(&text);
-        std::mem::drop(token2);
-        std::mem::drop(token);
+        token2.pop(self.ui);
+        token.pop(self.ui);
     }
 
     fn scrolled_to_y_if_not_visible(&self, scroll_hash: String, draw_fn: &dyn Fn()) {
@@ -459,22 +459,20 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         let token = self.ui.push_style_vars(&[StyleVar::WindowRounding(0.0),
                                               StyleVar::WindowPadding([x_padding, y_padding])]);
-        self.ui
-            .window(&self.imlabel("statusbar"))
-            .collapsible(false)
-            .horizontal_scrollbar(false)
-            .scroll_bar(false)
-            .scrollable(false)
-            .resizable(false)
-            .always_auto_resize(false)
-            .title_bar(false)
-            .no_focus_on_appearing(true)
-            .movable(false)
-            .no_bring_to_front_on_focus(true)
-            .position(window_pos, Condition::Always)
-            .size(window_size, Condition::Always)
-            .build(draw_fn);
-        std::mem::drop(token);
+        imgui::Window::new(&self.imlabel("statusbar")).collapsible(false)
+                                                      .horizontal_scrollbar(false)
+                                                      .scroll_bar(false)
+                                                      .scrollable(false)
+                                                      .resizable(false)
+                                                      .always_auto_resize(false)
+                                                      .title_bar(false)
+                                                      .focus_on_appearing(false)
+                                                      .movable(false)
+                                                      .bring_to_front_on_focus(false)
+                                                      .position(window_pos, Condition::Always)
+                                                      .size(window_size, Condition::Always)
+                                                      .build(self.ui, draw_fn);
+        token.pop(self.ui);
     }
 
     fn draw_text(&self, text: &str) {
@@ -482,7 +480,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         .push_style_colors(&[(StyleColor::ButtonHovered, CLEAR_COLOR),
                                              (StyleColor::ButtonActive, CLEAR_COLOR)]);
         self.draw_button(text, CLEAR_COLOR, &|| {});
-        std::mem::drop(token);
+        token.pop(self.ui);
     }
 
     fn draw_taking_up_full_width(&self, draw_fn: DrawFnRef<Self>) {
@@ -633,7 +631,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             draw();
         }
         // this pops the style var
-        std::mem::drop(style_var);
+        style_var.pop(self.ui);
         unsafe { imgui_sys::igSetCursorPosX(cursor_pos) };
         last_rhs();
     }
@@ -643,8 +641,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                       handle_keypress: Option<F>)
                                                       -> Self::DrawResult {
         let [display_size_x, display_size_y] = self.ui.io().display_size;
-        self.ui
-            .window(&self.imlabel("draw_centered_popup"))
+        imgui::Window::new(&self.imlabel("draw_centered_popup"))
             .size(INITIAL_WINDOW_SIZE, Condition::Always)
             .position([display_size_x * 0.5, display_size_y * 0.5],
                       Condition::Always)
@@ -652,7 +649,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .resizable(false)
             .scrollable(true)
             .title_bar(false)
-            .build(&|| {
+            .build(self.ui, &|| {
                 //unsafe { imgui_sys::igSetWindowFocus() };
                 draw_fn();
                 if let Some(keypress) = self.keypress {
@@ -669,39 +666,36 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn()) {
         let distance = 10.0;
         let [display_size_x, _] = self.ui.io().display_size;
-        self.ui
-            .window(&self.imlabel("top_right_overlay"))
-            .flags(ImGuiWindowFlags::NoNav)
-            .position(// 2.5: HARDCODE HAX, taking into account menubar height
-                      [display_size_x - distance, distance * 2.5],
-                      Condition::Always)
-            .position_pivot([1.0, 0.0])
-            .movable(false)
-            .title_bar(false)
-            .resizable(false)
-            .always_auto_resize(true)
-            .save_settings(false)
-            .no_focus_on_appearing(true)
-            .build(draw_fn)
+        imgui::Window::new(&self.imlabel("top_right_overlay")).flags(ImGuiWindowFlags::NO_NAV)
+                                                              .position(// 2.5: HARDCODE HAX, taking into account menubar height
+                                                                        [display_size_x - distance,
+                                                                         distance * 2.5],
+                                                                        Condition::Always)
+                                                              .position_pivot([1.0, 0.0])
+                                                              .movable(false)
+                                                              .title_bar(false)
+                                                              .resizable(false)
+                                                              .always_auto_resize(true)
+                                                              .save_settings(false)
+                                                              .focus_on_appearing(false)
+                                                              .build(self.ui, draw_fn)
     }
 
     // TODO: basically a copy+paste of draw_top_right_overlay
     fn draw_top_left_overlay(&self, draw_fn: &dyn Fn()) {
         let distance = 10.0;
-        self.ui
-            .window(&self.imlabel("top_left"))
-            .flags(ImGuiWindowFlags::NoNav)
-            .position(// 2.5: HARDCODE HAX, taking into account menubar height
-                      [distance * 2.5, distance * 2.5],
-                      Condition::Always)
-            .position_pivot([1.0, 0.0])
-            .movable(false)
-            .title_bar(false)
-            .resizable(false)
-            .always_auto_resize(true)
-            .save_settings(false)
-            .no_focus_on_appearing(true)
-            .build(draw_fn)
+        imgui::Window::new(&self.imlabel("top_left")).flags(ImGuiWindowFlags::NO_NAV)
+                                                     .position(// 2.5: HARDCODE HAX, taking into account menubar height
+                                                               [distance * 2.5, distance * 2.5],
+                                                               Condition::Always)
+                                                     .position_pivot([1.0, 0.0])
+                                                     .movable(false)
+                                                     .title_bar(false)
+                                                     .resizable(false)
+                                                     .always_auto_resize(true)
+                                                     .save_settings(false)
+                                                     .focus_on_appearing(false)
+                                                     .build(self.ui, draw_fn)
     }
 
     // taken from https://github.com/ocornut/imgui/issues/1901#issuecomment-400563921
@@ -749,7 +743,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             window_builder = window_builder.opened(&mut should_stay_open);
         }
 
-        window_builder.build(&|| {
+        window_builder.build(self.ui, &|| {
                           TkCache::set_current_window_label(&window_name);
                           TkCache::set_current_window_flex(0);
                           self.ui.group(draw_window_contents);
@@ -864,11 +858,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         .push_style_colors(&[(StyleColor::Border, color),
                                              (StyleColor::ChildBg, [bg[0], bg[1], bg[2], bg[3]])]);
 
-        self.ui
-            .child_frame(&child_frame_id, [0., height])
-            .show_borders(true)
-            .scrollbar_horizontal(true)
-            .build(&|| {
+        imgui::ChildWindow::new(&child_frame_id)
+            .size([0., height])
+            .border(true)
+            .horizontal_scrollbar(true)
+            .build(self.ui, &|| {
                 let child_region_height = self.ui.get_content_region_avail()[1];
                 self.ui.group(draw_fn);
                 let content_height = self.ui.get_item_rect_size()[1];
@@ -900,16 +894,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     }
                 }
             });
-        std::mem::drop(token);
+        token.pop(self.ui);
     }
 
     fn draw_layout_with_bottom_bar(&self,
                                    draw_content_fn: &dyn Fn(),
                                    draw_bottom_bar_fn: &dyn Fn()) {
         let frame_height = unsafe { imgui_sys::igGetFrameHeightWithSpacing() };
-        self.ui
-            .child_frame(&self.imlabel(""), [0.0, -frame_height])
-            .build(draw_content_fn);
+        imgui::ChildWindow::new(&self.imlabel("")).size([0.0, -frame_height])
+                                                  .build(self.ui, draw_content_fn);
         draw_bottom_bar_fn()
     }
 
@@ -1064,7 +1057,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         if self.ui.button(&self.imlabel(label), BUTTON_SIZE) {
             on_button_activate();
         }
-        std::mem::drop(token);
+        token.pop(self.ui);
     }
 
     // XXX: why do i have the small button look like a normal button again????
@@ -1077,13 +1070,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         if self.ui.small_button(&self.imlabel(label)) {
             on_button_activate()
         }
-        std::mem::drop(token);
+        token.pop(self.ui);
     }
 
     fn draw_text_box(&self, text: &str) {
         let token = self.ui.push_text_wrap_pos(0.);
         self.ui.text(text);
-        std::mem::drop(token);
+        token.pop(self.ui);
         // GHETTO: text box is always scrolled to the bottom
         unsafe { imgui_sys::igSetScrollHereY(1.0) };
     }
@@ -1102,7 +1095,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             if enter_pressed {
                 ondone(box_input.as_ref() as &str);
             }
-            std::mem::drop(token);
+            token.pop(self.ui);
         };
 
         let is_mouse_clicked = unsafe { imgui_sys::igIsMouseClicked(0, false) };
@@ -1161,12 +1154,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                     existing_value: Color,
                                     onchange: impl Fn(Color) + 'static) {
         let mut edited_value = existing_value.clone();
-        let was_color_changed = self.ui
-                                    .color_edit(&self.imlabel(label), &mut edited_value)
+        let was_color_changed = imgui::ColorEdit::new(&self.imlabel(label), &mut edited_value)
                                     .alpha(true)
                                     .alpha_bar(true)
-                                    .mode(ColorEditMode::HEX)
-                                    .build();
+                                    .display_mode(ColorEditDisplayMode::HEX)
+                                    .build(self.ui);
         if was_color_changed && existing_value != edited_value {
             onchange(edited_value)
         }
@@ -1264,11 +1256,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_menu(&self, label: &str, draw_menu_items: &dyn Fn()) {
-        self.ui.menu(&self.imlabel(label)).build(draw_menu_items)
+        self.ui.menu(&self.imlabel(label), true, draw_menu_items)
     }
 
     fn draw_menu_item<F: Fn() + 'static>(&self, label: &str, onselect: F) {
-        if self.ui.menu_item(&self.imlabel(label)).build() {
+        if imgui::MenuItem::new(&self.imlabel(label)).build(self.ui) {
             onselect()
         }
     }

@@ -29,10 +29,10 @@ backtrace = "0.3.44"
 glium = { version = "0.25.1", default-features = true }
 # matching the dep of the glium from above imgui
 glutin = { version = "0.21.2" }
-imgui = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.1.0" }
-imgui-sys = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.1.0" }
-imgui-glium-renderer = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.1.0" }
-imgui-winit-support = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.1.0" }
+imgui = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.2.0" }
+imgui-sys = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.2.0" }
+imgui-glium-renderer = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.2.0" }
+imgui-winit-support = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.2.0" }
 tokio-current-thread = {version = "0.1.4" }
 tokio-reactor = {version = "0.1.7" }
 tokio-timer = {version = "0.2.10" }

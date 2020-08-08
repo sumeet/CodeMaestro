@@ -9,7 +9,6 @@ use super::structs;
 
 use crate::builtins::{get_ok_type_from_result_type, ok_result_value};
 use crate::code_generation;
-use crate::env::pp_struct;
 use http;
 use itertools::Itertools;
 use lazy_static::lazy_static;
