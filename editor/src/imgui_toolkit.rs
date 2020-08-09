@@ -3,7 +3,6 @@ use super::async_executor;
 use super::editor::Keypress;
 use super::imgui_support;
 use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
-use itertools::Itertools;
 use nfd;
 
 use crate::colorscheme;
@@ -232,8 +231,8 @@ impl<'a> ImguiToolkit<'a> {
 
     // HAXXXXX
     fn is_last_drawn_item_totally_visible(&self) -> bool {
-        let window_min = self.ui.get_window_pos();
-        let window_size = self.ui.get_window_size();
+        let window_min = self.ui.window_pos();
+        let window_size = self.ui.window_size();
         let window_max = (window_min[0] + window_size[0], window_min[1] + window_size[1]);
 
         let item_min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
@@ -371,7 +370,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let padding = style.frame_padding;
         let x_padding = padding[0];
 
-        let current_cursor_pos = self.ui.get_cursor_pos();
+        let current_cursor_pos = self.ui.cursor_pos();
 
         let x_pos_to_indent_first_line = current_cursor_pos[0] + x_padding;
 
@@ -487,7 +486,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let style = self.ui.clone_style();
         let frame_padding = style.frame_padding;
 
-        let orig_cursor_pos = self.ui.get_cursor_pos();
+        let orig_cursor_pos = self.ui.cursor_pos();
         self.ui.group(draw_fn);
         self.ui.set_cursor_pos(orig_cursor_pos);
 
@@ -501,7 +500,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         // haxxx: draw twice:
         // first to get the bounding box, then draw over it with the bgcolor, and then
         // draw over it again
-        let orig_cursor_pos = self.ui.get_cursor_pos();
+        let orig_cursor_pos = self.ui.cursor_pos();
 
         self.ui.group(draw_fn);
 
@@ -543,13 +542,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         //let full_width = unsafe { imgui_sys::igGetContentRegionAvailWidth() };
         let full_width = unsafe { imgui_sys::igGetContentRegionAvail_nonUDT2().x };
 
-        let original_cursor_pos = self.ui.get_cursor_pos();
+        let original_cursor_pos = self.ui.cursor_pos();
         let label = im_str!("{}", text);
         let text_size = self.ui.calc_text_size(&label, false, 0.);
         let total_size = [full_width,
                           text_size[1] + (padding[1] * 2.) + (inner_padding.1 * 2.)];
 
-        let draw_cursor_pos = self.ui.get_cursor_screen_pos();
+        let draw_cursor_pos = self.ui.cursor_screen_pos();
         let end_of_button_bg_rect = [draw_cursor_pos[0] + total_size[0],
                                      draw_cursor_pos[1] + total_size[1]];
         self.ui
@@ -558,7 +557,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .filled(true)
             .build();
 
-        let draw_cursor_pos = self.ui.get_cursor_screen_pos();
+        let draw_cursor_pos = self.ui.cursor_screen_pos();
 
         let buttony_text_start_cursor_pos = [draw_cursor_pos[0] + padding[0] + inner_padding.0,
                                              draw_cursor_pos[1] + padding[1] + inner_padding.1];
@@ -572,14 +571,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_with_margin(&self, margin: (f32, f32), draw_fn: DrawFnRef<Self>) {
-        let orig_cursor_pos = self.ui.get_cursor_pos();
+        let orig_cursor_pos = self.ui.cursor_pos();
 
         let mut starting_point_for_cursor = orig_cursor_pos;
         starting_point_for_cursor[0] += margin.0 / 2.;
         starting_point_for_cursor[1] += margin.1 / 2.;
         self.ui.set_cursor_pos(starting_point_for_cursor);
         self.ui.group(draw_fn);
-        let drawn_rect_size = self.ui.get_item_rect_size();
+        let drawn_rect_size = self.ui.item_rect_size();
 
         self.ui.set_cursor_pos(orig_cursor_pos);
         self.ui
@@ -719,7 +718,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let window_name_str: &str = window_name.as_ref();
 
         let window_after_prev_draw = TkCache::get_window(window_name_str);
-        let mut window_builder = self.ui.window(&window_name).movable(true).scrollable(true);
+        let mut window_builder = imgui::Window::new(&window_name).movable(true)
+                                                                 .scrollable(true);
 
         if let Some(window) = window_after_prev_draw {
             // size == (0, 0) means don't interfere with the window size, let imgui do its thing
@@ -748,13 +748,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                           TkCache::set_current_window_flex(0);
                           self.ui.group(draw_window_contents);
                           TkCache::clear_current_window_label();
-                          let content_size = self.ui.get_item_rect_size();
+                          let content_size = self.ui.item_rect_size();
 
                           let mut cache = TK_CACHE.lock().unwrap();
                           let prev_window = cache.windows.get(window_name_str);
-                          let window_pos = self.ui.get_window_pos();
-                          let window_size = self.ui.get_window_size();
-                          let remaining_size = self.ui.get_content_region_avail();
+                          let window_pos = self.ui.window_pos();
+                          let window_size = self.ui.window_size();
+                          let remaining_size = self.ui.content_region_avail();
                           let drawn_window =
                               Window { pos: (window_pos[0], window_pos[1]),
                                        size: (window_size[0], window_size[1]),
@@ -863,12 +863,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .border(true)
             .horizontal_scrollbar(true)
             .build(self.ui, &|| {
-                let child_region_height = self.ui.get_content_region_avail()[1];
+                let child_region_height = self.ui.content_region_avail()[1];
                 self.ui.group(draw_fn);
-                let content_height = self.ui.get_item_rect_size()[1];
+                let content_height = self.ui.item_rect_size()[1];
 
                 if let Some(keypress) = self.keypress {
-                    if self.ui.is_child_window_focused() {
+                    if self.ui.is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS) {
                         if let Some(ref handle_keypress) = handle_keypress {
                             handle_keypress(keypress)
                         }
@@ -876,7 +876,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 }
 
                 TkCache::set_child_region_info(child_frame_id.as_ref(),
-                                               ChildRegion::new(self.ui.is_child_window_focused(),
+                                               ChildRegion::new(self.ui.is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS),
                                                                 child_region_height,
                                                                 content_height),
                                                flex);
@@ -1026,13 +1026,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let style = self.ui.clone_style();
         let padding = style.frame_padding;
 
-        let original_cursor_pos = self.ui.get_cursor_pos();
+        let original_cursor_pos = self.ui.cursor_pos();
         let label = im_str!("{}", label);
         let text_size = self.ui.calc_text_size(&label, false, 0.);
         let total_size = [text_size[0] + (padding[0] * 2.),
                           text_size[1] + (padding[1] * 2.)];
 
-        let draw_cursor_pos = self.ui.get_cursor_screen_pos();
+        let draw_cursor_pos = self.ui.cursor_screen_pos();
         let end_of_button_bg_rect = [draw_cursor_pos[0] + total_size[0],
                                      draw_cursor_pos[1] + total_size[1]];
         self.ui
@@ -1041,7 +1041,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .filled(true)
             .build();
 
-        let draw_cursor_pos = self.ui.get_cursor_screen_pos();
+        let draw_cursor_pos = self.ui.cursor_screen_pos();
         let buttony_text_start_cursor_pos = [draw_cursor_pos[0] + padding[0],
                                              draw_cursor_pos[1] + padding[1]];
         let draw_list = self.ui.get_window_draw_list();
@@ -1177,17 +1177,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
               H: Fn(&T) -> String
     {
         let mut selected_item_in_combo_box =
-            items.into_iter().position(|i| is_item_selected(i)).unwrap() as i32;
+            items.into_iter().position(|i| is_item_selected(i)).unwrap();
         let previous_selection = selected_item_in_combo_box.clone();
 
-        let formatted_items = items.into_iter()
-                                   .map(|s| im_str!("{}", format_item(s)).clone())
-                                   .collect_vec();
-
-        self.ui.combo(&self.imlabel(label),
-                      &mut selected_item_in_combo_box,
-                      &formatted_items.iter().collect_vec(),
-                      5);
+        let label = self.imlabel(label);
+        ComboBox::new(&label).build_simple(self.ui,
+                                           &mut selected_item_in_combo_box,
+                                           &items,
+                                           &move |item| im_str!("{}", format_item(item)).into());
         if selected_item_in_combo_box != previous_selection {
             onchange(items[selected_item_in_combo_box as usize])
         }
@@ -1228,11 +1225,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 SelectableItem::Selectable { item,
                                              label,
                                              is_selected, } => {
-                    if self.ui.selectable(&self.imlabel(&label),
-                                          is_selected,
-                                          ImGuiSelectableFlags::empty(),
-                                          [0., 0.])
-                    {
+                    let label = self.imlabel(&label);
+                    let selectable = imgui::Selectable::new(&label).selected(is_selected)
+                                                                   .size([0., 0.]);
+                    if selectable.build(self.ui) {
                         onselect(&item)
                     }
                 }
