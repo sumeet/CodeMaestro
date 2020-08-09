@@ -666,7 +666,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_top_right_overlay(&self, draw_fn: &dyn Fn()) {
         let distance = 10.0;
         let [display_size_x, _] = self.ui.io().display_size;
-        imgui::Window::new(&self.imlabel("top_right_overlay")).flags(ImGuiWindowFlags::NO_NAV)
+        imgui::Window::new(&self.imlabel("top_right_overlay")).flags(WindowFlags::NO_NAV)
                                                               .position(// 2.5: HARDCODE HAX, taking into account menubar height
                                                                         [display_size_x - distance,
                                                                          distance * 2.5],
@@ -684,7 +684,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     // TODO: basically a copy+paste of draw_top_right_overlay
     fn draw_top_left_overlay(&self, draw_fn: &dyn Fn()) {
         let distance = 10.0;
-        imgui::Window::new(&self.imlabel("top_left")).flags(ImGuiWindowFlags::NO_NAV)
+        imgui::Window::new(&self.imlabel("top_left")).flags(WindowFlags::NO_NAV)
                                                      .position(// 2.5: HARDCODE HAX, taking into account menubar height
                                                                [distance * 2.5, distance * 2.5],
                                                                Condition::Always)
@@ -1204,11 +1204,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
               H: Fn(&T) -> &str
     {
         for item in items {
-            if self.ui.selectable(&self.imlabel(&format_item(item)),
-                                  is_item_selected(item),
-                                  ImGuiSelectableFlags::empty(),
-                                  [0., 0.])
-            {
+            if imgui::Selectable::new(&self.imlabel(&format_item(item)))
+                .selected(is_item_selected(item))
+                .flags(SelectableFlags::empty())
+                .size([0., 0.])
+                .build(self.ui) {
                 onchange(item)
             }
         }
