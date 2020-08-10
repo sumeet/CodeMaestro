@@ -173,7 +173,7 @@ impl TkCache {
 }
 
 pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::AsyncExecutor) {
-    imgui_support::run("cs".to_string(), |ui, keypress| {
+    imgui_support::run("cs".to_string(), move |ui, keypress| {
         let mut app = app.borrow_mut();
         app.flush_commands(&mut async_executor);
         async_executor.turn();

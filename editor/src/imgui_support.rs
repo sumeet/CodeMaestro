@@ -1,8 +1,10 @@
-use glium::glutin::ElementState::Pressed;
-use glium::glutin::Event;
-use glium::glutin::VirtualKeyCode as Key;
-use glium::glutin::WindowEvent::*;
-use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, StyleColor, Ui};
+// use glium::glutin::ElementState::Pressed;
+// use glium::glutin::Event;
+// use glium::glutin::VirtualKeyCode as Key;
+// use glium::glutin::WindowEvent::*;
+use glium::glutin::event_loop::EventLoop;
+use glutin::window::{Icon, WindowBuilder};
+use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, Key, StyleColor, Ui};
 use std::time::Instant;
 
 use super::editor::{Key as AppKey, Keypress};
@@ -14,17 +16,14 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     use glium::{Display, Surface};
     use imgui_glium_renderer::Renderer;
 
-    let mut events_loop = glutin::EventsLoop::new();
+    let mut event_loop = EventLoop::new();
     let context = glutin::ContextBuilder::new().with_vsync(true);
-    let icon =
-        glutin::Icon::from_rgba(include_bytes!("../winicon.bin").to_vec(), 128, 128).unwrap();
+    let icon = Icon::from_rgba(include_bytes!("../winicon.bin").to_vec(), 128, 128).unwrap();
     let builder =
-        glutin::WindowBuilder::new().with_title(title)
-                                    .with_window_icon(Some(icon))
-                                    .with_dimensions(glutin::dpi::LogicalSize::new(1024f64,
-                                                                                   768f64));
-    let display = Display::new(builder, context, &events_loop).unwrap();
-    let window = display.gl_window();
+        WindowBuilder::new().with_title(title)
+                            .with_window_icon(Some(icon))
+                            .with_inner_size(glutin::dpi::LogicalSize::new(1024f64, 768f64));
+    let display = Display::new(builder, context, &event_loop).unwrap();
 
     let mut imgui = Context::create();
     imgui.set_ini_filename(None);
@@ -33,7 +32,9 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     imgui.set_clipboard_backend(Box::new(backend));
 
     let mut platform = WinitPlatform::init(&mut imgui);
-    platform.attach_window(imgui.io_mut(), &window.window(), HiDpiMode::Rounded);
+    let gl_window = display.gl_window();
+    let window = gl_window.window();
+    platform.attach_window(imgui.io_mut(), &window, HiDpiMode::Rounded);
 
     let hidpi_factor = platform.hidpi_factor();
     //let hidpi_factor = 1.0;
@@ -154,7 +155,6 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     //imgui_winit_support::configure_keys(&mut imgui);
 
     let mut last_frame = Instant::now();
-    let mut quit = false;
 
     loop {
         // duped above... clean this up TODO
@@ -172,85 +172,96 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
 
         let mut keypress: Option<Keypress> = None;
 
-        events_loop.poll_events(|event| {
-                       platform.handle_event(imgui.io_mut(), &window.window(), &event);
+        event_loop.run_return(|event, _, control_flow| match event {
+                      Event::NewEvents(_) => {
+                          last_frame = imgui.io_mut().update_delta_time(last_frame);
+                      }
+                      Event::MainEventsCleared => {
+                          let gl_window = display.gl_window();
+                          platform.prepare_frame(imgui.io_mut(), &gl_window.window())
+                                  .expect("Failed to start frame");
+                          gl_window.window().request_redraw();
+                      }
+                      Event::RedrawRequested(_) => {
+                          let ui = imgui.frame();
+                          if !run_ui(&ui, keypress) {
+                              *control_flow = ControlFlow::Exit;
+                          }
+                          let gl_window = display.gl_window();
+                          let mut target = display.draw();
+                          target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
+                          platform.prepare_render(&ui, &gl_window.window());
+                          renderer.render(&mut target, ui.render())
+                                  .expect("Rendering failed");
+                          target.finish().unwrap();
+                      }
+                      Event::WindowEvent { event: WindowEvent::CloseRequested,
+                                           .. } => *control_flow = ControlFlow::Exit,
+                      event => {
+                          let gl_window = display.gl_window();
+                          platform.handle_event(imgui.io_mut(), &gl_window.window(), &event);
 
-                       if let Event::WindowEvent { event, .. } = event {
-                           match event {
-                               CloseRequested => quit = true,
-                               KeyboardInput { input, .. } => {
-                                   let pressed = input.state == Pressed;
-                                   if pressed {
-                                       match input.virtual_keycode {
-                                           Some(key) => {
-                                               if let Some(key) = map_key(key) {
-                                                   let io = imgui.io();
-                                                   keypress = Some(Keypress::new(key,
-                                                                                 io.key_ctrl,
-                                                                                 io.key_shift))
-                                               }
-                                           }
-                                           _ => {}
-                                       }
-                                   }
-                               }
-                               _ => (),
-                           }
-                       }
-                   });
-
-        let io = imgui.io_mut();
-        platform.prepare_frame(io, &window.window())
-                .expect("Failed to start frame");
-        last_frame = io.update_delta_time(last_frame);
-        let ui = imgui.frame();
-        if !run_ui(&ui, keypress) {
-            break;
-        }
-
-        let mut target = display.draw();
-        target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
-        platform.prepare_render(&ui, &window.window());
-        renderer.render(&mut target, ui.render())
-                .expect("Rendering failed");
-        target.finish().unwrap();
-
-        if quit {
-            break;
-        }
+                          if let Event::WindowEvent { event:
+                                                          WindowEvent::KeyboardInput { input,
+                                                                                       .. },
+                                                      .. } = event
+                          {
+                              let pressed = input.state == Pressed;
+                              if pressed {
+                                  match input.virtual_keycode {
+                                      Some(key) => {
+                                          if let Some(key) = map_key(key) {
+                                              let io = imgui.io();
+                                              keypress = Some(Keypress::new(key,
+                                                                            io.key_ctrl,
+                                                                            io.key_shift))
+                                          }
+                                      }
+                                      _ => {}
+                                  }
+                              }
+                          }
+                      }
+                  });
     }
 }
 
-fn map_key(key: Key) -> Option<AppKey> {
+fn map_key(key: VirtualKeyCode) -> Option<AppKey> {
     match key {
-        Key::A => Some(AppKey::A),
-        Key::B => Some(AppKey::B),
-        Key::C => Some(AppKey::C),
-        Key::D => Some(AppKey::D),
-        Key::E => Some(AppKey::E),
-        Key::H => Some(AppKey::H),
-        Key::J => Some(AppKey::J),
-        Key::K => Some(AppKey::K),
-        Key::L => Some(AppKey::L),
-        Key::W => Some(AppKey::W),
-        Key::X => Some(AppKey::X),
-        Key::R => Some(AppKey::R),
-        Key::O => Some(AppKey::O),
-        Key::U => Some(AppKey::U),
-        Key::V => Some(AppKey::V),
-        Key::Escape => Some(AppKey::Escape),
-        Key::Tab => Some(AppKey::Tab),
-        Key::Up => Some(AppKey::UpArrow),
-        Key::Down => Some(AppKey::DownArrow),
-        Key::Left => Some(AppKey::LeftArrow),
-        Key::Right => Some(AppKey::RightArrow),
+        VirtualKeyCode::A => Some(AppKey::A),
+        VirtualKeyCode::B => Some(AppKey::B),
+        VirtualKeyCode::C => Some(AppKey::C),
+        VirtualKeyCode::D => Some(AppKey::D),
+        VirtualKeyCode::E => Some(AppKey::E),
+        VirtualKeyCode::H => Some(AppKey::H),
+        VirtualKeyCode::J => Some(AppKey::J),
+        VirtualKeyCode::K => Some(AppKey::K),
+        VirtualKeyCode::L => Some(AppKey::L),
+        VirtualKeyCode::W => Some(AppKey::W),
+        VirtualKeyCode::X => Some(AppKey::X),
+        VirtualKeyCode::R => Some(AppKey::R),
+        VirtualKeyCode::O => Some(AppKey::O),
+        VirtualKeyCode::U => Some(AppKey::U),
+        VirtualKeyCode::V => Some(AppKey::V),
+        VirtualKeyCode::Escape => Some(AppKey::Escape),
+        VirtualKeyCode::Tab => Some(AppKey::Tab),
+        VirtualKeyCode::Up => Some(AppKey::UpArrow),
+        VirtualKeyCode::Down => Some(AppKey::DownArrow),
+        VirtualKeyCode::Left => Some(AppKey::LeftArrow),
+        VirtualKeyCode::Right => Some(AppKey::RightArrow),
         _ => None,
     }
 }
 
 // from https://github.com/Gekkio/imgui-rs/blob/master/imgui-examples/examples/support/clipboard.rs
 use clipboard::{ClipboardContext, ClipboardProvider};
+use glutin::event::ElementState::Pressed;
+use glutin::event::{Event, WindowEvent};
+use glutin::event_loop::ControlFlow;
 use imgui::{ClipboardBackend, ImStr, ImString};
+use winit::event::VirtualKeyCode;
+use winit::platform::desktop::EventLoopExtDesktop;
+
 pub struct ClipboardSupport(ClipboardContext);
 
 pub fn init_clipboard() -> Option<ClipboardSupport> {
