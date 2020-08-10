@@ -1,10 +1,6 @@
-// use glium::glutin::ElementState::Pressed;
-// use glium::glutin::Event;
-// use glium::glutin::VirtualKeyCode as Key;
-// use glium::glutin::WindowEvent::*;
 use glium::glutin::event_loop::EventLoop;
 use glutin::window::{Icon, WindowBuilder};
-use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, Key, StyleColor, Ui};
+use imgui::{Context, FontConfig, FontGlyphRanges, FontSource, StyleColor, Ui};
 use std::time::Instant;
 
 use super::editor::{Key as AppKey, Keypress};
