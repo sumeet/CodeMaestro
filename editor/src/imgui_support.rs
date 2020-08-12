@@ -183,6 +183,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                           if !run_ui(&ui, keypress) {
                               *control_flow = ControlFlow::Exit;
                           }
+                          keypress = None;
                           let gl_window = display.gl_window();
                           let mut target = display.draw();
                           target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
