@@ -185,6 +185,9 @@ pub trait UiToolkit {
                     draw_fn: DrawFnRef<Self>,
                     draw_context_menu: DrawFnRef<Self>)
                     -> Self::DrawResult;
+    fn draw_columns<const N: usize>(&self,
+                                    draw_fn_groups: &[[DrawFnRef<Self>; N]])
+                                    -> Self::DrawResult;
 }
 
 pub enum SelectableItem<T: 'static> {

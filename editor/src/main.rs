@@ -5,6 +5,8 @@
 #![feature(associated_type_defaults)]
 #![feature(try_blocks)]
 #![feature(unsized_locals)]
+#![allow(incomplete_features)]
+#![feature(const_generics)]
 #![recursion_limit = "1024"]
 
 // crates

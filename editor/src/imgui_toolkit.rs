@@ -1261,6 +1261,17 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
+    fn draw_columns<const N: usize>(&self, draw_fn_groups: &[[DrawFnRef<Self>; N]]) {
+        self.ui.columns(N as i32, &self.imlabel(""), false);
+        for draw_fns in draw_fn_groups {
+            for draw_fn in draw_fns.iter() {
+                draw_fn();
+                self.ui.next_column();
+            }
+        }
+        self.ui.columns(1, &self.imlabel(""), false);
+    }
+
     fn context_menu(&self, draw_fn: DrawFnRef<Self>, draw_context_menu: DrawFnRef<Self>) {
         self.ui.group(draw_fn);
         let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };

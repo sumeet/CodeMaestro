@@ -1343,6 +1343,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                          builder: &JSONHTTPClientBuilder,
                          parsed_json: &json2::ParsedDocument)
                          -> T::DrawResult {
+        return self.ui_toolkit
+                   .draw_columns(&[[&|| self.ui_toolkit.draw_text("helloooo"), &|| {
+                                     self.ui_toolkit.draw_text("hw")
+                                 }]]);
+
         use json2::ParsedDocument::*;
         let nesting = parsed_json.nesting();
         match parsed_json {
