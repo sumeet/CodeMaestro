@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::iter;
 
+use gen_iter::GenIter;
 use itertools::Itertools;
 use matches::matches;
 use serde_json;
@@ -49,6 +50,12 @@ pub enum ParsedDocument {
 }
 
 impl ParsedDocument {
+    // pub fn flatten(&self) -> impl Iterator<Item = &Scalar> + '_ {
+    //     GenIter(move || match self {
+    //
+    //     })
+    // }
+
     fn doc_type(&self) -> DocType {
         match self {
             ParsedDocument::Scalar(Scalar::Null { .. }) => DocType::Null,
