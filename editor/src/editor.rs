@@ -1349,16 +1349,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                  }]]);
 
         use json2::ParsedDocument::*;
+        use json2::Scalar::*;
         let nesting = parsed_json.nesting();
         match parsed_json {
-            Bool { value, .. } => {
+            Scalar(Bool { value, .. }) => {
                 self.render_parsed_doc_value(builder, &value.to_string(), nesting)
             }
-            String { value, .. } => self.render_parsed_doc_value(builder, &value, nesting),
-            Number { value, .. } => {
+            Scalar(String { value, .. }) => self.render_parsed_doc_value(builder, &value, nesting),
+            Scalar(Number { value, .. }) => {
                 self.render_parsed_doc_value(builder, &value.to_string(), nesting)
             }
-            Null { .. } => self.ui_toolkit.draw_text("Null"),
+            Scalar(Null { .. }) => self.ui_toolkit.draw_text("Null"),
             List { value, .. } => {
                 self.ui_toolkit
                     .draw_all(&[&|| self.ui_toolkit.draw_text("["),

@@ -209,11 +209,12 @@ fn build_return_type(env_genie: &EnvGenie,
 
 pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {
     use json2::ParsedDocument;
+    use json2::Scalar;
     match parsed_doc {
-        ParsedDocument::Null { .. } => lang::NULL_TYPESPEC.id,
-        ParsedDocument::Bool { .. } => lang::BOOLEAN_TYPESPEC.id,
-        ParsedDocument::String { .. } => lang::STRING_TYPESPEC.id,
-        ParsedDocument::Number { .. } => lang::NUMBER_TYPESPEC.id,
+        ParsedDocument::Scalar(Scalar::Null { .. }) => lang::NULL_TYPESPEC.id,
+        ParsedDocument::Scalar(Scalar::Bool { .. }) => lang::BOOLEAN_TYPESPEC.id,
+        ParsedDocument::Scalar(Scalar::String { .. }) => lang::STRING_TYPESPEC.id,
+        ParsedDocument::Scalar(Scalar::Number { .. }) => lang::NUMBER_TYPESPEC.id,
         ParsedDocument::NonHomogeneousCantParse { .. }
         | ParsedDocument::EmptyCantInfer { .. }
         | ParsedDocument::Map { .. }

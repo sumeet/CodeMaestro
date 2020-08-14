@@ -14,23 +14,17 @@ pub enum Nest {
 pub type Nesting = Vec<Nest>;
 
 #[derive(Clone)]
-pub enum ParsedDocument {
+pub enum Scalar {
     // Scalars
-    Null {
-        nesting: Nesting,
-    },
-    Bool {
-        value: bool,
-        nesting: Nesting,
-    },
-    String {
-        value: String,
-        nesting: Nesting,
-    },
-    Number {
-        value: i128,
-        nesting: Nesting,
-    },
+    Null { nesting: Nesting },
+    Bool { value: bool, nesting: Nesting },
+    String { value: String, nesting: Nesting },
+    Number { value: i128, nesting: Nesting },
+}
+
+#[derive(Clone)]
+pub enum ParsedDocument {
+    Scalar(Scalar),
     // Composites
     List {
         value: Vec<ParsedDocument>,
@@ -57,10 +51,10 @@ pub enum ParsedDocument {
 impl ParsedDocument {
     fn doc_type(&self) -> DocType {
         match self {
-            ParsedDocument::Null { .. } => DocType::Null,
-            ParsedDocument::Bool { .. } => DocType::Bool,
-            ParsedDocument::String { .. } => DocType::String,
-            ParsedDocument::Number { .. } => DocType::Number,
+            ParsedDocument::Scalar(Scalar::Null { .. }) => DocType::Null,
+            ParsedDocument::Scalar(Scalar::Bool { .. }) => DocType::Bool,
+            ParsedDocument::Scalar(Scalar::String { .. }) => DocType::String,
+            ParsedDocument::Scalar(Scalar::Number { .. }) => DocType::Number,
             ParsedDocument::List { value, .. } => {
                 let mut list_type = value.iter().map(|d| d.doc_type()).unique().collect_vec();
                 if list_type.len() != 1 {
@@ -81,14 +75,14 @@ impl ParsedDocument {
 
     pub fn nesting(&self) -> &Nesting {
         match self {
-            ParsedDocument::Null { nesting, .. }
+            ParsedDocument::Scalar(Scalar::Null { nesting, .. })
             | ParsedDocument::NonHomogeneousCantParse { nesting, .. }
             | ParsedDocument::EmptyCantInfer { nesting, .. }
-            | ParsedDocument::Bool { nesting, .. }
+            | ParsedDocument::Scalar(Scalar::Bool { nesting, .. })
             | ParsedDocument::Map { nesting, .. }
             | ParsedDocument::List { nesting, .. }
-            | ParsedDocument::String { nesting, .. }
-            | ParsedDocument::Number { nesting, .. } => nesting,
+            | ParsedDocument::Scalar(Scalar::String { nesting, .. })
+            | ParsedDocument::Scalar(Scalar::Number { nesting, .. }) => nesting,
         }
     }
 
@@ -111,12 +105,9 @@ impl ParsedDocument {
             ParsedDocument::List { value, .. } => Box::new(value.iter()),
             ParsedDocument::Map { value, .. } => Box::new(value.values()),
             // scalars don't have children
-            ParsedDocument::Null { .. }
-            | ParsedDocument::NonHomogeneousCantParse { .. }
+            ParsedDocument::NonHomogeneousCantParse { .. }
             | ParsedDocument::EmptyCantInfer { .. }
-            | ParsedDocument::Bool { .. }
-            | ParsedDocument::String { .. }
-            | ParsedDocument::Number { .. } => Box::new(iter::empty()),
+            | ParsedDocument::Scalar(_) => Box::new(iter::empty()),
         }
     }
 }
@@ -127,17 +118,19 @@ pub fn parse(j: serde_json::Value) -> ParsedDocument {
 
 fn parse_nesting(j: serde_json::Value, nesting: Nesting) -> ParsedDocument {
     match j {
-        serde_json::Value::Null => ParsedDocument::Null { nesting },
-        serde_json::Value::Bool(value) => ParsedDocument::Bool { value, nesting },
-        serde_json::Value::String(value) => ParsedDocument::String { value, nesting },
+        serde_json::Value::Null => ParsedDocument::Scalar(Scalar::Null { nesting }),
+        serde_json::Value::Bool(value) => ParsedDocument::Scalar(Scalar::Bool { value, nesting }),
+        serde_json::Value::String(value) => {
+            ParsedDocument::Scalar(Scalar::String { value, nesting })
+        }
         serde_json::Value::Number(number) => {
             if number.is_f64() {
                 // yep we turn floats into strings
-                ParsedDocument::String { value: number.to_string(),
-                                         nesting }
+                ParsedDocument::Scalar(Scalar::String { value: number.to_string(),
+                                                        nesting })
             } else {
-                ParsedDocument::Number { value: number.as_i64().unwrap() as i128,
-                                         nesting }
+                ParsedDocument::Scalar(Scalar::Number { value: number.as_i64().unwrap() as i128,
+                                                        nesting })
             }
         }
         serde_json::Value::Array(ref vs) => {
