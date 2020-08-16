@@ -55,6 +55,7 @@ use cs::{await_eval_result, EnvGenie};
 
 mod value_renderer;
 use crate::code_editor::CodeLocation;
+use crate::json2::Nest;
 use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
@@ -1343,6 +1344,31 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                          builder: &JSONHTTPClientBuilder,
                          parsed_json: &json2::ParsedDocument)
                          -> T::DrawResult {
+        let values = parsed_json.flatten();
+        let draw_fns = values.iter().map(|scalar| {
+                                        let nesting = scalar.nesting();
+                                        move || {
+                                            self.ui_toolkit.draw_columns(&[[
+                    &|| {
+                        let nesting_fmt = nesting.iter()
+                                                 .map(|nest| match nest {
+                                                     Nest::ListElement(n) => n.to_string(),
+                                                     Nest::MapKey(key) => key.clone(),
+                                                 })
+                                                 .join(".");
+                        self.ui_toolkit.draw_text(&nesting_fmt)
+                    },
+                    &|| self.render_parsed_doc_value(builder, "value", nesting),
+                ]])
+                                        }
+                                    });
+        draw_all_iter!(T::self.ui_toolkit, draw_fns)
+    }
+
+    fn render_parsed_doc_old(&self,
+                             builder: &JSONHTTPClientBuilder,
+                             parsed_json: &json2::ParsedDocument)
+                             -> T::DrawResult {
         // return self.ui_toolkit
         //            .draw_columns(&[[&|| self.ui_toolkit.draw_text("helloooo"), &|| {
         //                              self.ui_toolkit.draw_text("hw")
@@ -1411,12 +1437,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let client_id = builder.json_http_client_id;
         let nesting = nesting.clone();
         self.ui_toolkit.draw_all_on_same_line(&[
-            &|| self.ui_toolkit.draw_text(value),
             &move || {
                 let cmd_buffer = cmd_buffer.clone();
                 let nesting = nesting.clone();
                 self.ui_toolkit.draw_checkbox_with_label(
-                    "",
+                    value,
                     selected_field.is_some(),
                     move |newvalue| {
                         let nesting = nesting.clone();

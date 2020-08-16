@@ -23,6 +23,18 @@ pub enum Scalar {
     Number { value: i128, nesting: Nesting },
 }
 
+impl Scalar {
+    pub(crate) fn nesting(&self) -> &Nesting {
+        use Scalar::*;
+        match self {
+            Null { nesting, .. }
+            | Bool { nesting, .. }
+            | String { nesting, .. }
+            | Number { nesting, .. } => nesting,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub enum ParsedDocument {
     Scalar(Scalar),
@@ -50,11 +62,32 @@ pub enum ParsedDocument {
 }
 
 impl ParsedDocument {
-    // pub fn flatten(&self) -> impl Iterator<Item = &Scalar> + '_ {
-    //     GenIter(move || match self {
-    //
-    //     })
-    // }
+    // TODO: is there a way i can make this lazy?
+    pub fn flatten(&self) -> Vec<&Scalar> {
+        let mut scalars = vec![];
+        match self {
+            ParsedDocument::Scalar(scalar) => {
+                scalars.push(scalar);
+            }
+            ParsedDocument::List { value, nesting } => {
+                for doc in value {
+                    for scalar in doc.flatten() {
+                        scalars.push(scalar);
+                    }
+                }
+            }
+            ParsedDocument::Map { value, .. } => {
+                for doc in value.values() {
+                    for scalar in doc.flatten() {
+                        scalars.push(scalar);
+                    }
+                }
+            }
+            ParsedDocument::EmptyCantInfer { .. } => (),
+            ParsedDocument::NonHomogeneousCantParse { .. } => (),
+        }
+        scalars
+    }
 
     fn doc_type(&self) -> DocType {
         match self {

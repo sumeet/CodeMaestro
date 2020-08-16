@@ -507,7 +507,7 @@ dependencies = [
  "futures-channel 0.3.1 (git+https://github.com/rust-lang-nursery/futures-rs)",
  "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-util 0.3.1 (git+https://github.com/rust-lang-nursery/futures-rs)",
- "gen-iter 0.1.2 (git+https://github.com/sumeet/gen-iter)",
+ "gen-iter 0.2.0 (git+https://github.com/tinaun/gen-iter)",
  "gotham 0.3.0 (git+https://github.com/sumeet/gotham)",
  "http 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "http-fs 1.0.0 (git+https://gitlab.com/sumeet4/http-fs)",
@@ -994,6 +994,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "gen-iter"
 version = "0.1.2"
 source = "git+https://github.com/sumeet/gen-iter#53b98fcfc06d01d148bc2615001868043c1e221c"
+
+[[package]]
+name = "gen-iter"
+version = "0.2.0"
+source = "git+https://github.com/tinaun/gen-iter#6d1e088abf7bef9189df61afa0dc79049658b451"
 
 [[package]]
 name = "generator"
@@ -3811,6 +3816,7 @@ dependencies = [
 "checksum futures-util-preview 0.3.0-alpha.19 (registry+https://github.com/rust-lang/crates.io-index)" = "5ce968633c17e5f97936bd2797b6e38fb56cf16a7422319f7ec2e30d3c470e8d"
 "checksum gcc 0.3.55 (registry+https://github.com/rust-lang/crates.io-index)" = "8f5f3913fa0bfe7ee1fd8248b6b9f42a5af4b9d65ec2dd2c3c26132b950ecfc2"
 "checksum gen-iter 0.1.2 (git+https://github.com/sumeet/gen-iter)" = "<none>"
+"checksum gen-iter 0.2.0 (git+https://github.com/tinaun/gen-iter)" = "<none>"
 "checksum generator 0.6.21 (registry+https://github.com/rust-lang/crates.io-index)" = "add72f17bb81521258fcc8a7a3245b1e184e916bfbe34f0ea89558f440df5c68"
 "checksum generic-array 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c68f0274ae0e023facc3c97b2e00f076be70e254bc851d972503b328db79b2ec"
 "checksum getrandom 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)" = "e7db7ca94ed4cd01190ceee0d8a8052f08a247aa1b469a7f68c6a3b71afcf407"
