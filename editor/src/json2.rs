@@ -69,7 +69,7 @@ impl ParsedDocument {
             ParsedDocument::Scalar(scalar) => {
                 scalars.push(scalar);
             }
-            ParsedDocument::List { value, nesting } => {
+            ParsedDocument::List { value, .. } => {
                 for doc in value {
                     for scalar in doc.flatten() {
                         scalars.push(scalar);
@@ -133,6 +133,10 @@ impl ParsedDocument {
         self.all_children_dfs()
             .flat_map(|child| child.find(nesting))
             .next()
+    }
+
+    pub fn all_children_including_self(&self) -> impl Iterator<Item = &Self> + '_ {
+        return std::iter::once(self).chain(self.all_children_dfs());
     }
 
     fn all_children_dfs<'a>(&'a self) -> Box<dyn Iterator<Item = &'a Self> + 'a> {

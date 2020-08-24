@@ -33,6 +33,7 @@ mod json2;
 mod json_http_client_builder;
 mod opener;
 mod save_state;
+mod schema_builder;
 mod send_to_server_overlay;
 mod theme_editor_renderer;
 mod ui_toolkit;

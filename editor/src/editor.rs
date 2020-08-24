@@ -56,6 +56,7 @@ use cs::{await_eval_result, EnvGenie};
 mod value_renderer;
 use crate::code_editor::CodeLocation;
 use crate::json2::Nest;
+use crate::schema_builder::SchemaType;
 use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
@@ -1333,10 +1334,36 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_test_request_results(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
         match builder.test_run_result {
             Some(Ok(_)) => {
-                self.render_parsed_doc(builder, builder.test_run_parsed_doc.as_ref().unwrap())
+                // self.render_parsed_doc(builder, builder.test_run_parsed_doc.as_ref().unwrap())
+                self.render_schema_builder(builder.test_run_schema_type.as_ref().unwrap())
             }
             Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
             None => self.ui_toolkit.draw_all(&[]),
+        }
+    }
+
+    fn render_schema_builder(&self, schema_type: &SchemaType) -> T::DrawResult {
+        self.ui_toolkit.draw_all(&[])
+        // self.ui_toolkit.draw_columns(&[])
+    }
+
+    fn render_schema_builder_columns(
+        &'a self,
+        schema_type: &'a SchemaType)
+        -> Box<dyn Iterator<Item = [Box<dyn Fn() -> T::DrawResult>; 2]> + 'a> {
+        match schema_type {
+            _ => {
+                let left: Box<dyn Fn() -> T::DrawResult> =
+                    Box::new(move || self.ui_toolkit.draw_text("string"));
+                let right: Box<dyn Fn() -> T::DrawResult> =
+                    Box::new(move || self.ui_toolkit.draw_text("hello"));
+                Box::new(std::iter::once([left, right]))
+            } // SchemaType::Number { .. } => [&|| self.ui_toolkit.draw_text("string"), &|| self.ui_toolkit.draw_text("hello")],
+              // SchemaType::Boolean { .. } => {}
+              // SchemaType::Null => {}
+              // SchemaType::List { .. } => {}
+              // SchemaType::Object { .. } => {}
+              // SchemaType::RemoveFromDocument => {}
         }
     }
 
@@ -1355,76 +1382,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                      Nest::ListElement(n) => n.to_string(),
                                                      Nest::MapKey(key) => key.clone(),
                                                  })
-                                                 .join(".");
-                        self.ui_toolkit.draw_text(&nesting_fmt)
+                                                 .last()
+                                                 .unwrap();
+                        // .join(".");
+                        // self.ui_toolkit.draw_text(&nesting_fmt)
+                        self.ui_toolkit.draw_text_input(&nesting_fmt, |_| (), || ())
                     },
                     &|| self.render_parsed_doc_value(builder, "value", nesting),
                 ]])
                                         }
                                     });
         draw_all_iter!(T::self.ui_toolkit, draw_fns)
-    }
-
-    fn render_parsed_doc_old(&self,
-                             builder: &JSONHTTPClientBuilder,
-                             parsed_json: &json2::ParsedDocument)
-                             -> T::DrawResult {
-        // return self.ui_toolkit
-        //            .draw_columns(&[[&|| self.ui_toolkit.draw_text("helloooo"), &|| {
-        //                              self.ui_toolkit.draw_text("hw")
-        //                          }]]);
-
-        use json2::ParsedDocument::*;
-        use json2::Scalar::*;
-        let nesting = parsed_json.nesting();
-        match parsed_json {
-            Scalar(Bool { value, .. }) => {
-                self.render_parsed_doc_value(builder, &value.to_string(), nesting)
-            }
-            Scalar(String { value, .. }) => self.render_parsed_doc_value(builder, &value, nesting),
-            Scalar(Number { value, .. }) => {
-                self.render_parsed_doc_value(builder, &value.to_string(), nesting)
-            }
-            Scalar(Null { .. }) => self.ui_toolkit.draw_text("Null"),
-            List { value, .. } => {
-                self.ui_toolkit
-                    .draw_all(&[&|| self.ui_toolkit.draw_text("["),
-                                &|| {
-                                    self.ui_toolkit.indent(10, &|| {
-                                                       // TODO: show the rest under a collapsible thingie
-                                                       self.render_parsed_doc(builder, &value[0])
-                                                   })
-                                },
-                                &|| self.ui_toolkit.draw_text("]")])
-            }
-            Map { value: map, .. } => self.ui_toolkit.draw_all(&[
-                &|| self.ui_toolkit.draw_text("{"),
-                &|| {
-                    self.ui_toolkit.indent(10, &|| {
-                                       draw_all_iter!(
-                                                      T::self.ui_toolkit,
-                                                      map.iter().map(|(key, value)| {
-                                                          move || {
-                                                              self.ui_toolkit.align(
-                                        &|| self.ui_toolkit.draw_text(&format!("{}:", key)),
-                                        &[&|| self.render_parsed_doc(builder, value)],
-                                    )
-                                                          }
-                                                      })
-                        )
-                                   })
-                },
-                &|| self.ui_toolkit.draw_text("}"),
-            ]),
-            // TODO: maybe one day we'll want to try and put these kinds of things into json::Value
-            // containers, and just let you grab at it like in a normal programming language. for
-            // now though, just don't let you do anything with them.
-            EmptyCantInfer { .. } => self.ui_toolkit.draw_text("Empty list, cannot infer type"),
-            NonHomogeneousCantParse { .. } => {
-                self.ui_toolkit
-                    .draw_text("Non homogeneous list, cannot infer type")
-            }
-        }
     }
 
     fn render_parsed_doc_value(&self,
