@@ -56,7 +56,7 @@ use cs::{await_eval_result, EnvGenie};
 mod value_renderer;
 use crate::code_editor::CodeLocation;
 use crate::json2::Nest;
-use crate::schema_builder::SchemaType;
+use crate::schema_builder::{FieldIdentifier, Schema, SchemaType};
 use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
@@ -1335,65 +1335,100 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         match builder.test_run_result {
             Some(Ok(_)) => {
                 // self.render_parsed_doc(builder, builder.test_run_parsed_doc.as_ref().unwrap())
-                self.render_schema_builder(builder.test_run_schema_type.as_ref().unwrap())
+                self.render_schema_builder(builder.test_run_schema.as_ref().unwrap())
             }
             Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
             None => self.ui_toolkit.draw_all(&[]),
         }
     }
 
-    fn render_schema_builder(&self, schema_type: &SchemaType) -> T::DrawResult {
-        self.ui_toolkit.draw_all(&[])
-        // self.ui_toolkit.draw_columns(&[])
+    fn render_schema_builder(&self, schema: &Schema) -> T::DrawResult {
+        let columns = self.render_schema_builder_columns(schema).collect_vec();
+        let columns = columns.iter().map(|[l, r]| [&**l, &**r]).collect_vec();
+        self.ui_toolkit.draw_columns(columns.as_slice())
     }
 
     fn render_schema_builder_columns(
         &'a self,
-        schema_type: &'a SchemaType)
-        -> Box<dyn Iterator<Item = [Box<dyn Fn() -> T::DrawResult>; 2]> + 'a> {
-        match schema_type {
-            _ => {
-                let left: Box<dyn Fn() -> T::DrawResult> =
-                    Box::new(move || self.ui_toolkit.draw_text("string"));
+        schema: &'a Schema)
+        -> Box<dyn Iterator<Item = [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2]> + 'a> {
+        match schema {
+            // SchemaType::Number { .. } => {
+            //     let left: Box<dyn Fn() -> T::DrawResult> =
+            //         Box::new(move || self.ui_toolkit.draw_text("string"));
+            //     let right: Box<dyn Fn() -> T::DrawResult> =
+            //         Box::new(move || self.ui_toolkit.draw_text("hello"));
+            //     Box::new(std::iter::once([left, right]))
+            // }
+            Schema { typ: SchemaType::Object { map },
+                     field_id,
+                     .. } => {
+                let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                    self.ui_toolkit
+                        .draw_text(self.render_field_identifier(field_id))
+                });
+                let right: Box<dyn Fn() -> T::DrawResult> =
+                    Box::new(move || self.ui_toolkit.draw_text("hello"));
+                let first = std::iter::once([left, right]);
+                let rest = map.iter()
+                              .map(move |(_k, current_schema)| {
+                                  self.render_schema_builder_columns(current_schema)
+                              })
+                              .flatten();
+                Box::new(first.chain(rest))
+                //     let left: Box<dyn Fn() -> T::DrawResult> =
+                //         Box::new(move || self.ui_toolkit.draw_text("string"));
+                //     Box::new(std::iter::once([left, right]))
+            }
+            Schema { typ, field_id, .. } => {
+                let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                    self.ui_toolkit
+                        .draw_text(self.render_field_identifier(field_id))
+                });
                 let right: Box<dyn Fn() -> T::DrawResult> =
                     Box::new(move || self.ui_toolkit.draw_text("hello"));
                 Box::new(std::iter::once([left, right]))
-            } // SchemaType::Number { .. } => [&|| self.ui_toolkit.draw_text("string"), &|| self.ui_toolkit.draw_text("hello")],
-              // SchemaType::Boolean { .. } => {}
+            } // SchemaType::Boolean { .. } => {}
               // SchemaType::Null => {}
               // SchemaType::List { .. } => {}
-              // SchemaType::Object { .. } => {}
               // SchemaType::RemoveFromDocument => {}
         }
     }
 
-    fn render_parsed_doc(&self,
-                         builder: &JSONHTTPClientBuilder,
-                         parsed_json: &json2::ParsedDocument)
-                         -> T::DrawResult {
-        let values = parsed_json.flatten();
-        let draw_fns = values.iter().map(|scalar| {
-                                        let nesting = scalar.nesting();
-                                        move || {
-                                            self.ui_toolkit.draw_columns(&[[
-                    &|| {
-                        let nesting_fmt = nesting.iter()
-                                                 .map(|nest| match nest {
-                                                     Nest::ListElement(n) => n.to_string(),
-                                                     Nest::MapKey(key) => key.clone(),
-                                                 })
-                                                 .last()
-                                                 .unwrap();
-                        // .join(".");
-                        // self.ui_toolkit.draw_text(&nesting_fmt)
-                        self.ui_toolkit.draw_text_input(&nesting_fmt, |_| (), || ())
-                    },
-                    &|| self.render_parsed_doc_value(builder, "value", nesting),
-                ]])
-                                        }
-                                    });
-        draw_all_iter!(T::self.ui_toolkit, draw_fns)
+    fn render_field_identifier(&self, field_id: &'a FieldIdentifier) -> &'a str {
+        match field_id {
+            FieldIdentifier::Root => "root",
+            FieldIdentifier::Name(name) => name,
+        }
     }
+
+    // fn render_parsed_doc(&self,
+    //                      builder: &JSONHTTPClientBuilder,
+    //                      parsed_json: &json2::ParsedDocument)
+    //                      -> T::DrawResult {
+    //     let values = parsed_json.flatten();
+    //     let draw_fns = values.iter().map(|scalar| {
+    //                                     let nesting = scalar.nesting();
+    //                                     move || {
+    //                                         self.ui_toolkit.draw_columns(&[[
+    //                 &|| {
+    //                     let nesting_fmt = nesting.iter()
+    //                                              .map(|nest| match nest {
+    //                                                  Nest::ListElement(n) => n.to_string(),
+    //                                                  Nest::MapKey(key) => key.clone(),
+    //                                              })
+    //                                              .last()
+    //                                              .unwrap();
+    //                     // .join(".");
+    //                     // self.ui_toolkit.draw_text(&nesting_fmt)
+    //                     self.ui_toolkit.draw_text_input(&nesting_fmt, |_| (), || ())
+    //                 },
+    //                 &|| self.render_parsed_doc_value(builder, "value", nesting),
+    //             ]])
+    //                                     }
+    //                                 });
+    //     draw_all_iter!(T::self.ui_toolkit, draw_fns)
+    // }
 
     fn render_parsed_doc_value(&self,
                                builder: &JSONHTTPClientBuilder,

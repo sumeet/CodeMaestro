@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use super::async_executor::AsyncExecutor;
 use super::json2;
 use crate::schema_builder;
-use crate::schema_builder::SchemaType;
+use crate::schema_builder::{Schema, SchemaType};
 use cs::await_eval_result;
 use cs::builtins::new_result;
 use cs::env;
@@ -55,7 +55,7 @@ impl HTTPResponseIntermediateValue {
 pub struct JSONHTTPClientBuilder {
     pub test_run_result: Option<Result<serde_json::Value, String>>,
     pub test_run_parsed_doc: Option<json2::ParsedDocument>,
-    pub test_run_schema_type: Option<schema_builder::SchemaType>,
+    pub test_run_schema: Option<schema_builder::Schema>,
     pub json_http_client_id: lang::ID,
     pub selected_fields: Vec<SelectedField>,
     pub return_type_candidate: Option<ReturnTypeBuilderResult>,
@@ -74,7 +74,7 @@ impl JSONHTTPClientBuilder {
     pub fn new(json_http_client_id: lang::ID) -> Self {
         Self { test_run_result: None,
                test_run_parsed_doc: None,
-               test_run_schema_type: None,
+               test_run_schema: None,
                return_type_candidate: None,
                json_http_client_id,
                selected_fields: vec![] }
@@ -145,7 +145,7 @@ impl JSONHTTPClientBuilder {
         self.test_run_result = Some(result.clone());
         if let Ok(value) = result {
             let parsed_doc = json2::parse(value);
-            self.test_run_schema_type = Some(SchemaType::from_parsed_doc(&parsed_doc));
+            self.test_run_schema = Some(Schema::from_parsed_doc_root(&parsed_doc));
             self.test_run_parsed_doc = Some(parsed_doc);
         } else {
             self.test_run_parsed_doc = None
