@@ -27,20 +27,18 @@ pub enum SchemaType {
     RemoveFromDocument,
 }
 
-pub struct IDK<'a> {
-    schema: &'a Schema,
-    indent: usize,
-}
+pub type SchemaWithIndent<'a> = (&'a Schema, usize);
 
 impl Schema {
-    pub fn iter_dfs_including_self(&self) -> impl Iterator<Item = IDK> {
+    pub fn iter_dfs_including_self(&self) -> impl Iterator<Item = SchemaWithIndent> {
         self.iter_dfs_including_self_rec(0)
     }
 
-    pub fn iter_dfs_including_self_rec(&self, indent: usize) -> impl Iterator<Item = IDK> {
-        let idk = IDK { schema: self,
-                        indent };
-        let mut first: Box<dyn Iterator<Item = IDK>> = Box::new(std::iter::once(idk));
+    pub fn iter_dfs_including_self_rec(&self,
+                                       indent: usize)
+                                       -> impl Iterator<Item = SchemaWithIndent> {
+        let idk = (self, indent);
+        let first: Box<dyn Iterator<Item = SchemaWithIndent>> = Box::new(std::iter::once(idk));
 
         match &self.typ {
             SchemaType::String { .. }
@@ -50,10 +48,11 @@ impl Schema {
             | SchemaType::List { .. }
             | SchemaType::RemoveFromDocument => first,
             SchemaType::Object { map, .. } => {
-                let rest =
-                    map.iter()
-                       .map(move |(_, inner_schema)| self.iter_dfs_including_self_rec(indent + 1))
-                       .flatten();
+                let rest = map.iter()
+                              .map(move |(_, inner_schema)| {
+                                  inner_schema.iter_dfs_including_self_rec(indent + 1)
+                              })
+                              .flatten();
                 Box::new(first.chain(rest))
             }
         }

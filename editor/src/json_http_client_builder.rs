@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use super::async_executor::AsyncExecutor;
 use super::json2;
 use crate::schema_builder;
-use crate::schema_builder::{Schema, SchemaType};
+use crate::schema_builder::Schema;
 use cs::await_eval_result;
 use cs::builtins::new_result;
 use cs::env;

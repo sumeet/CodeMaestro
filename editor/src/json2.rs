@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 use std::iter;
 
-use gen_iter::GenIter;
 use itertools::Itertools;
 use matches::matches;
 use serde_json;
@@ -24,6 +23,7 @@ pub enum Scalar {
 }
 
 impl Scalar {
+    #[allow(unused)]
     pub(crate) fn nesting(&self) -> &Nesting {
         use Scalar::*;
         match self {
@@ -63,32 +63,6 @@ pub enum ParsedDocument {
 
 impl ParsedDocument {
     // TODO: is there a way i can make this lazy?
-    pub fn flatten(&self) -> Vec<&Scalar> {
-        let mut scalars = vec![];
-        match self {
-            ParsedDocument::Scalar(scalar) => {
-                scalars.push(scalar);
-            }
-            ParsedDocument::List { value, .. } => {
-                for doc in value {
-                    for scalar in doc.flatten() {
-                        scalars.push(scalar);
-                    }
-                }
-            }
-            ParsedDocument::Map { value, .. } => {
-                for doc in value.values() {
-                    for scalar in doc.flatten() {
-                        scalars.push(scalar);
-                    }
-                }
-            }
-            ParsedDocument::EmptyCantInfer { .. } => (),
-            ParsedDocument::NonHomogeneousCantParse { .. } => (),
-        }
-        scalars
-    }
-
     fn doc_type(&self) -> DocType {
         match self {
             ParsedDocument::Scalar(Scalar::Null { .. }) => DocType::Null,
@@ -126,6 +100,7 @@ impl ParsedDocument {
         }
     }
 
+    #[allow(unused)]
     pub fn find(&self, nesting: &Nesting) -> Option<&Self> {
         if self.nesting() == nesting {
             return Some(self);
@@ -135,10 +110,12 @@ impl ParsedDocument {
             .next()
     }
 
+    #[allow(unused)]
     pub fn all_children_including_self(&self) -> impl Iterator<Item = &Self> + '_ {
         return std::iter::once(self).chain(self.all_children_dfs());
     }
 
+    #[allow(unused)]
     fn all_children_dfs<'a>(&'a self) -> Box<dyn Iterator<Item = &'a Self> + 'a> {
         Box::new(self.iterate_children()
                      .flat_map(|child| iter::once(child).chain(child.all_children_dfs())))

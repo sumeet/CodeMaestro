@@ -55,8 +55,7 @@ use cs::{await_eval_result, EnvGenie};
 
 mod value_renderer;
 use crate::code_editor::CodeLocation;
-use crate::json2::Nest;
-use crate::schema_builder::{FieldIdentifier, Schema, SchemaType};
+use crate::schema_builder::{FieldIdentifier, Schema};
 use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
@@ -1352,47 +1351,59 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         &'a self,
         schema: &'a Schema)
         -> Box<dyn Iterator<Item = [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2]> + 'a> {
-        match schema {
-            // SchemaType::Number { .. } => {
-            //     let left: Box<dyn Fn() -> T::DrawResult> =
-            //         Box::new(move || self.ui_toolkit.draw_text("string"));
-            //     let right: Box<dyn Fn() -> T::DrawResult> =
-            //         Box::new(move || self.ui_toolkit.draw_text("hello"));
-            //     Box::new(std::iter::once([left, right]))
-            // }
-            Schema { typ: SchemaType::Object { map },
-                     field_id,
-                     .. } => {
-                let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-                    self.ui_toolkit
-                        .draw_text(self.render_field_identifier(field_id))
-                });
-                let right: Box<dyn Fn() -> T::DrawResult> =
-                    Box::new(move || self.ui_toolkit.draw_text("hello"));
-                let first = std::iter::once([left, right]);
-                let rest = map.iter()
-                              .map(move |(_k, current_schema)| {
-                                  self.render_schema_builder_columns(current_schema)
-                              })
-                              .flatten();
-                Box::new(first.chain(rest))
-                //     let left: Box<dyn Fn() -> T::DrawResult> =
-                //         Box::new(move || self.ui_toolkit.draw_text("string"));
-                //     Box::new(std::iter::once([left, right]))
-            }
-            Schema { typ, field_id, .. } => {
-                let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-                    self.ui_toolkit
-                        .draw_text(self.render_field_identifier(field_id))
-                });
-                let right: Box<dyn Fn() -> T::DrawResult> =
-                    Box::new(move || self.ui_toolkit.draw_text("hello"));
-                Box::new(std::iter::once([left, right]))
-            } // SchemaType::Boolean { .. } => {}
-              // SchemaType::Null => {}
-              // SchemaType::List { .. } => {}
-              // SchemaType::RemoveFromDocument => {}
-        }
+        let i = schema.iter_dfs_including_self()
+                      .map(move |(schema, indent)| {
+                          let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                              self.ui_toolkit
+                                  .draw_text(self.render_field_identifier(&schema.field_id))
+                          });
+                          let right: Box<dyn Fn() -> T::DrawResult> =
+                              Box::new(move || self.ui_toolkit.draw_text("hello"));
+                          [left, right]
+                      });
+        Box::new(i)
+
+        // match schema {
+        //     // SchemaType::Number { .. } => {
+        //     //     let left: Box<dyn Fn() -> T::DrawResult> =
+        //     //         Box::new(move || self.ui_toolkit.draw_text("string"));
+        //     //     let right: Box<dyn Fn() -> T::DrawResult> =
+        //     //         Box::new(move || self.ui_toolkit.draw_text("hello"));
+        //     //     Box::new(std::iter::once([left, right]))
+        //     // }
+        //     Schema { typ: SchemaType::Object { map },
+        //              field_id,
+        //              .. } => {
+        //         let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+        //             self.ui_toolkit
+        //                 .draw_text(self.render_field_identifier(field_id))
+        //         });
+        //         let right: Box<dyn Fn() -> T::DrawResult> =
+        //             Box::new(move || self.ui_toolkit.draw_text("hello"));
+        //         let first = std::iter::once([left, right]);
+        //         let rest = map.iter()
+        //                       .map(move |(_k, current_schema)| {
+        //                           self.render_schema_builder_columns(current_schema)
+        //                       })
+        //                       .flatten();
+        //         Box::new(first.chain(rest))
+        //         //     let left: Box<dyn Fn() -> T::DrawResult> =
+        //         //         Box::new(move || self.ui_toolkit.draw_text("string"));
+        //         //     Box::new(std::iter::once([left, right]))
+        //     }
+        //     Schema { typ, field_id, .. } => {
+        //         let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+        //             self.ui_toolkit
+        //                 .draw_text(self.render_field_identifier(field_id))
+        //         });
+        //         let right: Box<dyn Fn() -> T::DrawResult> =
+        //             Box::new(move || self.ui_toolkit.draw_text("hello"));
+        //         Box::new(std::iter::once([left, right]))
+        //     } // SchemaType::Boolean { .. } => {}
+        //       // SchemaType::Null => {}
+        //       // SchemaType::List { .. } => {}
+        //       // SchemaType::RemoveFromDocument => {}
+        // }
     }
 
     fn render_field_identifier(&self, field_id: &'a FieldIdentifier) -> &'a str {
@@ -1430,6 +1441,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     //     draw_all_iter!(T::self.ui_toolkit, draw_fns)
     // }
 
+    #[allow(unused)]
     fn render_parsed_doc_value(&self,
                                builder: &JSONHTTPClientBuilder,
                                value: &str,
