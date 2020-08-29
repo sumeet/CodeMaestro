@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::json2;
 use crate::json2::{ParsedDocument, Scalar};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum FieldIdentifier {
     Root,
     Name(String),

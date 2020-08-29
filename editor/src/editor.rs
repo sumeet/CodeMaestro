@@ -55,7 +55,8 @@ use cs::{await_eval_result, EnvGenie};
 
 mod value_renderer;
 use crate::code_editor::CodeLocation;
-use crate::schema_builder::{FieldIdentifier, Schema};
+use crate::code_editor_renderer::BLACK_COLOR;
+use crate::schema_builder::{FieldIdentifier, Schema, SchemaWithIndent};
 use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
@@ -1352,11 +1353,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         schema: &'a Schema)
         -> Box<dyn Iterator<Item = [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2]> + 'a> {
         let i = schema.iter_dfs_including_self()
-                      .map(move |(schema, indent)| {
-                          let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-                              self.ui_toolkit
-                                  .draw_text(self.render_field_identifier(&schema.field_id))
-                          });
+                      .map(move |schema_with_indent| {
+                          let left: Box<dyn Fn() -> T::DrawResult> =
+                              Box::new(move || self.render_field_identifier(schema_with_indent));
                           let right: Box<dyn Fn() -> T::DrawResult> =
                               Box::new(move || self.ui_toolkit.draw_text("hello"));
                           [left, right]
@@ -1406,10 +1405,20 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         // }
     }
 
-    fn render_field_identifier(&self, field_id: &'a FieldIdentifier) -> &'a str {
-        match field_id {
-            FieldIdentifier::Root => "root",
-            FieldIdentifier::Name(name) => name,
+    fn render_field_identifier(&self, (schema, indent): SchemaWithIndent<'a>) -> T::DrawResult {
+        let indent_padding_px = 16;
+        match &schema.field_id {
+            FieldIdentifier::Root => {
+                self.ui_toolkit
+                    .draw_with_bgcolor(BLACK_COLOR, &|| self.ui_toolkit.draw_text("root"))
+            }
+            FieldIdentifier::Name(name) => {
+                debug_assert!(indent > 0,
+                              "only the root can have indent 0, something is wrong");
+                let indent_px = indent_padding_px * (indent - 1) as i16;
+                self.ui_toolkit
+                    .indent(indent_px, &|| self.ui_toolkit.draw_text(name))
+            }
         }
     }
 

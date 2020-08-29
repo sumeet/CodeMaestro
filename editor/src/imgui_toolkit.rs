@@ -601,6 +601,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn indent(&self, px: i16, draw_fn: &dyn Fn()) {
+        if px == 0 {
+            return draw_fn();
+        }
         unsafe { imgui_sys::igIndent(px as f32) }
         draw_fn();
         unsafe { imgui_sys::igUnindent(px as f32) }
