@@ -3,6 +3,29 @@ use std::collections::HashMap;
 use super::json2;
 use crate::json2::{ParsedDocument, Scalar};
 
+const ALL_FIELD_TYPES: [FieldType; 4] = [FieldType::String,
+                                         FieldType::Number,
+                                         FieldType::Boolean,
+                                         FieldType::Null];
+
+pub enum FieldType {
+    String,
+    Number,
+    Boolean,
+    Null,
+}
+
+impl FieldType {
+    fn format(&self) -> &'static str {
+        match self {
+            FieldType::String => "String",
+            FieldType::Number => "Number",
+            FieldType::Boolean => "Boolean",
+            FieldType::Null => "Null",
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum FieldIdentifier {
     Root,
@@ -14,6 +37,8 @@ pub struct Schema {
     pub field_id: FieldIdentifier,
     pub typ: SchemaType,
     pub optional: bool,
+    // indicator saying this came from the "pure" inference, not changed by user
+    // pub inferred: bool,
 }
 
 #[derive(Clone)]

@@ -1356,8 +1356,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                       .map(move |schema_with_indent| {
                           let left: Box<dyn Fn() -> T::DrawResult> =
                               Box::new(move || self.render_field_identifier(schema_with_indent));
-                          let right: Box<dyn Fn() -> T::DrawResult> =
-                              Box::new(move || self.ui_toolkit.draw_text("hello"));
+                          let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                              self.ui_toolkit.draw_combo_box_with_label("",
+                                                                        |i| i == &1,
+                                                                        |n| n.to_string(),
+                                                                        &[&1],
+                                                                        |_| ())
+                          });
                           [left, right]
                       });
         Box::new(i)
