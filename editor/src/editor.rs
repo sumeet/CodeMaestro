@@ -26,6 +26,7 @@ use crate::draw_all_iter;
 use crate::json_http_client_builder::HTTPResponseIntermediateValue;
 use crate::opener::MenuItem;
 use crate::opener::Opener;
+use crate::schema_builder::{FieldType, ALL_FIELD_TYPES};
 use crate::send_to_server_overlay::{SendToServerOverlay, SendToServerOverlayStatus};
 use crate::theme_editor_renderer::ThemeEditorRenderer;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
@@ -1335,33 +1336,58 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         match builder.test_run_result {
             Some(Ok(_)) => {
                 // self.render_parsed_doc(builder, builder.test_run_parsed_doc.as_ref().unwrap())
-                self.render_schema_builder(builder.test_run_schema.as_ref().unwrap())
+                self.render_schema_builder(builder.json_http_client_id,
+                                           builder.test_run_schema.as_ref().unwrap())
             }
             Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
             None => self.ui_toolkit.draw_all(&[]),
         }
     }
 
-    fn render_schema_builder(&self, schema: &Schema) -> T::DrawResult {
-        let columns = self.render_schema_builder_columns(schema).collect_vec();
+    fn render_schema_builder(&self, client_id: lang::ID, schema: &Schema) -> T::DrawResult {
+        let columns = self.render_schema_builder_columns(client_id, schema)
+                          .collect_vec();
         let columns = columns.iter().map(|[l, r]| [&**l, &**r]).collect_vec();
         self.ui_toolkit.draw_columns(columns.as_slice())
     }
 
     fn render_schema_builder_columns(
         &'a self,
+        client_id: lang::ID,
         schema: &'a Schema)
         -> Box<dyn Iterator<Item = [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2]> + 'a> {
         let i = schema.iter_dfs_including_self()
-                      .map(move |schema_with_indent| {
+                      .map(move |(schema, indent)| {
                           let left: Box<dyn Fn() -> T::DrawResult> =
-                              Box::new(move || self.render_field_identifier(schema_with_indent));
+                              Box::new(move || self.render_field_identifier(schema, &indent));
                           let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                              let cmd_buffer = Rc::clone(&self.command_buffer);
                               self.ui_toolkit.draw_combo_box_with_label("",
-                                                                        |i| i == &1,
-                                                                        |n| n.to_string(),
-                                                                        &[&1],
-                                                                        |_| ())
+                                                                        |t| {
+                                                                            if let _ =
+                                                                                FieldType::String
+                                                                            {
+                                                                                true
+                                                                            } else {
+                                                                                false
+                                                                            }
+                                                                        },
+                                                                        |t| t.to_string(),
+                                                                        &ALL_FIELD_TYPES[..],
+                                                                        move |_| {
+                                                                            cmd_buffer.borrow_mut().add_integrating_command(
+                                                                                move |cont, interp, _executor, _cmd_buffer| {
+                                                                                    let env = interp.env.borrow_mut();
+                                                                                    let mut builder = cont
+                                                                                        .get_json_http_client_builder(client_id)
+                                                                                        .unwrap()
+                                                                                        .clone();
+                                                                                    let new_schema = builder.test_run_schema.unwrap().clone();
+                                                                                    builder.test_run_schema = Some(new_schema);
+                                                                                    cont.load_json_http_client_builder(builder)
+                                                                                },
+                                                                            )
+                                                                        })
                           });
                           [left, right]
                       });
@@ -1410,7 +1436,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         // }
     }
 
-    fn render_field_identifier(&self, (schema, indent): SchemaWithIndent<'a>) -> T::DrawResult {
+    fn render_field_identifier(&self,
+                               schema: &Schema,
+                               indent: &[FieldIdentifier])
+                               -> T::DrawResult {
+        return self.ui_toolkit.draw_text(&format!("{:?}", indent));
         let indent_padding_px = 16;
         match &schema.field_id {
             FieldIdentifier::Root => {
@@ -1418,9 +1448,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     .draw_with_bgcolor(BLACK_COLOR, &|| self.ui_toolkit.draw_text("root"))
             }
             FieldIdentifier::Name(name) => {
-                debug_assert!(indent > 0,
+                debug_assert!(indent.len() > 0,
                               "only the root can have indent 0, something is wrong");
-                let indent_px = indent_padding_px * (indent - 1) as i16;
+                let indent_px = indent_padding_px * (indent.len() - 1) as i16;
                 self.ui_toolkit
                     .indent(indent_px, &|| self.ui_toolkit.draw_text(name))
             }

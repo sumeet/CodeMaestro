@@ -2,12 +2,15 @@ use std::collections::HashMap;
 
 use super::json2;
 use crate::json2::{ParsedDocument, Scalar};
+use objekt::private::fmt::Formatter;
+use std::fmt::Display;
 
-const ALL_FIELD_TYPES: [FieldType; 4] = [FieldType::String,
-                                         FieldType::Number,
-                                         FieldType::Boolean,
-                                         FieldType::Null];
+pub const ALL_FIELD_TYPES: [&FieldType; 4] = [&FieldType::String,
+                                              &FieldType::Number,
+                                              &FieldType::Boolean,
+                                              &FieldType::Null];
 
+#[derive(Clone)]
 pub enum FieldType {
     String,
     Number,
@@ -15,14 +18,15 @@ pub enum FieldType {
     Null,
 }
 
-impl FieldType {
-    fn format(&self) -> &'static str {
-        match self {
+impl Display for FieldType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
             FieldType::String => "String",
             FieldType::Number => "Number",
             FieldType::Boolean => "Boolean",
             FieldType::Null => "Null",
-        }
+        };
+        f.write_str(s)
     }
 }
 
@@ -52,18 +56,46 @@ pub enum SchemaType {
     RemoveFromDocument,
 }
 
-pub type SchemaWithIndent<'a> = (&'a Schema, usize);
+pub type SchemaWithIndent<'a> = (&'a Schema, Indent);
+pub type Indent = Vec<FieldIdentifier>;
+pub type IndentRef<'a> = &'a [FieldIdentifier];
 
 impl Schema {
+    pub fn get_mut(&mut self,
+                   mut indent: IndentRef)
+                   -> Result<&mut Self, Box<dyn std::error::Error>> {
+        if indent.len() == 0 {
+            return Ok(self);
+        }
+
+        let indent = &indent[1..];
+        match &mut self.typ {
+            SchemaType::String { .. }
+            | SchemaType::Number { .. }
+            | SchemaType::Boolean { .. }
+            | SchemaType::Null
+            | SchemaType::List { .. }
+            | SchemaType::RemoveFromDocument => Err("bad indent".to_owned().into()),
+            SchemaType::Object { map } => match &indent[0] {
+                FieldIdentifier::Root => Err("bad indent".to_owned().into()),
+                FieldIdentifier::Name(name) => {
+                    map.get_mut(name.as_str()).ok_or("blah".to_owned().into())
+                }
+            },
+        }
+    }
+
     pub fn iter_dfs_including_self(&self) -> impl Iterator<Item = SchemaWithIndent> {
-        self.iter_dfs_including_self_rec(0)
+        self.iter_dfs_including_self_rec(vec![])
     }
 
     pub fn iter_dfs_including_self_rec(&self,
-                                       indent: usize)
+                                       indent: Indent)
                                        -> impl Iterator<Item = SchemaWithIndent> {
-        let idk = (self, indent);
-        let first: Box<dyn Iterator<Item = SchemaWithIndent>> = Box::new(std::iter::once(idk));
+        let indent2 = indent.clone();
+        let schema_with_indent = (self, indent);
+        let first: Box<dyn Iterator<Item = SchemaWithIndent>> =
+            Box::new(std::iter::once(schema_with_indent));
 
         match &self.typ {
             SchemaType::String { .. }
@@ -75,7 +107,9 @@ impl Schema {
             SchemaType::Object { map, .. } => {
                 let rest = map.iter()
                               .map(move |(_, inner_schema)| {
-                                  inner_schema.iter_dfs_including_self_rec(indent + 1)
+                                  let mut indent = indent2.clone();
+                                  indent.push(self.field_id.clone());
+                                  inner_schema.iter_dfs_including_self_rec(indent)
                               })
                               .flatten();
                 Box::new(first.chain(rest))
