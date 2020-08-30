@@ -26,7 +26,7 @@ use crate::draw_all_iter;
 use crate::json_http_client_builder::HTTPResponseIntermediateValue;
 use crate::opener::MenuItem;
 use crate::opener::Opener;
-use crate::schema_builder::{FieldType, ALL_FIELD_TYPES};
+use crate::schema_builder::{FieldType, SchemaType, ALL_FIELD_TYPES};
 use crate::send_to_server_overlay::{SendToServerOverlay, SendToServerOverlayStatus};
 use crate::theme_editor_renderer::ThemeEditorRenderer;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
@@ -1358,32 +1358,31 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         -> Box<dyn Iterator<Item = [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2]> + 'a> {
         let i = schema.iter_dfs_including_self()
                       .map(move |(schema, indent)| {
+                          let left_indent = indent.clone();
                           let left: Box<dyn Fn() -> T::DrawResult> =
-                              Box::new(move || self.render_field_identifier(schema, &indent));
+                              Box::new(move || self.render_field_identifier(schema, &left_indent));
                           let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
                               let cmd_buffer = Rc::clone(&self.command_buffer);
+                              let indent = indent.clone();
                               self.ui_toolkit.draw_combo_box_with_label("",
-                                                                        |t| {
-                                                                            if let _ =
-                                                                                FieldType::String
-                                                                            {
-                                                                                true
-                                                                            } else {
-                                                                                false
-                                                                            }
+                                                                        |field_type| {
+                                                                            schema.field_type() == *field_type
                                                                         },
                                                                         |t| t.to_string(),
                                                                         &ALL_FIELD_TYPES[..],
-                                                                        move |_| {
+                                                                        move |new_field_type| {
+                                                                            let indent = indent.clone();
+                                                                            let new_field_type = *new_field_type;
                                                                             cmd_buffer.borrow_mut().add_integrating_command(
                                                                                 move |cont, interp, _executor, _cmd_buffer| {
-                                                                                    let env = interp.env.borrow_mut();
                                                                                     let mut builder = cont
                                                                                         .get_json_http_client_builder(client_id)
                                                                                         .unwrap()
                                                                                         .clone();
-                                                                                    let new_schema = builder.test_run_schema.unwrap().clone();
-                                                                                    builder.test_run_schema = Some(new_schema);
+                                                                                    let mut existing_schema = builder.test_run_schema.unwrap().clone();
+                                                                                    let schema_at_indent = existing_schema.get_mut(&indent).unwrap();
+                                                                                    schema_at_indent.typ = SchemaType::from(new_field_type);
+                                                                                    builder.test_run_schema = Some(existing_schema);
                                                                                     cont.load_json_http_client_builder(builder)
                                                                                 },
                                                                             )
@@ -1440,7 +1439,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                schema: &Schema,
                                indent: &[FieldIdentifier])
                                -> T::DrawResult {
-        return self.ui_toolkit.draw_text(&format!("{:?}", indent));
         let indent_padding_px = 16;
         match &schema.field_id {
             FieldIdentifier::Root => {

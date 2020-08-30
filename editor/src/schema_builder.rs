@@ -5,17 +5,41 @@ use crate::json2::{ParsedDocument, Scalar};
 use objekt::private::fmt::Formatter;
 use std::fmt::Display;
 
-pub const ALL_FIELD_TYPES: [&FieldType; 4] = [&FieldType::String,
+pub const ALL_FIELD_TYPES: [&FieldType; 5] = [&FieldType::String,
                                               &FieldType::Number,
                                               &FieldType::Boolean,
-                                              &FieldType::Null];
+                                              &FieldType::Null,
+                                              &FieldType::Object];
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Copy, Debug)]
 pub enum FieldType {
     String,
     Number,
     Boolean,
     Null,
+    Object,
+}
+
+// pub fn (ft: &FieldType) -> Self {
+//     match ft {
+//         FieldType::String => SchemaType::String { example: Default::default() },
+//         FieldType::Number => SchemaType::Number { example: Default::default() },
+//         FieldType::Boolean => SchemaType::Boolean { example: Default::default() },
+//         FieldType::Null => SchemaType::Null,
+//         FieldType::Object => SchemaType::Object { map: Default::default() },
+//     }
+// }
+
+impl From<FieldType> for SchemaType {
+    fn from(ft: FieldType) -> Self {
+        match ft {
+            FieldType::String => SchemaType::String { example: Default::default() },
+            FieldType::Number => SchemaType::Number { example: Default::default() },
+            FieldType::Boolean => SchemaType::Boolean { example: Default::default() },
+            FieldType::Null => SchemaType::Null,
+            FieldType::Object => SchemaType::Object { map: Default::default() },
+        }
+    }
 }
 
 impl Display for FieldType {
@@ -25,6 +49,7 @@ impl Display for FieldType {
             FieldType::Number => "Number",
             FieldType::Boolean => "Boolean",
             FieldType::Null => "Null",
+            FieldType::Object => "Object",
         };
         f.write_str(s)
     }
@@ -61,10 +86,21 @@ pub type Indent = Vec<FieldIdentifier>;
 pub type IndentRef<'a> = &'a [FieldIdentifier];
 
 impl Schema {
-    pub fn get_mut(&mut self,
-                   mut indent: IndentRef)
-                   -> Result<&mut Self, Box<dyn std::error::Error>> {
-        if indent.len() == 0 {
+    pub fn field_type(&self) -> FieldType {
+        match self.typ {
+            SchemaType::String { .. } => FieldType::String,
+            SchemaType::Number { .. } => FieldType::Number,
+            SchemaType::Boolean { .. } => FieldType::Boolean,
+            SchemaType::Null => FieldType::Null,
+            SchemaType::List { .. } => unimplemented!(),
+            SchemaType::Object { .. } => FieldType::Object,
+            SchemaType::RemoveFromDocument => unimplemented!(),
+        }
+    }
+    pub fn get_mut(&mut self, indent: IndentRef) -> Result<&mut Self, Box<dyn std::error::Error>> {
+        println!("indent_ref: {:?}", indent);
+
+        if indent.len() == 1 {
             return Ok(self);
         }
 
@@ -79,7 +115,9 @@ impl Schema {
             SchemaType::Object { map } => match &indent[0] {
                 FieldIdentifier::Root => Err("bad indent".to_owned().into()),
                 FieldIdentifier::Name(name) => {
-                    map.get_mut(name.as_str()).ok_or("blah".to_owned().into())
+                    let inner_schema: Result<_, Box<dyn std::error::Error>> =
+                        map.get_mut(name.as_str()).ok_or("blah".to_string().into());
+                    inner_schema?.get_mut(indent)
                 }
             },
         }
@@ -90,9 +128,11 @@ impl Schema {
     }
 
     pub fn iter_dfs_including_self_rec(&self,
-                                       indent: Indent)
+                                       mut indent: Indent)
                                        -> impl Iterator<Item = SchemaWithIndent> {
         let indent2 = indent.clone();
+
+        indent.push(self.field_id.clone());
         let schema_with_indent = (self, indent);
         let first: Box<dyn Iterator<Item = SchemaWithIndent>> =
             Box::new(std::iter::once(schema_with_indent));
