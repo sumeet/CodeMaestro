@@ -26,7 +26,7 @@ use crate::draw_all_iter;
 use crate::json_http_client_builder::HTTPResponseIntermediateValue;
 use crate::opener::MenuItem;
 use crate::opener::Opener;
-use crate::schema_builder::{FieldType, SchemaType, ALL_FIELD_TYPES};
+use crate::schema_builder::{IndentRef, SchemaType, ALL_FIELD_TYPES};
 use crate::send_to_server_overlay::{SendToServerOverlay, SendToServerOverlayStatus};
 use crate::theme_editor_renderer::ThemeEditorRenderer;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
@@ -57,7 +57,7 @@ use cs::{await_eval_result, EnvGenie};
 mod value_renderer;
 use crate::code_editor::CodeLocation;
 use crate::code_editor_renderer::BLACK_COLOR;
-use crate::schema_builder::{FieldIdentifier, Schema, SchemaWithIndent};
+use crate::schema_builder::{FieldIdentifier, Schema};
 use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
@@ -1374,7 +1374,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                             let indent = indent.clone();
                                                                             let new_field_type = *new_field_type;
                                                                             cmd_buffer.borrow_mut().add_integrating_command(
-                                                                                move |cont, interp, _executor, _cmd_buffer| {
+                                                                                move |cont, _interp, _executor, _cmd_buffer| {
                                                                                     let mut builder = cont
                                                                                         .get_json_http_client_builder(client_id)
                                                                                         .unwrap()
@@ -1391,48 +1391,13 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                           [left, right]
                       });
         Box::new(i)
+    }
 
-        // match schema {
-        //     // SchemaType::Number { .. } => {
-        //     //     let left: Box<dyn Fn() -> T::DrawResult> =
-        //     //         Box::new(move || self.ui_toolkit.draw_text("string"));
-        //     //     let right: Box<dyn Fn() -> T::DrawResult> =
-        //     //         Box::new(move || self.ui_toolkit.draw_text("hello"));
-        //     //     Box::new(std::iter::once([left, right]))
-        //     // }
-        //     Schema { typ: SchemaType::Object { map },
-        //              field_id,
-        //              .. } => {
-        //         let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-        //             self.ui_toolkit
-        //                 .draw_text(self.render_field_identifier(field_id))
-        //         });
-        //         let right: Box<dyn Fn() -> T::DrawResult> =
-        //             Box::new(move || self.ui_toolkit.draw_text("hello"));
-        //         let first = std::iter::once([left, right]);
-        //         let rest = map.iter()
-        //                       .map(move |(_k, current_schema)| {
-        //                           self.render_schema_builder_columns(current_schema)
-        //                       })
-        //                       .flatten();
-        //         Box::new(first.chain(rest))
-        //         //     let left: Box<dyn Fn() -> T::DrawResult> =
-        //         //         Box::new(move || self.ui_toolkit.draw_text("string"));
-        //         //     Box::new(std::iter::once([left, right]))
-        //     }
-        //     Schema { typ, field_id, .. } => {
-        //         let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-        //             self.ui_toolkit
-        //                 .draw_text(self.render_field_identifier(field_id))
-        //         });
-        //         let right: Box<dyn Fn() -> T::DrawResult> =
-        //             Box::new(move || self.ui_toolkit.draw_text("hello"));
-        //         Box::new(std::iter::once([left, right]))
-        //     } // SchemaType::Boolean { .. } => {}
-        //       // SchemaType::Null => {}
-        //       // SchemaType::List { .. } => {}
-        //       // SchemaType::RemoveFromDocument => {}
-        // }
+    fn render_add_new_field_row(&self,
+                                client_id: lang::ID,
+                                indent_ref: IndentRef)
+                                -> [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2] {
+        unimplemented!()
     }
 
     fn render_field_identifier(&self,
@@ -1446,9 +1411,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     .draw_with_bgcolor(BLACK_COLOR, &|| self.ui_toolkit.draw_text("root"))
             }
             FieldIdentifier::Name(name) => {
-                debug_assert!(indent.len() > 0,
-                              "only the root can have indent 0, something is wrong");
-                let indent_px = indent_padding_px * (indent.len() - 1) as i16;
+                debug_assert!(indent.len() > 1,
+                              "only the root can have indent 1, something is wrong");
+                let indent_px = indent_padding_px * (indent.len() - 2) as i16;
                 self.ui_toolkit
                     .indent(indent_px, &|| self.ui_toolkit.draw_text(name))
             }
