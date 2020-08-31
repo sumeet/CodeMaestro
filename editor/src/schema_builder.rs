@@ -76,9 +76,9 @@ pub enum SchemaType {
     Number { example: i128 },
     Boolean { example: bool },
     Null,
-    List { schema_type: Box<Schema> },
+    List { schema: Box<Schema> },
     Object { map: HashMap<String, Schema> },
-    RemoveFromDocument,
+    CameFromUnsupportedList,
 }
 
 pub type SchemaWithIndent<'a> = (&'a Schema, Indent);
@@ -94,12 +94,10 @@ impl Schema {
             SchemaType::Null => FieldType::Null,
             SchemaType::List { .. } => unimplemented!(),
             SchemaType::Object { .. } => FieldType::Object,
-            SchemaType::RemoveFromDocument => unimplemented!(),
+            SchemaType::CameFromUnsupportedList => unimplemented!(),
         }
     }
     pub fn get_mut(&mut self, indent: IndentRef) -> Result<&mut Self, Box<dyn std::error::Error>> {
-        println!("indent_ref: {:?}", indent);
-
         if indent.len() == 1 {
             return Ok(self);
         }
@@ -111,7 +109,7 @@ impl Schema {
             | SchemaType::Boolean { .. }
             | SchemaType::Null
             | SchemaType::List { .. }
-            | SchemaType::RemoveFromDocument => Err("bad indent".to_owned().into()),
+            | SchemaType::CameFromUnsupportedList => Err("bad indent".to_owned().into()),
             SchemaType::Object { map } => match &indent[0] {
                 FieldIdentifier::Root => Err("bad indent".to_owned().into()),
                 FieldIdentifier::Name(name) => {
@@ -143,7 +141,7 @@ impl Schema {
             | SchemaType::Boolean { .. }
             | SchemaType::Null
             | SchemaType::List { .. }
-            | SchemaType::RemoveFromDocument => first,
+            | SchemaType::CameFromUnsupportedList => first,
             SchemaType::Object { map, .. } => {
                 let rest = map.iter()
                               .map(move |(_, inner_schema)| {
@@ -174,7 +172,7 @@ impl Schema {
                     panic!("this should never be empty");
                 }
                 let first = value.first().unwrap();
-                SchemaType::List { schema_type: Box::new(Self::from_parsed_doc(first, field_id.clone())) }
+                SchemaType::List { schema: Box::new(Self::from_parsed_doc(first, field_id.clone())) }
             }
             ParsedDocument::Map { value, .. } => {
                 SchemaType::Object { map: value.iter()
@@ -184,8 +182,8 @@ impl Schema {
                                                })
                                                .collect() }
             }
-            ParsedDocument::EmptyCantInfer { .. } => SchemaType::RemoveFromDocument,
-            ParsedDocument::NonHomogeneousCantParse { .. } => SchemaType::RemoveFromDocument,
+            ParsedDocument::EmptyCantInfer { .. } => SchemaType::CameFromUnsupportedList,
+            ParsedDocument::NonHomogeneousCantParse { .. } => SchemaType::CameFromUnsupportedList,
         };
         Schema { field_id,
                  typ: schema_type,

@@ -23,7 +23,7 @@ use crate::chat::example_chat_program;
 use crate::chat_test_window::ChatTestWindow;
 use crate::colorscheme;
 use crate::draw_all_iter;
-use crate::json_http_client_builder::HTTPResponseIntermediateValue;
+use crate::json_http_client_builder::{HTTPResponseIntermediateValue, NAME_OF_ROOT};
 use crate::opener::MenuItem;
 use crate::opener::Opener;
 use crate::schema_builder::{IndentRef, SchemaType, ALL_FIELD_TYPES};
@@ -1283,9 +1283,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                             cont.get_json_http_client_builder(client_id).unwrap();
 
                                         // THIS is where the logic is ^^
-                                        builder.run_test(interp, async_executor, move |newbuilder| {
-                                            cmd_buffer5.borrow_mut().add_controller_command(
-                                                move |cont| {
+                                        builder.run_test(interp, async_executor, move |mut newbuilder| {
+                                            cmd_buffer5.borrow_mut().add_integrating_command(
+                                                move |cont, interp, _executor, _cmd_buffer| {
+                                                    let mut env = interp.env.borrow_mut();
+                                                    newbuilder.rebuild_return_type(&mut env);
                                                     cont.load_json_http_client_builder(newbuilder);
                                                 },
                                             )
@@ -1337,7 +1339,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             Some(Ok(_)) => {
                 // self.render_parsed_doc(builder, builder.test_run_parsed_doc.as_ref().unwrap())
                 self.render_schema_builder(builder.json_http_client_id,
-                                           builder.test_run_schema.as_ref().unwrap())
+                                           builder.external_schema.as_ref().unwrap())
             }
             Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
             None => self.ui_toolkit.draw_all(&[]),
@@ -1374,15 +1376,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                             let indent = indent.clone();
                                                                             let new_field_type = *new_field_type;
                                                                             cmd_buffer.borrow_mut().add_integrating_command(
-                                                                                move |cont, _interp, _executor, _cmd_buffer| {
+                                                                                move |cont, interp, _executor, _cmd_buffer| {
+                                                                                    let mut env = interp.env.borrow_mut();
                                                                                     let mut builder = cont
                                                                                         .get_json_http_client_builder(client_id)
                                                                                         .unwrap()
                                                                                         .clone();
-                                                                                    let mut existing_schema = builder.test_run_schema.unwrap().clone();
+                                                                                    let mut existing_schema = builder.external_schema.unwrap().clone();
                                                                                     let schema_at_indent = existing_schema.get_mut(&indent).unwrap();
                                                                                     schema_at_indent.typ = SchemaType::from(new_field_type);
-                                                                                    builder.test_run_schema = Some(existing_schema);
+                                                                                    builder.external_schema = Some(existing_schema);
+                                                                                    builder.rebuild_return_type(&mut env);
                                                                                     cont.load_json_http_client_builder(builder)
                                                                                 },
                                                                             )
@@ -1408,7 +1412,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         match &schema.field_id {
             FieldIdentifier::Root => {
                 self.ui_toolkit
-                    .draw_with_bgcolor(BLACK_COLOR, &|| self.ui_toolkit.draw_text("root"))
+                    .draw_with_bgcolor(BLACK_COLOR, &|| self.ui_toolkit.draw_text(NAME_OF_ROOT))
             }
             FieldIdentifier::Name(name) => {
                 debug_assert!(indent.len() > 1,
@@ -1448,7 +1452,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     //     draw_all_iter!(T::self.ui_toolkit, draw_fns)
     // }
 
-    #[allow(unused)]
     fn render_parsed_doc_value(&self,
                                builder: &JSONHTTPClientBuilder,
                                value: &str,

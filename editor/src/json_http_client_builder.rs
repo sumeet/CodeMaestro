@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use super::async_executor::AsyncExecutor;
 use super::json2;
 use crate::schema_builder;
-use crate::schema_builder::Schema;
+use crate::schema_builder::{Schema, SchemaType};
 use cs::await_eval_result;
 use cs::builtins::new_result;
 use cs::env;
@@ -16,6 +16,8 @@ use cs::lang;
 use cs::structs;
 
 mod fake_http_client;
+
+pub const NAME_OF_ROOT: &'static str = "Response";
 
 // TODO: move this one func somewhere else? or keep it in this file?
 // i think this is always going to be a Result, because an HTTP request can always fail
@@ -45,6 +47,7 @@ impl HTTPResponseIntermediateValue {
     pub fn from_builder(env: &env::ExecutionEnvironment,
                         builder: &JSONHTTPClientBuilder)
                         -> Option<Self> {
+        // println!("{:?}")
         Some(value_response_for_test_output(env,
                                             builder.test_run_result.as_ref()?.as_ref().ok()?,
                                             builder.return_type_candidate.as_ref()?))
@@ -55,7 +58,7 @@ impl HTTPResponseIntermediateValue {
 pub struct JSONHTTPClientBuilder {
     pub test_run_result: Option<Result<serde_json::Value, String>>,
     pub test_run_parsed_doc: Option<json2::ParsedDocument>,
-    pub test_run_schema: Option<schema_builder::Schema>,
+    pub external_schema: Option<schema_builder::Schema>,
     pub json_http_client_id: lang::ID,
     pub selected_fields: Vec<SelectedField>,
     pub return_type_candidate: Option<ReturnTypeBuilderResult>,
@@ -74,7 +77,7 @@ impl JSONHTTPClientBuilder {
     pub fn new(json_http_client_id: lang::ID) -> Self {
         Self { test_run_result: None,
                test_run_parsed_doc: None,
-               test_run_schema: None,
+               external_schema: None,
                return_type_candidate: None,
                json_http_client_id,
                selected_fields: vec![] }
@@ -110,7 +113,7 @@ impl JSONHTTPClientBuilder {
     }
 
     // this function is where i need to strike next
-    fn rebuild_return_type(&mut self, env: &mut env::ExecutionEnvironment) {
+    pub fn rebuild_return_type(&mut self, env: &mut env::ExecutionEnvironment) {
         // TODO: might not want to denormalize structs, but instead read them off the client
         // but for now we'll denormalize
         if let Some(return_type_candidate) = self.return_type_candidate.as_ref() {
@@ -121,7 +124,12 @@ impl JSONHTTPClientBuilder {
 
         let env_genie = EnvGenie::new(env);
 
-        self.return_type_candidate = build_return_type(&env_genie, &self.selected_fields);
+        if self.external_schema.is_none() {
+            return;
+        }
+
+        self.return_type_candidate =
+            Some(build_return_type2(&env_genie, &self.external_schema.as_ref().unwrap().typ));
         // TODO: inside here, append the structs to the actual JSON HTTP function, and also
         // stick them into the environment
         if self.return_type_candidate.is_none() {
@@ -145,7 +153,7 @@ impl JSONHTTPClientBuilder {
         self.test_run_result = Some(result.clone());
         if let Ok(value) = result {
             let parsed_doc = json2::parse(value);
-            self.test_run_schema = Some(Schema::from_parsed_doc_root(&parsed_doc));
+            self.external_schema = Some(Schema::from_parsed_doc_root(&parsed_doc));
             self.test_run_parsed_doc = Some(parsed_doc);
         } else {
             self.test_run_parsed_doc = None
@@ -210,7 +218,12 @@ fn build_return_type(env_genie: &EnvGenie,
                      selected_fields: &[SelectedField])
                      -> Option<ReturnTypeBuilderResult> {
     let return_type_spec = make_return_type_spec(selected_fields).ok()?;
-    Some(ReturnTypeBuilder::new("Response", env_genie, &return_type_spec).build())
+    Some(ReturnTypeBuilder::new(NAME_OF_ROOT, env_genie, &return_type_spec).build())
+}
+
+fn build_return_type2(env_genie: &EnvGenie, schema_type: &SchemaType) -> ReturnTypeBuilderResult {
+    let return_type_spec = ReturnTypeSpec::from_schema_type(schema_type);
+    ReturnTypeBuilder::new(NAME_OF_ROOT, env_genie, &return_type_spec).build()
 }
 
 pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {
@@ -269,6 +282,33 @@ pub enum ReturnTypeSpec {
 }
 
 impl ReturnTypeSpec {
+    pub fn from_schema_type(schema_type: &SchemaType) -> Self {
+        match schema_type {
+            SchemaType::String { example: _ } => {
+                ReturnTypeSpec::Scalar { typespec_id: lang::STRING_TYPESPEC.id }
+            }
+            SchemaType::Number { example: _ } => {
+                ReturnTypeSpec::Scalar { typespec_id: lang::NUMBER_TYPESPEC.id }
+            }
+            SchemaType::Boolean { example: _ } => {
+                ReturnTypeSpec::Scalar { typespec_id: lang::BOOLEAN_TYPESPEC.id }
+            }
+            SchemaType::Null => ReturnTypeSpec::Scalar { typespec_id: lang::NULL_TYPESPEC.id },
+            SchemaType::List { schema } => {
+                ReturnTypeSpec::List(Box::new(Self::from_schema_type(&schema.typ)))
+            }
+            SchemaType::Object { map } => {
+                let return_type_spec_by_name = map.iter().map(|(field_name, inner_schema)| {
+                    (field_name.to_owned(), Self::from_schema_type(&inner_schema.typ))
+                }).collect();
+                ReturnTypeSpec::Struct(return_type_spec_by_name)
+            }
+            SchemaType::CameFromUnsupportedList => {
+                panic!("schema contained either heterogeneous list or empty list, no handling for this yet")
+            }
+        }
+    }
+
     fn insert_key(&mut self, key: &String, rts: ReturnTypeSpec) -> &mut ReturnTypeSpec {
         match self {
             ReturnTypeSpec::Struct(map) => map.entry(key.clone()).or_insert(rts),
