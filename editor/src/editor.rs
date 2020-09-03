@@ -1414,24 +1414,25 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                 client_id: lang::ID,
                                 indent: Indent)
                                 -> [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2] {
-        self.ui_toolkit
-            .draw_form(("New", lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
-                       &move |(field_name, field_type)| {
-                           // probably don't actually need to clone this, can't get it to compile
-                           let indent = indent.clone();
-
-                           let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-                               self.render_with_indentation_for_field(&indent, &|| {
-                                       self.ui_toolkit.draw_text_input(field_name, |_| (), || ())
-                                   })
-                           });
-                           let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-                               self.render_type_change_combo("", &field_type, |_| ())
-                               // self.ui_toolkit.draw_text_input("hello", |_| (), || ())
-                           });
-                           [left, right]
-                       },
-                       |_| ())
+        [unimplemented!(), unimplemented!()]
+        // self.ui_toolkit
+        //     .draw_form(("New", lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+        //                &move |(field_name, field_type)| {
+        //                    // probably don't actually need to clone this, can't get it to compile
+        //                    let indent = indent.clone();
+        //
+        //                    let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+        //                        self.render_with_indentation_for_field(&indent, &|| {
+        //                                self.ui_toolkit.draw_text_input(field_name, |_| (), || ())
+        //                            })
+        //                    });
+        //                    let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+        //                        self.render_type_change_combo("", &field_type, |_| ())
+        //                        // self.ui_toolkit.draw_text_input("hello", |_| (), || ())
+        //                    });
+        //                    [left, right]
+        //                },
+        //                |_| ())
     }
 
     fn render_field_identifier(&self, schema: &Schema, indent: IndentRef) -> T::DrawResult {
