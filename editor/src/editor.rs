@@ -413,8 +413,11 @@ impl CommandBuffer {
     pub fn load_json_http_client(&mut self, json_http_client: JSONHTTPClient) {
         self.add_integrating_command(move |controller, interpreter, _, _| {
                 let mut env = interpreter.env.borrow_mut();
-                controller
-                .load_json_http_client_builder(JSONHTTPClientBuilder::new(json_http_client.id()));
+                // only create a new JSON builder when the JSON HTTP client is created for the first time
+                if controller.get_json_http_client_builder(json_http_client.id()).is_none() {
+                    controller
+                        .load_json_http_client_builder(JSONHTTPClientBuilder::new(json_http_client.id()));
+                }
 
                 let generate_url_params_code =
                     lang::CodeNode::Block(json_http_client.gen_url_params_code.clone());
