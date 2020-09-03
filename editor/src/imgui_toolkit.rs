@@ -1140,7 +1140,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let enter_pressed = self.ui
                                 .input_text(&self.imlabel(label), &mut box_input)
                                 .enter_returns_true(true)
-                                .always_insert_mode(true)
                                 .build();
         if enter_pressed {
             ondone();
