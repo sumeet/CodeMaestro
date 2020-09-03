@@ -107,6 +107,11 @@ pub trait UiToolkit {
                                                                          existing_value: &str,
                                                                          onchange: F)
                                                                          -> Self::DrawResult;
+    fn draw_form<T: 'static, R>(&self,
+                                initial_values: T,
+                                draw_form_fn: &dyn Fn(&T) -> R,
+                                ondone: impl Fn(&T) + 'static)
+                                -> R;
     fn draw_combo_box_with_label<F, G, H, T>(&self,
                                              label: &str,
                                              is_item_selected: G,

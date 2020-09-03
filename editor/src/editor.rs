@@ -26,7 +26,7 @@ use crate::draw_all_iter;
 use crate::json_http_client_builder::{HTTPResponseIntermediateValue, NAME_OF_ROOT};
 use crate::opener::MenuItem;
 use crate::opener::Opener;
-use crate::schema_builder::{IndentRef, SchemaType, ALL_FIELD_TYPES};
+use crate::schema_builder::{Indent, IndentRef, SchemaType, ALL_FIELD_TYPES};
 use crate::send_to_server_overlay::{SendToServerOverlay, SendToServerOverlayStatus};
 use crate::theme_editor_renderer::ThemeEditorRenderer;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
@@ -1362,7 +1362,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         schema: &'a Schema)
         -> Box<dyn Iterator<Item = [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2]> + 'a> {
         let i = schema.iter_dfs_including_self()
-                      .map(move |(schema, indent)| {
+                      .scan(vec![], move |prev_indent, (schema, indent)| {
+                          let should_render_add_field_for_preceding_object = prev_indent.len() > indent.len();
+                          let prev_indent_clone = prev_indent.clone();
+                          *prev_indent = indent.clone();
+
                           let left_indent = indent.clone();
                           let left: Box<dyn Fn() -> T::DrawResult> =
                               Box::new(move || self.render_field_identifier(schema, &left_indent));
@@ -1395,36 +1399,65 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                             )
                                                                         })
                           });
-                          [left, right]
-                      });
+                          if should_render_add_field_for_preceding_object {
+                              let i : Box<dyn Iterator<Item = _>> = Box::new(std::iter::once(self.render_add_new_field_row(client_id, prev_indent_clone)).chain(std::iter::once([left, right])));
+                              Some(i)
+                          } else {
+                              let i : Box<dyn Iterator<Item = _>> = Box::new(std::iter::once([left, right]));
+                              Some(i)
+                          }
+                      }).flatten();
         Box::new(i)
     }
 
-    fn render_add_new_field_row(&self,
+    fn render_add_new_field_row(&'a self,
                                 client_id: lang::ID,
-                                indent_ref: IndentRef)
+                                indent: Indent)
                                 -> [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2] {
-        unimplemented!()
+        self.ui_toolkit
+            .draw_form(("New", lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+                       &move |(field_name, field_type)| {
+                           // probably don't actually need to clone this, can't get it to compile
+                           let indent = indent.clone();
+
+                           let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                               self.render_with_indentation_for_field(&indent, &|| {
+                                       self.ui_toolkit.draw_text_input(field_name, |_| (), || ())
+                                   })
+                           });
+                           let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                               self.render_type_change_combo("", &field_type, |_| ())
+                               // self.ui_toolkit.draw_text_input("hello", |_| (), || ())
+                           });
+                           [left, right]
+                       },
+                       |_| ())
     }
 
-    fn render_field_identifier(&self,
-                               schema: &Schema,
-                               indent: &[FieldIdentifier])
-                               -> T::DrawResult {
-        let indent_padding_px = 16;
-        match &schema.field_id {
-            FieldIdentifier::Root => {
-                self.ui_toolkit
-                    .draw_with_bgcolor(BLACK_COLOR, &|| self.ui_toolkit.draw_text(NAME_OF_ROOT))
-            }
-            FieldIdentifier::Name(name) => {
-                debug_assert!(indent.len() > 1,
-                              "only the root can have indent 1, something is wrong");
-                let indent_px = indent_padding_px * (indent.len() - 2) as i16;
-                self.ui_toolkit
-                    .indent(indent_px, &|| self.ui_toolkit.draw_text(name))
-            }
+    fn render_field_identifier(&self, schema: &Schema, indent: IndentRef) -> T::DrawResult {
+        self.render_with_indentation_for_field(indent, &|| match &schema.field_id {
+                FieldIdentifier::Root => {
+                    self.ui_toolkit
+                        .draw_with_bgcolor(BLACK_COLOR, &|| self.ui_toolkit.draw_text(NAME_OF_ROOT))
+                }
+                FieldIdentifier::Name(name) => {
+                    debug_assert!(indent.len() > 1,
+                                  "only the root can have indent 1, something is wrong");
+                    self.ui_toolkit.draw_text(name)
+                }
+            })
+    }
+
+    fn render_with_indentation_for_field(&self,
+                                         indent: IndentRef,
+                                         draw_fn: DrawFnRef<T>)
+                                         -> T::DrawResult {
+        if indent.len() < 2 {
+            return draw_fn();
         }
+        let indent_padding_px = 16;
+        let indent_px = indent_padding_px * (indent.len() - 2) as i16;
+        self.ui_toolkit.indent(indent_px, draw_fn)
     }
 
     // fn render_parsed_doc(&self,

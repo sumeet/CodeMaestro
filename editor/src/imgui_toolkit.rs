@@ -1152,6 +1152,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
+    fn draw_form<T: 'static, R>(&self,
+                                initial_values: T,
+                                draw_form_fn: &dyn Fn(&T) -> R,
+                                ondone: impl Fn(&T) + 'static)
+                                -> R {
+        draw_form_fn(&initial_values)
+    }
+
     fn draw_color_picker_with_label(&self,
                                     label: &str,
                                     existing_value: Color,
