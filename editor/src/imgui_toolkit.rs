@@ -1117,14 +1117,23 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.draw_text_input_with_label("", existing_value, onchange, ondone)
     }
 
-    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self,
-                                                                         label: &str,
-                                                                         existing_value: &str,
-                                                                         onchange: F) {
+    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static,
+                                                E: Fn() -> () + 'static>(
+        &self,
+        label: &str,
+        existing_value: &str,
+        onchange: F,
+        onenter: E) {
         let mut box_input = buf(existing_value);
-        self.ui
-            .input_text_multiline(&self.imlabel(label), &mut box_input, [0., 100.])
-            .build();
+        if self.ui
+               .input_text_multiline(&self.imlabel(label), &mut box_input, [0., 100.])
+               .flags(ImGuiInputTextFlags::CtrlEnterForNewLine)
+               .resize_buffer(true)
+               .enter_returns_true(true)
+               .build()
+        {
+            onenter()
+        }
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
         }

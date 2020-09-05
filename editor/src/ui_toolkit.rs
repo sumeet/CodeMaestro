@@ -102,11 +102,14 @@ pub trait UiToolkit {
                                                                             onchange: F,
                                                                             ondone: D)
                                                                             -> Self::DrawResult;
-    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self,
-                                                                         label: &str,
-                                                                         existing_value: &str,
-                                                                         onchange: F)
-                                                                         -> Self::DrawResult;
+    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static, E: Fn() -> () + 'static>(
+        &self,
+        label: &str,
+        existing_value: &str,
+        onchange: F,
+        onenter: E)
+        -> Self::DrawResult;
+
     fn draw_form<T: 'static, R>(&self,
                                 initial_values: T,
                                 draw_form_fn: &dyn Fn(&T) -> R,

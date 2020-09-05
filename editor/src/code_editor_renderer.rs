@@ -1281,11 +1281,24 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_string_literal(&self, string_literal: &lang::StringLiteral) -> T::DrawResult {
         self.set_selected_on_click(&|| {
-                                       self.draw_buttony_text(&format!("\u{F10D} {} \u{F10E}",
-                                                                       string_literal.value),
+                                       self.draw_buttony_text(&self.format_string_literal_display(&string_literal.value),
                                                               colorscheme!(literal_bg_color))
                                    },
                                    string_literal.id)
+    }
+
+    fn format_string_literal_display(&self, value: &str) -> String {
+        let most_num_newlines_to_display = 2;
+        let inner_value = if value.matches("\n").count() >= most_num_newlines_to_display {
+            let i = value.match_indices("\n")
+                         .nth(most_num_newlines_to_display)
+                         .unwrap()
+                         .0;
+            format!("{}…", value.chars().take(i).join(""))
+        } else {
+            value.to_string()
+        };
+        format!("\u{F10D} {} \u{F10E}", inner_value)
     }
 
     fn render_number_literal(&self, number_literal: &lang::NumberLiteral) -> T::DrawResult {
@@ -1308,14 +1321,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::StringLiteral(string_literal) => {
                 self.ui_toolkit.focused(&move || {
                                    let new_literal = string_literal.clone();
-                                   self.draw_inline_text_editor(&string_literal.value,
-                                                                move |new_value| {
-                                                                    let mut sl =
-                                                                        new_literal.clone();
-                                                                    sl.value =
-                                                                        new_value.to_string();
-                                                                    CodeNode::StringLiteral(sl)
-                                                                })
+                                   self.draw_multiline_text_editor(&string_literal.value,
+                                                                   move |new_value| {
+                                                                       let mut sl =
+                                                                           new_literal.clone();
+                                                                       sl.value =
+                                                                           new_value.to_string();
+                                                                       CodeNode::StringLiteral(sl)
+                                                                   })
                                })
             }
             CodeNode::Assignment(assignment) => {
@@ -1348,6 +1361,33 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  &|| {})
             }
         }
+    }
+
+    fn draw_multiline_text_editor<F: Fn(&str) -> CodeNode + 'static>(&self,
+                                                                     initial_value: &str,
+                                                                     new_node_fn: F)
+                                                                     -> T::DrawResult {
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        let cmd_buffer2 = Rc::clone(&self.command_buffer);
+        let new_node_fn = Rc::new(new_node_fn);
+
+        self.draw_multiline_text_input(
+                                   initial_value,
+                                   move |new_value| {
+                                       let new_node_fn = Rc::clone(&new_node_fn);
+
+                                       let new_value = new_value.to_string();
+                                       cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                           println!("replacing code, inserting new value {:?}", new_value);
+                    editor.replace_code(new_node_fn(&new_value))
+                })
+                                   },
+                                   move || {
+                                       cmd_buffer2.borrow_mut().add_editor_command(|editor| {
+                                           editor.mark_as_not_editing();
+                                       })
+                                   },
+        )
     }
 
     fn draw_inline_text_editor<F: Fn(&str) -> CodeNode + 'static>(&self,
@@ -1411,6 +1451,25 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn draw_text(&self, text: &str) -> T::DrawResult {
         self.draw_nested_borders_around(&|| self.ui_toolkit.draw_text(text))
+    }
+
+    fn draw_multiline_text_input<F: Fn(&str) + 'static, E: Fn() + 'static>(&self,
+                                                                           existing_value: &str,
+                                                                           onchange: F,
+                                                                           onenter: E)
+                                                                           -> T::DrawResult {
+        let onchange_rc = Rc::new(RefCell::new(onchange));
+        let onenter_rc = Rc::new(RefCell::new(onenter));
+        self.draw_nested_borders_around(&move || {
+                let onchange_rc = Rc::clone(&onchange_rc);
+                let onenter_rc = Rc::clone(&onenter_rc);
+                self.ui_toolkit.draw_multiline_text_input_with_label("",
+                                                                     existing_value,
+                                                                     move |v| {
+                                                                         onchange_rc.borrow()(v)
+                                                                     },
+                                                                     move || onenter_rc.borrow()())
+            })
     }
 
     fn draw_text_input<F: Fn(&str) + 'static, D: Fn() + 'static>(&self,
