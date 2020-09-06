@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use super::json2;
@@ -11,7 +12,7 @@ pub const ALL_FIELD_TYPES: [&FieldType; 5] = [&FieldType::String,
                                               &FieldType::Null,
                                               &FieldType::Object];
 
-#[derive(Clone, PartialEq, Copy, Debug)]
+#[derive(Clone, PartialEq, Copy, Debug, Serialize, Deserialize)]
 pub enum FieldType {
     String,
     Number,
@@ -61,7 +62,7 @@ pub enum FieldIdentifier {
     Name(String),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Schema {
     pub field_id: FieldIdentifier,
     pub typ: SchemaType,
@@ -70,7 +71,7 @@ pub struct Schema {
     // pub inferred: bool,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum SchemaType {
     String { example: String },
     Number { example: i128 },
@@ -86,6 +87,31 @@ pub type Indent = Vec<FieldIdentifier>;
 pub type IndentRef<'a> = &'a [FieldIdentifier];
 
 impl Schema {
+    pub fn new(field_id: FieldIdentifier, typ: SchemaType) -> Self {
+        Schema { field_id,
+                 typ,
+                 optional: false }
+    }
+
+    pub fn insert_at(&mut self,
+                     indent: IndentRef,
+                     new_field_name: String,
+                     new_field_type: FieldType)
+                     -> Result<(), Box<dyn std::error::Error>> {
+        let part_to_modify = self.get_mut(indent)?;
+        println!("indent_ref: {:?}", indent);
+        match &mut part_to_modify.typ {
+            SchemaType::Object { map } => {
+                let new_schema = Self::new(FieldIdentifier::Name(new_field_name.clone()),
+                                           SchemaType::from(new_field_type));
+                println!("keys: {:?}", map.keys().collect::<Vec<_>>());
+                map.insert(new_field_name, new_schema);
+                Ok(())
+            }
+            otherwise => Err(format!("expected object, got {:?}", otherwise).into()),
+        }
+    }
+
     pub fn field_type(&self) -> FieldType {
         match self.typ {
             SchemaType::String { .. } => FieldType::String,
@@ -185,8 +211,6 @@ impl Schema {
             ParsedDocument::EmptyCantInfer { .. } => SchemaType::CameFromUnsupportedList,
             ParsedDocument::NonHomogeneousCantParse { .. } => SchemaType::CameFromUnsupportedList,
         };
-        Schema { field_id,
-                 typ: schema_type,
-                 optional: false }
+        Schema::new(field_id, schema_type)
     }
 }

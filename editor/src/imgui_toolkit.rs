@@ -1168,10 +1168,18 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_form<T: Serialize + DeserializeOwned + 'static, R>(&self,
                                                                form_id: u64,
                                                                initial_values: T,
-                                                               draw_form_fn: &dyn Fn(&T) -> R,
-                                                               ondone: impl Fn(&T) + 'static)
+                                                               draw_form_fn: &dyn Fn(&T) -> R)
                                                                -> R {
-        draw_form_fn(&initial_values)
+        let mut cache = TK_CACHE.lock().unwrap();
+        let entry = cache.forms
+                         .entry(form_id)
+                         .or_insert_with(|| bincode::serialize(&initial_values).unwrap());
+        draw_form_fn(&bincode::deserialize(entry.as_slice()).unwrap())
+    }
+
+    fn submit_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64) -> T {
+        let t = TK_CACHE.lock().unwrap().forms.remove(&form_id).unwrap();
+        bincode::deserialize(t.as_slice()).unwrap()
     }
 
     fn change_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64, to: T) {

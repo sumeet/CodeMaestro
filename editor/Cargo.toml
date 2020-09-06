@@ -10,7 +10,7 @@ cs = {path = "../"}
 # these are specified in super
 cfg-if = "*"
 itertools = "*"
-serde = "*"
+serde = {version = "*", features=["derive"]}
 serde_derive = "*"
 lazy_static = "*"
 serde_json = "*"

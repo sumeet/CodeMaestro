@@ -26,7 +26,7 @@ use crate::draw_all_iter;
 use crate::json_http_client_builder::{HTTPResponseIntermediateValue, NAME_OF_ROOT};
 use crate::opener::MenuItem;
 use crate::opener::Opener;
-use crate::schema_builder::{Indent, IndentRef, SchemaType, ALL_FIELD_TYPES};
+use crate::schema_builder::{FieldType, Indent, IndentRef, SchemaType, ALL_FIELD_TYPES};
 use crate::send_to_server_overlay::{SendToServerOverlay, SendToServerOverlayStatus};
 use crate::theme_editor_renderer::ThemeEditorRenderer;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
@@ -1376,31 +1376,27 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                           let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
                               let cmd_buffer = Rc::clone(&self.command_buffer);
                               let indent = indent.clone();
-                              self.ui_toolkit.draw_combo_box_with_label("",
-                                                                        |field_type| {
-                                                                            schema.field_type() == *field_type
-                                                                        },
-                                                                        |t| t.to_string(),
-                                                                        &ALL_FIELD_TYPES[..],
-                                                                        move |new_field_type| {
-                                                                            let indent = indent.clone();
-                                                                            let new_field_type = *new_field_type;
-                                                                            cmd_buffer.borrow_mut().add_integrating_command(
-                                                                                move |cont, interp, _executor, _cmd_buffer| {
-                                                                                    let mut env = interp.env.borrow_mut();
-                                                                                    let mut builder = cont
-                                                                                        .get_json_http_client_builder(client_id)
-                                                                                        .unwrap()
-                                                                                        .clone();
-                                                                                    let mut existing_schema = builder.external_schema.unwrap().clone();
-                                                                                    let schema_at_indent = existing_schema.get_mut(&indent).unwrap();
-                                                                                    schema_at_indent.typ = SchemaType::from(new_field_type);
-                                                                                    builder.external_schema = Some(existing_schema);
-                                                                                    builder.rebuild_return_type(&mut env);
-                                                                                    cont.load_json_http_client_builder(builder)
-                                                                                },
-                                                                            )
-                                                                        })
+                              self.draw_schema_field_type_combo_box(&schema.field_type(),
+                                                                    move |new_field_type| {
+                                                                        let indent = indent.clone();
+                                                                        let new_field_type = *new_field_type;
+                                                                        cmd_buffer.borrow_mut().add_integrating_command(
+                                                                            move |cont, interp, _executor, _cmd_buffer| {
+                                                                                let mut env = interp.env.borrow_mut();
+                                                                                let mut builder = cont
+                                                                                    .get_json_http_client_builder(client_id)
+                                                                                    .unwrap()
+                                                                                    .clone();
+                                                                                let mut existing_schema = builder.external_schema.unwrap().clone();
+                                                                                let schema_at_indent = existing_schema.get_mut(&indent).unwrap();
+                                                                                schema_at_indent.typ = SchemaType::from(new_field_type);
+                                                                                builder.external_schema = Some(existing_schema);
+                                                                                builder.rebuild_return_type(&mut env);
+                                                                                cont.load_json_http_client_builder(builder)
+                                                                            },
+                                                                        )
+                                                                    }
+                              )
                           });
                           if should_render_add_field_for_preceding_object {
                               let i : Box<dyn Iterator<Item = _>> = Box::new(std::iter::once(self.render_add_new_field_row(client_id, prev_indent_clone)).chain(std::iter::once([left, right])));
@@ -1411,6 +1407,17 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                           }
                       }).flatten();
         Box::new(i)
+    }
+
+    fn draw_schema_field_type_combo_box(&self,
+                                        current_field_type: &FieldType,
+                                        onchange: impl Fn(&FieldType) + 'static)
+                                        -> T::DrawResult {
+        self.ui_toolkit.draw_combo_box_with_label("",
+                                                  |field_type| current_field_type == field_type,
+                                                  |t| t.to_string(),
+                                                  &ALL_FIELD_TYPES[..],
+                                                  onchange)
     }
 
     fn form_id(&self, client_id: lang::ID, indent: IndentRef) -> u64 {
@@ -1426,30 +1433,68 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                 -> [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2] {
         let form_id = self.form_id(client_id, &indent);
         self.ui_toolkit
-            .draw_form(self.form_id(client_id, &indent), ("New".to_string(), lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+            .draw_form(self.form_id(client_id, &indent), ("New".to_string(), FieldType::Null),
                        &|(field_name, field_type)| {
                            let field_name = field_name.to_string();
                            let field_type = field_type.clone();
 
+                           let field_name2 = field_name.to_string();
+                           let field_type2 = field_type.clone();
+
                            // probably don't actually need to clone this, can't get it to compile
                            let indent = indent.clone();
+                           let indent2 = indent.clone();
 
                            let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-                               self.render_with_indentation_for_field(&indent, &|| {
+                               let field_type = field_type.clone();
+                               let field_name = field_name.clone();
+                               self.render_with_indentation_for_field(&indent, &move || {
+                                   let field_type = field_type.clone();
+                                   let field_name = field_name.clone();
                                        self.ui_toolkit.draw_text_input(&field_name, move |new_field_name| {
                                            T::change_form(form_id, (new_field_name.to_string(), field_type.clone()))
                                        }, || ())
                                    })
                            });
+
                            let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-                               self.render_type_change_combo("", &field_type, |new_field_type| {
-                                   T::change_form(form_id, (field_name, new_field_type))
-                               })
-                               // self.ui_toolkit.draw_text_input("hello", |_| (), || ())
+                               let field_name2 = field_name2.clone();
+                               let indent2 = indent2.clone();
+                               self.ui_toolkit.draw_all_on_same_line(&[
+                                   &move || {
+                                       let field_name2 = field_name2.clone();
+                                       self.draw_schema_field_type_combo_box(&field_type2, move |new_field_type| {
+                                           T::change_form(form_id, (field_name2.clone(), *new_field_type))
+                                       })
+                                   },
+                                   &move || {
+                                       let indent2 = indent2.clone();
+                                       let cmd_buffer = Rc::clone(&self.command_buffer);
+                                       self.ui_toolkit.draw_button("Submit", colorscheme!(adding_color), move || {
+                                           let mut indent2 = indent2.clone();
+                                           indent2.pop();
+                                           cmd_buffer.borrow_mut().add_integrating_command(
+                                               move |cont, interp, _executor, _cmd_buffer| {
+                                                   let mut env = interp.env.borrow_mut();
+                                                   let mut builder = cont
+                                                       .get_json_http_client_builder(client_id)
+                                                       .unwrap()
+                                                       .clone();
+                                                   let mut existing_schema = builder.external_schema.unwrap().clone();
+                                                   let (new_field_name, new_field_type) : (String, FieldType) = T::submit_form(form_id);
+                                                   existing_schema.insert_at(&indent2, new_field_name, new_field_type).unwrap();
+
+                                                   builder.external_schema = Some(existing_schema);
+                                                   builder.rebuild_return_type(&mut env);
+                                                   cont.load_json_http_client_builder(builder)
+                                               },
+                                           )
+                                       })
+                                   }
+                               ])
                            });
                            [left, right]
-                       },
-                       |_| ())
+                       })
     }
 
     fn render_field_identifier(&self, schema: &Schema, indent: IndentRef) -> T::DrawResult {
