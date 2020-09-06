@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use super::json2;
 use crate::json2::{ParsedDocument, Scalar};
@@ -73,12 +72,22 @@ pub struct Schema {
 
 #[derive(Clone, Debug)]
 pub enum SchemaType {
-    String { example: String },
-    Number { example: i128 },
-    Boolean { example: bool },
+    String {
+        example: String,
+    },
+    Number {
+        example: i128,
+    },
+    Boolean {
+        example: bool,
+    },
     Null,
-    List { schema: Box<Schema> },
-    Object { map: HashMap<String, Schema> },
+    List {
+        schema: Box<Schema>,
+    },
+    Object {
+        map: indexmap::IndexMap<String, Schema>,
+    },
     CameFromUnsupportedList,
 }
 
@@ -87,10 +96,48 @@ pub type Indent = Vec<FieldIdentifier>;
 pub type IndentRef<'a> = &'a [FieldIdentifier];
 
 impl Schema {
+    pub fn can_be_deleted(&self) -> bool {
+        match self.field_id {
+            FieldIdentifier::Root => false,
+            FieldIdentifier::Name(_) => true,
+        }
+    }
+
     pub fn new(field_id: FieldIdentifier, typ: SchemaType) -> Self {
         Schema { field_id,
                  typ,
                  optional: false }
+    }
+
+    pub fn is_object(&self) -> bool {
+        match self.typ {
+            SchemaType::Object { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn as_object_mut(
+        &mut self)
+        -> Result<&mut indexmap::IndexMap<String, Schema>, Box<dyn std::error::Error>> {
+        match &mut self.typ {
+            SchemaType::Object { map } => Ok(map),
+            otherwise => Err(format!("expected object, got {:?}", otherwise).into()),
+        }
+    }
+
+    pub fn remove(&mut self,
+                  indent: IndentRef,
+                  field_id: &FieldIdentifier)
+                  -> Result<(), Box<dyn std::error::Error>> {
+        let part_to_modify = self.get_mut(indent)?;
+        let field_name = match field_id {
+            FieldIdentifier::Root => return Err("can't get rid of root".into()),
+            FieldIdentifier::Name(field_name) => field_name,
+        };
+        part_to_modify.as_object_mut()?
+                      .shift_remove(field_name)
+                      .ok_or_else(|| "field doesn't exist".to_string())?;
+        Ok(())
     }
 
     pub fn insert_at(&mut self,
@@ -99,15 +146,11 @@ impl Schema {
                      new_field_type: FieldType)
                      -> Result<(), Box<dyn std::error::Error>> {
         let part_to_modify = self.get_mut(indent)?;
-        match &mut part_to_modify.typ {
-            SchemaType::Object { map } => {
-                let new_schema = Self::new(FieldIdentifier::Name(new_field_name.clone()),
-                                           SchemaType::from(new_field_type));
-                map.insert(new_field_name, new_schema);
-                Ok(())
-            }
-            otherwise => Err(format!("expected object, got {:?}", otherwise).into()),
-        }
+        let new_schema = Self::new(FieldIdentifier::Name(new_field_name.clone()),
+                                   SchemaType::from(new_field_type));
+        part_to_modify.as_object_mut()?
+                      .insert(new_field_name, new_schema);
+        Ok(())
     }
 
     pub fn field_type(&self) -> FieldType {
@@ -122,7 +165,7 @@ impl Schema {
         }
     }
     pub fn get_mut(&mut self, indent: IndentRef) -> Result<&mut Self, Box<dyn std::error::Error>> {
-        if indent.len() == 1 {
+        if indent.len() <= 1 {
             return Ok(self);
         }
 

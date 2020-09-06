@@ -1365,47 +1365,104 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         -> Box<dyn Iterator<Item = [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2]> + 'a> {
         let i = schema.iter_dfs_including_self()
                       .scan(vec![], move |prev_indent, (schema, indent)| {
-                          let should_render_add_field_for_preceding_object = prev_indent.len() > indent.len();
+                          // if the indent level is decreasing, that means we just rendered an object. render add new field 
+                          // immediately below. for the root object, we're appending at the end of this function
+                          let should_render_add_field_for_preceding_object = {
+                              prev_indent.len() > indent.len()
+                          };
                           let prev_indent_clone = prev_indent.clone();
                           *prev_indent = indent.clone();
 
                           let left_indent = indent.clone();
                           let left: Box<dyn Fn() -> T::DrawResult> =
                               Box::new(move || self.render_field_identifier(schema, &left_indent));
-                          let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-                              let cmd_buffer = Rc::clone(&self.command_buffer);
-                              let indent = indent.clone();
-                              self.draw_schema_field_type_combo_box(&schema.field_type(),
-                                                                    move |new_field_type| {
-                                                                        let indent = indent.clone();
-                                                                        let new_field_type = *new_field_type;
-                                                                        cmd_buffer.borrow_mut().add_integrating_command(
-                                                                            move |cont, interp, _executor, _cmd_buffer| {
-                                                                                let mut env = interp.env.borrow_mut();
-                                                                                let mut builder = cont
-                                                                                    .get_json_http_client_builder(client_id)
-                                                                                    .unwrap()
-                                                                                    .clone();
-                                                                                let mut existing_schema = builder.external_schema.unwrap().clone();
-                                                                                let schema_at_indent = existing_schema.get_mut(&indent).unwrap();
-                                                                                schema_at_indent.typ = SchemaType::from(new_field_type);
-                                                                                builder.external_schema = Some(existing_schema);
-                                                                                builder.rebuild_return_type(&mut env);
-                                                                                cont.load_json_http_client_builder(builder)
-                                                                            },
-                                                                        )
-                                                                    }
-                              )
-                          });
+                          let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || self.render_schema_builder_column_right(client_id, &schema, indent.clone()));
                           if should_render_add_field_for_preceding_object {
-                              let i : Box<dyn Iterator<Item = _>> = Box::new(std::iter::once(self.render_add_new_field_row(client_id, prev_indent_clone)).chain(std::iter::once([left, right])));
+                              let i : Box<dyn Iterator<Item = _>> = Box::new(
+                                  std::iter::once(self.render_add_new_field_row(client_id, prev_indent_clone))
+                                      .chain(std::iter::once([left, right])));
                               Some(i)
                           } else {
                               let i : Box<dyn Iterator<Item = _>> = Box::new(std::iter::once([left, right]));
                               Some(i)
                           }
                       }).flatten();
-        Box::new(i)
+
+        // appending at the end of this function, like we said above ^^^
+        if schema.is_object() {
+            Box::new(i.chain(std::iter::once(self.render_add_new_field_row(client_id, vec![]))))
+        } else {
+            Box::new(i)
+        }
+    }
+
+    fn render_schema_builder_column_right(&'a self,
+                                          client_id: lang::ID,
+                                          inner_schema: &Schema,
+                                          indent: Indent)
+                                          -> T::DrawResult {
+        let indent2 = indent.clone();
+        let inner_schema = inner_schema.clone();
+        let inner_schema2 = inner_schema.clone();
+
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &move || {
+                let indent = indent.clone();
+                let inner_schema = inner_schema.clone();
+                let cmd_buffer = Rc::clone(&cmd_buffer);
+                self.draw_schema_field_type_combo_box(
+                                                      &inner_schema.field_type(),
+                                                      move |new_field_type| {
+                                                          let indent = indent.clone();
+                                                          let new_field_type = *new_field_type;
+                                                          cmd_buffer.borrow_mut()
+                        .add_integrating_command(move |cont, interp, _executor, _cmd_buffer| {
+                            let mut env = interp.env.borrow_mut();
+                            let mut builder = cont.get_json_http_client_builder(client_id)
+                                .unwrap()
+                                .clone();
+                            let mut existing_schema = builder.external_schema.unwrap().clone();
+                            let schema_at_indent = existing_schema.get_mut(&indent).unwrap();
+                            schema_at_indent.typ = SchemaType::from(new_field_type);
+                            builder.external_schema = Some(existing_schema);
+                            builder.rebuild_return_type(&mut env);
+                            cont.load_json_http_client_builder(builder)
+                        })
+                                                      },
+                )
+            },
+            &move || {
+                if inner_schema2.can_be_deleted() {
+                    let indent2 = indent2.clone();
+                    let cmd_buffer = Rc::clone(&self.command_buffer);
+                    let inner_schema = inner_schema2.clone();
+                    self.ui_toolkit
+                        .draw_button("-", colorscheme!(danger_color), move || {
+                            let mut indent2 = indent2.clone();
+                            indent2.pop();
+                            let inner_schema = inner_schema.clone();
+                            cmd_buffer.borrow_mut().add_integrating_command(
+                                move |cont, interp, _executor, _cmd_buffer| {
+                                    let mut env = interp.env.borrow_mut();
+                                    let mut builder = cont
+                                        .get_json_http_client_builder(client_id)
+                                        .unwrap()
+                                        .clone();
+                                    let mut entire_schema = builder.external_schema.unwrap().clone();
+                                    entire_schema.remove(&indent2, &inner_schema.field_id).unwrap();
+
+                                    builder.external_schema = Some(entire_schema);
+                                    builder.rebuild_return_type(&mut env);
+                                    cont.load_json_http_client_builder(builder)
+                                },
+                            )
+                        })
+                } else {
+                    self.ui_toolkit.draw_all(&[])
+                }
+            },
+        ])
     }
 
     fn draw_schema_field_type_combo_box(&self,
@@ -1469,7 +1526,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                    &move || {
                                        let indent2 = indent2.clone();
                                        let cmd_buffer = Rc::clone(&self.command_buffer);
-                                       self.ui_toolkit.draw_button("Submit", colorscheme!(adding_color), move || {
+                                       self.ui_toolkit.draw_button("+", colorscheme!(adding_color), move || {
                                            let mut indent2 = indent2.clone();
                                            indent2.pop();
                                            cmd_buffer.borrow_mut().add_integrating_command(
