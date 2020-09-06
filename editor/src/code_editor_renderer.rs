@@ -1294,7 +1294,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                          .nth(most_num_newlines_to_display)
                          .unwrap()
                          .0;
-            format!("{}…", value.chars().take(i).join(""))
+            // TODO: would like to use unicode ellipsis here but need to fix fonts
+            format!("{}...", value.chars().take(i).join(""))
         } else {
             value.to_string()
         };
@@ -1378,14 +1379,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
                                        let new_value = new_value.to_string();
                                        cmd_buffer.borrow_mut().add_editor_command(move |editor| {
-                                           println!("replacing code, inserting new value {:?}", new_value);
                     editor.replace_code(new_node_fn(&new_value))
                 })
                                    },
                                    move || {
                                        cmd_buffer2.borrow_mut().add_editor_command(|editor| {
-                                           editor.mark_as_not_editing();
-                                       })
+                                                                   editor.mark_as_not_editing();
+                                                               })
                                    },
         )
     }

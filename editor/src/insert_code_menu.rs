@@ -10,6 +10,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
 
+use crate::code_editor::get_result_type_from_indexing_into_list;
 use cs::chat_program::ChatProgram;
 use std::collections::HashMap;
 
@@ -858,7 +859,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
         find_all_locals_preceding(
             search_params.insertion_point, code_genie, env_genie)
             .filter_map(|variable| {
-                let list_elem_typ = get_type_from_list(variable.typ)?;
+                let list_elem_typ = get_result_type_from_indexing_into_list(variable.typ)?;
                 if let Some(search_type) = &search_params.return_type {
                     if !search_type.matches(&list_elem_typ) {
                         return None

@@ -9,6 +9,9 @@
     "024247f6-3202-4acc-8d9a-b80a427cda3c": {
       "type": "JoinString"
     },
+    "2a6af5fe-8512-4d03-a018-a549c10cac8a": {
+      "type": "SplitString"
+    },
     "b5c18d63-f9a0-4f08-8ee7-e35b3db9122d": {
       "type": "Print"
     }

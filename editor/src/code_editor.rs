@@ -599,9 +599,7 @@ impl CodeGenie {
             }
             CodeNode::ListIndex(list_index) => {
                 let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie)?;
-                let ok_type = get_type_from_list(list_typ).ok_or("unable to guess type")?;
-                Ok(new_result_with_null_error(ok_type))
-
+                Ok(get_result_type_from_indexing_into_list(list_typ).ok_or("unable to guess type")?)
                 // debug info that i deleted from the old implementation but might still need later:
                 //                let list_typ =
                 //                    self.guess_type(list_index.list_expr.as_ref(), env_genie);
@@ -1338,6 +1336,11 @@ pub fn get_type_from_list(mut typ: lang::Type) -> Option<lang::Type> {
         return None;
     }
     Some(typ.params.remove(0))
+}
+
+pub fn get_result_type_from_indexing_into_list(list_typ: lang::Type) -> Option<lang::Type> {
+    let ok_type = get_type_from_list(list_typ)?;
+    Some(new_result_with_null_error(ok_type))
 }
 
 pub fn update_code_in_env(location: CodeLocation,

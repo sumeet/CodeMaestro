@@ -375,3 +375,57 @@ impl lang::Function for JoinString {
         lang::Type::from_spec(&*lang::STRING_TYPESPEC)
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SplitString {}
+
+#[typetag::serde]
+impl lang::Function for SplitString {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let str = args.get(&self.takes_args()[0].id)
+                      .unwrap()
+                      .as_str()
+                      .unwrap();
+        let delimiter = args.get(&self.takes_args()[1].id)
+                            .unwrap()
+                            .as_str()
+                            .unwrap();
+        let strings = str.split(delimiter)
+                         .map(|str| lang::Value::String(str.to_string()))
+                         .collect();
+        lang::Value::List(lang::Type::from_spec(&*lang::STRING_TYPESPEC), strings)
+    }
+
+    fn name(&self) -> &str {
+        "Split"
+    }
+
+    fn description(&self) -> &str {
+        "Split a string into a list by a delimiter"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("2a6af5fe-8512-4d03-a018-a549c10cac8a").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![
+            lang::ArgumentDefinition::new_with_id(
+                uuid::Uuid::parse_str("401e29a6-afd6-4868-913c-83bef61e9783").unwrap(),
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                "String to split".to_string()),
+            lang::ArgumentDefinition::new_with_id(
+                uuid::Uuid::parse_str("ad4e23c5-233b-466c-b0f5-7662e832adf1").unwrap(),
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                "Delimiter".to_string()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)])
+    }
+}
