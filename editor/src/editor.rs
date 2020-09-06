@@ -1341,11 +1341,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_test_request_results(&self, builder: &JSONHTTPClientBuilder) -> T::DrawResult {
         match builder.test_run_result {
-            Some(Ok(_)) => {
-                // self.render_parsed_doc(builder, builder.test_run_parsed_doc.as_ref().unwrap())
-                self.render_schema_builder(builder.json_http_client_id,
-                                           builder.external_schema.as_ref().unwrap())
-            }
+            Some(Ok(_)) => self.render_schema_builder(builder.json_http_client_id,
+                                                      builder.external_schema.as_ref().unwrap()),
             Some(Err(ref e)) => self.ui_toolkit.draw_text(e),
             None => self.ui_toolkit.draw_all(&[]),
         }
@@ -1469,13 +1466,15 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                  onchange: impl Fn(Schema) + 'static)
                                  -> T::DrawResult {
         let current_schema = current_schema.clone();
+        let current_schema2 = current_schema.clone();
         let onchange = Rc::new(onchange);
-        self.ui_toolkit.draw_all(&[
-            &move || {
-                let onchange = Rc::clone(&onchange);
-                let current_schema = current_schema.clone();
-                let current_field_type = current_schema.field_type();
-                self.ui_toolkit.draw_combo_box_with_label("",
+        let onchange2 = Rc::clone(&onchange);
+        self.ui_toolkit.draw_all_on_same_line(&[&move || {
+                                                    let onchange = Rc::clone(&onchange);
+                                                    let current_schema = current_schema.clone();
+                                                    let current_field_type =
+                                                        current_schema.field_type();
+                                                    self.ui_toolkit.draw_combo_box_with_label("",
                                                           |field_type| {
                                                               current_field_type == *field_type
                                                           },
@@ -1488,11 +1487,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                   SchemaType::from(*newtype);
                                                               onchange(new_schema)
                                                           })
-            },
-            // &|| {
-            //     self.ui_toolkit.draw_checkbox_with_label("Optional")
-            // }
-        ])
+                                                },
+                                                &move || {
+                                                    let current_schema = current_schema2.clone();
+                                                    let onchange = Rc::clone(&onchange2);
+                                                    self.ui_toolkit.draw_checkbox_with_label("Opt?",
+                                                         current_schema.optional,
+                                                         move |is_optional| {
+                                                             let mut new_schema =
+                                                                 current_schema.clone();
+                                                             new_schema.optional = is_optional;
+                                                             onchange(new_schema)
+                                                         })
+                                                }])
     }
 
     fn form_id(&self, client_id: lang::ID, indent: IndentRef) -> u64 {

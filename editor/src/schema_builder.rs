@@ -28,16 +28,6 @@ impl Default for Schema {
     }
 }
 
-// pub fn (ft: &FieldType) -> Self {
-//     match ft {
-//         FieldType::String => SchemaType::String { example: Default::default() },
-//         FieldType::Number => SchemaType::Number { example: Default::default() },
-//         FieldType::Boolean => SchemaType::Boolean { example: Default::default() },
-//         FieldType::Null => SchemaType::Null,
-//         FieldType::Object => SchemaType::Object { map: Default::default() },
-//     }
-// }
-
 impl From<FieldType> for SchemaType {
     fn from(ft: FieldType) -> Self {
         match ft {
