@@ -842,12 +842,12 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                             // use in looking at it
                             if typ.matches_spec(&lang::NULL_TYPESPEC) {
                                 self.ui_toolkit.draw_all_on_same_line(&[
-                                    &|| self.ui_toolkit.draw_buttony_text("", darker_color),
+                                    &|| self.ui_toolkit.draw_buttony_text(&lang::FUNCTION_TYPESPEC.symbol, darker_color),
                                     &|| self.ui_toolkit.draw_buttony_text(name, color),
                                 ])
                             } else {
                                 self.ui_toolkit.draw_all_on_same_line(&[
-                                    &|| self.ui_toolkit.draw_buttony_text(&format!(" {}", sym), darker_color),
+                                    &|| self.ui_toolkit.draw_buttony_text(&format!("{} {}",lang::FUNCTION_TYPESPEC.symbol, sym), darker_color),
                                     &|| self.ui_toolkit.draw_buttony_text(name, color),
 //                                        &|| self.ui_toolkit.draw_text("  "),
 //                                        &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),

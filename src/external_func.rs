@@ -1,6 +1,7 @@
 use super::env;
 use super::function;
 use super::lang;
+use crate::lang::Value;
 use objekt::clone_trait_object;
 use std::collections::HashMap;
 
@@ -62,7 +63,8 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
             lang::Value::Null
             | lang::Value::String(_)
             | lang::Value::Number(_)
-            | lang::Value::Boolean(_) => value,
+            | lang::Value::Boolean(_)
+            | lang::Value::FunctionReference(_) => value,
         }
     })
 }
@@ -91,6 +93,7 @@ fn contains_futures(val: &lang::Value) -> bool {
         lang::Value::Null
         | lang::Value::String(_)
         | lang::Value::Number(_)
-        | lang::Value::Boolean(_) => false,
+        | lang::Value::Boolean(_)
+        | lang::Value::FunctionReference(_) => false,
     }
 }

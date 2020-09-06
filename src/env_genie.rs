@@ -45,6 +45,9 @@ impl<'a> EnvGenie<'a> {
             }
             Value::Enum { variant_id: _variant_id,
                           value, } => self.guess_type_of_value(value),
+            Value::FunctionReference(function_id) => {
+                lang::Type::from_spec(&*lang::FUNCTION_TYPESPEC)
+            }
         }
     }
 

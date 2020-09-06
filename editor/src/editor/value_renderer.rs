@@ -58,8 +58,13 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::Enum { variant_id, value } => {
                 self.render_enum(variant_id, value)
             }
+            Value::FunctionReference(function_id) => {
+                self.render_function_reference(function_id)
+            }
         }
     }
+
+    fn render_function_reference(&self, function_id: &lang::ID) -> T::DrawResult {}
 
     fn render_enum(&self, variant_id: &lang::ID, value: &lang::Value) -> T::DrawResult {
         // TODO: perhaps share this later with the enum literal code (no enum literal yet)
