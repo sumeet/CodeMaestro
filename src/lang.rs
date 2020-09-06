@@ -60,13 +60,6 @@ lazy_static! {
         symbol: "\u{f06a}".to_string(),
         num_params: 0,
     };
-    pub static ref FUNCTION_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
-        readable_name: "Function".to_string(),
-        description: "Reference to a function".into(),
-        id: uuid::Uuid::parse_str("1f9d90f3-3895-4b83-826b-b4f00683d72b").unwrap(),
-        symbol: "".to_string(),
-        num_params: 1,
-    };
 
     pub static ref BUILT_IN_TYPESPECS : Vec<&'static BuiltInTypeSpec> = vec![
         &NULL_TYPESPEC, &BOOLEAN_TYPESPEC, &STRING_TYPESPEC, &NUMBER_TYPESPEC,
@@ -134,7 +127,6 @@ pub enum Value {
     Struct { struct_id: ID, values: StructValues },
     Future(ValueFuture),
     Enum { variant_id: ID, value: Box<Value> },
-    FunctionReference(ID),
 }
 
 impl Value {
