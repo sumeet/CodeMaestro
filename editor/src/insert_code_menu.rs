@@ -1,4 +1,3 @@
-use super::code_editor::get_type_from_list;
 use super::code_editor::CodeGenie;
 use super::code_editor::InsertionPoint;
 use super::code_generation;

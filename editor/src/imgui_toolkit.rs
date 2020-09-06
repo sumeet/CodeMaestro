@@ -11,7 +11,7 @@ use bincode;
 use imgui::*;
 use lazy_static::lazy_static;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
 use std::collections::HashSet;

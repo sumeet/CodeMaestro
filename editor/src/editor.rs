@@ -12,7 +12,6 @@ use super::code_editor;
 use super::code_editor_renderer::CodeEditorRenderer;
 use super::code_generation;
 use super::edit_types;
-use super::json2;
 use super::json_http_client_builder::JSONHTTPClientBuilder;
 use super::save_state;
 use super::ui_toolkit::{SelectableItem, UiToolkit};
@@ -1521,84 +1520,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let indent_padding_px = 16;
         let indent_px = indent_padding_px * (indent.len() - 2) as i16;
         self.ui_toolkit.indent(indent_px, draw_fn)
-    }
-
-    // fn render_parsed_doc(&self,
-    //                      builder: &JSONHTTPClientBuilder,
-    //                      parsed_json: &json2::ParsedDocument)
-    //                      -> T::DrawResult {
-    //     let values = parsed_json.flatten();
-    //     let draw_fns = values.iter().map(|scalar| {
-    //                                     let nesting = scalar.nesting();
-    //                                     move || {
-    //                                         self.ui_toolkit.draw_columns(&[[
-    //                 &|| {
-    //                     let nesting_fmt = nesting.iter()
-    //                                              .map(|nest| match nest {
-    //                                                  Nest::ListElement(n) => n.to_string(),
-    //                                                  Nest::MapKey(key) => key.clone(),
-    //                                              })
-    //                                              .last()
-    //                                              .unwrap();
-    //                     // .join(".");
-    //                     // self.ui_toolkit.draw_text(&nesting_fmt)
-    //                     self.ui_toolkit.draw_text_input(&nesting_fmt, |_| (), || ())
-    //                 },
-    //                 &|| self.render_parsed_doc_value(builder, "value", nesting),
-    //             ]])
-    //                                     }
-    //                                 });
-    //     draw_all_iter!(T::self.ui_toolkit, draw_fns)
-    // }
-
-    fn render_parsed_doc_value(&self,
-                               builder: &JSONHTTPClientBuilder,
-                               value: &str,
-                               nesting: &json2::Nesting)
-                               -> T::DrawResult {
-        let selected_field = builder.get_selected_field(nesting);
-        let cmd_buffer = Rc::clone(&self.command_buffer);
-        let client_id = builder.json_http_client_id;
-        let nesting = nesting.clone();
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &move || {
-                let cmd_buffer = cmd_buffer.clone();
-                let nesting = nesting.clone();
-                self.ui_toolkit.draw_checkbox_with_label(
-                    value,
-                    selected_field.is_some(),
-                    move |newvalue| {
-                        let nesting = nesting.clone();
-                        cmd_buffer.borrow_mut().add_integrating_command(
-                            move |cont, interp, _executor, _cmd_buffer| {
-                                let mut env = interp.env.borrow_mut();
-                                let mut builder = cont
-                                    .get_json_http_client_builder(client_id)
-                                    .unwrap()
-                                    .clone();
-                                if newvalue {
-                                    builder.add_selected_field(nesting, &mut env)
-                                } else {
-                                    builder.remove_selected_field(nesting, &mut env)
-                                }
-                                cont.load_json_http_client_builder(builder)
-                            },
-                        )
-                    },
-                )
-            },
-            &|| {
-                if let Some(selected_field) = selected_field {
-                    let ts = self.env_genie
-                                 .find_typespec(selected_field.typespec_id)
-                                 .unwrap();
-                    self.ui_toolkit
-                        .draw_text(&format!("{} {}", selected_field.name, ts.readable_name()))
-                } else {
-                    self.ui_toolkit.draw_text("")
-                }
-            },
-        ])
     }
 
     fn render_edit_struct(&self, strukt: &structs::Struct, window: &Window) -> T::DrawResult {

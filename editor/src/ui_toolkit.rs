@@ -1,7 +1,7 @@
 // TODO: move Keypress
 use super::editor::Keypress;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 pub type Color = [f32; 4];
 

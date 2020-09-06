@@ -83,35 +83,6 @@ impl JSONHTTPClientBuilder {
                selected_fields: vec![] }
     }
 
-    pub fn get_selected_field(&self, nesting: &json2::Nesting) -> Option<&SelectedField> {
-        self.selected_fields
-            .iter()
-            .find(|field| &field.nesting == nesting)
-    }
-
-    pub fn add_selected_field(&mut self,
-                              nesting: json2::Nesting,
-                              env: &mut env::ExecutionEnvironment) {
-        let field = self.test_run_parsed_doc
-                        .as_ref()
-                        .unwrap()
-                        .find(&nesting)
-                        .expect("couldn't find field for some reason");
-        self.selected_fields
-            .push(SelectedField { name: gen_field_name(&nesting),
-                                  nesting,
-                                  typespec_id: get_typespec_id(field) });
-        self.rebuild_return_type(env)
-    }
-
-    pub fn remove_selected_field(&mut self,
-                                 nesting: json2::Nesting,
-                                 env: &mut env::ExecutionEnvironment) {
-        self.selected_fields
-            .drain_filter(|field| field.nesting == nesting);
-        self.rebuild_return_type(env)
-    }
-
     // this function is where i need to strike next
     pub fn rebuild_return_type(&mut self, env: &mut env::ExecutionEnvironment) {
         // TODO: might not want to denormalize structs, but instead read them off the client
@@ -203,75 +174,9 @@ impl JSONHTTPClientBuilder {
     }
 }
 
-fn gen_field_name(nesting: &json2::Nesting) -> String {
-    nesting.iter()
-           .filter_map(|n| match n {
-               json2::Nest::MapKey(key) => Some(key.as_str()),
-               _ => None,
-           })
-           .last()
-           .unwrap_or("h00000what")
-           .to_string()
-}
-
-fn build_return_type(env_genie: &EnvGenie,
-                     selected_fields: &[SelectedField])
-                     -> Option<ReturnTypeBuilderResult> {
-    let return_type_spec = make_return_type_spec(selected_fields).ok()?;
-    Some(ReturnTypeBuilder::new(NAME_OF_ROOT, env_genie, &return_type_spec).build())
-}
-
 fn build_return_type2(env_genie: &EnvGenie, schema_type: &SchemaType) -> ReturnTypeBuilderResult {
     let return_type_spec = ReturnTypeSpec::from_schema_type(schema_type);
     ReturnTypeBuilder::new(NAME_OF_ROOT, env_genie, &return_type_spec).build()
-}
-
-pub fn get_typespec_id(parsed_doc: &json2::ParsedDocument) -> lang::ID {
-    use json2::ParsedDocument;
-    use json2::Scalar;
-    match parsed_doc {
-        ParsedDocument::Scalar(Scalar::Null { .. }) => lang::NULL_TYPESPEC.id,
-        ParsedDocument::Scalar(Scalar::Bool { .. }) => lang::BOOLEAN_TYPESPEC.id,
-        ParsedDocument::Scalar(Scalar::String { .. }) => lang::STRING_TYPESPEC.id,
-        ParsedDocument::Scalar(Scalar::Number { .. }) => lang::NUMBER_TYPESPEC.id,
-        ParsedDocument::NonHomogeneousCantParse { .. }
-        | ParsedDocument::EmptyCantInfer { .. }
-        | ParsedDocument::Map { .. }
-        | ParsedDocument::List { .. } => {
-            panic!("we don't support selecting these types, smth's wrong")
-        }
-    }
-}
-
-fn make_return_type_spec(selected_fields: &[SelectedField]) -> Result<ReturnTypeSpec, &str> {
-    if selected_fields.is_empty() {
-        return Err("no selected fields");
-    }
-
-    if selected_fields.len() == 1 && selected_fields[0].nesting.is_empty() {
-        return Ok(ReturnTypeSpec::Scalar { typespec_id: selected_fields[0].typespec_id });
-    }
-
-    // this is a placeholder, really this could be anything, it has to be initialized to something,
-    // it'll be mutated below
-    let mut return_type_spec = ReturnTypeSpec::Struct(BTreeMap::new());
-    for selected_field in selected_fields {
-        let scalar = ReturnTypeSpec::Scalar { typespec_id: selected_field.typespec_id };
-
-        let mut current_return_type_spec = &mut return_type_spec;
-        for nest in &selected_field.nesting {
-            match nest {
-                json2::Nest::MapKey(key) => {
-                    current_return_type_spec =
-                        current_return_type_spec.insert_key(key, scalar.clone());
-                }
-                json2::Nest::ListElement(_) => {
-                    current_return_type_spec = current_return_type_spec.into_list(scalar.clone());
-                }
-            }
-        }
-    }
-    Ok(return_type_spec)
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Debug)]
@@ -306,28 +211,6 @@ impl ReturnTypeSpec {
             SchemaType::CameFromUnsupportedList => {
                 panic!("schema contained either heterogeneous list or empty list, no handling for this yet")
             }
-        }
-    }
-
-    fn insert_key(&mut self, key: &String, rts: ReturnTypeSpec) -> &mut ReturnTypeSpec {
-        match self {
-            ReturnTypeSpec::Struct(map) => map.entry(key.clone()).or_insert(rts),
-            ReturnTypeSpec::List(box of) => of.insert_key(key, rts),
-            // in this instance, the Scalar acts as a placeholder. let's clobber it!
-            ReturnTypeSpec::Scalar { .. } => {
-                *self = ReturnTypeSpec::Struct(BTreeMap::new());
-                self.insert_key(key, rts)
-            }
-        }
-    }
-
-    fn into_list(&mut self, rts: ReturnTypeSpec) -> &mut ReturnTypeSpec {
-        match self {
-            ReturnTypeSpec::Struct(_) | ReturnTypeSpec::Scalar { .. } => {
-                *self = ReturnTypeSpec::List(Box::new(rts));
-                self
-            }
-            ReturnTypeSpec::List(_) => self,
         }
     }
 }

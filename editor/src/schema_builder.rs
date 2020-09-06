@@ -99,12 +99,10 @@ impl Schema {
                      new_field_type: FieldType)
                      -> Result<(), Box<dyn std::error::Error>> {
         let part_to_modify = self.get_mut(indent)?;
-        println!("indent_ref: {:?}", indent);
         match &mut part_to_modify.typ {
             SchemaType::Object { map } => {
                 let new_schema = Self::new(FieldIdentifier::Name(new_field_name.clone()),
                                            SchemaType::from(new_field_type));
-                println!("keys: {:?}", map.keys().collect::<Vec<_>>());
                 map.insert(new_field_name, new_schema);
                 Ok(())
             }
