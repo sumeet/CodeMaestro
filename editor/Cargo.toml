@@ -17,7 +17,7 @@ serde_json = "*"
 objekt = "*"
 http = "0.1.19"
 gen-iter = {git = "https://github.com/sumeet/gen-iter"}
-
+bincode = "1.3.1"
 matches = "0.1.8"
 rand = {version = "0.7.3", features = ["stdweb"]}
 # gotta copy and paste this from super for some reason

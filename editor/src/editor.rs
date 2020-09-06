@@ -58,6 +58,7 @@ mod value_renderer;
 use crate::code_editor::CodeLocation;
 use crate::code_editor_renderer::BLACK_COLOR;
 use crate::schema_builder::{FieldIdentifier, Schema};
+use std::hash::{Hash, Hasher};
 use value_renderer::ValueRenderer;
 
 #[derive(Debug, Copy, Clone)]
@@ -1412,29 +1413,43 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         Box::new(i)
     }
 
+    fn form_id(&self, client_id: lang::ID, indent: IndentRef) -> u64 {
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        client_id.hash(&mut hasher);
+        indent.hash(&mut hasher);
+        hasher.finish()
+    }
+
     fn render_add_new_field_row(&'a self,
                                 client_id: lang::ID,
                                 indent: Indent)
                                 -> [Box<(dyn Fn() -> T::DrawResult + 'a)>; 2] {
-        [unimplemented!(), unimplemented!()]
-        // self.ui_toolkit
-        //     .draw_form(("New", lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
-        //                &move |(field_name, field_type)| {
-        //                    // probably don't actually need to clone this, can't get it to compile
-        //                    let indent = indent.clone();
-        //
-        //                    let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-        //                        self.render_with_indentation_for_field(&indent, &|| {
-        //                                self.ui_toolkit.draw_text_input(field_name, |_| (), || ())
-        //                            })
-        //                    });
-        //                    let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
-        //                        self.render_type_change_combo("", &field_type, |_| ())
-        //                        // self.ui_toolkit.draw_text_input("hello", |_| (), || ())
-        //                    });
-        //                    [left, right]
-        //                },
-        //                |_| ())
+        let form_id = self.form_id(client_id, &indent);
+        self.ui_toolkit
+            .draw_form(self.form_id(client_id, &indent), ("New".to_string(), lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+                       &|(field_name, field_type)| {
+                           let field_name = field_name.to_string();
+                           let field_type = field_type.clone();
+
+                           // probably don't actually need to clone this, can't get it to compile
+                           let indent = indent.clone();
+
+                           let left: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                               self.render_with_indentation_for_field(&indent, &|| {
+                                       self.ui_toolkit.draw_text_input(&field_name, move |new_field_name| {
+                                           T::change_form(form_id, (new_field_name.to_string(), field_type.clone()))
+                                       }, || ())
+                                   })
+                           });
+                           let right: Box<dyn Fn() -> T::DrawResult> = Box::new(move || {
+                               self.render_type_change_combo("", &field_type, |new_field_type| {
+                                   T::change_form(form_id, (field_name, new_field_type))
+                               })
+                               // self.ui_toolkit.draw_text_input("hello", |_| (), || ())
+                           });
+                           [left, right]
+                       },
+                       |_| ())
     }
 
     fn render_field_identifier(&self, schema: &Schema, indent: IndentRef) -> T::DrawResult {

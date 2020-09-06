@@ -55,7 +55,7 @@ impl Display for FieldType {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Hash)]
 pub enum FieldIdentifier {
     Root,
     Name(String),

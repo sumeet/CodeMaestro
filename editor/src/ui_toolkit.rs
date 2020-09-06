@@ -1,5 +1,7 @@
 // TODO: move Keypress
 use super::editor::Keypress;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 
 pub type Color = [f32; 4];
 
@@ -110,11 +112,13 @@ pub trait UiToolkit {
         onenter: E)
         -> Self::DrawResult;
 
-    fn draw_form<T: 'static, R>(&self,
-                                initial_values: T,
-                                draw_form_fn: &dyn Fn(&T) -> R,
-                                ondone: impl Fn(&T) + 'static)
-                                -> R;
+    fn draw_form<T: Serialize + DeserializeOwned + 'static, R>(&self,
+                                                               form_id: u64,
+                                                               initial_values: T,
+                                                               draw_form_fn: &dyn Fn(&T) -> R,
+                                                               ondone: impl Fn(&T) + 'static)
+                                                               -> R;
+    fn change_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64, to: T);
     fn draw_combo_box_with_label<F, G, H, T>(&self,
                                              label: &str,
                                              is_item_selected: G,
