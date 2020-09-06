@@ -20,6 +20,14 @@ pub enum FieldType {
     Object,
 }
 
+impl Default for Schema {
+    fn default() -> Self {
+        Self { field_id: FieldIdentifier::Name("New".to_string()),
+               typ: SchemaType::Null,
+               optional: false }
+    }
+}
+
 // pub fn (ft: &FieldType) -> Self {
 //     match ft {
 //         FieldType::String => SchemaType::String { example: Default::default() },
@@ -55,13 +63,13 @@ impl Display for FieldType {
     }
 }
 
-#[derive(Clone, Debug, Hash)]
+#[derive(Clone, Debug, Hash, Serialize, Deserialize)]
 pub enum FieldIdentifier {
     Root,
     Name(String),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Schema {
     pub field_id: FieldIdentifier,
     pub typ: SchemaType,
@@ -70,7 +78,7 @@ pub struct Schema {
     // pub inferred: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum SchemaType {
     String {
         example: String,
@@ -96,6 +104,13 @@ pub type Indent = Vec<FieldIdentifier>;
 pub type IndentRef<'a> = &'a [FieldIdentifier];
 
 impl Schema {
+    pub fn field_name(&self) -> Result<&str, Box<dyn std::error::Error>> {
+        match &self.field_id {
+            FieldIdentifier::Root => Err("root doesn't have a field name".into()),
+            FieldIdentifier::Name(name) => Ok(name),
+        }
+    }
+
     pub fn can_be_deleted(&self) -> bool {
         match self.field_id {
             FieldIdentifier::Root => false,
@@ -142,14 +157,11 @@ impl Schema {
 
     pub fn insert_at(&mut self,
                      indent: IndentRef,
-                     new_field_name: String,
-                     new_field_type: FieldType)
+                     new_schema: Self)
                      -> Result<(), Box<dyn std::error::Error>> {
         let part_to_modify = self.get_mut(indent)?;
-        let new_schema = Self::new(FieldIdentifier::Name(new_field_name.clone()),
-                                   SchemaType::from(new_field_type));
         part_to_modify.as_object_mut()?
-                      .insert(new_field_name, new_schema);
+                      .insert(new_schema.field_name()?.into(), new_schema);
         Ok(())
     }
 
