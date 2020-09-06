@@ -1411,7 +1411,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 let indent = indent.clone();
                 let inner_schema = inner_schema.clone();
                 let cmd_buffer = Rc::clone(&cmd_buffer);
-                self.draw_schema_field_type_combo_box(
+                self.draw_schema_field_options(
                                                       &inner_schema.field_type(),
                                                       move |new_field_type| {
                                                           let indent = indent.clone();
@@ -1465,15 +1465,26 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         ])
     }
 
-    fn draw_schema_field_type_combo_box(&self,
-                                        current_field_type: &FieldType,
-                                        onchange: impl Fn(&FieldType) + 'static)
-                                        -> T::DrawResult {
-        self.ui_toolkit.draw_combo_box_with_label("",
-                                                  |field_type| current_field_type == field_type,
-                                                  |t| t.to_string(),
-                                                  &ALL_FIELD_TYPES[..],
-                                                  onchange)
+    fn draw_schema_field_options(&self,
+                                 current_field_type: &FieldType,
+                                 onchange: impl Fn(&FieldType) + 'static)
+                                 -> T::DrawResult {
+        let onchange = Rc::new(onchange);
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                let onchange = Rc::clone(&onchange);
+                self.ui_toolkit.draw_combo_box_with_label("",
+                                                          |field_type| {
+                                                              current_field_type == field_type
+                                                          },
+                                                          |t| t.to_string(),
+                                                          &ALL_FIELD_TYPES[..],
+                                                          move |newtype| onchange(newtype))
+            },
+            // &|| {
+            //     self.ui_toolkit.draw_checkbox_with_label("Optional")
+            // }
+        ])
     }
 
     fn form_id(&self, client_id: lang::ID, indent: IndentRef) -> u64 {
@@ -1519,7 +1530,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                self.ui_toolkit.draw_all_on_same_line(&[
                                    &move || {
                                        let field_name2 = field_name2.clone();
-                                       self.draw_schema_field_type_combo_box(&field_type2, move |new_field_type| {
+                                       self.draw_schema_field_options(&field_type2, move |new_field_type| {
                                            T::change_form(form_id, (field_name2.clone(), *new_field_type))
                                        })
                                    },
