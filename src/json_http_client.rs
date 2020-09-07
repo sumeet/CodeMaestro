@@ -8,7 +8,7 @@ use super::result::Result;
 use super::structs;
 
 use crate::builtins::{get_ok_type_from_result_type, ok_result_value};
-use crate::code_generation;
+use crate::{code_generation, enums};
 use http;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -304,11 +304,22 @@ fn serde_value_to_lang_value(value: &serde_json::Value,
         if let Some(value) = serde_value_into_struct(value.clone(), strukt, env) {
             return Ok(value);
         }
+    } else if let Some(eneom) = env.find_enum(into_type.typespec_id) {
+        if let Some(value) = serde_value_into_eneom(value.clone(), eneom, env) {
+            return Ok(value);
+        }
     }
     Err(format!("couldn't decode {:?} into {:?}", value, into_type))
 }
 
 // helper function to `serde_value_to_lang_value`
+fn serde_value_into_eneom(mut value: serde_json::Value,
+                          eneom: &enums::Enum,
+                          env: &env::ExecutionEnvironment)
+                          -> Option<lang::Value> {
+    unimplemented!()
+}
+
 fn serde_value_into_struct(mut value: serde_json::Value,
                            strukt: &structs::Struct,
                            env: &env::ExecutionEnvironment)

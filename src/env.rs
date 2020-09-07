@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use crate::builtins::err_result_value;
 use crate::builtins::ok_result_value;
-use crate::EnvGenie;
+use crate::{enums, EnvGenie};
 use failure::_core::fmt::Formatter;
 use itertools::Itertools;
 use std::convert::TryInto;
@@ -339,6 +339,11 @@ impl ExecutionEnvironment {
     pub fn find_struct(&self, id: lang::ID) -> Option<&structs::Struct> {
         self.find_typespec(id)
             .and_then(|ts| ts.downcast_ref::<structs::Struct>())
+    }
+
+    pub fn find_enum(&self, id: lang::ID) -> Option<&enums::Enum> {
+        self.find_typespec(id)
+            .and_then(|ts| ts.downcast_ref::<enums::Enum>())
     }
 
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {

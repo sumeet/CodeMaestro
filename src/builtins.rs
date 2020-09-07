@@ -25,6 +25,8 @@ lazy_static! {
         uuid::Uuid::parse_str("04ae1441-8499-4ea1-9ecb-8a547e941e8d").unwrap();
     pub static ref RESULT_ENUM_ID: uuid::Uuid =
         uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap();
+    pub static ref OPTION_ENUM_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("f580d95e-2b63-4790-a061-4ddc3d6d21b8").unwrap();
     pub static ref HTTP_FORM_PARAM_STRUCT_ID: uuid::Uuid =
         uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap();
     pub static ref MESSAGE_STRUCT_ID: uuid::Uuid =
@@ -237,6 +239,11 @@ impl lang::Function for Capitalize {
     fn returns(&self) -> lang::Type {
         lang::Type::from_spec(&*lang::STRING_TYPESPEC)
     }
+}
+
+pub fn new_option(some_type: lang::Type) -> lang::Type {
+    lang::Type { typespec_id: *OPTION_ENUM_ID,
+                 params: vec![some_type] }
 }
 
 pub fn new_result_with_null_error(ok_type: lang::Type) -> lang::Type {

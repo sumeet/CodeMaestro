@@ -8,7 +8,7 @@ use super::json2;
 use crate::schema_builder;
 use crate::schema_builder::{Schema, SchemaType};
 use cs::await_eval_result;
-use cs::builtins::new_result;
+use cs::builtins::{new_option, new_result};
 use cs::env;
 use cs::env_genie::EnvGenie;
 use cs::json_http_client::{fetch_json, serde_value_to_lang_value_wrapped_in_enum, JSONHTTPClient};
@@ -48,9 +48,12 @@ impl HTTPResponseIntermediateValue {
     pub fn from_builder(env: &env::ExecutionEnvironment,
                         builder: &JSONHTTPClientBuilder)
                         -> Option<Self> {
-        value_response_for_test_output(env,
-                                       builder.test_run_result.as_ref()?.as_ref().ok()?,
-                                       builder.return_type_candidate.as_ref()?).ok()
+        // value_response_for_test_output(env,
+        //                                builder.test_run_result.as_ref()?.as_ref().ok()?,
+        //                                builder.return_type_candidate.as_ref()?).ok()
+        Some(value_response_for_test_output(env,
+                                            builder.test_run_result.as_ref()?.as_ref().ok()?,
+                                            builder.return_type_candidate.as_ref()?).unwrap())
     }
 }
 
@@ -99,8 +102,9 @@ impl JSONHTTPClientBuilder {
             return;
         }
 
+        let external_schema = self.external_schema.as_ref().unwrap();
         self.return_type_candidate =
-            Some(build_return_type2(&env_genie, &self.external_schema.as_ref().unwrap().typ));
+            Some(build_return_type(&env_genie, &external_schema.typ, external_schema.optional));
         // TODO: inside here, append the structs to the actual JSON HTTP function, and also
         // stick them into the environment
         if self.return_type_candidate.is_none() {
@@ -174,8 +178,11 @@ impl JSONHTTPClientBuilder {
     }
 }
 
-fn build_return_type2(env_genie: &EnvGenie, schema_type: &SchemaType) -> ReturnTypeBuilderResult {
-    let return_type_spec = ReturnTypeSpec::from_schema_type(schema_type);
+fn build_return_type(env_genie: &EnvGenie,
+                     schema_type: &SchemaType,
+                     optional: bool)
+                     -> ReturnTypeBuilderResult {
+    let return_type_spec = ReturnTypeSpec::from_schema_type(schema_type, optional);
     ReturnTypeBuilder::new(NAME_OF_ROOT, env_genie, &return_type_spec).build()
 }
 
@@ -184,11 +191,12 @@ pub enum ReturnTypeSpec {
     Struct(BTreeMap<String, ReturnTypeSpec>),
     List(Box<ReturnTypeSpec>),
     Scalar { typespec_id: lang::ID },
+    Optional(Box<ReturnTypeSpec>),
 }
 
 impl ReturnTypeSpec {
-    pub fn from_schema_type(schema_type: &SchemaType) -> Self {
-        match schema_type {
+    pub fn from_schema_type(schema_type: &SchemaType, optional: bool) -> Self {
+        let return_type_spec = match schema_type {
             SchemaType::String { example: _ } => {
                 ReturnTypeSpec::Scalar { typespec_id: lang::STRING_TYPESPEC.id }
             }
@@ -200,17 +208,22 @@ impl ReturnTypeSpec {
             }
             SchemaType::Null => ReturnTypeSpec::Scalar { typespec_id: lang::NULL_TYPESPEC.id },
             SchemaType::List { schema } => {
-                ReturnTypeSpec::List(Box::new(Self::from_schema_type(&schema.typ)))
+                ReturnTypeSpec::List(Box::new(Self::from_schema_type(&schema.typ, schema.optional)))
             }
             SchemaType::Object { map } => {
                 let return_type_spec_by_name = map.iter().map(|(field_name, inner_schema)| {
-                    (field_name.to_owned(), Self::from_schema_type(&inner_schema.typ))
+                    (field_name.to_owned(), Self::from_schema_type(&inner_schema.typ, inner_schema.optional))
                 }).collect();
                 ReturnTypeSpec::Struct(return_type_spec_by_name)
             }
             SchemaType::CameFromUnsupportedList => {
                 panic!("schema contained either heterogeneous list or empty list, no handling for this yet")
             }
+        };
+        if optional {
+            Self::Optional(Box::new(return_type_spec))
+        } else {
+            return_type_spec
         }
     }
 }
@@ -275,6 +288,13 @@ impl<'a> ReturnTypeBuilder<'a> {
                 //structs_to_be_added.dedup_by_key(|s| normalize_struct_fields(&s.fields));
                 ReturnTypeBuilderResult { structs_to_be_added,
                                           typ: lang::Type::from_spec_id(typespec_id, vec![]) }
+            }
+            ReturnTypeSpec::Optional(inner_return_type_spec) => {
+                let mut result = ReturnTypeBuilder::new(self.current_field_name,
+                                                        self.env_genie,
+                                                        inner_return_type_spec.as_ref()).build();
+                result.typ = new_option(result.typ);
+                result
             }
         }
     }

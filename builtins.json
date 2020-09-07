@@ -44,6 +44,28 @@
         }
       ]
     },
+    "f580d95e-2b63-4790-a061-4ddc3d6d21b8": {
+      "type": "Enum",
+      "name": "Option",
+      "description": "Represents either a value or no-value",
+      "id": "f580d95e-2b63-4790-a061-4ddc3d6d21b8",
+      "symbol": "\uF059",
+      "variants": [
+        {
+          "name": "Some",
+          "id": "8049bbb7-ab7e-4b5f-89f8-b248a1e68ca6",
+          "variant_type": null
+        },
+        {
+          "name": "None",
+          "id": "373bd161-d7a0-40b5-9cbe-91bfa449d1e4",
+          "variant_type": {
+            "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+            "params": []
+          }
+        }
+      ]
+    },
     "ffd15538-175e-4f60-8acd-c24222ddd664": {
       "type": "Enum",
       "name": "Result",
