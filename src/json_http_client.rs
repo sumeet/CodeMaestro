@@ -7,8 +7,10 @@ use super::lang;
 use super::result::Result;
 use super::structs;
 
-use crate::builtins::{get_ok_type_from_result_type, ok_result_value};
-use crate::{code_generation, enums};
+use crate::builtins::{
+    get_ok_type_from_result_type, none_option_value, ok_result_value, some_option_value,
+};
+use crate::code_generation;
 use http;
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -304,20 +306,26 @@ fn serde_value_to_lang_value(value: &serde_json::Value,
         if let Some(value) = serde_value_into_struct(value.clone(), strukt, env) {
             return Ok(value);
         }
-    } else if let Some(eneom) = env.find_enum(into_type.typespec_id) {
-        if let Some(value) = serde_value_into_eneom(value.clone(), eneom, env) {
-            return Ok(value);
-        }
+    } else if into_type.matches_spec_id(*builtins::OPTION_ENUM_ID) {
+        return serde_value_into_option(value.clone(), &into_type.params[0], env).map_err(|e| {
+                                                                                    e.to_string()
+                                                                                });
     }
     Err(format!("couldn't decode {:?} into {:?}", value, into_type))
 }
 
 // helper function to `serde_value_to_lang_value`
-fn serde_value_into_eneom(mut value: serde_json::Value,
-                          eneom: &enums::Enum,
-                          env: &env::ExecutionEnvironment)
-                          -> Option<lang::Value> {
-    unimplemented!()
+fn serde_value_into_option(value: serde_json::Value,
+                           some_type: &lang::Type,
+                           env: &env::ExecutionEnvironment)
+                           -> std::result::Result<lang::Value, Box<dyn std::error::Error>> {
+    if value.is_null() {
+        Ok(none_option_value())
+    } else {
+        Ok(some_option_value(serde_value_to_lang_value(&value,
+                                                       some_type,
+                                                       env)?))
+    }
 }
 
 fn serde_value_into_struct(mut value: serde_json::Value,
@@ -333,6 +341,13 @@ fn serde_value_into_struct(mut value: serde_json::Value,
         strukt.fields
               .iter()
               .map(|strukt_field| {
+                  if strukt_field.field_type
+                                 .matches_spec_id(*builtins::OPTION_ENUM_ID)
+                     && !map.contains_key(&strukt_field.name)
+                  {
+                      return Some((strukt_field.id, none_option_value()));
+                  }
+
                   let js_obj = map.remove(&strukt_field.name)?;
                   Some((strukt_field.id,
                         serde_value_to_lang_value(&js_obj, &strukt_field.field_type, env).ok()?))

@@ -13,6 +13,13 @@ pub struct Enum {
 }
 
 impl Enum {
+    // TODO: should `variants` be an indexmap instead?
+    pub fn get_variant_by_id(&self, variant_id: lang::ID) -> Option<&EnumVariant> {
+        self.variants
+            .iter()
+            .find(|variant| variant.id == variant_id)
+    }
+
     pub fn new() -> Self {
         Self { name: "New Enum".to_string(),
                description: "".to_string(),

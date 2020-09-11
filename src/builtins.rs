@@ -25,8 +25,16 @@ lazy_static! {
         uuid::Uuid::parse_str("04ae1441-8499-4ea1-9ecb-8a547e941e8d").unwrap();
     pub static ref RESULT_ENUM_ID: uuid::Uuid =
         uuid::Uuid::parse_str("ffd15538-175e-4f60-8acd-c24222ddd664").unwrap();
+    pub static ref RESULT_OK_VARIANT_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("f70c799a-1d63-4293-889d-55c07a7456a0").unwrap();
+    pub static ref RESULT_ERROR_VARIANT_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("9f22e23e-d9b9-49c2-acf2-43a59598ea86").unwrap();
     pub static ref OPTION_ENUM_ID: uuid::Uuid =
         uuid::Uuid::parse_str("f580d95e-2b63-4790-a061-4ddc3d6d21b8").unwrap();
+    pub static ref OPTION_SOME_VARIANT_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("8049bbb7-ab7e-4b5f-89f8-b248a1e68ca6").unwrap();
+    pub static ref OPTION_NONE_VARIANT_ID: uuid::Uuid =
+        uuid::Uuid::parse_str("373bd161-d7a0-40b5-9cbe-91bfa449d1e4").unwrap();
     pub static ref HTTP_FORM_PARAM_STRUCT_ID: uuid::Uuid =
         uuid::Uuid::parse_str("b6566a28-8257-46a9-aa29-39d9add25173").unwrap();
     pub static ref MESSAGE_STRUCT_ID: uuid::Uuid =
@@ -35,10 +43,6 @@ lazy_static! {
         uuid::Uuid::parse_str("36052afd-cf12-4146-bbc7-f9df04148b73").unwrap();
     pub static ref CHAT_REPLY_MESSAGE_ARG_ID: uuid::Uuid =
         uuid::Uuid::parse_str("95bbed9a-6757-43c5-8e74-b15862e300c8").unwrap();
-    pub static ref RESULT_OK_VARIANT_ID: uuid::Uuid =
-        uuid::Uuid::parse_str("f70c799a-1d63-4293-889d-55c07a7456a0").unwrap();
-    pub static ref RESULT_ERROR_VARIANT_ID: uuid::Uuid =
-        uuid::Uuid::parse_str("9f22e23e-d9b9-49c2-acf2-43a59598ea86").unwrap();
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -106,6 +110,16 @@ pub fn new_message(sender: String, argument_text: String, full_text: String) -> 
                          uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(argument_text),
                          uuid::Uuid::parse_str("9a8d9059-a729-4660-b440-8ee7c411e70a").unwrap() => lang::Value::String(full_text),
                      })
+}
+
+pub fn some_option_value(value: lang::Value) -> lang::Value {
+    lang::Value::Enum { variant_id: *OPTION_SOME_VARIANT_ID,
+                        value: Box::new(value) }
+}
+
+pub fn none_option_value() -> lang::Value {
+    lang::Value::Enum { variant_id: *OPTION_NONE_VARIANT_ID,
+                        value: Box::new(lang::Value::Null) }
 }
 
 pub fn ok_result_value(value: lang::Value) -> lang::Value {

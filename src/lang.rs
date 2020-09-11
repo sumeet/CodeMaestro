@@ -314,7 +314,11 @@ impl Type {
 
     // XXX: idk if this is right but it'll at least get me farther i think
     pub fn matches_spec(&self, spec: &BuiltInTypeSpec) -> bool {
-        self.typespec_id == spec.id
+        self.matches_spec_id(spec.id)
+    }
+
+    pub fn matches_spec_id(&self, spec_id: ID) -> bool {
+        self.typespec_id == spec_id
     }
 }
 
