@@ -81,7 +81,6 @@ impl CodeEditor {
         // don't perform any commands when in edit mode
         match (self.editing, &keypress.key, &keypress.shift, &keypress.ctrl) {
             (true, Key::Escape, _, _) => {
-                println!("escape_out_of_auytocomplete");
                 self.escape_out_of_autocomplete_and_undo();
             }
             (false, Key::Escape, _, _) => {
