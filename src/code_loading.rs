@@ -67,6 +67,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function
         "JoinString" => Box::new(builtins::JoinString {}),
         "SplitString" => Box::new(builtins::SplitString {}),
         "HTTPRequest" => Box::new(builtins::HTTPRequest {}),
+        "Map" => Box::new(builtins::Map {}),
         "Print" => Box::new(builtins::Print {}),
         "JSONHTTPClient" => Box::new(serde_json::from_value::<JSONHTTPClient>(value)?),
         "ChatProgram" => Box::new(serde_json::from_value::<ChatProgram>(value)?),

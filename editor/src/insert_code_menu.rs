@@ -26,6 +26,7 @@ lazy_static! {
         Box::new(InsertMatchOptionGenerator {}),
         Box::new(InsertAssignmentOptionGenerator {}),
         Box::new(InsertLiteralOptionGenerator {}),
+        Box::new(InsertBlockOptionGenerator {}),
     ];
 }
 
@@ -933,5 +934,34 @@ impl InsertConditionalOptionGenerator {
                                is_selected: false,
                                new_node:
                                    code_generation::new_conditional(&search_params.return_type) }
+    }
+}
+
+#[derive(Clone)]
+struct InsertBlockOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertBlockOptionGenerator {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        if search_params.return_type.is_none() {
+            return vec![];
+        }
+        let return_type =  search_params.return_type.as_ref().unwrap();
+        if !return_type.matches_spec(&*lang::ANON_FUNC_TYPESPEC) {
+            return vec![];
+        }
+        // TODO: this could also return FunctionReferences
+        vec![
+            InsertCodeMenuOption {
+                sort_key: "block".to_string(),
+                new_node: lang::CodeNode::Block(lang::Block::new()),
+                is_selected: false,
+                group_name: "Functions",
+
+            }
+        ]
     }
 }

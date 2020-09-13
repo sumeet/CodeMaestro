@@ -450,3 +450,50 @@ impl lang::Function for SplitString {
                                 vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)])
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Map {}
+
+#[typetag::serde]
+impl lang::Function for Map {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        unimplemented!()
+    }
+
+    fn name(&self) -> &str {
+        "Map"
+    }
+
+    fn description(&self) -> &str {
+        "Map"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("7add6e8d-0f89-4958-a435-bad3c9066927").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![
+            lang::ArgumentDefinition::new_with_id(
+                uuid::Uuid::parse_str("75ac0660-6814-4d17-8444-481237581f16").unwrap(),
+                lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                    vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)]),
+                "What to map over".to_string()),
+            lang::ArgumentDefinition::new_with_id(
+                uuid::Uuid::parse_str("1ae3bf22-a2ab-4bd0-af5f-193385284b7d").unwrap(),
+                lang::Type::with_params(&*lang::ANON_FUNC_TYPESPEC,
+                                    vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                                        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+                                    ]),
+                "Function thing".to_string()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                vec![lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)])
+    }
+}

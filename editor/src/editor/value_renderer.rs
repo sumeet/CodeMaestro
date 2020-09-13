@@ -58,6 +58,9 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::Enum { variant_id, value } => {
                 self.render_enum(variant_id, value)
             }
+            Value::AnonymousFunction(_) => {
+                panic!("don't worry about rendering functions")
+            }
         }
     }
 
@@ -87,6 +90,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             | Value::Number(_)
             | Value::Future(_) => true,
             Value::Enum { .. } | Value::List(_, _) | Value::Struct { .. } => false,
+            Value::AnonymousFunction(_) => panic!("unimplemented"),
         };
         if is_scalar {
             self.nesting_renderer.draw_nested(&|| self.render(value))

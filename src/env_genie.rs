@@ -45,6 +45,12 @@ impl<'a> EnvGenie<'a> {
             }
             Value::Enum { variant_id: _variant_id,
                           value, } => self.guess_type_of_value(value),
+            Value::AnonymousFunction(anonymous_function) => {
+                lang::Type::with_params(&*lang::ANON_FUNC_TYPESPEC, vec![
+                    anonymous_function.takes_arg.arg_type.clone(),
+                    anonymous_function.returns.clone(),
+                ])
+            }
         }
     }
 

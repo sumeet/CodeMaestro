@@ -60,10 +60,18 @@ lazy_static! {
         symbol: "\u{f06a}".to_string(),
         num_params: 0,
     };
+    pub static ref ANON_FUNC_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
+        readable_name: "Function".to_string(),
+        description: "Anonymous function (block)".into(),
+        id: uuid::Uuid::parse_str("92fe8555-2f8c-4ae5-aca6-42353f6dc888").unwrap(),
+        // TODO: put in font awesome (f) symbol in here
+        symbol: "f".to_string(),
+        num_params: 2,
+    };
 
     pub static ref BUILT_IN_TYPESPECS : Vec<&'static BuiltInTypeSpec> = vec![
         &NULL_TYPESPEC, &BOOLEAN_TYPESPEC, &STRING_TYPESPEC, &NUMBER_TYPESPEC,
-        &LIST_TYPESPEC, &ERROR_TYPESPEC];
+        &LIST_TYPESPEC, &ERROR_TYPESPEC, &ANON_FUNC_TYPESPEC];
 }
 
 #[typetag::serde(tag = "type")]
@@ -127,6 +135,14 @@ pub enum Value {
     Struct { struct_id: ID, values: StructValues },
     Future(ValueFuture),
     Enum { variant_id: ID, value: Box<Value> },
+    AnonymousFunction(AnonymousFunction),
+}
+
+#[derive(Clone, Debug)]
+pub struct AnonymousFunction {
+    pub takes_arg: ArgumentDefinition,
+    pub returns: Type,
+    pub expressions: Vec<CodeNode>,
 }
 
 impl Value {
