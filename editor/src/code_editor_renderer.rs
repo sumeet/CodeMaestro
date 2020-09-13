@@ -703,7 +703,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                .unwrap())
                                },
                                ChildRegionHeight::FitContent,
-                               None::<&dyn Fn() -> T::DrawResult>,
+                               Some(&|| self.draw_right_click_menu()),
                                None::<fn(Keypress)>)
     }
 
