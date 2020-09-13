@@ -61,11 +61,11 @@ lazy_static! {
         num_params: 0,
     };
     pub static ref ANON_FUNC_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
-        readable_name: "Function".to_string(),
-        description: "Anonymous function (block)".into(),
+        readable_name: "Executable code".to_string(),
+        description: "Callback code that can be run".into(),
         id: uuid::Uuid::parse_str("92fe8555-2f8c-4ae5-aca6-42353f6dc888").unwrap(),
         // TODO: put in font awesome (f) symbol in here
-        symbol: "f".to_string(),
+        symbol: "ｆ".to_string(),
         num_params: 2,
     };
 
@@ -105,6 +105,7 @@ pub enum CodeNode {
     NullLiteral(ID),
     Assignment(Assignment),
     Block(Block),
+    AnonymousFunction(AnonymousFunction),
     VariableReference(VariableReference),
     Placeholder(Placeholder),
     StructLiteral(StructLiteral),
@@ -117,6 +118,7 @@ pub enum CodeNode {
     ListIndex(ListIndex),
 }
 
+use crate::code_generation::new_block;
 use futures_util::future::Shared;
 use futures_util::FutureExt;
 use std::collections::BTreeMap;
@@ -138,11 +140,22 @@ pub enum Value {
     AnonymousFunction(AnonymousFunction),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct AnonymousFunction {
+    pub id: ID,
+    // TODO: take more than one argument
     pub takes_arg: ArgumentDefinition,
     pub returns: Type,
-    pub expressions: Vec<CodeNode>,
+    pub block: Box<CodeNode>,
+}
+
+impl AnonymousFunction {
+    pub fn new(takes_arg: ArgumentDefinition, returns: Type) -> Self {
+        Self { id: new_id(),
+               takes_arg,
+               returns,
+               block: Box::new(CodeNode::Block(new_block(vec![]))) }
+    }
 }
 
 impl Value {
@@ -446,6 +459,9 @@ impl CodeNode {
             CodeNode::Match(mach) => format!("Match: {}", mach.id),
             CodeNode::StructFieldGet(sfg) => format!("Struct field get: {}", sfg.id),
             CodeNode::ListIndex(list_index) => format!("List index: {}", list_index.id),
+            CodeNode::AnonymousFunction(anon_func) => {
+                format!("Anonymous function: {}", anon_func.id)
+            }
         }
     }
 
@@ -470,6 +486,7 @@ impl CodeNode {
             CodeNode::Match(mach) => mach.id,
             CodeNode::StructFieldGet(sfg) => sfg.id,
             CodeNode::ListIndex(list_index) => list_index.id,
+            CodeNode::AnonymousFunction(anon_func) => anon_func.id,
         }
     }
 
@@ -538,6 +555,9 @@ impl CodeNode {
                 iter::once(list_index.list_expr.as_ref())
                     .chain(iter::once(list_index.index_expr.as_ref())),
             ),
+            CodeNode::AnonymousFunction(anon_func) => {
+                Box::new(std::iter::once(anon_func.block.as_ref()))
+            }
         }
     }
 
@@ -589,6 +609,7 @@ impl CodeNode {
             CodeNode::StructFieldGet(sfg) => vec![sfg.struct_expr.borrow_mut()],
             CodeNode::ListIndex(list_index) => vec![list_index.list_expr.borrow_mut(),
                                                     list_index.index_expr.borrow_mut(),],
+            CodeNode::AnonymousFunction(anon_func) => vec![anon_func.block.borrow_mut()],
         }
     }
 

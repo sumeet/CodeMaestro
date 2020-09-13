@@ -11,6 +11,8 @@ use objekt::clone_trait_object;
 
 use crate::code_editor::get_result_type_from_indexing_into_list;
 use cs::chat_program::ChatProgram;
+use cs::code_generation::new_anon_func;
+use cs::lang::ArgumentDefinition;
 use std::collections::HashMap;
 
 lazy_static! {
@@ -949,19 +951,21 @@ impl InsertCodeMenuOptionGenerator for InsertBlockOptionGenerator {
         if search_params.return_type.is_none() {
             return vec![];
         }
-        let return_type =  search_params.return_type.as_ref().unwrap();
+        let return_type = search_params.return_type.as_ref().unwrap();
         if !return_type.matches_spec(&*lang::ANON_FUNC_TYPESPEC) {
             return vec![];
         }
-        // TODO: this could also return FunctionReferences
-        vec![
-            InsertCodeMenuOption {
-                sort_key: "block".to_string(),
-                new_node: lang::CodeNode::Block(lang::Block::new()),
-                is_selected: false,
-                group_name: "Functions",
 
-            }
-        ]
+        // TODO: takes_arg is hardcoded to string, how can this be a configurable type?
+        // how to set the short_name?
+        let takes_arg = ArgumentDefinition::new(lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                                                "short name needs to be set".into());
+
+        // TODO: this could also return FunctionReferences (doesn't exist yet) in addition to
+        // AnonymousFunction
+        vec![InsertCodeMenuOption { sort_key: "block".to_string(),
+                                    new_node: new_anon_func(takes_arg, return_type.clone()),
+                                    is_selected: false,
+                                    group_name: "Executable Code" }]
     }
 }

@@ -1,5 +1,6 @@
 use crate::enums::Enum;
 use crate::lang;
+use crate::lang::AnonymousFunction;
 use crate::structs;
 use std::collections::BTreeMap;
 
@@ -122,6 +123,10 @@ pub fn new_block(inside_block: Vec<lang::CodeNode>) -> lang::Block {
     let mut block = lang::Block::new();
     block.expressions = inside_block;
     block
+}
+
+pub fn new_anon_func(takes_arg: lang::ArgumentDefinition, returns: lang::Type) -> lang::CodeNode {
+    lang::CodeNode::AnonymousFunction(AnonymousFunction::new(takes_arg, returns))
 }
 
 pub fn new_match(eneom: &Enum,

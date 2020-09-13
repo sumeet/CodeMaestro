@@ -604,6 +604,11 @@ impl CodeGenie {
                 //                    self.guess_type(list_index.list_expr.as_ref(), env_genie);
                 //                panic!(format!("couldn't extract list element from {:?}", list_typ))
             }
+            CodeNode::AnonymousFunction(anon_func) => {
+                // TODO: could possibly use type inference here w/ the last element of the block...
+                // or should this be definable some other way? or inferred another way?
+                Ok(anon_func.returns.clone())
+            }
         }
     }
 

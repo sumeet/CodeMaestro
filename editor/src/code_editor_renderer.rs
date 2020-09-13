@@ -21,7 +21,7 @@ use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use cs::env_genie::EnvGenie;
 use cs::lang;
-use cs::lang::CodeNode;
+use cs::lang::{AnonymousFunction, CodeNode};
 use cs::structs;
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
@@ -623,6 +623,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             }
             CodeNode::NumberLiteral(_) => Some(lang::NUMBER_TYPESPEC.description.clone()),
             CodeNode::ListIndex(_) => None,
+            CodeNode::AnonymousFunction(anon_func) => {
+                Some("Executable code that can be passed around like data, and executed later. Sometimes referred to as a \"callback\"".into())
+            }
         }
     }
 
@@ -677,6 +680,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 }
                 CodeNode::StructFieldGet(sfg) => self.render_struct_field_get(&sfg),
                 CodeNode::ListIndex(list_index) => self.render_list_index(&list_index),
+                CodeNode::AnonymousFunction(anon_func) => self.render_anonymous_function(anon_func),
             }
         };
 
@@ -687,6 +691,20 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         } else {
             self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
         }
+    }
+
+    pub fn render_anonymous_function(&self, anon_func: &AnonymousFunction) -> T::DrawResult {
+        self.ui_toolkit
+            .draw_child_region(colorscheme!(input_bg_color),
+                               &|| {
+                                   self.render_block(&anon_func.block
+                                                               .as_ref()
+                                                               .into_block()
+                                                               .unwrap())
+                               },
+                               ChildRegionHeight::FitContent,
+                               None::<&dyn Fn() -> T::DrawResult>,
+                               None::<fn(Keypress)>)
     }
 
     pub fn render_context_menu(&self,
@@ -719,9 +737,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::ListIndex(_) => {
                 self.render_general_code_context_menu(draw_code_fn, code_node_id)
             }
-            CodeNode::FunctionCall(_) | CodeNode::Block(_) | CodeNode::Argument(_) => {
-                draw_code_fn()
-            }
+            CodeNode::FunctionCall(_)
+            | CodeNode::Block(_)
+            | CodeNode::Argument(_)
+            | CodeNode::AnonymousFunction(_) => draw_code_fn(),
         }
     }
 

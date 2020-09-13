@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use crate::builtins::err_result_value;
 use crate::builtins::ok_result_value;
+use crate::lang::CodeNode;
 use crate::{enums, EnvGenie};
 use failure::_core::fmt::Formatter;
 use itertools::Itertools;
@@ -205,6 +206,7 @@ impl Interpreter {
                     ok_result_value(vec.remove(index_usize))
                 })
             }
+            CodeNode::AnonymousFunction(anon_func) => self.evaluate(anon_func.block.as_ref()),
         }
     }
 
