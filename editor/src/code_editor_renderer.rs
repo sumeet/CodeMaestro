@@ -750,7 +750,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                         -> <T as UiToolkit>::DrawResult {
         self.ui_toolkit.context_menu(draw_code_fn, &|| {
                            self.ui_toolkit.draw_all(&[
-                // Replace is probably the first menu item
+                &|| {
+                    if self.code_editor.can_be_replaced(code_node_id_to_act_on) {
+                        let cmd_buffer = Rc::clone(&self.command_buffer);
+                        self.ui_toolkit.draw_menu_item("Replace", move || {
+                            cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                editor.enter_replace_for_node(code_node_id_to_act_on);
+                            })
+                        })
+                    } else {
+                        self.ui_toolkit.draw_all(&[])
+                    }
+                },
                 &|| {
                     let cmd_buffer = Rc::clone(&self.command_buffer);
                     self.ui_toolkit

@@ -227,6 +227,29 @@ impl CodeEditor {
         self.mark_as_editing(InsertionPoint::Wrap(node_id));
     }
 
+    pub fn enter_replace_for_node(&mut self, node_id: lang::ID) {
+        let insertion_point = self.insertion_point_for_replace(node_id).unwrap();
+        self.mark_as_editing(insertion_point);
+    }
+
+    pub fn can_be_replaced(&self, node_id: lang::ID) -> bool {
+        self.insertion_point_for_replace(node_id).is_some()
+    }
+
+    pub fn insertion_point_for_replace(&self, node_id: lang::ID) -> Option<InsertionPoint> {
+        match self.code_genie.find_parent(node_id)? {
+            lang::CodeNode::StructLiteralField(cn) => {
+                let id = cn.id;
+                Some(InsertionPoint::StructLiteralField(id))
+            }
+            lang::CodeNode::Argument(_)
+            | lang::CodeNode::Assignment(_)
+            | lang::CodeNode::Block(_)
+            | lang::CodeNode::ListIndex(_) => Some(InsertionPoint::Replace(node_id)),
+            _ => None,
+        }
+    }
+
     pub fn try_enter_wrap_for_selected_node(&mut self) -> Option<()> {
         self.enter_wrap_for_node(self.selected_node_id?);
         Some(())
@@ -234,20 +257,8 @@ impl CodeEditor {
 
     fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
         let selected_node_id = self.selected_node_id?;
-        match self.code_genie.find_parent(selected_node_id)? {
-            lang::CodeNode::StructLiteralField(cn) => {
-                let id = cn.id;
-                self.mark_as_editing(InsertionPoint::StructLiteralField(id));
-            }
-            lang::CodeNode::Argument(_)
-            | lang::CodeNode::Assignment(_)
-            | lang::CodeNode::Block(_)
-            | lang::CodeNode::ListIndex(_) => {
-                self.mark_as_editing(InsertionPoint::Replace(selected_node_id));
-            }
-            _ => (),
-        }
-        Some(())
+        let insertion_point = self.insertion_point_for_replace(selected_node_id)?;
+        self.mark_as_editing(insertion_point)
     }
 
     fn get_selected_node(&self) -> Option<&lang::CodeNode> {
