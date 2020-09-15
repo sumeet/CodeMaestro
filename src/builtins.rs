@@ -457,10 +457,26 @@ pub struct Map {}
 #[typetag::serde]
 impl lang::Function for Map {
     fn call(&self,
-            _interpreter: env::Interpreter,
+            mut interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        unimplemented!()
+        let what_to_map_over = args.get(&self.takes_args()[0].id)
+                                   .unwrap()
+                                   .as_vec()
+                                   .unwrap();
+        let map_fn = args.get(&self.takes_args()[1].id)
+                         .unwrap()
+                         .as_anon_func()
+                         .unwrap();
+        let mapped =
+            what_to_map_over.iter()
+                            .map(|value| {
+                                interpreter.set_local_variable(map_fn.takes_arg.id, value.clone());
+                                lang::Value::new_future(interpreter.evaluate(map_fn.block.as_ref()))
+                            })
+                            .collect::<Vec<_>>();
+        // this could be a List<map_fn.returns> once this is generic
+        lang::Value::List(self.returns(), mapped)
     }
 
     fn name(&self) -> &str {
@@ -495,5 +511,44 @@ impl lang::Function for Map {
     fn returns(&self) -> lang::Type {
         lang::Type::with_params(&*lang::LIST_TYPESPEC,
                                 vec![lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)])
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ParseNumber {}
+
+#[typetag::serde]
+impl lang::Function for ParseNumber {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let val = args.get(&self.takes_args()[0].id).unwrap();
+        let num = val.as_str().unwrap().parse().unwrap_or(0);
+        lang::Value::Number(num)
+    }
+
+    fn name(&self) -> &str {
+        "ParseNumber"
+    }
+
+    fn description(&self) -> &str {
+        "Turns a String into a Number, returns 0 if it can't parse (TODO FIXME)"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("fd49253c-3661-413f-b78c-25f20f8e3473").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![
+            lang::ArgumentDefinition::new_with_id(
+                uuid::Uuid::parse_str("f99f9d51-2ec7-4fce-9471-14b4c800110b").unwrap(),
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC), "String to convert".into())
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
     }
 }

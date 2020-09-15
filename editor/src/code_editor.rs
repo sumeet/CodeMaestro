@@ -510,6 +510,13 @@ impl CodeGenie {
             .is_some()
     }
 
+    pub fn find_all_anon_funcs<'a>(&'a self)
+                                   -> impl Iterator<Item = &'a lang::AnonymousFunction> + 'a {
+        self.code
+            .self_with_all_children_dfs()
+            .filter_map(|code_node| code_node.as_anon_func().ok())
+    }
+
     pub fn find_all_variables_referencing_assignment(
         &self,
         assignment_id: lang::ID)
@@ -663,6 +670,14 @@ impl CodeGenie {
                 prev = node;
             }
         })
+    }
+
+    pub fn find_anon_funcs_preceding<'a>(
+        &'a self,
+        node_id: lang::ID)
+        -> impl Iterator<Item = &'a lang::AnonymousFunction> + 'a {
+        self.all_parents_of(node_id)
+            .filter_map(|code| code.as_anon_func().ok())
     }
 
     pub fn find_enum_variant_preceding_by_assignment_id<'a>(&'a self,

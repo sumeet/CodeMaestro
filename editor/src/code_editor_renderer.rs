@@ -924,10 +924,22 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             return Some((arg.short_name, arg.arg_type));
         }
         // variables can also refer to enum variants
+        if let Some(match_variant) =
+            self.code_editor
+                .code_genie
+                .find_enum_variant_by_assignment_id(variable_reference.assignment_id,
+                                                    self.env_genie)
+        {
+            return Some((match_variant.enum_variant.name, match_variant.typ));
+        }
+
+        // anonymous function arguments
         self.code_editor
             .code_genie
-            .find_enum_variant_by_assignment_id(variable_reference.assignment_id, self.env_genie)
-            .map(|match_variant| (match_variant.enum_variant.name, match_variant.typ))
+            .find_all_anon_funcs()
+            .map(|anon_func| &anon_func.takes_arg)
+            .find(|arg_def| arg_def.id == variable_reference.assignment_id)
+            .map(|arg_def| (arg_def.short_name.clone(), arg_def.arg_type.clone()))
     }
 
     // TODO: combine the insertion point stuff with the insertion point stuff elsewhere, mainly

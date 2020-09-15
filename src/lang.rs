@@ -167,6 +167,13 @@ impl Value {
         FutureExt::shared(Box::pin(async_fn))
     }
 
+    pub fn as_anon_func(&self) -> Option<&AnonymousFunction> {
+        match self {
+            Value::AnonymousFunction(af) => Some(af),
+            _ => None,
+        }
+    }
+
     // should we use TryFrom / TryInto here...
     pub fn as_boolean(&self) -> Option<bool> {
         match self {
@@ -352,6 +359,13 @@ impl Type {
 }
 
 impl CodeNode {
+    pub fn as_anon_func(&self) -> Result<&AnonymousFunction, Box<dyn std::error::Error>> {
+        match self {
+            CodeNode::AnonymousFunction(ref af) => Ok(af),
+            _ => Err(format!("expected anonymous func, got {:?} instead", self).into()),
+        }
+    }
+
     pub fn as_function_call(&self) -> Result<&FunctionCall, Box<dyn std::error::Error>> {
         match self {
             CodeNode::FunctionCall(ref fc) => Ok(fc),

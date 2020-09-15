@@ -493,12 +493,28 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     }
 }
 
+fn find_anon_func_args_for<'a>(insertion_point: InsertionPoint,
+                               code_genie: &'a CodeGenie,
+                               _env_genie: &'a EnvGenie)
+                               -> impl Iterator<Item = Variable> + 'a {
+    let (node_id, _) = assignment_search_position(insertion_point);
+    code_genie.find_anon_funcs_preceding(node_id)
+              .map(|anon_func| {
+                  let arg = &anon_func.takes_arg;
+                  Variable { variable_type: VariableType::Argument,
+                             locals_id: arg.id,
+                             typ: arg.arg_type.clone(),
+                             name: arg.short_name.clone() }
+              })
+}
+
 fn find_all_locals_preceding<'a>(insertion_point: InsertionPoint,
                                  code_genie: &'a CodeGenie,
                                  env_genie: &'a EnvGenie)
                                  -> impl Iterator<Item = Variable> + 'a {
     find_assignments_and_function_args_preceding(insertion_point, code_genie, env_genie)
         .chain(find_enum_variants_preceding(insertion_point, code_genie, env_genie))
+        .chain(find_anon_func_args_for(insertion_point, code_genie, env_genie))
 }
 
 fn find_assignments_and_function_args_preceding<'a>(insertion_point: InsertionPoint,
@@ -958,8 +974,8 @@ impl InsertCodeMenuOptionGenerator for InsertBlockOptionGenerator {
 
         // TODO: takes_arg is hardcoded to string, how can this be a configurable type?
         // how to set the short_name?
-        let takes_arg = ArgumentDefinition::new(lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                                                "short name needs to be set".into());
+        let takes_arg =
+            ArgumentDefinition::new(lang::Type::from_spec(&*lang::STRING_TYPESPEC), "var".into());
 
         // TODO: this could also return FunctionReferences (doesn't exist yet) in addition to
         // AnonymousFunction

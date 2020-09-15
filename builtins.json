@@ -17,6 +17,9 @@
     },
     "7add6e8d-0f89-4958-a435-bad3c9066927": {
       "type": "Map"
+    },
+    "fd49253c-3661-413f-b78c-25f20f8e3473": {
+      "type": "ParseNumber"
     }
   },
   "typespecs": {
