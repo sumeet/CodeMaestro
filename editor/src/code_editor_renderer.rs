@@ -623,7 +623,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             }
             CodeNode::NumberLiteral(_) => Some(lang::NUMBER_TYPESPEC.description.clone()),
             CodeNode::ListIndex(_) => None,
-            CodeNode::AnonymousFunction(anon_func) => {
+            CodeNode::AnonymousFunction(_) => {
                 Some("Executable code that can be passed around like data, and executed later. Sometimes referred to as a \"callback\"".into())
             }
         }
@@ -695,7 +695,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     pub fn render_anonymous_function(&self, anon_func: &AnonymousFunction) -> T::DrawResult {
         self.ui_toolkit
-            .draw_child_region(colorscheme!(input_bg_color),
+            .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| {
                                    self.render_block(&anon_func.block
                                                                .as_ref()

@@ -961,8 +961,8 @@ struct InsertBlockOptionGenerator {}
 impl InsertCodeMenuOptionGenerator for InsertBlockOptionGenerator {
     fn options(&self,
                search_params: &CodeSearchParams,
-               code_genie: &CodeGenie,
-               env_genie: &EnvGenie)
+               _code_genie: &CodeGenie,
+               _env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
         if search_params.return_type.is_none() {
             return vec![];

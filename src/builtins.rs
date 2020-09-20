@@ -475,16 +475,15 @@ impl lang::Function for Map {
                                 lang::Value::new_future(interpreter.evaluate(map_fn.block.as_ref()))
                             })
                             .collect::<Vec<_>>();
-        // this could be a List<map_fn.returns> once this is generic
-        lang::Value::List(self.returns(), mapped)
+        lang::Value::List(map_fn.returns.clone(), mapped)
     }
 
     fn name(&self) -> &str {
-        "Map"
+        "Transform"
     }
 
     fn description(&self) -> &str {
-        "Map"
+        "Transforms a List of items into a new List, applying a function to each element. This is sometimes called \"Map\" in other programming languages."
     }
 
     fn id(&self) -> lang::ID {

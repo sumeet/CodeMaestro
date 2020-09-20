@@ -167,10 +167,10 @@ impl Value {
         FutureExt::shared(Box::pin(async_fn))
     }
 
-    pub fn as_anon_func(&self) -> Option<&AnonymousFunction> {
+    pub fn as_anon_func(&self) -> Result<&AnonymousFunction, Box<dyn std::error::Error>> {
         match self {
-            Value::AnonymousFunction(af) => Some(af),
-            _ => None,
+            Value::AnonymousFunction(af) => Ok(af),
+            otherwise => Err(format!("expected AnonFunc but got {:?}", otherwise).into()),
         }
     }
 
