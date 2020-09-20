@@ -245,8 +245,12 @@ impl CodeEditor {
             lang::CodeNode::Argument(_)
             | lang::CodeNode::Assignment(_)
             | lang::CodeNode::Block(_)
+            | lang::CodeNode::ListLiteral(_)
             | lang::CodeNode::ListIndex(_) => Some(InsertionPoint::Replace(node_id)),
-            _ => None,
+            otherwise => {
+                println!("otherwise: {:?}", otherwise);
+                None
+            }
         }
     }
 
