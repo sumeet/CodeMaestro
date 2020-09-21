@@ -324,15 +324,61 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static>(&self,
-                                                                         label: &str,
-                                                                         existing_value: &str,
-                                                                         onchange: F)
-                                                                         -> Self::DrawResult {
+    fn draw_columns<const N: usize>(&self,
+                                    draw_fn_groups: &[[DrawFnRef<Self>; N]])
+                                    -> Self::DrawResult {
+        html! {
+            <table>
+                { for draw_fn_groups.iter().map(|draw_fns| html! {
+                    <tr>
+                        { for draw_fns.iter().map(|draw_fn| html! {
+                        <td>{ draw_fn() }</td>
+                        }) }
+                    </tr>
+                }) }
+            </table>
+        }
+    }
+
+    fn draw_form<T: Serialize + DeserializeOwned + 'static, R>(&self,
+                                                               _form_id: u64,
+                                                               initial_values: T,
+                                                               draw_form_fn: &dyn Fn(&T) -> R)
+                                                               -> R {
+        draw_form_fn(&initial_values)
+    }
+
+    fn change_form<T: Serialize + DeserializeOwned + 'static>(_form_id: u64, _to: T) {
+        unimplemented!()
+    }
+
+    fn submit_form<T: Serialize + DeserializeOwned + 'static>(_form_id: u64) -> T {
+        unimplemented!()
+    }
+
+    fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static, E: Fn() + 'static>(
+        &self,
+        label: &str,
+        existing_value: &str,
+        onchange: F,
+        onenter: E)
+        -> Self::DrawResult {
         html! {
             <div>
                 <textarea rows=5, value=existing_value,
-                          oninput=self.callback(move |e: InputData| { onchange(&e.value) ; Msg::Redraw }), >
+                          onkeypress=self.callback(move |e: KeyPressEvent| {
+                            if e.key() != "Enter" {
+                                return Msg::DontRedraw;
+                            }
+                            if e.shift_key() || e.ctrl_key() {
+                                Msg::DontRedraw
+                            } else {
+                                onenter() ; Msg::Redraw
+                            }
+                          }),
+                          oninput=self.callback(move |e: InputData| {
+                               onchange(&e.value) ; Msg::Redraw
+                           }), >
                 </textarea>
                 <label>{{ label }}</label>
             </div>
@@ -554,6 +600,9 @@ impl UiToolkit for YewToolkit {
             ChildRegionHeight::ExpandFill { min_height } => {
                 ("flex: 1; margin-top: 0px;",
                  format!("min-height: {}px; height: 100%;", min_height))
+            }
+            ChildRegionHeight::FitContent => {
+                ("flex: 1; margin-top: 0px;", "min-height: 100%; height: 100%;".to_owned())
             }
             ChildRegionHeight::Pixels(px) => ("margin-top: 0px;", format!("height: {}px;", px)),
         };
@@ -1402,6 +1451,8 @@ fn vtag(html: Html) -> VTag {
     }
 }
 
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use stdweb::unstable::TryFrom;
 use stdweb::web::Node;
 
