@@ -1333,7 +1333,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let most_num_newlines_to_display = 2;
         let inner_value = if value.matches("\n").count() >= most_num_newlines_to_display {
             let i = value.match_indices("\n")
-                         .nth(most_num_newlines_to_display)
+                         .nth(most_num_newlines_to_display - 1)
                          .unwrap()
                          .0;
             // TODO: would like to use unicode ellipsis here but need to fix fonts
@@ -1356,6 +1356,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                    number_literal.id)
     }
 
+    // TODO: this is where i need to look for things that can be edited
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
         // this is kind of a mess. render_insert_code_node() does `focus` inside of
         // it. the other parts of the branch need to be wrapped in focus() but not
