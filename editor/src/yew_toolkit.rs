@@ -365,8 +365,9 @@ impl UiToolkit for YewToolkit {
         -> Self::DrawResult {
         html! {
             <div>
-                <textarea rows=5, value=existing_value,
+                <textarea rows=5,
                           onkeypress=self.callback(move |e: KeyPressEvent| {
+                            e.stop_propagation();
                             if e.key() != "Enter" {
                                 return Msg::DontRedraw;
                             }
@@ -379,6 +380,7 @@ impl UiToolkit for YewToolkit {
                           oninput=self.callback(move |e: InputData| {
                                onchange(&e.value) ; Msg::Redraw
                            }), >
+                   {{ existing_value }}
                 </textarea>
                 <label>{{ label }}</label>
             </div>
@@ -735,7 +737,7 @@ impl UiToolkit for YewToolkit {
     fn draw_buttony_text(&self, label: &str, color: [f32; 4]) -> Self::DrawResult {
         html! {
             <button class="fit-content",
-                style=format!("color: white; background-color: {}; display: block; border: none; outline: none;", rgba(color)), >
+                style=format!("white-space: pre; color: white; background-color: {}; display: block; border: none; outline: none;", rgba(color)), >
                 { symbolize_text(label) }
             </button>
         }
