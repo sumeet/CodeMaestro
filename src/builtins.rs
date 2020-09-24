@@ -1,6 +1,8 @@
 use super::code_loading;
 use super::env;
 use super::lang;
+use crate::await_eval_result;
+use futures_util::future::join_all;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use maplit::hashmap;
@@ -457,29 +459,37 @@ pub struct Map {}
 #[typetag::serde]
 impl lang::Function for Map {
     fn call(&self,
-            mut interpreter: env::Interpreter,
-            args: HashMap<lang::ID, lang::Value>)
+            interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let what_to_map_over = args.get(&self.takes_args()[0].id)
+        let what_to_map_over = args.remove(&self.takes_args()[0].id)
                                    .unwrap()
-                                   .as_vec()
+                                   .into_vec()
                                    .unwrap();
-        let map_fn = args.get(&self.takes_args()[1].id)
+        let map_fn = args.remove(&self.takes_args()[1].id)
                          .unwrap()
-                         .as_anon_func()
+                         .into_anon_func()
                          .unwrap();
-        let mapped =
-            what_to_map_over.iter()
-                            .map(|value| {
-                                interpreter.set_local_variable(map_fn.takes_arg.id, value.clone());
-                                lang::Value::new_future(interpreter.evaluate(map_fn.block.as_ref()))
-                            })
-                            .collect::<Vec<_>>();
-        lang::Value::List(map_fn.returns.clone(), mapped)
+        lang::Value::new_future(async move {
+            let mapped =
+                what_to_map_over.into_iter()
+                                .map(|value| {
+                                    let mut interpreter = interpreter.shallow_copy();
+                                    let map_fn = map_fn.clone();
+                                    async move {
+                                        interpreter.set_local_variable(map_fn.takes_arg.id,
+                                                                       value);
+                                        await_eval_result!(interpreter.evaluate(map_fn.block
+                                                                                      .as_ref()))
+                                    }
+                                });
+            let joined = join_all(mapped).await;
+            lang::Value::List(map_fn.returns, joined)
+        })
     }
 
     fn name(&self) -> &str {
-        "Transform"
+        "Transform (Map)"
     }
 
     fn description(&self) -> &str {

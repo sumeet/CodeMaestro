@@ -159,6 +159,13 @@ impl AnonymousFunction {
 }
 
 impl Value {
+    pub fn into_anon_func(self) -> Result<AnonymousFunction, Box<dyn std::error::Error>> {
+        match self {
+            Value::AnonymousFunction(af) => Ok(af),
+            otherwise => Err(format!("expected AnonFunc but got {:?}", otherwise).into()),
+        }
+    }
+
     pub fn new_future(async_fn: impl Future<Output = Value> + 'static) -> Value {
         Value::Future(Self::new_value_future(async_fn))
     }
