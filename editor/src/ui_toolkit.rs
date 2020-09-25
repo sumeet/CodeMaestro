@@ -1,7 +1,24 @@
 // TODO: move Keypress
 use super::editor::Keypress;
+use lazy_static::lazy_static;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+
+lazy_static! {
+    static ref TK_CACHE: Arc<Mutex<TkCache>> = Arc::new(Mutex::new(TkCache::new()));
+}
+
+struct TkCache {
+    forms: HashMap<u64, Vec<u8>>,
+}
+
+impl TkCache {
+    fn new() -> Self {
+        TkCache { forms: HashMap::new() }
+    }
+}
 
 pub type Color = [f32; 4];
 
@@ -116,9 +133,26 @@ pub trait UiToolkit {
                                                                form_id: u64,
                                                                initial_values: T,
                                                                draw_form_fn: &dyn Fn(&T) -> R)
-                                                               -> R;
-    fn change_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64, to: T);
-    fn submit_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64) -> T;
+                                                               -> R {
+        let mut cache = TK_CACHE.lock().unwrap();
+        let entry = cache.forms
+                         .entry(form_id)
+                         .or_insert_with(|| bincode::serialize(&initial_values).unwrap());
+        draw_form_fn(&bincode::deserialize(entry.as_slice()).unwrap())
+    }
+
+    fn submit_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64) -> T {
+        let t = TK_CACHE.lock().unwrap().forms.remove(&form_id).unwrap();
+        bincode::deserialize(t.as_slice()).unwrap()
+    }
+
+    fn change_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64, to: T) {
+        TK_CACHE.lock()
+                .unwrap()
+                .forms
+                .insert(form_id, bincode::serialize(&to).unwrap());
+    }
+
     fn draw_combo_box_with_label<F, G, H, T>(&self,
                                              label: &str,
                                              is_item_selected: G,

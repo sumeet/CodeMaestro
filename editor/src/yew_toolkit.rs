@@ -340,22 +340,6 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    fn draw_form<T: Serialize + DeserializeOwned + 'static, R>(&self,
-                                                               _form_id: u64,
-                                                               initial_values: T,
-                                                               draw_form_fn: &dyn Fn(&T) -> R)
-                                                               -> R {
-        draw_form_fn(&initial_values)
-    }
-
-    fn change_form<T: Serialize + DeserializeOwned + 'static>(_form_id: u64, _to: T) {
-        unimplemented!()
-    }
-
-    fn submit_form<T: Serialize + DeserializeOwned + 'static>(_form_id: u64) -> T {
-        unimplemented!()
-    }
-
     fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static, E: Fn() + 'static>(
         &self,
         label: &str,
@@ -1453,8 +1437,6 @@ fn vtag(html: Html) -> VTag {
     }
 }
 
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use stdweb::unstable::TryFrom;
 use stdweb::web::Node;
 

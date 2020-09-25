@@ -7,11 +7,8 @@ use nfd;
 
 use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
-use bincode;
 use imgui::*;
 use lazy_static::lazy_static;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
@@ -64,7 +61,6 @@ impl ChildRegion {
 }
 
 struct TkCache {
-    forms: HashMap<u64, Vec<u8>>,
     current_window_label: Option<ImString>,
     child_regions: HashMap<String, ChildRegion>,
     windows: HashMap<String, Window>,
@@ -77,8 +73,7 @@ struct TkCache {
 
 impl TkCache {
     fn new() -> Self {
-        Self { forms: HashMap::new(),
-               child_regions: HashMap::new(),
+        Self { child_regions: HashMap::new(),
                replace_on_hover: HashMap::new(),
                current_window_label: None,
                current_flex: 0,
@@ -1163,30 +1158,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
         }
-    }
-
-    fn draw_form<T: Serialize + DeserializeOwned + 'static, R>(&self,
-                                                               form_id: u64,
-                                                               initial_values: T,
-                                                               draw_form_fn: &dyn Fn(&T) -> R)
-                                                               -> R {
-        let mut cache = TK_CACHE.lock().unwrap();
-        let entry = cache.forms
-                         .entry(form_id)
-                         .or_insert_with(|| bincode::serialize(&initial_values).unwrap());
-        draw_form_fn(&bincode::deserialize(entry.as_slice()).unwrap())
-    }
-
-    fn submit_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64) -> T {
-        let t = TK_CACHE.lock().unwrap().forms.remove(&form_id).unwrap();
-        bincode::deserialize(t.as_slice()).unwrap()
-    }
-
-    fn change_form<T: Serialize + DeserializeOwned + 'static>(form_id: u64, to: T) {
-        TK_CACHE.lock()
-                .unwrap()
-                .forms
-                .insert(form_id, bincode::serialize(&to).unwrap());
     }
 
     fn draw_color_picker_with_label(&self,
