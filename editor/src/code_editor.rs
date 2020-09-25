@@ -438,10 +438,18 @@ impl CodeEditor {
         Some(())
     }
 
+    pub fn can_be_deleted(&self, id: lang::ID) -> bool {
+        self.mutation_master
+            .delete_code(id, &self.code_genie, self.selected_node_id)
+            .is_some()
+    }
+
     pub fn delete_node_id(&mut self, id: lang::ID) -> Option<()> {
         let mutation_result = self.mutation_master
                                   .delete_code(id, &self.code_genie, self.selected_node_id);
-        self.apply_mutation_result(mutation_result);
+        if let Some(mutation_result) = mutation_result {
+            self.apply_mutation_result(mutation_result)
+        }
         Some(())
     }
 
@@ -1184,8 +1192,8 @@ impl MutationMaster {
     pub fn delete_code(&self,
                        node_id_to_delete: lang::ID,
                        genie: &CodeGenie,
-                       original_cursor_position: Option<lang::ID>)
-                       -> MutationResult {
+                       _original_cursor_position: Option<lang::ID>)
+                       -> Option<MutationResult> {
         let parent = genie.find_parent(node_id_to_delete);
         if parent.is_none() {
             panic!("idk when this happens, let's take care of this if / when it does")
@@ -1215,7 +1223,7 @@ impl MutationMaster {
                 let mut new_root = genie.root().clone();
                 new_root.replace(CodeNode::Block(new_block));
 
-                MutationResult::new(new_root, new_cursor_position, false)
+                Some(MutationResult::new(new_root, new_cursor_position, false))
             }
             CodeNode::ListLiteral(list_literal) => {
                 let mut new_list_literal = list_literal.clone();
@@ -1245,9 +1253,9 @@ impl MutationMaster {
                 new_root.replace(CodeNode::ListLiteral(new_list_literal));
 
                 //                self.log_new_mutation(&new_root, new_cursor_position);
-                MutationResult::new(new_root, new_cursor_position, false)
+                Some(MutationResult::new(new_root, new_cursor_position, false))
             }
-            _ => MutationResult::new(genie.root().clone(), original_cursor_position, false),
+            _ => None,
         }
     }
 
