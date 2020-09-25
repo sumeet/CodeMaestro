@@ -99,8 +99,11 @@ impl CodeEditor {
             | (false, Key::RightArrow, _, false)
             | (false, Key::L, false, false) => self.try_select_forward_one_node(),
             (false, Key::C, false, false) => {
-                if let Some(id) = self.selected_node_id {
-                    self.mark_as_editing(InsertionPoint::Editing(id));
+                if let Some(node) = self.get_selected_node() {
+                    #[allow(mutable_borrow_reservation_conflict)]
+                    if self.can_be_edited(node) {
+                        self.mark_as_editing(InsertionPoint::Editing(node.id()));
+                    }
                 }
             }
             (false, Key::D, false, false) => {
@@ -234,6 +237,52 @@ impl CodeEditor {
 
     pub fn can_be_replaced(&self, node_id: lang::ID) -> bool {
         self.insertion_point_for_replace(node_id).is_some()
+    }
+
+    pub fn can_be_edited(&self, code_node: &CodeNode) -> bool {
+        match code_node {
+            CodeNode::StringLiteral(_)
+            | CodeNode::Assignment(_)
+            | CodeNode::Argument(_)
+            | CodeNode::StructLiteralField(_)
+            | CodeNode::ListLiteral(_) => true,
+            CodeNode::FunctionCall(_)
+            | CodeNode::FunctionReference(_)
+            | CodeNode::NullLiteral(_)
+            | CodeNode::Block(_)
+            | CodeNode::AnonymousFunction(_)
+            | CodeNode::VariableReference(_)
+            | CodeNode::Placeholder(_)
+            | CodeNode::StructLiteral(_)
+            | CodeNode::Conditional(_)
+            | CodeNode::Match(_)
+            | CodeNode::StructFieldGet(_)
+            | CodeNode::NumberLiteral(_)
+            | CodeNode::ListIndex(_) => false,
+        }
+    }
+
+    pub fn edit_menu_text(&self, code_node: &CodeNode) -> &'static str {
+        match code_node {
+            CodeNode::StringLiteral(_) => "Change value",
+            CodeNode::Assignment(_) => "Change name",
+            CodeNode::Argument(_) => "Change value",
+            CodeNode::StructLiteralField(_) => "Change value",
+            CodeNode::ListLiteral(_) => "Change value",
+            CodeNode::FunctionCall(_)
+            | CodeNode::FunctionReference(_)
+            | CodeNode::NullLiteral(_)
+            | CodeNode::Block(_)
+            | CodeNode::AnonymousFunction(_)
+            | CodeNode::VariableReference(_)
+            | CodeNode::Placeholder(_)
+            | CodeNode::StructLiteral(_)
+            | CodeNode::Conditional(_)
+            | CodeNode::Match(_)
+            | CodeNode::StructFieldGet(_)
+            | CodeNode::NumberLiteral(_)
+            | CodeNode::ListIndex(_) => unimplemented!(),
+        }
     }
 
     pub fn insertion_point_for_replace(&self, node_id: lang::ID) -> Option<InsertionPoint> {
