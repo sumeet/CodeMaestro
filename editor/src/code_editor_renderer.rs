@@ -1414,16 +1414,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::ListLiteral(list_literal) => {
                 self.render_list_literal(list_literal, code_node)
             }
-            _ => {
-                // TODO: this is super hacks. the editor just reaches in and makes something not
-                // editing while rendering lol
-                self.command_buffer
-                    .borrow_mut()
-                    .add_editor_command(|e| e.mark_as_not_editing());
-                self.draw_button(&format!("Not possible to edit {:?}", code_node),
-                                 colorscheme!(danger_color),
-                                 &|| {})
-            }
+            _ => panic!("wasn't supposed to actually edit this"),
         }
     }
 
