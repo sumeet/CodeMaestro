@@ -1292,6 +1292,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             let label = self.imlabel("item_context_menu");
             imgui_sys::igBeginPopupContextItem(label.as_ptr(), mouse_button)
         } {
+            println!("min, max: {:?}, {:?}", min, max);
             draw_context_menu();
             unsafe { imgui_sys::igEndPopup() };
             self.ui
