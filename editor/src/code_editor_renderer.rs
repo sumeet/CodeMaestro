@@ -13,6 +13,7 @@ use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
     render_null, render_struct_field, render_struct_field_label, render_struct_identifier,
+    render_type_symbol,
 };
 use crate::colorscheme;
 use crate::draw_all_iter;
@@ -1404,15 +1405,31 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                })
             }
             CodeNode::Assignment(assignment) => {
+                let type_of_assignment =
+                    self.code_editor
+                        .code_genie
+                        .guess_type(assignment.expression.as_ref(), self.env_genie)
+                        .unwrap();
+
                 self.render_assignment_specify_lhs(assignment, &|| {
-                        self.ui_toolkit.focused(&|| {
-                        let a = assignment.clone();
-                        self.draw_inline_text_editor(&assignment.name, move |new_value| {
-                            let mut new_assignment = a.clone();
-                            new_assignment.name = new_value.to_string();
-                            CodeNode::Assignment(new_assignment)
-                        })
-                    })
+                        self.ui_toolkit.draw_all_on_same_line(&[
+                        &|| {
+                            render_type_symbol(self.ui_toolkit,
+                                               self.env_genie,
+                                               colorscheme!(variable_color),
+                                               &type_of_assignment)
+                        },
+                        &|| {
+                            self.ui_toolkit.focused(&|| {
+                                let a = assignment.clone();
+                                self.draw_inline_text_editor(&assignment.name, move |new_value| {
+                                    let mut new_assignment = a.clone();
+                                    new_assignment.name = new_value.to_string();
+                                    CodeNode::Assignment(new_assignment)
+                                })
+                            })
+                        },
+                    ])
                     })
             }
             CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => {
