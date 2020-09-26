@@ -107,6 +107,7 @@ pub trait UiToolkit {
                                           -> Self::DrawResult;
     fn draw_text_input<F: Fn(&str) + 'static, D: Fn() + 'static>(&self,
                                                                  existing_value: &str,
+                                                                 fit_input_width: bool,
                                                                  onchange: F,
                                                                  ondone: D)
                                                                  -> Self::DrawResult;

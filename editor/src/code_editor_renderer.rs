@@ -164,15 +164,23 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                      .code_genie
                                      .guess_type(assignment.expression.as_ref(), self.env_genie)
                                      .unwrap();
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| {
-                self.set_selected_on_click(&|| {
-                    self.render_name_with_type_definition(&assignment.name, colorscheme!(variable_color), &type_of_assignment)
-                }, assignment.id)
-            },
-            &|| self.draw_text("   \u{f52c}   "),
-            &|| self.render_code(assignment.expression.as_ref()),
-        ])
+        self.render_assignment_specify_lhs(assignment, &|| {
+            self.set_selected_on_click(&|| {
+                self.render_name_with_type_definition(&assignment.name, colorscheme!(variable_color),
+                                                      &type_of_assignment)
+            }, assignment.id)
+        })
+    }
+
+    fn render_assignment_specify_lhs(&self,
+                                     assignment: &lang::Assignment,
+                                     draw_lhs_func: DrawFnRef<T>)
+                                     -> T::DrawResult {
+        self.ui_toolkit.draw_all_on_same_line(&[draw_lhs_func,
+                                                &|| self.draw_text("   \u{f52c}   "),
+                                                &|| {
+                                                    self.render_code(assignment.expression.as_ref())
+                                                }])
     }
 
     fn render_insert_code_node(&self) -> T::DrawResult {
@@ -192,6 +200,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
                            self.draw_text_input(
                                                 menu.input_str(),
+                                                false,
                                                 move |input| {
                                                     let input = input.to_string();
                                                     cmdb_1.borrow_mut()
@@ -748,10 +757,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                         draw_code_fn: DrawFnRef<T>,
                                         code_node_id_to_act_on: lang::ID)
                                         -> <T as UiToolkit>::DrawResult {
-        let node_to_act_on = self.code_editor
-                                 .code_genie
-                                 .find_node(code_node_id_to_act_on)
-                                 .unwrap();
         self.ui_toolkit.context_menu(draw_code_fn, &|| {
                            self.ui_toolkit.draw_all(&[
                 &|| {
@@ -1380,7 +1385,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                    number_literal.id)
     }
 
-    // TODO: this is where i need to look for things that can be edited
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
         // this is kind of a mess. render_insert_code_node() does `focus` inside of
         // it. the other parts of the branch need to be wrapped in focus() but not
@@ -1400,14 +1404,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                })
             }
             CodeNode::Assignment(assignment) => {
-                self.ui_toolkit.focused(&|| {
-                                   let a = assignment.clone();
-                                   self.draw_inline_text_editor(&assignment.name, move |new_value| {
-                                       let mut new_assignment = a.clone();
-                                       new_assignment.name = new_value.to_string();
-                                       CodeNode::Assignment(new_assignment)
-                                   })
-                               })
+                self.render_assignment_specify_lhs(assignment, &|| {
+                        self.ui_toolkit.focused(&|| {
+                        let a = assignment.clone();
+                        self.draw_inline_text_editor(&assignment.name, move |new_value| {
+                            let mut new_assignment = a.clone();
+                            new_assignment.name = new_value.to_string();
+                            CodeNode::Assignment(new_assignment)
+                        })
+                    })
+                    })
             }
             CodeNode::Argument(_) | CodeNode::StructLiteralField(_) => {
                 // TODO: need to show the argument name or struct literal field, i think we can
@@ -1459,6 +1465,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         self.draw_text_input(
                              initial_value,
+                             true,
                              move |new_value| {
                                  let new_node_fn = Rc::clone(&new_node_fn);
 
@@ -1532,6 +1539,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn draw_text_input<F: Fn(&str) + 'static, D: Fn() + 'static>(&self,
                                                                  existing_value: &str,
+                                                                 fit_input_width: bool,
                                                                  onchange: F,
                                                                  ondone: D)
                                                                  -> T::DrawResult {
@@ -1541,6 +1549,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 let onchange_rc = Rc::clone(&onchange_rc);
                 let ondone_rc = Rc::clone(&ondone_rc);
                 self.ui_toolkit.draw_text_input(existing_value,
+                                                fit_input_width,
                                                 move |v| onchange_rc.borrow()(v),
                                                 move || ondone_rc.borrow()())
             })

@@ -1124,8 +1124,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self,
                                                                        existing_value: &str,
+                                                                       fit_input_width: bool,
                                                                        onchange: F,
                                                                        ondone: D) {
+        if fit_input_width {
+            let text_size = self.ui
+                                .calc_text_size(&im_str!("{}", existing_value), false, 0.);
+            let padding = 10.;
+            self.ui.set_next_item_width(text_size[0] + padding);
+        }
         self.draw_text_input_with_label("", existing_value, onchange, ondone)
     }
 

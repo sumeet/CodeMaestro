@@ -829,6 +829,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
                                        self.ui_toolkit.draw_text_input(
                             &opener.input_str,
+                            false,
                             move |newvalue: &str| {
                                 let newvalue = newvalue.to_string();
                                 cmd_buffer1
@@ -1528,7 +1529,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                let schema = schema.clone();
                                self.render_with_indentation_for_field(&indent, &move || {
                                    let schema2 = schema.clone();
-                                   self.ui_toolkit.draw_text_input(schema.field_name().unwrap(), move |new_field_name| {
+                                   self.ui_toolkit.draw_text_input(schema.field_name().unwrap(), false, move |new_field_name| {
                                        let mut schema = schema2.clone();
                                        schema.field_id = FieldIdentifier::Name(new_field_name.into());
                                        T::change_form(form_id, schema)

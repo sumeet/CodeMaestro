@@ -9,115 +9,127 @@
       "code": {
         "expressions": [
           {
-            "FunctionCall": {
-              "function_reference": {
-                "FunctionReference": {
-                  "function_id": "7add6e8d-0f89-4958-a435-bad3c9066927",
-                  "id": "143292b1-371e-413f-957a-c5965bd3f772"
-                }
-              },
-              "args": [
-                {
-                  "Argument": {
-                    "id": "3599019d-6bec-4f5d-b706-cf779a0431af",
-                    "argument_definition_id": "75ac0660-6814-4d17-8444-481237581f16",
-                    "expr": {
-                      "ListLiteral": {
-                        "id": "1657aa0d-f8c6-4232-9914-08936ad8abc9",
-                        "element_type": {
-                          "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-                          "params": []
-                        },
-                        "elements": [
-                          {
-                            "StringLiteral": {
-                              "value": "1",
-                              "id": "d5531ac3-3b4f-4856-b45b-094a46ad0e8c"
-                            }
-                          },
-                          {
-                            "StringLiteral": {
-                              "value": "2",
-                              "id": "4767358e-db29-430b-a652-f894433b0387"
-                            }
-                          },
-                          {
-                            "StringLiteral": {
-                              "value": "3",
-                              "id": "cc0cc70f-1dd0-493f-a34d-5e24a357b0cd"
-                            }
-                          }
-                        ]
-                      }
+            "Assignment": {
+              "name": "hello",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "7add6e8d-0f89-4958-a435-bad3c9066927",
+                      "id": "143292b1-371e-413f-957a-c5965bd3f772"
                     }
-                  }
-                },
-                {
-                  "Argument": {
-                    "id": "26a43a50-a6bd-4d3b-b740-45328ecae33d",
-                    "argument_definition_id": "1ae3bf22-a2ab-4bd0-af5f-193385284b7d",
-                    "expr": {
-                      "AnonymousFunction": {
-                        "id": "6ffe43c9-45b2-4522-a006-88c9d1e5422c",
-                        "takes_arg": {
-                          "id": "af94d860-00db-4043-8466-f5381a4ae4b1",
-                          "arg_type": {
-                            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-                            "params": []
-                          },
-                          "short_name": "var"
-                        },
-                        "returns": {
-                          "typespec_id": "92fe8555-2f8c-4ae5-aca6-42353f6dc888",
-                          "params": [
-                            {
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "3599019d-6bec-4f5d-b706-cf779a0431af",
+                        "argument_definition_id": "75ac0660-6814-4d17-8444-481237581f16",
+                        "expr": {
+                          "ListLiteral": {
+                            "id": "1657aa0d-f8c6-4232-9914-08936ad8abc9",
+                            "element_type": {
                               "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
                               "params": []
                             },
-                            {
-                              "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-                              "params": []
-                            }
-                          ]
-                        },
-                        "block": {
-                          "Block": {
-                            "expressions": [
+                            "elements": [
                               {
-                                "FunctionCall": {
-                                  "function_reference": {
-                                    "FunctionReference": {
-                                      "function_id": "fd49253c-3661-413f-b78c-25f20f8e3473",
-                                      "id": "25fba83f-4fb9-4f9f-b2f3-e2c18f4c6f7c"
-                                    }
-                                  },
-                                  "args": [
-                                    {
-                                      "Argument": {
-                                        "id": "c0b81f53-8ba1-45f6-ad06-6dc7d19e2475",
-                                        "argument_definition_id": "f99f9d51-2ec7-4fce-9471-14b4c800110b",
-                                        "expr": {
-                                          "VariableReference": {
-                                            "assignment_id": "af94d860-00db-4043-8466-f5381a4ae4b1",
-                                            "id": "6942ec72-4fd3-4c1b-b9d6-1f19d3c55e42"
-                                          }
-                                        }
-                                      }
-                                    }
-                                  ],
-                                  "id": "68e538ad-e7b7-4430-9da2-f084bc9a4b24"
+                                "StringLiteral": {
+                                  "value": "1",
+                                  "id": "d5531ac3-3b4f-4856-b45b-094a46ad0e8c"
+                                }
+                              },
+                              {
+                                "StringLiteral": {
+                                  "value": "2",
+                                  "id": "4767358e-db29-430b-a652-f894433b0387"
+                                }
+                              },
+                              {
+                                "StringLiteral": {
+                                  "value": "3",
+                                  "id": "cc0cc70f-1dd0-493f-a34d-5e24a357b0cd"
                                 }
                               }
-                            ],
-                            "id": "f6ca2862-4434-4e15-8bae-4a4e301604bc"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Argument": {
+                        "id": "26a43a50-a6bd-4d3b-b740-45328ecae33d",
+                        "argument_definition_id": "1ae3bf22-a2ab-4bd0-af5f-193385284b7d",
+                        "expr": {
+                          "AnonymousFunction": {
+                            "id": "6ffe43c9-45b2-4522-a006-88c9d1e5422c",
+                            "takes_arg": {
+                              "id": "af94d860-00db-4043-8466-f5381a4ae4b1",
+                              "arg_type": {
+                                "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                                "params": []
+                              },
+                              "short_name": "var"
+                            },
+                            "returns": {
+                              "typespec_id": "92fe8555-2f8c-4ae5-aca6-42353f6dc888",
+                              "params": [
+                                {
+                                  "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                                  "params": []
+                                },
+                                {
+                                  "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+                                  "params": []
+                                }
+                              ]
+                            },
+                            "block": {
+                              "Block": {
+                                "expressions": [
+                                  {
+                                    "FunctionCall": {
+                                      "function_reference": {
+                                        "FunctionReference": {
+                                          "function_id": "fd49253c-3661-413f-b78c-25f20f8e3473",
+                                          "id": "25fba83f-4fb9-4f9f-b2f3-e2c18f4c6f7c"
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "Argument": {
+                                            "id": "c0b81f53-8ba1-45f6-ad06-6dc7d19e2475",
+                                            "argument_definition_id": "f99f9d51-2ec7-4fce-9471-14b4c800110b",
+                                            "expr": {
+                                              "VariableReference": {
+                                                "assignment_id": "af94d860-00db-4043-8466-f5381a4ae4b1",
+                                                "id": "6942ec72-4fd3-4c1b-b9d6-1f19d3c55e42"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "id": "68e538ad-e7b7-4430-9da2-f084bc9a4b24"
+                                    }
+                                  }
+                                ],
+                                "id": "f6ca2862-4434-4e15-8bae-4a4e301604bc"
+                              }
+                            }
                           }
                         }
                       }
                     }
-                  }
+                  ],
+                  "id": "0b47de07-ccb9-47f5-a778-1d1ced4e5775"
                 }
-              ],
-              "id": "0b47de07-ccb9-47f5-a778-1d1ced4e5775"
+              },
+              "id": "62641e3d-cd7f-4972-9146-c1c215d55951"
+            }
+          },
+          {
+            "VariableReference": {
+              "assignment_id": "62641e3d-cd7f-4972-9146-c1c215d55951",
+              "id": "2c5e7676-db8e-43b0-a749-3d917558807f"
             }
           },
           {
