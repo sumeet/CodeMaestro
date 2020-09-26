@@ -753,7 +753,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  .find_node(code_node_id_to_act_on)
                                  .unwrap();
         self.ui_toolkit.context_menu(draw_code_fn, &|| {
-            println!("in node to act on {:?}: ", node_to_act_on);
                            self.ui_toolkit.draw_all(&[
                 &|| {
                     if self.code_editor.can_be_replaced(code_node_id_to_act_on) {
