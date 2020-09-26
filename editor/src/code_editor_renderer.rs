@@ -781,7 +781,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         let cmd_buffer = Rc::clone(&self.command_buffer);
                         self.ui_toolkit.draw_menu_item(self.code_editor.edit_menu_text(code_node), move || {
                             cmd_buffer.borrow_mut().add_editor_command(move |editor| {
-                                editor.enter_replace_for_node(code_node_id_to_act_on);
+                                editor.mark_as_editing(InsertionPoint::Editing(code_node_id_to_act_on));
                             })
                         })
                     } else {
