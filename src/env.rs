@@ -13,6 +13,7 @@ use crate::builtins::ok_result_value;
 use crate::lang::CodeNode;
 use crate::{enums, EnvGenie};
 use failure::_core::fmt::Formatter;
+use futures_util::FutureExt;
 use itertools::Itertools;
 use std::convert::TryInto;
 
@@ -48,11 +49,10 @@ impl Interpreter {
 
     // TODO: this is insane that we have to clone the code just to evaluate it. this is gonna slow
     // down evaluation so much
-    pub fn evaluate(&mut self,
-                    code_node: &lang::CodeNode)
-                    -> Pin<Box<dyn Future<Output = lang::Value>>> {
+    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
         let code_node = code_node.clone();
-        match code_node {
+        let code_node_id = code_node.id();
+        let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
                 // TODO: get rid of the unwrap and bubble up the error
                 use futures_util::TryFutureExt;
@@ -106,7 +106,7 @@ impl Interpreter {
                     struct_literal.fields()
                                   .map(|literal_field| {
                                       (literal_field.struct_field_id,
-                                       self.evaluate(&literal_field.expr))
+                                       self.evaluate(&literal_field.expr).boxed_local())
                                   })
                                   .collect();
                 Box::pin(async move {
@@ -122,7 +122,7 @@ impl Interpreter {
             // i think these code nodes will actually never be evaluated, because they get evaluated
             // as part of the struct itself
             lang::CodeNode::StructLiteralField(_struct_literal_field) => {
-                panic!("struct literals are never evaluated")
+                panic!("struct literal fields are never evaluated")
             }
             lang::CodeNode::Conditional(conditional) => {
                 let condition_fut = self.evaluate(conditional.condition.as_ref());
@@ -130,7 +130,7 @@ impl Interpreter {
                 // TODO: does the else branch get evaluated just by nature of creating the future,
                 // even if we never await it?
                 let else_branch_fut = match conditional.else_branch.as_ref() {
-                    Some(else_branch) => self.evaluate(else_branch.as_ref()),
+                    Some(else_branch) => self.evaluate(else_branch.as_ref()).boxed_local(),
                     None => Box::pin(async { lang::Value::Null }),
                 };
                 Box::pin(async move {
@@ -209,6 +209,14 @@ impl Interpreter {
             CodeNode::AnonymousFunction(anon_func) => {
                 Box::pin(async move { lang::Value::AnonymousFunction(anon_func) })
             }
+        };
+        let env = Rc::clone(&self.env);
+        async move {
+            let result = result.await;
+            env.borrow_mut()
+               .prev_eval_result_by_code_id
+               .insert(code_node_id, result.clone());
+            result
         }
     }
 
@@ -275,12 +283,14 @@ pub struct ExecutionEnvironment {
     pub locals: HashMap<lang::ID, lang::Value>,
     pub functions: HashMap<lang::ID, Box<dyn lang::Function + 'static>>,
     pub typespecs: HashMap<lang::ID, Box<dyn lang::TypeSpec + 'static>>,
+    pub prev_eval_result_by_code_id: HashMap<lang::ID, lang::Value>,
 }
 
 impl ExecutionEnvironment {
     pub fn new() -> ExecutionEnvironment {
         return ExecutionEnvironment { console: String::new(),
                                       locals: HashMap::new(),
+                                      prev_eval_result_by_code_id: HashMap::new(),
                                       functions: HashMap::new(),
                                       typespecs: Self::built_in_typespecs() };
     }
