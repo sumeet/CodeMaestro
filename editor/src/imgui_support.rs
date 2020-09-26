@@ -170,7 +170,9 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
 
         event_loop.run_return(|event, _, control_flow| match event {
                       Event::NewEvents(_) => {
-                          last_frame = imgui.io_mut().update_delta_time(last_frame);
+                          let now = Instant::now();
+                          imgui.io_mut().update_delta_time(now - last_frame);
+                          last_frame = now;
                       }
                       Event::MainEventsCleared => {
                           let gl_window = display.gl_window();
