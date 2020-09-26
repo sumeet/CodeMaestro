@@ -748,6 +748,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                         draw_code_fn: DrawFnRef<T>,
                                         code_node_id_to_act_on: lang::ID)
                                         -> <T as UiToolkit>::DrawResult {
+        let node_to_act_on = self.code_editor
+                                 .code_genie
+                                 .find_node(code_node_id_to_act_on)
+                                 .unwrap();
         self.ui_toolkit.context_menu(draw_code_fn, &|| {
                            self.ui_toolkit.draw_all(&[
                 &|| {

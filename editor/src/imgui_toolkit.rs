@@ -8,6 +8,10 @@ use nfd;
 use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use imgui::*;
+use imgui_sys::{
+    ImGuiPopupFlags_MouseButtonRight, ImGuiPopupFlags_NoOpenOverExistingPopup,
+    ImGuiPopupFlags_NoOpenOverItems, ImVec2,
+};
 use lazy_static::lazy_static;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
@@ -209,6 +213,24 @@ pub struct ImguiToolkit<'a> {
 }
 
 impl<'a> ImguiToolkit<'a> {
+    fn get_item_rect(&self) -> (ImVec2, ImVec2) {
+        let mut min = ImVec2::zero();
+        let mut max = ImVec2::zero();
+        unsafe {
+            imgui_sys::igGetItemRectMin(&mut min);
+            imgui_sys::igGetItemRectMax(&mut max);
+        };
+        (min, max)
+    }
+
+    fn get_item_content_region_max(&self) -> ImVec2 {
+        let mut max = ImVec2::zero();
+        unsafe {
+            imgui_sys::igGetContentRegionMax(&mut max);
+        }
+        max
+    }
+
     pub fn new(ui: &'a Ui, keypress: Option<Keypress>) -> ImguiToolkit<'a> {
         ImguiToolkit { ui,
                        keypress,
@@ -235,8 +257,7 @@ impl<'a> ImguiToolkit<'a> {
         let window_size = self.ui.window_size();
         let window_max = (window_min[0] + window_size[0], window_min[1] + window_size[1]);
 
-        let item_min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let item_max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (item_min, item_max) = self.get_item_rect();
 
         (window_min[0] <= item_min.x)
         && (item_min.x <= window_max.0)
@@ -249,17 +270,19 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn mouse_clicked_in_last_drawn_element(&self) -> bool {
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() }.into();
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() }.into();
+        let (min, max) = self.get_item_rect();
         let mouse_pos = self.ui.io().mouse_pos;
-        self.is_left_button_down() && Rect { min, max }.contains(mouse_pos)
+        self.is_left_button_down()
+        && Rect { min: min.into(),
+                  max: max.into() }.contains(mouse_pos)
     }
 
     fn mouse_released_in_last_drawn_element(&self) -> bool {
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() }.into();
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() }.into();
+        let (min, max) = self.get_item_rect();
         let mouse_pos = self.ui.io().mouse_pos;
-        self.was_left_button_released() && Rect { min, max }.contains(mouse_pos)
+        self.was_left_button_released()
+        && Rect { min: min.into(),
+                  max: max.into() }.contains(mouse_pos)
     }
 
     fn was_left_button_released(&self) -> bool {
@@ -271,8 +294,7 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn make_last_item_look_active(&self) {
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         self.ui
             .get_window_draw_list()
             .add_rect(min.into(), max.into(), colorscheme!(button_active_color))
@@ -426,8 +448,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         // grabbed this code from draw_box_around
         if self.ui.is_item_hovered() {
-            let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-            let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+            let (min, max) = self.get_item_rect();
             self.ui
                 .get_window_draw_list()
                 .add_rect(min.into(), max.into(), colorscheme!(button_hover_color))
@@ -490,9 +511,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         self.ui.set_cursor_pos(orig_cursor_pos);
 
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
-        let width = unsafe { imgui_sys::igGetContentRegionMax_nonUDT2().x } - frame_padding[0] * 2.;
+        let (min, max) = self.get_item_rect();
+        let width = self.get_item_content_region_max().x - frame_padding[0] * 2.;
         self.ui.dummy([width, max.y - min.y])
     }
 
@@ -509,8 +529,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         // if framebg color is transparent, then make it opaque
         blankoutbgcolor[3] = 1.;
 
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         // without the scope here we get a crash for loading drawlist twice, idk what the deal is
         // tbh
         {
@@ -529,8 +548,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_with_no_spacing_afterwards(&self, draw_fn: DrawFnRef<Self>) {
         self.ui.group(draw_fn);
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         self.ui.set_cursor_screen_pos([min.x, max.y]);
     }
 
@@ -539,8 +557,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let style = self.ui.clone_style();
         let padding = style.frame_padding;
 
-        //let full_width = unsafe { imgui_sys::igGetContentRegionAvailWidth() };
-        let full_width = unsafe { imgui_sys::igGetContentRegionAvail_nonUDT2().x };
+        let full_width = self.ui.content_region_avail()[0];
 
         let original_cursor_pos = self.ui.cursor_pos();
         let label = im_str!("{}", text);
@@ -887,8 +904,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 if let Some(draw_context_menu) = draw_context_menu {
                     let label = self.imlabel("draw_context_menu");
                     if unsafe {
-                        let mouse_button = 1;
-                        imgui_sys::igBeginPopupContextWindow(label.as_ptr(), mouse_button, false)
+                        let flags = ImGuiPopupFlags_NoOpenOverItems | ImGuiPopupFlags_MouseButtonRight;
+                        imgui_sys::igBeginPopupContextWindow(label.as_ptr(), flags as i32)
                     } {
                         draw_context_menu();
                         unsafe {
@@ -921,13 +938,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_code_line_separator(&self, plus_char: char, width: f32, height: f32, color: [f32; 4]) {
         self.ui
             .invisible_button(&self.imlabel("code_line_separator"), [width, height]);
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let min = self.ui.item_rect_min();
+        let max = self.ui.item_rect_max();
 
         let draw_list = self.ui.get_window_draw_list();
 
-        let center_of_line = [min.x, (min.y + max.y) / 2.];
-        let mut line = (center_of_line, [max.x, center_of_line[1]]);
+        let center_of_line = [min[0], (min[1] + max[1]) / 2.];
+        let mut line = (center_of_line, [max[0], center_of_line[1]]);
         // idk why exactly, but these -0.5s get the line to match up nicely with the circle
         (line.0)[1] -= 0.5;
         (line.1)[1] -= 0.5;
@@ -964,8 +981,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         self.ui
             .get_window_draw_list()
             .add_rect(min.into(), max.into(), color)
@@ -975,8 +991,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_top_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         self.ui
             .get_window_draw_list()
             .add_rect(min.into(), [max.x, min.y + thickness as f32 - 1.], color)
@@ -987,8 +1002,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_right_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         self.ui
             .get_window_draw_list()
             .add_rect([max.x - thickness as f32, min.y], max.into(), color)
@@ -999,8 +1013,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_left_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         self.ui
             .get_window_draw_list()
             .add_rect(min.into(), [min.x - thickness as f32, max.y], color)
@@ -1011,8 +1024,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn draw_bottom_border_inside(&self, color: [f32; 4], thickness: u8, draw_fn: &dyn Fn()) {
         self.ui.group(draw_fn);
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         self.ui
             .get_window_draw_list()
             .add_rect([min.x, max.y - thickness as f32], max.into(), color)
@@ -1285,12 +1297,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     fn context_menu(&self, draw_fn: DrawFnRef<Self>, draw_context_menu: DrawFnRef<Self>) {
         self.ui.group(draw_fn);
-        let min = unsafe { imgui_sys::igGetItemRectMin_nonUDT2() };
-        let max = unsafe { imgui_sys::igGetItemRectMax_nonUDT2() };
+        let (min, max) = self.get_item_rect();
         if unsafe {
-            let mouse_button = 1;
             let label = self.imlabel("item_context_menu");
-            imgui_sys::igBeginPopupContextItem(label.as_ptr(), mouse_button)
+            let flags = ImGuiPopupFlags_MouseButtonRight | ImGuiPopupFlags_NoOpenOverExistingPopup;
+            imgui_sys::igBeginPopupContextItem(label.as_ptr(), flags as i32)
         } {
             draw_context_menu();
             unsafe { imgui_sys::igEndPopup() };
