@@ -83,15 +83,23 @@ pub fn render_struct_identifier<T: UiToolkit>(strukt: &structs::Struct,
     render_name_with_type_fn(&strukt.name, colorscheme!(cool_color), &typ)
 }
 
+pub fn render_type_symbol<T: UiToolkit>(ui_toolkit: &T,
+                                        env_genie: &EnvGenie,
+                                        base_color: Color,
+                                        typ: &lang::Type)
+                                        -> T::DrawResult {
+    let sym = env_genie.get_symbol_for_type(typ);
+    let darker_color = darken(base_color);
+    ui_toolkit.draw_buttony_text(&sym, darker_color)
+}
+
 pub fn render_name_with_type_definition<T: UiToolkit>(ui_toolkit: &T,
                                                       env_genie: &EnvGenie,
                                                       name: &str,
                                                       color: Color,
                                                       typ: &lang::Type)
                                                       -> T::DrawResult {
-    let sym = env_genie.get_symbol_for_type(typ);
-    let darker_color = darken(color);
-    ui_toolkit.draw_all_on_same_line(&[&|| ui_toolkit.draw_buttony_text(&sym, darker_color),
+    ui_toolkit.draw_all_on_same_line(&[&|| render_type_symbol(ui_toolkit, env_genie, color, typ),
                                        &|| ui_toolkit.draw_buttony_text(name, color)])
 }
 
