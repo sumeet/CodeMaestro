@@ -91,6 +91,7 @@ pub enum Key {
     U,
     V,
     Tab,
+    Enter,
     Escape,
     UpArrow,
     DownArrow,

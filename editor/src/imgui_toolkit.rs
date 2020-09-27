@@ -1144,14 +1144,17 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         onchange: F,
         onenter: E) {
         let mut box_input = buf(existing_value);
-        if self.ui
-               .input_text_multiline(&self.imlabel(label), &mut box_input, [0., 100.])
-               .flags(ImGuiInputTextFlags::CtrlEnterForNewLine)
-               .resize_buffer(true)
-               .enter_returns_true(true)
-               .build()
-        {
-            onenter()
+        self.ui
+            .input_text_multiline(&self.imlabel(label), &mut box_input, [0., 100.])
+            .resize_buffer(true)
+            .build();
+        if self.ui.is_item_active() {
+            match self.keypress {
+                Some(Keypress { key: crate::editor::Key::Enter,
+                                ctrl: false,
+                                shift: false, }) => return onenter(),
+                _ => {}
+            }
         }
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
