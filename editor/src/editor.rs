@@ -53,7 +53,7 @@ use cs::structs;
 use cs::tests;
 use cs::{await_eval_result, EnvGenie};
 
-mod value_renderer;
+pub mod value_renderer;
 use crate::code_editor::CodeLocation;
 use crate::code_editor_renderer::BLACK_COLOR;
 use crate::schema_builder::{FieldIdentifier, Schema};

@@ -2,6 +2,7 @@
 // ... i couldn't find a good way of sharing the code, but i think i might need to eventually.
 // for now it's just copy+paste
 use crate::align;
+use crate::code_editor_renderer::BLACK_COLOR;
 use crate::code_rendering::{
     render_enum_variant_identifier, render_list_literal_label, render_list_literal_value,
     render_name_with_type_definition, render_null, render_struct_field, render_struct_field_label,
@@ -52,15 +53,9 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::Number(num) => self.render_number(num),
             Value::List(typ, values) => self.render_list(typ, values),
             Value::Struct { struct_id, values } => self.render_struct(struct_id, values),
-            Value::Future(_) => {
-                panic!("let's worry about futures later, they're not even in the example. we may never have to do anything here")
-            }
-            Value::Enum { variant_id, value } => {
-                self.render_enum(variant_id, value)
-            }
-            Value::AnonymousFunction(_) => {
-                panic!("don't worry about rendering functions")
-            }
+            Value::Future(_) => self.draw_buttony_text("Future", BLACK_COLOR),
+            Value::Enum { variant_id, value } => self.render_enum(variant_id, value),
+            Value::AnonymousFunction(_) => panic!("don't worry about rendering functions"),
         }
     }
 

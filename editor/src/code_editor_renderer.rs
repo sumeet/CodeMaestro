@@ -17,6 +17,7 @@ use crate::code_rendering::{
 };
 use crate::colorscheme;
 use crate::draw_all_iter;
+use crate::editor::value_renderer::ValueRenderer;
 use crate::editor::{CommandBuffer, Keypress};
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
@@ -1007,13 +1008,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                    move || {
                                        if not_inserting_code {
                                            self.ui_toolkit.draw_all(&[
-                                                &|| self.render_code(code),
+                                                &|| self.render_code_line_in_block(code),
                                                 &|| self.render_add_code_here_line(InsertionPoint::After(code.id())),
                                            ])
                                        } else {
                                            self.ui_toolkit.draw_all(&[
                                               &|| self.render_code_insertion_menu_here_if_it_was_requested(),
-                                              &|| self.render_code(code),
+                                              &|| self.render_code_line_in_block(code),
                                               &|| self.render_code_insertion_menu_here_if_it_was_requested(),
                                            ])
                                        }
@@ -1025,6 +1026,22 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 }
             },
         ])
+    }
+
+    fn render_code_line_in_block(&self, code_node: &lang::CodeNode) -> T::DrawResult {
+        let value = self.env_genie.get_last_executed_result(code_node.id());
+        if let Some(value) = value {
+            self.ui_toolkit
+                .draw_all(&[&|| self.render_code(code_node), &|| {
+                        self.ui_toolkit.draw_box_around([0., 0., 0., 0.2], &|| {
+                            self.ui_toolkit.align(&|| self.ui_toolkit.draw_text("Output          "), &[&|| {
+                                ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(value)
+                            }])
+                        })
+                }])
+        } else {
+            self.render_code(code_node)
+        }
     }
 
     fn render_add_code_here_line(&self, insertion_point: InsertionPoint) -> T::DrawResult {

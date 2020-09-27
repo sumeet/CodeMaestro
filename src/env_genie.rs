@@ -28,6 +28,10 @@ impl<'a> EnvGenie<'a> {
         Self { env }
     }
 
+    pub fn get_last_executed_result(&self, code_node_id: lang::ID) -> Option<&lang::Value> {
+        self.env.prev_eval_result_by_code_id.get(&code_node_id)
+    }
+
     pub fn guess_type_of_value(&self, value: &lang::Value) -> lang::Type {
         match value {
             Value::Null => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
@@ -46,10 +50,9 @@ impl<'a> EnvGenie<'a> {
             Value::Enum { variant_id: _variant_id,
                           value, } => self.guess_type_of_value(value),
             Value::AnonymousFunction(anonymous_function) => {
-                lang::Type::with_params(&*lang::ANON_FUNC_TYPESPEC, vec![
-                    anonymous_function.takes_arg.arg_type.clone(),
-                    anonymous_function.returns.clone(),
-                ])
+                lang::Type::with_params(&*lang::ANON_FUNC_TYPESPEC,
+                                        vec![anonymous_function.takes_arg.arg_type.clone(),
+                                             anonymous_function.returns.clone(),])
             }
         }
     }

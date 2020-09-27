@@ -506,14 +506,14 @@ impl lang::Function for Map {
                 uuid::Uuid::parse_str("75ac0660-6814-4d17-8444-481237581f16").unwrap(),
                 lang::Type::with_params(&*lang::LIST_TYPESPEC,
                                     vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)]),
-                "What to map over".to_string()),
+                "Collection".to_string()),
             lang::ArgumentDefinition::new_with_id(
                 uuid::Uuid::parse_str("1ae3bf22-a2ab-4bd0-af5f-193385284b7d").unwrap(),
                 lang::Type::with_params(&*lang::ANON_FUNC_TYPESPEC,
                                     vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC),
                                         lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
                                     ]),
-                "Function thing".to_string()),
+                "Transformation".to_string()),
         ]
     }
 

@@ -4,6 +4,148 @@
   "functions": [
     {
       "type": "ChatProgram",
+      "id": "d1f6a300-8d3b-4fae-9be4-dec36937ec12",
+      "prefix": "!day1part1",
+      "code": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "input",
+              "expression": {
+                "StringLiteral": {
+                  "value": "77355\n115734\n59983\n106798\n71384\n112431\n87261\n98469\n104485\n63185\n112442\n90113\n62805\n77610\n61459\n55290\n139325\n58463\n65173\n95550\n101228\n70912\n147516\n62547\n137966\n53801\n115927\n133275\n147358\n126852\n110379\n107234\n130258\n127847\n118167\n122223\n90956\n141688\n88278\n54049\n135498\n123187\n125149\n61475\n136691\n133089\n120734\n112196\n88342\n94531\n105013\n118379\n106009\n78690\n87934\n75396\n83546\n64225\n104813\n127819\n78321\n107227\n107651\n139758\n50150\n55272\n106774\n68290\n104639\n140973\n121498\n89391\n108435\n73725\n51004\n104700\n127297\n91490\n103583\n128041\n146250\n142082\n95475\n65298\n130514\n92002\n141553\n126533\n75251\n143249\n146307\n50681\n128266\n109199\n72487\n50416\n92153\n120627\n119192\n56510",
+                  "id": "df9fdc12-5fb5-4917-a61a-de1f9bd0c317"
+                }
+              },
+              "id": "e04619bd-ec32-487c-9285-e02296067aa7"
+            }
+          },
+          {
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "7add6e8d-0f89-4958-a435-bad3c9066927",
+                  "id": "dfe5bbea-9d71-446f-a4b7-68a55e6bf67d"
+                }
+              },
+              "args": [
+                {
+                  "Argument": {
+                    "id": "0ec0f1ff-d052-4cd3-acbe-d4e99e78f5ca",
+                    "argument_definition_id": "75ac0660-6814-4d17-8444-481237581f16",
+                    "expr": {
+                      "FunctionCall": {
+                        "function_reference": {
+                          "FunctionReference": {
+                            "function_id": "2a6af5fe-8512-4d03-a018-a549c10cac8a",
+                            "id": "a2fe1ea5-b3a9-4485-8b00-afb61ae7f7bc"
+                          }
+                        },
+                        "args": [
+                          {
+                            "Argument": {
+                              "id": "2391a339-eda5-4927-b860-0a0714dfab9e",
+                              "argument_definition_id": "401e29a6-afd6-4868-913c-83bef61e9783",
+                              "expr": {
+                                "VariableReference": {
+                                  "assignment_id": "e04619bd-ec32-487c-9285-e02296067aa7",
+                                  "id": "56d4379a-9d97-42f9-9fa5-5fa294a8cafe"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "Argument": {
+                              "id": "34227167-9f50-4107-ad6e-c08b23ff9b4e",
+                              "argument_definition_id": "ad4e23c5-233b-466c-b0f5-7662e832adf1",
+                              "expr": {
+                                "StringLiteral": {
+                                  "value": "\n",
+                                  "id": "f1954752-3501-424b-b0b0-ba32f450c679"
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "id": "2bf8b445-53a7-4184-b375-3227e902a223"
+                      }
+                    }
+                  }
+                },
+                {
+                  "Argument": {
+                    "id": "8984451d-7747-4444-8a8b-2840d7ea2505",
+                    "argument_definition_id": "1ae3bf22-a2ab-4bd0-af5f-193385284b7d",
+                    "expr": {
+                      "AnonymousFunction": {
+                        "id": "8b0e26e0-c137-4b7c-8dc8-69e3e59a883d",
+                        "takes_arg": {
+                          "id": "a6f1cf0f-b6b9-41dc-b034-ad9ea20b3961",
+                          "arg_type": {
+                            "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                            "params": []
+                          },
+                          "short_name": "var"
+                        },
+                        "returns": {
+                          "typespec_id": "92fe8555-2f8c-4ae5-aca6-42353f6dc888",
+                          "params": [
+                            {
+                              "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                              "params": []
+                            },
+                            {
+                              "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+                              "params": []
+                            }
+                          ]
+                        },
+                        "block": {
+                          "Block": {
+                            "expressions": [
+                              {
+                                "FunctionCall": {
+                                  "function_reference": {
+                                    "FunctionReference": {
+                                      "function_id": "fd49253c-3661-413f-b78c-25f20f8e3473",
+                                      "id": "71e0156a-2d0c-4bee-bd1d-1f3da5980669"
+                                    }
+                                  },
+                                  "args": [
+                                    {
+                                      "Argument": {
+                                        "id": "0ff0f02a-6c71-4be2-8940-fb182f378a9c",
+                                        "argument_definition_id": "f99f9d51-2ec7-4fce-9471-14b4c800110b",
+                                        "expr": {
+                                          "VariableReference": {
+                                            "assignment_id": "a6f1cf0f-b6b9-41dc-b034-ad9ea20b3961",
+                                            "id": "5d398e52-75dd-4be6-9590-398608ecb3f9"
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "id": "32226ad3-25e8-44d9-9bc5-e367f73e5a78"
+                                }
+                              }
+                            ],
+                            "id": "d494fcf4-98b6-41ea-8ee8-089261619e8e"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "09506566-346d-48ac-b703-6319eeddfc6c"
+            }
+          }
+        ],
+        "id": "50b091f8-717e-45de-b948-b84cf3ccad99"
+      }
+    },
+    {
+      "type": "ChatProgram",
       "id": "65e7d463-24a7-4271-80cd-f43bccb9316e",
       "prefix": "!spread",
       "code": {
