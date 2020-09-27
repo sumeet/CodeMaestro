@@ -212,7 +212,7 @@ impl Interpreter {
         };
         let env = Rc::clone(&self.env);
         async move {
-            let result = result.await;
+            let result = await_eval_result!(result);
             env.borrow_mut()
                .prev_eval_result_by_code_id
                .insert(code_node_id, result.clone());
