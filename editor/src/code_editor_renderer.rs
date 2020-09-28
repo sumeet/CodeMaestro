@@ -1031,7 +1031,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_code_line_in_block(&self, code_node: &lang::CodeNode) -> T::DrawResult {
         let draw_code_fn = &|| {
             self.ui_toolkit
-                .drag_drop_source(&|| self.render_code(code_node), code_node)
+                .drag_drop_source(&|| self.render_code(code_node),
+                                  &|| self.render_code(code_node),
+                                  code_node)
         };
 
         let value = self.env_genie.get_last_executed_result(code_node.id());
@@ -1050,15 +1052,28 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_add_code_here_line(&self, insertion_point: InsertionPoint) -> T::DrawResult {
-        self.ui_toolkit.replace_on_hover(&|| {
-                                             self.ui_toolkit
-                                                 // HAX: 70 is the size of the Insert Code button lol
-                                                 .draw_code_line_separator('\u{f0fe}',
-                                                                           70.,
-                                                                           2.,
-                                                                           colorscheme!(separator_color))
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        self.ui_toolkit.drag_drop_target(
+                                         &|| {
+                                             self.ui_toolkit.replace_on_hover(&|| {
+                self.ui_toolkit
+                    // HAX: 70 is the size of the Insert Code button lol
+                    .draw_code_line_separator('\u{f0fe}',
+                                              70.,
+                                              2.,
+                                              colorscheme!(separator_color))
+            },
+                                             &|| self.render_add_code_here_button(insertion_point))
                                          },
-                                         &|| self.render_add_code_here_button(insertion_point))
+                                         &|| self.ui_toolkit.draw_text("hello"),
+                                         move |code_node: CodeNode| {
+                                             cmd_buffer.borrow_mut()
+                                                       .add_editor_command(move |editor| {
+                                                           editor.move_code(code_node.id(),
+                                                                            insertion_point);
+                                                       })
+                                         },
+        )
     }
 
     // this is for the button itself. for the line with hover, see ^

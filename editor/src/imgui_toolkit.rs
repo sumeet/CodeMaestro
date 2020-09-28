@@ -10,8 +10,9 @@ use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use imgui::*;
 use imgui_sys::{
     igAcceptDragDropPayload, igBeginDragDropTarget, igEndDragDropSource, igEndDragDropTarget,
-    igSetDragDropPayload, ImGuiPopupFlags_MouseButtonRight,
-    ImGuiPopupFlags_NoOpenOverExistingPopup, ImGuiPopupFlags_NoOpenOverItems, ImVec2,
+    igSetDragDropPayload, ImGuiDragDropFlags_AcceptBeforeDelivery,
+    ImGuiPopupFlags_MouseButtonRight, ImGuiPopupFlags_NoOpenOverExistingPopup,
+    ImGuiPopupFlags_NoOpenOverItems, ImVec2,
 };
 use lazy_static::lazy_static;
 use objekt::private::ptr::slice_from_raw_parts;
@@ -389,28 +390,35 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                .unwrap();
     }
 
-    fn drag_drop_source(&self, draw_fn: DrawFnRef<Self>, payload: impl Serialize) {
+    fn drag_drop_source(&self,
+                        draw_fn: DrawFnRef<Self>,
+                        draw_preview_fn: DrawFnRef<Self>,
+                        payload: impl Serialize) {
         self.ui.group(draw_fn);
         unsafe {
             if imgui_sys::igBeginDragDropSource(ImGuiDragDropFlags::SourceAllowNullID.bits()) {
+                self.ui.group(draw_preview_fn);
                 let payload_bytes = bincode::serialize(&payload).unwrap();
                 igSetDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
                                      payload_bytes.as_ptr() as *const _,
                                      payload_bytes.len(),
                                      0);
 
-                unsafe { igEndDragDropSource() }
+                igEndDragDropSource()
             }
         }
     }
 
     fn drag_drop_target<D: DeserializeOwned>(&self,
                                              draw_fn: DrawFnRef<Self>,
+                                             draw_when_hovered: DrawFnRef<Self>,
                                              accepts_payload: impl Fn(D) + 'static) {
         self.ui.group(draw_fn);
         unsafe {
             if igBeginDragDropTarget() {
-                let payload = igAcceptDragDropPayload(b"_ITEM\0".as_ptr() as *const _, 0);
+                let payload = igAcceptDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
+                                                      // ImGuiDragDropFlags_AcceptBeforeDelivery as _);
+                                                      0);
                 if !payload.is_null() {
                     let payload = *payload;
                     let data =
@@ -418,7 +426,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     accepts_payload(bincode::deserialize(&*data).unwrap())
                 }
 
-                unsafe { igEndDragDropTarget() }
+                draw_when_hovered();
+
+                igEndDragDropTarget()
             }
         }
     }

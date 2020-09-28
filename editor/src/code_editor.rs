@@ -425,6 +425,14 @@ impl CodeEditor {
         self.set_selected_node_id(mutation_result.new_cursor_position);
     }
 
+    pub fn move_code(&mut self, code_node_id: lang::ID, to: InsertionPoint) -> Option<()> {
+        let mutation_result = self.mutation_master
+                                  .move_code(&self.code_genie, code_node_id, to);
+        // TODO: these save current state calls can go inside of the mutation master
+        self.apply_mutation_result(mutation_result);
+        Some(())
+    }
+
     pub fn extract_into_variable(&mut self, code_node_id: lang::ID) -> Option<()> {
         let mutation_result = self.mutation_master
                                   .extract_into_variable(code_node_id, &self.code_genie);
@@ -1027,7 +1035,9 @@ impl MutationMaster {
             InsertionPoint::Before(id) | InsertionPoint::After(id) => {
                 let parent =
                     genie.find_parent(id)
-                         .expect("unable to insert new code, couldn't find parent to insert into");
+                         .unwrap_or_else(|| {
+                             panic!("unable to insert new code {:?} into {:?}, couldn't find parent to insert into", node_to_insert.id(), insertion_point)
+                         });
                 self.insert_new_expression_in_block(node_to_insert,
                                                     insertion_point,
                                                     parent.clone(),
@@ -1146,6 +1156,28 @@ impl MutationMaster {
             _ => panic!("should be inserting into type parent, got {:?} instead",
                         parent),
         }
+    }
+
+    pub fn move_code(&self,
+                     code_genie: &CodeGenie,
+                     node_id: lang::ID,
+                     to: InsertionPoint)
+                     -> MutationResult {
+        println!("inserting {:?} into {:?}", node_id, to);
+        match to {
+            InsertionPoint::Before(id) | InsertionPoint::After(id) => {
+                if id == node_id {
+                    return MutationResult::new(code_genie.code.clone(), None, false);
+                }
+            }
+            _ => (),
+        };
+        let code = code_genie.find_node(node_id).unwrap();
+        let mut result = self.delete_code(node_id, code_genie, None).unwrap();
+        result.new_root = self.insert_code(code, to, &CodeGenie::new(result.new_root));
+        result
+        // result.unwrap().new_root.
+        // MutationResult::new(new_root, None, false)
     }
 
     pub fn extract_into_variable(&self,

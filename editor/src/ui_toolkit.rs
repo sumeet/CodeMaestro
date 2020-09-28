@@ -113,10 +113,12 @@ pub trait UiToolkit {
                                                                  -> Self::DrawResult;
     fn drag_drop_source(&self,
                         draw_fn: DrawFnRef<Self>,
+                        draw_preview_fn: DrawFnRef<Self>,
                         payload: impl Serialize)
                         -> Self::DrawResult;
     fn drag_drop_target<D: DeserializeOwned>(&self,
                                              draw_fn: DrawFnRef<Self>,
+                                             draw_when_hovered: DrawFnRef<Self>,
                                              accepts_payload: impl Fn(D) + 'static)
                                              -> Self::DrawResult;
     fn draw_color_picker_with_label(&self,
