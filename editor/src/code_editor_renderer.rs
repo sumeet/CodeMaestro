@@ -1029,10 +1029,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_code_line_in_block(&self, code_node: &lang::CodeNode) -> T::DrawResult {
+        let draw_code_fn = &|| {
+            self.ui_toolkit
+                .drag_drop_source(&|| self.render_code(code_node), code_node)
+        };
+
         let value = self.env_genie.get_last_executed_result(code_node.id());
         if let Some(value) = value {
             self.ui_toolkit
-                .draw_all(&[&|| self.render_code(code_node), &|| {
+                .draw_all(&[draw_code_fn, &|| {
                         self.ui_toolkit.draw_box_around([0., 0., 0., 0.2], &|| {
                             self.ui_toolkit.align(&|| self.ui_toolkit.draw_text("Output          "), &[&|| {
                                 ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(value)
@@ -1040,7 +1045,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         })
                 }])
         } else {
-            self.render_code(code_node)
+            draw_code_fn()
         }
     }
 

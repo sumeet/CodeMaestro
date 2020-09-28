@@ -390,22 +390,24 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn drag_drop_source(&self, draw_fn: DrawFnRef<Self>, payload: impl Serialize) {
+        self.ui.group(draw_fn);
         unsafe {
-            if imgui_sys::igBeginDragDropSource(0) {
+            if imgui_sys::igBeginDragDropSource(ImGuiDragDropFlags::SourceAllowNullID.bits()) {
                 let payload_bytes = bincode::serialize(&payload).unwrap();
                 igSetDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
                                      payload_bytes.as_ptr() as *const _,
                                      payload_bytes.len(),
                                      0);
+
+                unsafe { igEndDragDropSource() }
             }
         }
-        draw_fn();
-        unsafe { igEndDragDropSource() }
     }
 
     fn drag_drop_target<D: DeserializeOwned>(&self,
                                              draw_fn: DrawFnRef<Self>,
                                              accepts_payload: impl Fn(D) + 'static) {
+        self.ui.group(draw_fn);
         unsafe {
             if igBeginDragDropTarget() {
                 let payload = igAcceptDragDropPayload(b"_ITEM\0".as_ptr() as *const _, 0);
@@ -415,10 +417,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         slice_from_raw_parts(payload.Data as *const u8, payload.DataSize as usize);
                     accepts_payload(bincode::deserialize(&*data).unwrap())
                 }
+
+                unsafe { igEndDragDropTarget() }
             }
         }
-        draw_fn();
-        unsafe { igEndDragDropTarget() }
     }
 
     fn draw_wrapped_text(&self, color: Color, text: &str) {
