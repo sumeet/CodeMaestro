@@ -9,10 +9,14 @@ use crate::colorscheme;
 use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
 use imgui::*;
 use imgui_sys::{
-    ImGuiPopupFlags_MouseButtonRight, ImGuiPopupFlags_NoOpenOverExistingPopup,
-    ImGuiPopupFlags_NoOpenOverItems, ImVec2,
+    igAcceptDragDropPayload, igBeginDragDropTarget, igEndDragDropSource, igEndDragDropTarget,
+    igSetDragDropPayload, ImGuiPopupFlags_MouseButtonRight,
+    ImGuiPopupFlags_NoOpenOverExistingPopup, ImGuiPopupFlags_NoOpenOverItems, ImVec2,
 };
 use lazy_static::lazy_static;
+use objekt::private::ptr::slice_from_raw_parts;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::cell::RefCell;
 use std::collections::hash_map::HashMap;
 use std::collections::HashSet;
@@ -383,6 +387,38 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         File::create(&filename).unwrap()
                                .write_all(&contents)
                                .unwrap();
+    }
+
+    fn drag_drop_source(&self, draw_fn: DrawFnRef<Self>, payload: impl Serialize) {
+        unsafe {
+            if imgui_sys::igBeginDragDropSource(0) {
+                let payload_bytes = bincode::serialize(&payload).unwrap();
+                igSetDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
+                                     payload_bytes.as_ptr() as *const _,
+                                     payload_bytes.len(),
+                                     0);
+            }
+        }
+        draw_fn();
+        unsafe { igEndDragDropSource() }
+    }
+
+    fn drag_drop_target<D: DeserializeOwned>(&self,
+                                             draw_fn: DrawFnRef<Self>,
+                                             accepts_payload: impl Fn(D) + 'static) {
+        unsafe {
+            if igBeginDragDropTarget() {
+                let payload = igAcceptDragDropPayload(b"_ITEM\0".as_ptr() as *const _, 0);
+                if !payload.is_null() {
+                    let payload = *payload;
+                    let data =
+                        slice_from_raw_parts(payload.Data as *const u8, payload.DataSize as usize);
+                    accepts_payload(bincode::deserialize(&*data).unwrap())
+                }
+            }
+        }
+        draw_fn();
+        unsafe { igEndDragDropTarget() }
     }
 
     fn draw_wrapped_text(&self, color: Color, text: &str) {
