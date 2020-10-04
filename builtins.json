@@ -20,6 +20,15 @@
     },
     "fd49253c-3661-413f-b78c-25f20f8e3473": {
       "type": "ParseNumber"
+    },
+    "d1943888-27bc-40da-9756-e25da8584f96": {
+      "type": "DivideTemp"
+    },
+    "a54e21c5-d20f-4a46-98ca-fede6474d9c7": {
+      "type": "Subtract"
+    },
+    "a35bb47b-2660-4c90-a7c5-d015ea6954cb": {
+      "type": "SumList"
     }
   },
   "typespecs": {

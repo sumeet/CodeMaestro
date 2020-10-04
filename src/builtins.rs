@@ -561,3 +561,139 @@ impl lang::Function for ParseNumber {
         lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DivideTemp {}
+
+#[typetag::serde]
+impl lang::Function for DivideTemp {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let dividend = args.get(&self.takes_args()[0].id)
+                           .unwrap()
+                           .as_i128()
+                           .unwrap();
+        let divisor = args.get(&self.takes_args()[1].id)
+                          .unwrap()
+                          .as_i128()
+                          .unwrap();
+        lang::Value::Number(dividend / divisor)
+    }
+
+    fn name(&self) -> &str {
+        "DivideTemp"
+    }
+
+    fn description(&self) -> &str {
+        "Does Division"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("d1943888-27bc-40da-9756-e25da8584f96").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("fea14b3b-71dd-4907-88b9-ee1a857937ef").unwrap(),
+                                                   lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+                                                   "Dividend".into()),
+        lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("88afb818-e741-48e4-8550-7a29aaf4b500").unwrap(),
+                                                   lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+                                                   "Divisor".into())]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Subtract {}
+
+#[typetag::serde]
+impl lang::Function for Subtract {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        // TODO: fix the names
+        let dividend = args.get(&self.takes_args()[0].id)
+                           .unwrap()
+                           .as_i128()
+                           .unwrap();
+        let divisor = args.get(&self.takes_args()[1].id)
+                          .unwrap()
+                          .as_i128()
+                          .unwrap();
+        lang::Value::Number(dividend - divisor)
+    }
+
+    fn name(&self) -> &str {
+        "Subtract"
+    }
+
+    fn description(&self) -> &str {
+        "Does subtraction"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("a54e21c5-d20f-4a46-98ca-fede6474d9c7").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("2563941c-b8aa-4e22-9081-d7507d01f575").unwrap(),
+                                                   lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+                                                   "Minuend".into()),
+             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("1b5a2487-0cb8-4101-b184-a9b61d154e2a").unwrap(),
+                                                   lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+                                                   "Subtrahen".into())]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SumList {}
+
+#[typetag::serde]
+impl lang::Function for SumList {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let what_to_map_over = args.remove(&self.takes_args()[0].id)
+                                   .unwrap()
+                                   .into_vec()
+                                   .unwrap()
+                                   .into_iter()
+                                   .map(|value| value.as_i128().unwrap())
+                                   .sum();
+        lang::Value::Number(what_to_map_over)
+    }
+
+    fn name(&self) -> &str {
+        "SumList"
+    }
+
+    fn description(&self) -> &str {
+        "Add all the numbers together"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("a35bb47b-2660-4c90-a7c5-d015ea6954cb").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("c68fa262-5ea7-4f2f-8c2c-4838cf0959b1").unwrap(),
+                                                   lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                                                           vec![lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)]),
+                                                   "Numbers".into())]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+    }
+}

@@ -187,7 +187,7 @@ impl Interpreter {
                 let list_fut = self.evaluate(list_index.list_expr.as_ref());
                 let index_fut = self.evaluate(list_index.index_expr.as_ref());
                 Box::pin(async move {
-                    let index = await_eval_result!(index_fut).into_i128().unwrap();
+                    let index = await_eval_result!(index_fut).as_i128().unwrap();
                     if index.is_negative() {
                         return err_result_value(format!("can't index into a list with a negative index: {}", index));
                     }

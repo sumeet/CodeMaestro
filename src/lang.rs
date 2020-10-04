@@ -82,6 +82,9 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn id(&self) -> ID;
     fn takes_args(&self) -> Vec<ArgumentDefinition>;
     fn returns(&self) -> Type;
+    fn draw(&self) -> Option<Block> {
+        None
+    }
     fn cs_code(&self) -> Box<dyn Iterator<Item = &Block> + '_> {
         Box::new(std::iter::empty())
     }
@@ -217,9 +220,9 @@ impl Value {
         }
     }
 
-    pub fn into_i128(self) -> Option<i128> {
+    pub fn as_i128(&self) -> Option<i128> {
         match self {
-            Value::Number(i) => Some(i),
+            Value::Number(i) => Some(*i),
             _ => None,
         }
     }
