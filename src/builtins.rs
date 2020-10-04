@@ -582,6 +582,10 @@ impl lang::Function for DivideTemp {
         lang::Value::Number(dividend / divisor)
     }
 
+    fn style(&self) -> lang::FunctionRenderingStyle {
+        lang::FunctionRenderingStyle::Infix("/")
+    }
+
     fn name(&self) -> &str {
         "DivideTemp"
     }
@@ -613,6 +617,10 @@ pub struct Subtract {}
 
 #[typetag::serde]
 impl lang::Function for Subtract {
+    fn style(&self) -> lang::FunctionRenderingStyle {
+        lang::FunctionRenderingStyle::Infix("-")
+    }
+
     fn call(&self,
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
