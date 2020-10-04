@@ -1176,8 +1176,6 @@ impl MutationMaster {
         let mut result = self.delete_code(node_id, code_genie, None).unwrap();
         result.new_root = self.insert_code(code, to, &CodeGenie::new(result.new_root));
         result
-        // result.unwrap().new_root.
-        // MutationResult::new(new_root, None, false)
     }
 
     pub fn extract_into_variable(&self,

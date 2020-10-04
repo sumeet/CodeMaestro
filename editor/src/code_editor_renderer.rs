@@ -20,7 +20,7 @@ use crate::draw_all_iter;
 use crate::editor::value_renderer::ValueRenderer;
 use crate::editor::{CommandBuffer, Keypress};
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
-use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
+use crate::ui_toolkit::{ChildRegionHeight, ChildRegionWidth, DrawFnRef};
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{AnonymousFunction, CodeNode};
@@ -74,6 +74,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| self.render_code(code),
                                height,
+                               ChildRegionWidth::All,
                                Some(&move || self.draw_right_click_menu()),
                                Some(move |keypress| {
                                    cmd_buffer.borrow_mut()
@@ -279,6 +280,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                   )
                                                   },
                                                   ChildRegionHeight::Pixels(300),
+                                                  ChildRegionWidth::All,
                                                   None::<&dyn Fn() -> T::DrawResult>,
                                                   None::<fn(Keypress)>)
             }
@@ -714,6 +716,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                .unwrap())
                                },
                                ChildRegionHeight::FitContent,
+                               ChildRegionWidth::All,
                                Some(&|| self.draw_right_click_menu()),
                                None::<fn(Keypress)>)
     }
@@ -1038,17 +1041,34 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         let value = self.env_genie.get_last_executed_result(code_node.id());
         if let Some(value) = value {
-            self.ui_toolkit
-                .draw_all(&[draw_code_fn, &|| {
-                        self.ui_toolkit.draw_box_around([0., 0., 0., 0.2], &|| {
-                            self.ui_toolkit.align(&|| self.ui_toolkit.draw_text("Output          "), &[&|| {
-                                ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(value)
-                            }])
-                        })
-                }])
+            self.draw_code_with_output(draw_code_fn, value)
         } else {
             draw_code_fn()
         }
+    }
+
+    // TODO: this output stuff is too big, taking up too much space.
+    //
+    // need to explore:
+    // (1) removing the frame from the child region, so we have a scrollable region without the bulk
+    // (2) the padding too, same reason
+    fn draw_code_with_output(&self,
+                             draw_code_fn: DrawFnRef<T>,
+                             value: &lang::Value)
+                             -> T::DrawResult {
+        self.ui_toolkit
+            .draw_all(&[draw_code_fn, &|| {
+                self.ui_toolkit.draw_child_region([0., 0., 0., 0.2], &|| {
+                    self.ui_toolkit.draw_box_around([0., 0., 0., 0.2], &|| {
+                        self.ui_toolkit.align(&|| self.ui_toolkit.draw_text("Output          "), &[&|| {
+                            ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(value)
+                        }])
+                    })
+                }, ChildRegionHeight::Max(50), ChildRegionWidth::FitContent,
+                                                  None::<DrawFnRef<T>>,
+                                                  None::<fn(Keypress)>
+                )
+            }])
     }
 
     fn render_add_code_here_line(&self, insertion_point: InsertionPoint) -> T::DrawResult {

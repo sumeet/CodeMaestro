@@ -64,6 +64,7 @@ pub trait UiToolkit {
                                                     bg: Color,
                                                     draw_fn: &dyn Fn() -> Self::DrawResult,
                                                     height: ChildRegionHeight,
+                                                    width: ChildRegionWidth,
                                                     draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult;
@@ -259,8 +260,15 @@ pub enum SelectableItem<T: 'static> {
 #[derive(Debug, Copy, Clone)]
 pub enum ChildRegionHeight {
     FitContent,
+    Max(usize),
     ExpandFill { min_height: f32 },
     Pixels(usize),
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum ChildRegionWidth {
+    FitContent,
+    All,
 }
 
 pub type DrawFnRef<'a, T> = &'a dyn Fn() -> <T as UiToolkit>::DrawResult;

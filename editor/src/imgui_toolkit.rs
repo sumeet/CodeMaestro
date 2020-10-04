@@ -6,13 +6,12 @@ use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
 use nfd;
 
 use crate::colorscheme;
-use crate::ui_toolkit::{ChildRegionHeight, DrawFnRef};
+use crate::ui_toolkit::{ChildRegionHeight, ChildRegionWidth, DrawFnRef};
 use imgui::*;
 use imgui_sys::{
     igAcceptDragDropPayload, igBeginDragDropTarget, igEndDragDropSource, igEndDragDropTarget,
-    igSetDragDropPayload, ImGuiDragDropFlags_AcceptBeforeDelivery,
-    ImGuiPopupFlags_MouseButtonRight, ImGuiPopupFlags_NoOpenOverExistingPopup,
-    ImGuiPopupFlags_NoOpenOverItems, ImVec2,
+    igSetDragDropPayload, ImGuiPopupFlags_MouseButtonRight,
+    ImGuiPopupFlags_NoOpenOverExistingPopup, ImGuiPopupFlags_NoOpenOverItems, ImVec2,
 };
 use lazy_static::lazy_static;
 use objekt::private::ptr::slice_from_raw_parts;
@@ -858,10 +857,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                     bg: Color,
                                                     draw_fn: &dyn Fn(),
                                                     height: ChildRegionHeight,
+                                                    width: ChildRegionWidth,
                                                     draw_context_menu: Option<&dyn Fn()>,
                                                     handle_keypress: Option<F>) {
         let child_frame_id = self.imlabel("");
         let mut flex = 0;
+        // MAGICNUMBER: some pixels of padding, for some reason the remaining height gives
+        // a few pixels less than we actually need to use up the whole screen
+        let magic = 16.;
 
         let height = match height {
             ChildRegionHeight::FitContent => {
@@ -870,7 +873,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     // initially give back 0 if the window size is totally empty
                     None => 0.,
                     Some(_) => {
-                        let magic = 16.;
                         TkCache::get_child_region_content_height(child_frame_id.as_ref()).unwrap_or(0.) + magic
                     }
                 }
@@ -881,9 +883,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 // TODO: use imgui stack layout once it's in (https://github.com/ocornut/imgui/pull/846)
                 // ^^ i'm kind of implementing my own layout code, maybe we won't end up needing this ^
                 let current_window = TkCache::get_current_window();
-                // MAGICNUMBER: some pixels of padding, for some reason the remaining height gives
-                // a few pixels less than we actually need to use up the whole screen
-                let magic = 16.;
                 match current_window {
                     // initially give back 0 if the window size is totally empty
                     None => 0.,
@@ -906,6 +905,22 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 }
             }
             ChildRegionHeight::Pixels(pixels) => pixels as f32,
+            ChildRegionHeight::Max(pixels) => {
+                let current_window = TkCache::get_current_window();
+                let prev_height = match current_window {
+                    // initially give back 0 if the window size is totally empty
+                    None => pixels as f32,
+                    Some(_) => {
+                        TkCache::get_child_region_content_height(child_frame_id.as_ref()).unwrap_or(0.) + magic
+                    }
+                };
+                prev_height.min(pixels as _)
+            }
+        };
+
+        let width = match width {
+            ChildRegionWidth::FitContent => 0.,
+            ChildRegionWidth::All => 0.,
         };
 
         // TODO: this is hardcoded and can't be shared with wasm or any other system
@@ -927,7 +942,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                              (StyleColor::ChildBg, [bg[0], bg[1], bg[2], bg[3]])]);
 
         imgui::ChildWindow::new(&child_frame_id)
-            .size([0., height])
+            .size([width, height])
             .border(true)
             .horizontal_scrollbar(true)
             .build(self.ui, &|| {
