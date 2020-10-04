@@ -23,7 +23,7 @@ use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
 use crate::ui_toolkit::{ChildRegionHeight, ChildRegionWidth, DrawFnRef};
 use cs::env_genie::EnvGenie;
 use cs::lang;
-use cs::lang::{AnonymousFunction, CodeNode};
+use cs::lang::{AnonymousFunction, CodeNode, FunctionRenderingStyle};
 use cs::structs;
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
@@ -875,7 +875,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let func = func.unwrap();
         // TODO: rework this for when we have generics. the function arguments will need to take
         // the actual parameters as parameters
-        self.render_function_name(&func.name(), colorscheme!(action_color), &func.returns())
+        match func.style() {
+            FunctionRenderingStyle::Default => {
+                self.render_function_name(&func.name(), colorscheme!(action_color), &func.returns())
+            }
+            FunctionRenderingStyle::Infix(_, _) => {
+                self.render_function_name("", colorscheme!(action_color), &func.returns())
+            }
+        }
     }
 
     fn render_variable_reference(&self,
@@ -1119,6 +1126,37 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             return self.render_code(&function_call.function_reference);
         }
 
+        let function = self.env_genie
+                           .find_function(function_call.function_reference().function_id)
+                           .map(|func| func.clone())
+                           .unwrap();
+        match function.style() {
+            FunctionRenderingStyle::Default => {
+                self.render_default_function_call_style(&function_call)
+            }
+            FunctionRenderingStyle::Infix(_, infix) => {
+                self.render_infix_function_call_style(infix, &function_call)
+            }
+        }
+    }
+
+    fn render_infix_function_call_style(&self,
+                                        infix_symbol: &str,
+                                        function_call: &lang::FunctionCall)
+                                        -> T::DrawResult {
+        // function_call.args[0]
+        // function_call.args[1]
+        self.ui_toolkit
+            .draw_all_on_same_line(&[
+                &|| self.render_code(&function_call.function_reference),
+                &|| self.render_code(&function_call.args[0]),
+                                     &|| self.ui_toolkit.draw_text(infix_symbol),
+                                     &|| self.render_code(&function_call.args[1])])
+    }
+
+    fn render_default_function_call_style(&self,
+                                          function_call: &lang::FunctionCall)
+                                          -> <T as UiToolkit>::DrawResult {
         let rhs = self.render_function_call_arguments(function_call.function_reference()
                                                                    .function_id,
                                                       function_call.args());
@@ -1141,28 +1179,35 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
-        let arg_display = {
-            match self.env_genie
-                      .get_arg_definition(argument.argument_definition_id)
-            {
-                Some(arg_def) => {
-                    let type_symbol = self.env_genie.get_symbol_for_type(&arg_def.arg_type);
-                    format!("{} {}", type_symbol, arg_def.short_name)
-                }
-                None => "\u{f059}".to_string(),
-            }
-        };
+        let func = self.env_genie
+                       .get_function_containing_arg(argument.argument_definition_id)
+                       .unwrap();
 
-        self.render_nested(&|| {
-                self.ui_toolkit.draw_all_on_same_line(&[&|| {
-                                                            self.ui_toolkit
-                                                                .draw_buttony_text(&arg_display,
-                                                                                   BLACK_COLOR)
-                                                        },
-                                                        &|| {
-                                                            self.render_code(argument.expr.as_ref())
-                                                        }])
-            })
+        let render_inner_code = &|| self.render_code(argument.expr.as_ref());
+
+        match func.style() {
+            FunctionRenderingStyle::Default => {
+                let arg_display = {
+                    match self.env_genie
+                              .get_arg_definition(argument.argument_definition_id)
+                    {
+                        Some(arg_def) => {
+                            let type_symbol = self.env_genie.get_symbol_for_type(&arg_def.arg_type);
+                            format!("{} {}", type_symbol, arg_def.short_name)
+                        }
+                        None => "\u{f059}".to_string(),
+                    }
+                };
+
+                self.render_nested(&|| {
+                        self.ui_toolkit.draw_all_on_same_line(&[
+                        &|| self.ui_toolkit.draw_buttony_text(&arg_display, BLACK_COLOR),
+                        render_inner_code,
+                    ])
+                    })
+            }
+            FunctionRenderingStyle::Infix(_, _) => self.render_nested(&|| render_inner_code()),
+        }
     }
 
     fn render_args_for_found_function(

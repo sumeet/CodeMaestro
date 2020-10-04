@@ -239,11 +239,20 @@ impl<'a> EnvGenie<'a> {
         self.env.list_typespecs()
     }
 
+    pub fn get_function_containing_arg(&self,
+                                       argument_definition_id: lang::ID)
+                                       -> Option<&dyn lang::Function> {
+        self.iterate_all_function_arguments()
+            .find(|(_, arg)| arg.id == argument_definition_id)
+            .map(|arg_def| arg_def.0)
+    }
+
     pub fn get_arg_definition(&self,
                               argument_definition_id: lang::ID)
                               -> Option<lang::ArgumentDefinition> {
         self.iterate_all_function_arguments()
-            .find(|arg| arg.id == argument_definition_id)
+            .find(|(_, arg)| arg.id == argument_definition_id)
+            .map(|arg_def| arg_def.1)
     }
 
     // TODO: this is the place that needs to be changed
@@ -254,13 +263,14 @@ impl<'a> EnvGenie<'a> {
 
     pub fn iterate_all_function_arguments(
         &self)
-        -> impl Iterator<Item = lang::ArgumentDefinition> + '_ {
+        -> impl Iterator<Item = (&dyn lang::Function, lang::ArgumentDefinition)> + '_ {
         self.env.list_functions().flat_map(move |func| {
                                      let args_for_func = get_args_for_func(func.as_ref());
                                      args_for_func.into_iter()
                                                   .flat_map(move |(_block_id, get_args)| {
                                                       get_args(func.as_ref())
                                                   })
+                                                  .map(move |arg| (func.as_ref(), arg))
                                  })
     }
 

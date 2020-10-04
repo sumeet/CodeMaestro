@@ -583,7 +583,7 @@ impl lang::Function for DivideTemp {
     }
 
     fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Infix("/")
+        lang::FunctionRenderingStyle::Infix(vec![], "/")
     }
 
     fn name(&self) -> &str {
@@ -618,7 +618,7 @@ pub struct Subtract {}
 #[typetag::serde]
 impl lang::Function for Subtract {
     fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Infix("-")
+        lang::FunctionRenderingStyle::Infix(vec![], "-")
     }
 
     fn call(&self,

@@ -92,7 +92,7 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
 
 pub enum FunctionRenderingStyle {
     Default,
-    Infix(&'static str),
+    Infix(Vec<ID>, &'static str),
 }
 
 impl fmt::Debug for dyn Function {
