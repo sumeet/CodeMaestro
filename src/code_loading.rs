@@ -69,7 +69,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function
         "HTTPRequest" => Box::new(builtins::HTTPRequest {}),
         "ParseNumber" => Box::new(builtins::ParseNumber {}),
         "DivideTemp" => Box::new(builtins::DivideTemp {}),
-        "SumList" => Box::new(builtins::SumList {}),
+        "Sum" => Box::new(builtins::Sum {}),
         "Subtract" => Box::new(builtins::Subtract {}),
         "Map" => Box::new(builtins::Map {}),
         "Print" => Box::new(builtins::Print {}),

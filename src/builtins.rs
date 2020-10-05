@@ -583,7 +583,8 @@ impl lang::Function for DivideTemp {
     }
 
     fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Infix(vec![], "/")
+        lang::FunctionRenderingStyle::Default
+        //lang::FunctionRenderingStyle::Infix(vec![], "/")
     }
 
     fn name(&self) -> &str {
@@ -618,7 +619,8 @@ pub struct Subtract {}
 #[typetag::serde]
 impl lang::Function for Subtract {
     fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Infix(vec![], "-")
+        lang::FunctionRenderingStyle::Infix(vec![], "-");
+        lang::FunctionRenderingStyle::Default
     }
 
     fn call(&self,
@@ -664,10 +666,10 @@ impl lang::Function for Subtract {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct SumList {}
+pub struct Sum {}
 
 #[typetag::serde]
-impl lang::Function for SumList {
+impl lang::Function for Sum {
     fn call(&self,
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
@@ -683,7 +685,7 @@ impl lang::Function for SumList {
     }
 
     fn name(&self) -> &str {
-        "SumList"
+        "Sum"
     }
 
     fn description(&self) -> &str {

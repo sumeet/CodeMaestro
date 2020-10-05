@@ -28,7 +28,7 @@
       "type": "Subtract"
     },
     "a35bb47b-2660-4c90-a7c5-d015ea6954cb": {
-      "type": "SumList"
+      "type": "Sum"
     }
   },
   "typespecs": {
