@@ -6,7 +6,7 @@ use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
 use nfd;
 
 use crate::colorscheme;
-use crate::ui_toolkit::{ChildRegionHeight, ChildRegionWidth, DrawFnRef};
+use crate::ui_toolkit::{ChildRegionFrameStyle, ChildRegionHeight, ChildRegionWidth, DrawFnRef};
 use imgui::*;
 use imgui_sys::{
     igAcceptDragDropPayload, igBeginDragDropTarget, igEndDragDropSource, igEndDragDropTarget,
@@ -56,15 +56,15 @@ struct Window {
 
 struct ChildRegion {
     is_focused: bool,
-    content_height: f32,
+    content_size: [f32; 2],
     height: f32,
 }
 
 impl ChildRegion {
-    fn new(is_focused: bool, height: f32, content_height: f32) -> Self {
+    fn new(is_focused: bool, height: f32, content_size: [f32; 2]) -> Self {
         Self { is_focused,
                height,
-               content_height }
+               content_size }
     }
 }
 
@@ -161,7 +161,15 @@ impl TkCache {
                 .unwrap()
                 .child_regions
                 .get(child_window_id)
-                .map(|cr| cr.content_height)
+                .map(|cr| cr.content_size[1])
+    }
+
+    pub fn get_child_region_content_width(child_window_id: &str) -> Option<f32> {
+        TK_CACHE.lock()
+                .unwrap()
+                .child_regions
+                .get(child_window_id)
+                .map(|cr| cr.content_size[0])
     }
 
     pub fn is_hovered(label: &str) -> bool {
@@ -856,6 +864,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
                                                     draw_fn: &dyn Fn(),
+                                                    frame_style: ChildRegionFrameStyle,
                                                     height: ChildRegionHeight,
                                                     width: ChildRegionWidth,
                                                     draw_context_menu: Option<&dyn Fn()>,
@@ -864,7 +873,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let mut flex = 0;
         // MAGICNUMBER: some pixels of padding, for some reason the remaining height gives
         // a few pixels less than we actually need to use up the whole screen
-        let magic = 16.;
+        let magic = {
+            match frame_style {
+                ChildRegionFrameStyle::Framed => 16.,
+                ChildRegionFrameStyle::NoFrame => 0.,
+            }
+        };
 
         let height = match height {
             ChildRegionHeight::FitContent => {
@@ -919,7 +933,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         };
 
         let width = match width {
-            ChildRegionWidth::FitContent => 0.,
+            ChildRegionWidth::FitContent => {
+                let current_window = TkCache::get_current_window();
+                match current_window {
+                    // initially give back 0 if the window size is totally empty
+                    None => 0.,
+                    Some(_) => {
+                        TkCache::get_child_region_content_width(child_frame_id.as_ref()).unwrap_or(0.) + magic
+                    }
+                }
+            }
             ChildRegionWidth::All => 0.,
         };
 
@@ -941,14 +964,25 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         .push_style_colors(&[(StyleColor::Border, color),
                                              (StyleColor::ChildBg, [bg[0], bg[1], bg[2], bg[3]])]);
 
-        imgui::ChildWindow::new(&child_frame_id)
-            .size([width, height])
-            .border(true)
-            .horizontal_scrollbar(true)
+        let mut builder = imgui::ChildWindow::new(&child_frame_id).size([width, height]);
+
+        match frame_style {
+            ChildRegionFrameStyle::Framed => {
+                builder = builder.border(true).horizontal_scrollbar(true)
+            }
+            ChildRegionFrameStyle::NoFrame => {
+                builder = builder.border(false)
+                                 .scrollable(true)
+                                 .scroll_bar(false)
+                                 .horizontal_scrollbar(true)
+            }
+        }
+
+        builder
             .build(self.ui, &|| {
                 let child_region_height = self.ui.content_region_avail()[1];
                 self.ui.group(draw_fn);
-                let content_height = self.ui.item_rect_size()[1];
+                let content_size = self.ui.item_rect_size();
 
                 if let Some(keypress) = self.keypress {
                     if self.ui.is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS) {
@@ -961,7 +995,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 TkCache::set_child_region_info(child_frame_id.as_ref(),
                                                ChildRegion::new(self.ui.is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS),
                                                                 child_region_height,
-                                                                content_height),
+                                                                content_size),
                                                flex);
 
                 if let Some(draw_context_menu) = draw_context_menu {

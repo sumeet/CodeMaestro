@@ -63,6 +63,7 @@ pub trait UiToolkit {
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
                                                     draw_fn: &dyn Fn() -> Self::DrawResult,
+                                                    frame_style: ChildRegionFrameStyle,
                                                     height: ChildRegionHeight,
                                                     width: ChildRegionWidth,
                                                     draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
@@ -269,6 +270,12 @@ pub enum ChildRegionHeight {
 pub enum ChildRegionWidth {
     FitContent,
     All,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum ChildRegionFrameStyle {
+    Framed,
+    NoFrame,
 }
 
 pub type DrawFnRef<'a, T> = &'a dyn Fn() -> <T as UiToolkit>::DrawResult;

@@ -20,7 +20,7 @@ use crate::draw_all_iter;
 use crate::editor::value_renderer::ValueRenderer;
 use crate::editor::{CommandBuffer, Keypress};
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
-use crate::ui_toolkit::{ChildRegionHeight, ChildRegionWidth, DrawFnRef};
+use crate::ui_toolkit::{ChildRegionFrameStyle, ChildRegionHeight, ChildRegionWidth, DrawFnRef};
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{AnonymousFunction, CodeNode, FunctionRenderingStyle};
@@ -73,6 +73,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| self.render_code(code),
+                               ChildRegionFrameStyle::Framed,
                                height,
                                ChildRegionWidth::All,
                                Some(&move || self.draw_right_click_menu()),
@@ -279,6 +280,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                       })
                                                   )
                                                   },
+                                                  ChildRegionFrameStyle::Framed,
                                                   ChildRegionHeight::Pixels(300),
                                                   ChildRegionWidth::All,
                                                   None::<&dyn Fn() -> T::DrawResult>,
@@ -715,6 +717,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                .into_block()
                                                                .unwrap())
                                },
+                               ChildRegionFrameStyle::Framed,
                                ChildRegionHeight::FitContent,
                                ChildRegionWidth::All,
                                Some(&|| self.draw_right_click_menu()),
@@ -1071,7 +1074,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                             ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(value)
                         }])
                     })
-                }, ChildRegionHeight::Max(50), ChildRegionWidth::FitContent,
+                }, ChildRegionFrameStyle::NoFrame, ChildRegionHeight::Max(50), ChildRegionWidth::FitContent,
                                                   None::<DrawFnRef<T>>,
                                                   None::<fn(Keypress)>
                 )
