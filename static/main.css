@@ -159,3 +159,13 @@ replaceonhoverhack {
 button {
     margin: 0px;
 }
+
+/* from https://www.w3schools.com/howto/howto_css_hide_scrollbars.asp */
+/* firefox */
+.invisible-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+/* webkit */
+.invisible-scrollbar {
+    scrollbar-width: none;
+}

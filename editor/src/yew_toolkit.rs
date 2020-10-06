@@ -13,7 +13,9 @@ use super::editor::{Key as AppKey, Keypress};
 use super::ui_toolkit::UiToolkit;
 use crate::code_editor_renderer::BLACK_COLOR;
 use crate::colorscheme;
-use crate::ui_toolkit::{ChildRegionHeight, Color, DrawFnRef, SelectableItem};
+use crate::ui_toolkit::{
+    ChildRegionFrameStyle, ChildRegionHeight, ChildRegionWidth, Color, DrawFnRef, SelectableItem,
+};
 use all::All;
 use overlay::{TopLeftOverlay, TopRightOverlay};
 use separator::Separator;
@@ -284,6 +286,22 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    fn drag_drop_source(&self,
+                        draw_fn: DrawFnRef<Self>,
+                        draw_preview_fn: DrawFnRef<Self>,
+                        payload: impl Serialize)
+                        -> Self::DrawResult {
+        draw_fn()
+    }
+
+    fn drag_drop_target<D: DeserializeOwned>(&self,
+                                             draw_fn: DrawFnRef<Self>,
+                                             draw_when_hovered: DrawFnRef<Self>,
+                                             accepts_payload: impl Fn(D) + 'static)
+                                             -> Self::DrawResult {
+        draw_fn()
+    }
+
     fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(
         &self,
         label: &str,
@@ -295,7 +313,7 @@ impl UiToolkit for YewToolkit {
             // min-height: fit-content is a fix for safari. otherwise this doesn't take up any space
             // and gets stomped in flex layouts
             <div style="display: flex; min-height: fit-content;",>
-                {{ self.draw_text_input(existing_value, onchange, ondone) }}
+                {{ self.draw_text_input(existing_value, false, onchange, ondone) }}
                 <label>{{ label }}</label>
             </div>
         }
@@ -562,7 +580,9 @@ impl UiToolkit for YewToolkit {
     fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
                                                     bg: Color,
                                                     draw_fn: &dyn Fn() -> Self::DrawResult,
+                                                    frame_style: ChildRegionFrameStyle,
                                                     height: ChildRegionHeight,
+                                                    width: ChildRegionWidth,
                                                     draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
                                                     handle_keypress: Option<F>)
                                                     -> Self::DrawResult {
@@ -591,6 +611,20 @@ impl UiToolkit for YewToolkit {
                 ("flex: 1; margin-top: 0px;", "min-height: 100%; height: 100%;".to_owned())
             }
             ChildRegionHeight::Pixels(px) => ("margin-top: 0px;", format!("height: {}px;", px)),
+            ChildRegionHeight::Max(max_height) => ("flex: 1; margin-top: 0px;",
+                                                   format!("max-height: {}px; height: 100%;",
+                                                           max_height)),
+        };
+        let width_css = match width {
+            ChildRegionWidth::FitContent => "width: fit-content;",
+            ChildRegionWidth::All => "width: 100%;",
+        };
+        let (border_css, border_class) = match frame_style {
+            ChildRegionFrameStyle::Framed => ("border: 1px solid #6a6a6a; overflow: auto;", ""),
+            // TODO: scrollbar-width: none; only works in firefox. need to apply same fix for webkit/chrome
+            ChildRegionFrameStyle::NoFrame => {
+                ("border: none; overflow: auto;", "invisible-scrollbar")
+            }
         };
 
         let context_menu_ref = NodeRef::default();
@@ -606,10 +640,10 @@ impl UiToolkit for YewToolkit {
                     { context_menu.unwrap_or_else(|| VNode::from(VList::new())) }
                 </div>
 
-                <div style={ format!("border: 1px solid #6a6a6a; white-space: nowrap; background-color: {}; overflow: auto; {}", rgba(bg), height_css) },
+                <div style={ format!("{} white-space: nowrap; background-color: {}; {} {}", border_css, rgba(bg), height_css, width_css) },
                     ref={context_menu_trigger_ref},
                     tabindex=0,
-                    class="context_menu_trigger",
+                    class=format!("context_menu_trigger {}", border_class),
                     oncontextmenu=self.callback(move |e: ContextMenuEvent| {
                         let context_menu_el : Element = (&context_menu_ref2).cast().unwrap();
                         let context_menu_trigger_el : Element = (&context_menu_trigger_ref2).cast().unwrap();
@@ -778,17 +812,29 @@ impl UiToolkit for YewToolkit {
 
     fn draw_text_input<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(&self,
                                                                        existing_value: &str,
+                                                                       fit_input_width: bool,
                                                                        onchange: F,
                                                                        ondone: D)
                                                                        -> Self::DrawResult {
+        let node_ref = NodeRef::default();
         let ondone = Rc::new(ondone);
         let ondone2 = Rc::clone(&ondone);
         html! {
             <input type="text",
+               ref={node_ref},
                style=format!("display: block; background-color: {};", rgba(colorscheme!(input_bg_color))),
                autocomplete="off",
                value=existing_value,
                oninput=self.callback(move |e: InputData| {
+                   // from https://stackoverflow.com/a/43488899
+                    if fit_input_width {
+                        // let element : Element = node_ref.cast().unwrap();
+                        // js! {
+                        //     let el = @{element};
+                        //     el.style.width = @{e.value.len()} + "ch";
+                        // };
+                    }
+
                    onchange(&e.value);
                    Msg::Redraw
                }),
@@ -1372,6 +1418,7 @@ fn map_key(key: &str) -> Option<AppKey> {
         "arrowright" => Some(AppKey::RightArrow),
         "arrowup" => Some(AppKey::UpArrow),
         "arrowdown" => Some(AppKey::DownArrow),
+        "enter" | "return" => Some(AppKey::Enter),
         "esc" | "escape" => Some(AppKey::Escape),
         _ => None,
     }
@@ -1437,6 +1484,8 @@ fn vtag(html: Html) -> VTag {
     }
 }
 
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use stdweb::unstable::TryFrom;
 use stdweb::web::Node;
 
