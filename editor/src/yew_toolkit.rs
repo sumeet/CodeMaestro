@@ -286,12 +286,20 @@ impl UiToolkit for YewToolkit {
         }
     }
 
+    // TODO: fix this https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API
     fn drag_drop_source(&self,
                         draw_fn: DrawFnRef<Self>,
                         draw_preview_fn: DrawFnRef<Self>,
                         payload: impl Serialize)
                         -> Self::DrawResult {
-        draw_fn()
+        html! {
+            <div draggable="true", ondragstart=self.callback(move |e: DragStartEvent| {
+                e.data_transfer.drop_effect = "move";
+                Msg::DontRedraw
+            }),>
+                {{ draw_fn() }}
+            </div>
+        }
     }
 
     fn drag_drop_target<D: DeserializeOwned>(&self,
@@ -817,6 +825,7 @@ impl UiToolkit for YewToolkit {
                                                                        ondone: D)
                                                                        -> Self::DrawResult {
         let node_ref = NodeRef::default();
+        let node_ref2 = node_ref.clone();
         let ondone = Rc::new(ondone);
         let ondone2 = Rc::clone(&ondone);
         html! {
@@ -826,13 +835,16 @@ impl UiToolkit for YewToolkit {
                autocomplete="off",
                value=existing_value,
                oninput=self.callback(move |e: InputData| {
+                    // TODO: i think this isn't totally accurate length "ch" i think doesn't calc
+                    // text size
                    // from https://stackoverflow.com/a/43488899
                     if fit_input_width {
-                        // let element : Element = node_ref.cast().unwrap();
-                        // js! {
-                        //     let el = @{element};
-                        //     el.style.width = @{e.value.len()} + "ch";
-                        // };
+                        let element : Element = (&node_ref2).cast().unwrap();
+                        let len = e.value.len().to_string();
+                        js! {
+                            let el = @{element};
+                            el.style.width = @{len} + "ch";
+                        };
                     }
 
                    onchange(&e.value);
