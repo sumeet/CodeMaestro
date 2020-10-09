@@ -29,6 +29,9 @@
     },
     "a35bb47b-2660-4c90-a7c5-d015ea6954cb": {
       "type": "Sum"
+    },
+    "f3781fb2-d638-49be-88c0-9eb0dddbed32": {
+      "type": "Equals"
     }
   },
   "typespecs": {

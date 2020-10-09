@@ -68,10 +68,44 @@ lazy_static! {
         symbol: "ｆ".to_string(),
         num_params: 2,
     };
+    pub static ref ANY_TYPESPEC: AnyTypeSpec = AnyTypeSpec { };
 
-    pub static ref BUILT_IN_TYPESPECS : Vec<&'static BuiltInTypeSpec> = vec![
-        &NULL_TYPESPEC, &BOOLEAN_TYPESPEC, &STRING_TYPESPEC, &NUMBER_TYPESPEC,
-        &LIST_TYPESPEC, &ERROR_TYPESPEC, &ANON_FUNC_TYPESPEC];
+    pub static ref BUILT_IN_TYPESPECS : Vec<Box<dyn TypeSpec>> = vec![
+        Box::new(NULL_TYPESPEC.clone()), Box::new(BOOLEAN_TYPESPEC.clone()),
+        Box::new(STRING_TYPESPEC.clone()),
+        Box::new(NUMBER_TYPESPEC.clone()),
+        Box::new(LIST_TYPESPEC.clone()), Box::new(ERROR_TYPESPEC.clone()),
+        Box::new(ANON_FUNC_TYPESPEC.clone()), Box::new(ANY_TYPESPEC.clone())];
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AnyTypeSpec;
+
+#[typetag::serde()]
+impl TypeSpec for AnyTypeSpec {
+    fn readable_name(&self) -> &str {
+        "Any Type"
+    }
+
+    fn description(&self) -> &str {
+        "Any type can be used here"
+    }
+
+    fn id(&self) -> ID {
+        Uuid::parse_str("8b83b98f-2b2c-42c3-b819-bb6b29972320").unwrap()
+    }
+
+    fn symbol(&self) -> &str {
+        "A"
+    }
+
+    fn num_params(&self) -> usize {
+        return 0;
+    }
+
+    fn matches(&self, _: ID) -> bool {
+        return true;
+    }
 }
 
 #[typetag::serde(tag = "type")]
@@ -132,9 +166,19 @@ use futures_util::FutureExt;
 use std::collections::BTreeMap;
 use std::pin::Pin;
 
-pub type ValueFuture = Shared<Pin<Box<dyn Future<Output = Value>>>>;
-pub type StructValues = HashMap<ID, Value>;
+// pub type ValueFuture = Shared<Pin<Box<dyn Future<Output = Value>>>>;
+
 #[derive(Clone, Debug)]
+pub struct ValueFuture(pub Shared<Pin<Box<dyn Future<Output = Value>>>>);
+
+impl PartialEq for ValueFuture {
+    fn eq(&self, _: &Self) -> bool {
+        panic!("comparison doesn't work for futures")
+    }
+}
+
+pub type StructValues = HashMap<ID, Value>;
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value {
     Null,
     Boolean(bool),
@@ -179,7 +223,7 @@ impl Value {
     }
 
     pub fn new_value_future(async_fn: impl Future<Output = Value> + 'static) -> ValueFuture {
-        FutureExt::shared(Box::pin(async_fn))
+        ValueFuture(FutureExt::shared(Box::pin(async_fn)))
     }
 
     pub fn as_anon_func(&self) -> Result<&AnonymousFunction, Box<dyn std::error::Error>> {
@@ -280,6 +324,9 @@ pub trait TypeSpec: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn symbol(&self) -> &str;
     fn num_params(&self) -> usize;
     fn matches(&self, typespec_id: ID) -> bool {
+        if typespec_id == ANY_TYPESPEC.id() {
+            return true;
+        }
         self.id() == typespec_id
     }
 }
@@ -313,12 +360,6 @@ impl TypeSpec for BuiltInTypeSpec {
 
     fn num_params(&self) -> usize {
         self.num_params
-    }
-}
-
-impl BuiltInTypeSpec {
-    pub fn matches(&self, other: &Self) -> bool {
-        self.id == other.id
     }
 }
 

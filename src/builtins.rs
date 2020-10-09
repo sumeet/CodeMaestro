@@ -57,8 +57,8 @@ impl Builtins {
     pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
         let str = include_str!("../builtins.json");
         let mut builtins = Self::deserialize(str)?;
-        for ts in lang::BUILT_IN_TYPESPECS.iter().cloned().cloned() {
-            builtins.typespecs.insert(ts.id, Box::new(ts));
+        for ts in lang::BUILT_IN_TYPESPECS.iter().cloned() {
+            builtins.typespecs.insert(ts.id(), ts);
         }
         Ok(builtins)
     }
@@ -701,6 +701,49 @@ impl lang::Function for Sum {
                                                    lang::Type::with_params(&*lang::LIST_TYPESPEC,
                                                                            vec![lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)]),
                                                    "Numbers".into())]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Equals {}
+
+#[typetag::serde]
+impl lang::Function for Equals {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let lhs = args.remove(&self.takes_args()[0].id);
+        let rhs = args.remove(&self.takes_args()[1].id);
+        lang::Value::Boolean(lhs == rhs)
+    }
+
+    fn name(&self) -> &str {
+        "Equals"
+    }
+
+    fn description(&self) -> &str {
+        "Test equality"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("7809f2da-0ae1-4181-8fd9-b72b27fe7aa4").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("c5effe9a-e4e9-4c58-ba35-73b59e8b3368").unwrap(),
+                                                   lang::Type::with_params(&*lang::STRING_TYPESPEC,
+                                                                           vec![]),
+                                                   "LHS".into()),
+             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("fe065a78-e84f-4365-8e3f-06331f8f2241").unwrap(),
+                                                   lang::Type::with_params(&*lang::STRING_TYPESPEC,
+                                                                           vec![]),
+                                                   "RHS".into())
+        ]
     }
 
     fn returns(&self) -> lang::Type {
