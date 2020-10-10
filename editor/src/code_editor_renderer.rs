@@ -1403,6 +1403,17 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                         }])
             },
             &|| self.render_indented(&|| self.render_code(&conditional.true_branch)),
+            &|| self.draw_button("Else",
+                                 colorscheme!(action_color),
+                                 &|| {}),
+            &|| {
+                if let Some(else_branch) = &conditional.else_branch {
+                    self.render_indented(&|| self.render_code(else_branch))
+                } else {
+                    self.ui_toolkit.draw_all(&[])
+                }
+            },
+
         ])
     }
 
@@ -1424,7 +1435,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         .code_genie
                         .match_variant_by_variant_id(mach, self.env_genie);
                 if type_and_enum_by_variant_id.len() != mach.branch_by_variant_id.len() {
-                    return self.ui_toolkit.draw_buttony_text("WOMPWOMP", colorscheme!(danger_color))
+                    return self.ui_toolkit.draw_buttony_text("Enum and code mismatch", colorscheme!(danger_color))
                 }
                 draw_all_iter!(
                                T::self.ui_toolkit,

@@ -672,6 +672,7 @@ impl InsertLiteralOptionGenerator {
     }
 
     fn list_literal_option(&self, list_literal_type: &lang::Type) -> InsertCodeMenuOption {
+        let typespec_id = list_literal_type.typespec_id.to_string();
         let element_type = &list_literal_type.params[0];
         InsertCodeMenuOption {
             group_name: LITERALS_GROUP,
@@ -945,7 +946,9 @@ impl InsertLiteralOptionGenerator {
         } else if return_type.matches_spec_id(lang::ANY_TYPESPEC.id()) {
             options.push(self.number_literal_option(0));
         }
-        if return_type.matches_spec(&lang::LIST_TYPESPEC) {
+        // TODO: kind of a nasty if check for params.len()... that's to make sure it's not Any
+        // TODO: shouldn't there be a way to insert list and then select the type though?
+        if return_type.matches_spec(&lang::LIST_TYPESPEC) && return_type.params.len() > 0 {
             options.push(self.list_literal_option(&return_type));
         }
         if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {

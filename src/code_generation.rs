@@ -114,8 +114,8 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
             "Condition".to_string(),
             lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC),
         )),
-        true_branch: Box::new(new_placeholder("True branch".to_string(), branch_type)),
-        else_branch: None,
+        true_branch: Box::new(lang::CodeNode::Block(new_block(vec![new_placeholder("True branch".to_string(), branch_type.clone())]))),
+        else_branch: Some(Box::new(lang::CodeNode::Block(new_block(vec![new_placeholder("Else branch".to_string(), branch_type.clone())])))),
     })
 }
 

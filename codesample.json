@@ -3,6 +3,200 @@
   "tests": [],
   "functions": [
     {
+      "type": "ChatProgram",
+      "id": "69a76e26-0df2-4798-bcc2-ea8eadf1d08a",
+      "prefix": "!rely",
+      "code": {
+        "expressions": [
+          {
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                  "id": "62737719-ad0c-4709-a796-7e549ddae9f3"
+                }
+              },
+              "args": [
+                {
+                  "Argument": {
+                    "id": "5a971975-3afd-46ca-adcd-dbdfcd1c54f7",
+                    "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                    "expr": {
+                      "StringLiteral": {
+                        "value": "Hello",
+                        "id": "48fb21f1-e2c1-4316-a078-b572782509ab"
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "20ca62e8-2908-4b31-b691-c37c5362e15d"
+            }
+          }
+        ],
+        "id": "80613bd2-57f7-4465-b6ca-175379d1e0f4"
+      }
+    },
+    {
+      "type": "ChatProgram",
+      "id": "65e7d463-24a7-4271-80cd-f43bccb9316e",
+      "prefix": "!spread",
+      "code": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "hello",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "7add6e8d-0f89-4958-a435-bad3c9066927",
+                      "id": "143292b1-371e-413f-957a-c5965bd3f772"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "3599019d-6bec-4f5d-b706-cf779a0431af",
+                        "argument_definition_id": "75ac0660-6814-4d17-8444-481237581f16",
+                        "expr": {
+                          "ListLiteral": {
+                            "id": "1657aa0d-f8c6-4232-9914-08936ad8abc9",
+                            "element_type": {
+                              "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                              "params": []
+                            },
+                            "elements": [
+                              {
+                                "StringLiteral": {
+                                  "value": "1",
+                                  "id": "d5531ac3-3b4f-4856-b45b-094a46ad0e8c"
+                                }
+                              },
+                              {
+                                "StringLiteral": {
+                                  "value": "2",
+                                  "id": "4767358e-db29-430b-a652-f894433b0387"
+                                }
+                              },
+                              {
+                                "StringLiteral": {
+                                  "value": "3",
+                                  "id": "cc0cc70f-1dd0-493f-a34d-5e24a357b0cd"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Argument": {
+                        "id": "26a43a50-a6bd-4d3b-b740-45328ecae33d",
+                        "argument_definition_id": "1ae3bf22-a2ab-4bd0-af5f-193385284b7d",
+                        "expr": {
+                          "AnonymousFunction": {
+                            "id": "6ffe43c9-45b2-4522-a006-88c9d1e5422c",
+                            "takes_arg": {
+                              "id": "af94d860-00db-4043-8466-f5381a4ae4b1",
+                              "arg_type": {
+                                "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                                "params": []
+                              },
+                              "short_name": "var"
+                            },
+                            "returns": {
+                              "typespec_id": "92fe8555-2f8c-4ae5-aca6-42353f6dc888",
+                              "params": [
+                                {
+                                  "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
+                                  "params": []
+                                },
+                                {
+                                  "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+                                  "params": []
+                                }
+                              ]
+                            },
+                            "block": {
+                              "Block": {
+                                "expressions": [
+                                  {
+                                    "FunctionCall": {
+                                      "function_reference": {
+                                        "FunctionReference": {
+                                          "function_id": "fd49253c-3661-413f-b78c-25f20f8e3473",
+                                          "id": "25fba83f-4fb9-4f9f-b2f3-e2c18f4c6f7c"
+                                        }
+                                      },
+                                      "args": [
+                                        {
+                                          "Argument": {
+                                            "id": "c0b81f53-8ba1-45f6-ad06-6dc7d19e2475",
+                                            "argument_definition_id": "f99f9d51-2ec7-4fce-9471-14b4c800110b",
+                                            "expr": {
+                                              "VariableReference": {
+                                                "assignment_id": "af94d860-00db-4043-8466-f5381a4ae4b1",
+                                                "id": "6942ec72-4fd3-4c1b-b9d6-1f19d3c55e42"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ],
+                                      "id": "68e538ad-e7b7-4430-9da2-f084bc9a4b24"
+                                    }
+                                  }
+                                ],
+                                "id": "f6ca2862-4434-4e15-8bae-4a4e301604bc"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "0b47de07-ccb9-47f5-a778-1d1ced4e5775"
+                }
+              },
+              "id": "62641e3d-cd7f-4972-9146-c1c215d55951"
+            }
+          },
+          {
+            "VariableReference": {
+              "assignment_id": "62641e3d-cd7f-4972-9146-c1c215d55951",
+              "id": "2c5e7676-db8e-43b0-a749-3d917558807f"
+            }
+          },
+          {
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                  "id": "20498256-d40e-4441-97bb-5f70e54c3241"
+                }
+              },
+              "args": [
+                {
+                  "Argument": {
+                    "id": "b05a9f8b-d448-4e3c-91ab-d3ace3a3e26a",
+                    "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                    "expr": {
+                      "StringLiteral": {
+                        "value": "Hello",
+                        "id": "7de192bb-284b-4e31-b4c1-4a50cd052cfe"
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "a46b2744-de5b-4ec3-83ba-429ea968787c"
+            }
+          }
+        ],
+        "id": "2fe49447-9f2c-45e0-957a-5015b99c084c"
+      }
+    },
+    {
       "type": "CodeFunction",
       "id": "fe668546-b799-40cd-b108-9fdc5ba5ab2d",
       "name": "New function",
@@ -132,6 +326,78 @@
           },
           {
             "Conditional": {
+              "id": "8cb3a71a-bd21-41f2-b747-9bd7d7ec434d",
+              "condition": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "7809f2da-0ae1-4181-8fd9-b72b27fe7aa4",
+                      "id": "b63d93dd-4099-40be-ac07-fa32f4d04363"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "383de9f3-0ef1-4c01-9785-2b40c6d31d03",
+                        "argument_definition_id": "c5effe9a-e4e9-4c58-ba35-73b59e8b3368",
+                        "expr": {
+                          "VariableReference": {
+                            "assignment_id": "a6c90217-4083-4d8e-9414-6728a6b35436",
+                            "id": "546cbfac-4978-49eb-a20f-a1f75bda6b4b"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Argument": {
+                        "id": "d7c8e7c4-64f6-4c91-8f94-1dd1f26cd16c",
+                        "argument_definition_id": "fe065a78-e84f-4365-8e3f-06331f8f2241",
+                        "expr": {
+                          "NumberLiteral": {
+                            "id": "fe9a6930-6d74-4ea8-82bd-93a011f8c472",
+                            "value": 0
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "1dd82a4c-41f9-4f29-9683-6cc6223c07e1"
+                }
+              },
+              "true_branch": {
+                "Block": {
+                  "expressions": [
+                    {
+                      "NumberLiteral": {
+                        "id": "89e5da41-b979-4e04-90c5-8ccc18057bdb",
+                        "value": 0
+                      }
+                    }
+                  ],
+                  "id": "dec2e077-8f0b-4edf-8c87-3ca6f1d2ebb0"
+                }
+              },
+              "else_branch": {
+                "Block": {
+                  "expressions": [
+                    {
+                      "Placeholder": {
+                        "id": "6a600488-e938-4c52-bace-c8b83a412abd",
+                        "description": "Else branch",
+                        "typ": {
+                          "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+                          "params": []
+                        }
+                      }
+                    }
+                  ],
+                  "id": "da5987d4-fd3c-49fc-91f6-4301f1abd181"
+                }
+              }
+            }
+          },
+          {
+            "Conditional": {
               "id": "c2b81f72-4c2c-455f-8c31-222351a0119a",
               "condition": {
                 "FunctionCall": {
@@ -224,41 +490,6 @@
           }
         ],
         "id": "42b03f41-b4c2-41a0-92d9-abc79930527a"
-      }
-    },
-    {
-      "type": "ChatProgram",
-      "id": "69a76e26-0df2-4798-bcc2-ea8eadf1d08a",
-      "prefix": "!rely",
-      "code": {
-        "expressions": [
-          {
-            "FunctionCall": {
-              "function_reference": {
-                "FunctionReference": {
-                  "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
-                  "id": "62737719-ad0c-4709-a796-7e549ddae9f3"
-                }
-              },
-              "args": [
-                {
-                  "Argument": {
-                    "id": "5a971975-3afd-46ca-adcd-dbdfcd1c54f7",
-                    "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
-                    "expr": {
-                      "StringLiteral": {
-                        "value": "Hello",
-                        "id": "48fb21f1-e2c1-4316-a078-b572782509ab"
-                      }
-                    }
-                  }
-                }
-              ],
-              "id": "20ca62e8-2908-4b31-b691-c37c5362e15d"
-            }
-          }
-        ],
-        "id": "80613bd2-57f7-4465-b6ca-175379d1e0f4"
       }
     },
     {
@@ -506,165 +737,6 @@
           }
         ],
         "id": "50b091f8-717e-45de-b948-b84cf3ccad99"
-      }
-    },
-    {
-      "type": "ChatProgram",
-      "id": "65e7d463-24a7-4271-80cd-f43bccb9316e",
-      "prefix": "!spread",
-      "code": {
-        "expressions": [
-          {
-            "Assignment": {
-              "name": "hello",
-              "expression": {
-                "FunctionCall": {
-                  "function_reference": {
-                    "FunctionReference": {
-                      "function_id": "7add6e8d-0f89-4958-a435-bad3c9066927",
-                      "id": "143292b1-371e-413f-957a-c5965bd3f772"
-                    }
-                  },
-                  "args": [
-                    {
-                      "Argument": {
-                        "id": "3599019d-6bec-4f5d-b706-cf779a0431af",
-                        "argument_definition_id": "75ac0660-6814-4d17-8444-481237581f16",
-                        "expr": {
-                          "ListLiteral": {
-                            "id": "1657aa0d-f8c6-4232-9914-08936ad8abc9",
-                            "element_type": {
-                              "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-                              "params": []
-                            },
-                            "elements": [
-                              {
-                                "StringLiteral": {
-                                  "value": "1",
-                                  "id": "d5531ac3-3b4f-4856-b45b-094a46ad0e8c"
-                                }
-                              },
-                              {
-                                "StringLiteral": {
-                                  "value": "2",
-                                  "id": "4767358e-db29-430b-a652-f894433b0387"
-                                }
-                              },
-                              {
-                                "StringLiteral": {
-                                  "value": "3",
-                                  "id": "cc0cc70f-1dd0-493f-a34d-5e24a357b0cd"
-                                }
-                              }
-                            ]
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "Argument": {
-                        "id": "26a43a50-a6bd-4d3b-b740-45328ecae33d",
-                        "argument_definition_id": "1ae3bf22-a2ab-4bd0-af5f-193385284b7d",
-                        "expr": {
-                          "AnonymousFunction": {
-                            "id": "6ffe43c9-45b2-4522-a006-88c9d1e5422c",
-                            "takes_arg": {
-                              "id": "af94d860-00db-4043-8466-f5381a4ae4b1",
-                              "arg_type": {
-                                "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-                                "params": []
-                              },
-                              "short_name": "var"
-                            },
-                            "returns": {
-                              "typespec_id": "92fe8555-2f8c-4ae5-aca6-42353f6dc888",
-                              "params": [
-                                {
-                                  "typespec_id": "e0e8271e-5f94-4d00-bad9-46a2ce4d6568",
-                                  "params": []
-                                },
-                                {
-                                  "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-                                  "params": []
-                                }
-                              ]
-                            },
-                            "block": {
-                              "Block": {
-                                "expressions": [
-                                  {
-                                    "FunctionCall": {
-                                      "function_reference": {
-                                        "FunctionReference": {
-                                          "function_id": "fd49253c-3661-413f-b78c-25f20f8e3473",
-                                          "id": "25fba83f-4fb9-4f9f-b2f3-e2c18f4c6f7c"
-                                        }
-                                      },
-                                      "args": [
-                                        {
-                                          "Argument": {
-                                            "id": "c0b81f53-8ba1-45f6-ad06-6dc7d19e2475",
-                                            "argument_definition_id": "f99f9d51-2ec7-4fce-9471-14b4c800110b",
-                                            "expr": {
-                                              "VariableReference": {
-                                                "assignment_id": "af94d860-00db-4043-8466-f5381a4ae4b1",
-                                                "id": "6942ec72-4fd3-4c1b-b9d6-1f19d3c55e42"
-                                              }
-                                            }
-                                          }
-                                        }
-                                      ],
-                                      "id": "68e538ad-e7b7-4430-9da2-f084bc9a4b24"
-                                    }
-                                  }
-                                ],
-                                "id": "f6ca2862-4434-4e15-8bae-4a4e301604bc"
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  ],
-                  "id": "0b47de07-ccb9-47f5-a778-1d1ced4e5775"
-                }
-              },
-              "id": "62641e3d-cd7f-4972-9146-c1c215d55951"
-            }
-          },
-          {
-            "VariableReference": {
-              "assignment_id": "62641e3d-cd7f-4972-9146-c1c215d55951",
-              "id": "2c5e7676-db8e-43b0-a749-3d917558807f"
-            }
-          },
-          {
-            "FunctionCall": {
-              "function_reference": {
-                "FunctionReference": {
-                  "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
-                  "id": "20498256-d40e-4441-97bb-5f70e54c3241"
-                }
-              },
-              "args": [
-                {
-                  "Argument": {
-                    "id": "b05a9f8b-d448-4e3c-91ab-d3ace3a3e26a",
-                    "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
-                    "expr": {
-                      "StringLiteral": {
-                        "value": "Hello",
-                        "id": "7de192bb-284b-4e31-b4c1-4a50cd052cfe"
-                      }
-                    }
-                  }
-                }
-              ],
-              "id": "a46b2744-de5b-4ec3-83ba-429ea968787c"
-            }
-          }
-        ],
-        "id": "2fe49447-9f2c-45e0-957a-5015b99c084c"
       }
     },
     {
