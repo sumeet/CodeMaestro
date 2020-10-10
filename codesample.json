@@ -18,6 +18,250 @@
       }
     },
     {
+      "type": "CodeFunction",
+      "id": "798c6a94-edd6-470c-9ff9-26c087de437c",
+      "name": "calculate fuel",
+      "description": "",
+      "args": [
+        {
+          "id": "b4748181-d442-4c0b-8c3b-79e80ad9cc40",
+          "arg_type": {
+            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+            "params": []
+          },
+          "short_name": "mass"
+        }
+      ],
+      "return_type": {
+        "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+        "params": []
+      },
+      "block": {
+        "expressions": [
+          {
+            "Assignment": {
+              "name": "divided",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "d1943888-27bc-40da-9756-e25da8584f96",
+                      "id": "017a6b12-0820-4421-adbd-7b4f31f97a9b"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "4ae9329d-d751-4915-8080-9ffd17589828",
+                        "argument_definition_id": "fea14b3b-71dd-4907-88b9-ee1a857937ef",
+                        "expr": {
+                          "VariableReference": {
+                            "assignment_id": "b4748181-d442-4c0b-8c3b-79e80ad9cc40",
+                            "id": "14bfc62b-949a-4a5b-9c69-302b59238431"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Argument": {
+                        "id": "66282025-a6cd-44dd-9e18-45dc6bb4c35b",
+                        "argument_definition_id": "88afb818-e741-48e4-8550-7a29aaf4b500",
+                        "expr": {
+                          "NumberLiteral": {
+                            "id": "21af6f41-c923-40c2-90e9-a98515c330d4",
+                            "value": 3
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "8a9d97ea-70db-4ee4-a302-b65aa63fb20e"
+                }
+              },
+              "id": "dfb10372-7148-4490-a21a-423ffdab2155"
+            }
+          },
+          {
+            "Assignment": {
+              "name": "subtracted",
+              "expression": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "a54e21c5-d20f-4a46-98ca-fede6474d9c7",
+                      "id": "4316d905-fc30-48cb-8d41-dbc9360f0a8a"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "3cde79ae-8d66-4649-a98f-bf5ad46c2175",
+                        "argument_definition_id": "2563941c-b8aa-4e22-9081-d7507d01f575",
+                        "expr": {
+                          "VariableReference": {
+                            "assignment_id": "dfb10372-7148-4490-a21a-423ffdab2155",
+                            "id": "7ef2a939-8fa4-4877-9fe6-5d764944de18"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Argument": {
+                        "id": "c97b8806-e011-46eb-88e5-05938004f25d",
+                        "argument_definition_id": "1b5a2487-0cb8-4101-b184-a9b61d154e2a",
+                        "expr": {
+                          "NumberLiteral": {
+                            "id": "14317fb3-834b-4f1b-8c6a-83e9eb4b419d",
+                            "value": 2
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "2e3fe87b-e17e-485b-9eae-8c861a9eb27b"
+                }
+              },
+              "id": "a6c90217-4083-4d8e-9414-6728a6b35436"
+            }
+          },
+          {
+            "VariableReference": {
+              "assignment_id": "a6c90217-4083-4d8e-9414-6728a6b35436",
+              "id": "fd4b81f4-2578-4f36-a893-ddbac0e042ec"
+            }
+          },
+          {
+            "Conditional": {
+              "id": "c2b81f72-4c2c-455f-8c31-222351a0119a",
+              "condition": {
+                "FunctionCall": {
+                  "function_reference": {
+                    "FunctionReference": {
+                      "function_id": "7809f2da-0ae1-4181-8fd9-b72b27fe7aa4",
+                      "id": "f5b06a32-adc9-44c0-ab0c-4a9098e088ef"
+                    }
+                  },
+                  "args": [
+                    {
+                      "Argument": {
+                        "id": "482594e6-1c5f-435c-9c0a-c68705621d46",
+                        "argument_definition_id": "c5effe9a-e4e9-4c58-ba35-73b59e8b3368",
+                        "expr": {
+                          "VariableReference": {
+                            "assignment_id": "a6c90217-4083-4d8e-9414-6728a6b35436",
+                            "id": "452054df-7a42-4c96-86f6-0d4d2994915b"
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "Argument": {
+                        "id": "f6dc82d0-947a-4871-a5b9-c3be61a6ed88",
+                        "argument_definition_id": "fe065a78-e84f-4365-8e3f-06331f8f2241",
+                        "expr": {
+                          "StringLiteral": {
+                            "value": "0",
+                            "id": "7029d79a-198c-411e-b9fe-e7af7aee8b08"
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "id": "4b84b8f5-d650-4ee0-8978-03ad33e5598a"
+                }
+              },
+              "true_branch": {
+                "Placeholder": {
+                  "id": "a72b9bee-183d-4fe1-8051-f69151b19697",
+                  "description": "True branch",
+                  "typ": {
+                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+                    "params": []
+                  }
+                }
+              },
+              "else_branch": null
+            }
+          },
+          {
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "798c6a94-edd6-470c-9ff9-26c087de437c",
+                  "id": "c9e30fca-865b-42f8-be7c-129946673630"
+                }
+              },
+              "args": [
+                {
+                  "Argument": {
+                    "id": "d3aef270-3214-4330-8549-e2452d2772c3",
+                    "argument_definition_id": "b4748181-d442-4c0b-8c3b-79e80ad9cc40",
+                    "expr": {
+                      "Placeholder": {
+                        "id": "9984da73-5d0e-43ed-8752-7c756fe05440",
+                        "description": "mass",
+                        "typ": {
+                          "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+                          "params": []
+                        }
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "080f87a0-310e-4d7e-98c2-a6fa6ee70556"
+            }
+          },
+          {
+            "Placeholder": {
+              "id": "10b88ef5-d9f2-46c6-a8e4-e522d285d055",
+              "description": "The last expression must return a Number",
+              "typ": {
+                "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
+                "params": []
+              }
+            }
+          }
+        ],
+        "id": "42b03f41-b4c2-41a0-92d9-abc79930527a"
+      }
+    },
+    {
+      "type": "ChatProgram",
+      "id": "69a76e26-0df2-4798-bcc2-ea8eadf1d08a",
+      "prefix": "!rely",
+      "code": {
+        "expressions": [
+          {
+            "FunctionCall": {
+              "function_reference": {
+                "FunctionReference": {
+                  "function_id": "36052afd-cf12-4146-bbc7-f9df04148b73",
+                  "id": "62737719-ad0c-4709-a796-7e549ddae9f3"
+                }
+              },
+              "args": [
+                {
+                  "Argument": {
+                    "id": "5a971975-3afd-46ca-adcd-dbdfcd1c54f7",
+                    "argument_definition_id": "95bbed9a-6757-43c5-8e74-b15862e300c8",
+                    "expr": {
+                      "StringLiteral": {
+                        "value": "Hello",
+                        "id": "48fb21f1-e2c1-4316-a078-b572782509ab"
+                      }
+                    }
+                  }
+                }
+              ],
+              "id": "20ca62e8-2908-4b31-b691-c37c5362e15d"
+            }
+          }
+        ],
+        "id": "80613bd2-57f7-4465-b6ca-175379d1e0f4"
+      }
+    },
+    {
       "type": "ChatProgram",
       "id": "d1f6a300-8d3b-4fae-9be4-dec36937ec12",
       "prefix": "!day1part1",
@@ -424,185 +668,76 @@
       }
     },
     {
-      "type": "CodeFunction",
-      "id": "798c6a94-edd6-470c-9ff9-26c087de437c",
-      "name": "calculate fuel",
-      "description": "",
-      "args": [
-        {
-          "id": "b4748181-d442-4c0b-8c3b-79e80ad9cc40",
-          "arg_type": {
-            "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-            "params": []
-          },
-          "short_name": "mass"
-        }
-      ],
-      "return_type": {
-        "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-        "params": []
-      },
-      "block": {
+      "type": "JSONHTTPClient",
+      "id": "854ff431-89d0-4d71-87f6-4aaaf953d0e0",
+      "url": "https://httpbin.org/get",
+      "gen_url_code": {
         "expressions": [
           {
-            "Assignment": {
-              "name": "divided",
-              "expression": {
-                "FunctionCall": {
-                  "function_reference": {
-                    "FunctionReference": {
-                      "function_id": "d1943888-27bc-40da-9756-e25da8584f96",
-                      "id": "017a6b12-0820-4421-adbd-7b4f31f97a9b"
-                    }
-                  },
-                  "args": [
-                    {
-                      "Argument": {
-                        "id": "4ae9329d-d751-4915-8080-9ffd17589828",
-                        "argument_definition_id": "fea14b3b-71dd-4907-88b9-ee1a857937ef",
-                        "expr": {
-                          "VariableReference": {
-                            "assignment_id": "b4748181-d442-4c0b-8c3b-79e80ad9cc40",
-                            "id": "14bfc62b-949a-4a5b-9c69-302b59238431"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "Argument": {
-                        "id": "66282025-a6cd-44dd-9e18-45dc6bb4c35b",
-                        "argument_definition_id": "88afb818-e741-48e4-8550-7a29aaf4b500",
-                        "expr": {
-                          "NumberLiteral": {
-                            "id": "21af6f41-c923-40c2-90e9-a98515c330d4",
-                            "value": 3
-                          }
-                        }
-                      }
-                    }
-                  ],
-                  "id": "8a9d97ea-70db-4ee4-a302-b65aa63fb20e"
-                }
-              },
-              "id": "dfb10372-7148-4490-a21a-423ffdab2155"
+            "StringLiteral": {
+              "value": "https://lichess.org/api/user/smt2",
+              "id": "fca84b9f-2bcd-4ed2-9fcb-c3bbf50f8e2b"
             }
-          },
+          }
+        ],
+        "id": "163ca05a-ba10-4fbe-b590-a196b57f76b9"
+      },
+      "gen_url_params_code": {
+        "expressions": [
           {
-            "Assignment": {
-              "name": "subtracted",
-              "expression": {
-                "FunctionCall": {
-                  "function_reference": {
-                    "FunctionReference": {
-                      "function_id": "a54e21c5-d20f-4a46-98ca-fede6474d9c7",
-                      "id": "4316d905-fc30-48cb-8d41-dbc9360f0a8a"
-                    }
-                  },
-                  "args": [
-                    {
-                      "Argument": {
-                        "id": "3cde79ae-8d66-4649-a98f-bf5ad46c2175",
-                        "argument_definition_id": "2563941c-b8aa-4e22-9081-d7507d01f575",
-                        "expr": {
-                          "VariableReference": {
-                            "assignment_id": "dfb10372-7148-4490-a21a-423ffdab2155",
-                            "id": "7ef2a939-8fa4-4877-9fe6-5d764944de18"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "Argument": {
-                        "id": "c97b8806-e011-46eb-88e5-05938004f25d",
-                        "argument_definition_id": "1b5a2487-0cb8-4101-b184-a9b61d154e2a",
-                        "expr": {
-                          "NumberLiteral": {
-                            "id": "14317fb3-834b-4f1b-8c6a-83e9eb4b419d",
-                            "value": 2
-                          }
-                        }
-                      }
-                    }
-                  ],
-                  "id": "2e3fe87b-e17e-485b-9eae-8c861a9eb27b"
-                }
+            "ListLiteral": {
+              "id": "94082675-c5cf-4b53-a7d0-e5d340a9e57d",
+              "element_type": {
+                "typespec_id": "b6566a28-8257-46a9-aa29-39d9add25173",
+                "params": []
               },
-              "id": "a6c90217-4083-4d8e-9414-6728a6b35436"
+              "elements": []
             }
-          },
-          {
-            "VariableReference": {
-              "assignment_id": "a6c90217-4083-4d8e-9414-6728a6b35436",
-              "id": "fd4b81f4-2578-4f36-a893-ddbac0e042ec"
-            }
-          },
-          {
-            "Conditional": {
-              "id": "b74f4c4c-f59c-4718-ac0e-37d7891b29d8",
-              "condition": {
-                "Placeholder": {
-                  "id": "edbb4207-c5d5-40c9-b0a9-44d555d86ab7",
-                  "description": "",
-                  "typ": {
-                    "typespec_id": "d00d688f-0c9e-43af-a19f-ab02e46b4c2c",
-                    "params": []
-                  }
-                }
-              },
-              "true_branch": {
-                "Placeholder": {
-                  "id": "b529c9bf-61a4-4e1e-bc51-a6be4854c9aa",
-                  "description": "True branch",
-                  "typ": {
-                    "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
-                    "params": []
-                  }
-                }
-              },
-              "else_branch": null
-            }
-          },
+          }
+        ],
+        "id": "140f8dc3-8fb9-4b7d-9bce-11d9efca9197"
+      },
+      "test_code": {
+        "expressions": [
           {
             "FunctionCall": {
               "function_reference": {
                 "FunctionReference": {
-                  "function_id": "798c6a94-edd6-470c-9ff9-26c087de437c",
-                  "id": "c9e30fca-865b-42f8-be7c-129946673630"
+                  "function_id": "854ff431-89d0-4d71-87f6-4aaaf953d0e0",
+                  "id": "35841a06-2a4c-46cc-9939-83d6fa57f6e4"
                 }
               },
-              "args": [
-                {
-                  "Argument": {
-                    "id": "d3aef270-3214-4330-8549-e2452d2772c3",
-                    "argument_definition_id": "b4748181-d442-4c0b-8c3b-79e80ad9cc40",
-                    "expr": {
-                      "Placeholder": {
-                        "id": "9984da73-5d0e-43ed-8752-7c756fe05440",
-                        "description": "mass",
-                        "typ": {
-                          "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-                          "params": []
-                        }
-                      }
-                    }
-                  }
-                }
-              ],
-              "id": "080f87a0-310e-4d7e-98c2-a6fa6ee70556"
-            }
-          },
-          {
-            "Placeholder": {
-              "id": "10b88ef5-d9f2-46c6-a8e4-e522d285d055",
-              "description": "The last expression must return a Number",
-              "typ": {
-                "typespec_id": "6dbe9096-4ff5-42f1-b2ff-36eacc3ced59",
-                "params": []
-              }
+              "args": [],
+              "id": "e3d9f2cc-a7be-4e90-93ca-3ed2be90fcac"
             }
           }
         ],
-        "id": "42b03f41-b4c2-41a0-92d9-abc79930527a"
+        "id": "e545c695-315e-4766-b43f-1798333c32dd"
+      },
+      "transform_code": {
+        "expressions": [],
+        "id": "72c39edf-c3e6-4a1b-b007-003eb8387b56"
+      },
+      "name": "JSON HTTP Get Client",
+      "method": "Get",
+      "description": "",
+      "args": [],
+      "intermediate_parse_schema": {
+        "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+        "params": []
+      },
+      "intermediate_parse_structs": [],
+      "intermediate_parse_argument": {
+        "id": "83bf0808-045e-4c98-bf39-a36691be4129",
+        "arg_type": {
+          "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+          "params": []
+        },
+        "short_name": "Response"
+      },
+      "return_type_after_transform": {
+        "typespec_id": "daa07233-b887-4512-b06e-d6a53d415213",
+        "params": []
       }
     }
   ],

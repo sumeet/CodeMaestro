@@ -736,17 +736,17 @@ impl lang::Function for Equals {
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
         vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("c5effe9a-e4e9-4c58-ba35-73b59e8b3368").unwrap(),
-                                                   lang::Type::with_params(&*lang::STRING_TYPESPEC,
+                                                   lang::Type::with_params(&*lang::ANY_TYPESPEC,
                                                                            vec![]),
                                                    "LHS".into()),
              lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("fe065a78-e84f-4365-8e3f-06331f8f2241").unwrap(),
-                                                   lang::Type::with_params(&*lang::STRING_TYPESPEC,
+                                                   lang::Type::with_params(&*lang::ANY_TYPESPEC,
                                                                            vec![]),
                                                    "RHS".into())
         ]
     }
 
     fn returns(&self) -> lang::Type {
-        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+        lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC)
     }
 }

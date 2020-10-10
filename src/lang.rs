@@ -96,7 +96,7 @@ impl TypeSpec for AnyTypeSpec {
     }
 
     fn symbol(&self) -> &str {
-        "A"
+        "\u{f12a}"
     }
 
     fn num_params(&self) -> usize {
@@ -392,6 +392,7 @@ impl Type {
                params }
     }
 
+    // TODO: i forget why we need this
     pub fn id(&self) -> ID {
         let mut mashed_hashes = vec![self.typespec_id.to_string()];
         mashed_hashes.extend(self.params.iter().map(|t| t.id().to_string()));
@@ -401,6 +402,10 @@ impl Type {
     }
 
     pub fn matches(&self, other: &Self) -> bool {
+        // TODO: duplication, search for ANY_TYPESPEC
+        if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
+            return true;
+        }
         self.id() == other.id()
     }
 
@@ -410,6 +415,10 @@ impl Type {
     }
 
     pub fn matches_spec_id(&self, spec_id: ID) -> bool {
+        // TODO: duplication, search for ANY_TYPESPEC
+        if self.typespec_id == ANY_TYPESPEC.id() || spec_id == ANY_TYPESPEC.id() {
+            return true;
+        }
         self.typespec_id == spec_id
     }
 }

@@ -12,7 +12,7 @@ use objekt::clone_trait_object;
 use crate::code_editor::get_result_type_from_indexing_into_list;
 use cs::chat_program::ChatProgram;
 use cs::code_generation::new_anon_func;
-use cs::lang::ArgumentDefinition;
+use cs::lang::{ArgumentDefinition, TypeSpec};
 use std::collections::HashMap;
 
 lazy_static! {
@@ -469,11 +469,19 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             .map(|(id, variables)| (id, variables.collect()))
             .collect();
 
-        let mut variables: Vec<Variable> = if let Some(search_type) = &search_params.return_type {
-            variables_by_type_id.remove(&search_type.id())
-                                .unwrap_or_else(|| vec![])
-        } else {
-            Iterator::flatten(variables_by_type_id.drain().map(|(_, v)| v)).collect()
+        // let mut variables: Vec<Variable> = if let Some(search_type) = &search_params.return_type && (!search_type.matches_spec(&lang::ANY_TYPESPEC)) {
+        //     variables_by_type_id.remove(&search_type.id())
+        //                         .unwrap_or_else(|| vec![])
+        // } else {
+        //     Iterator::flatten(variables_by_type_id.drain().map(|(_, v)| v)).collect()
+        // };
+
+        let mut variables = match &search_params.return_type {
+            Some(search_type) if !search_type.matches_spec_id(lang::ANY_TYPESPEC.id()) => {
+                variables_by_type_id.remove(&search_type.id())
+                                    .unwrap_or_else(|| vec![])
+            }
+            _ => Iterator::flatten(variables_by_type_id.drain().map(|(_, v)| v)).collect(),
         };
 
         variables =
@@ -926,15 +934,21 @@ impl InsertLiteralOptionGenerator {
                                         return_type: &lang::Type) {
         if return_type.matches_spec(&lang::STRING_TYPESPEC) {
             options.push(self.string_literal_option(input_str.clone()));
-        } else if return_type.matches_spec(&lang::NULL_TYPESPEC) {
+        }
+        if return_type.matches_spec(&lang::NULL_TYPESPEC) {
             options.push(self.null_literal_option());
-        } else if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
+        }
+        if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
             if let Some(number) = search_params.parse_number_input() {
                 options.push(self.number_literal_option(number));
             }
-        } else if return_type.matches_spec(&lang::LIST_TYPESPEC) {
+        } else if return_type.matches_spec_id(lang::ANY_TYPESPEC.id()) {
+            options.push(self.number_literal_option(0));
+        }
+        if return_type.matches_spec(&lang::LIST_TYPESPEC) {
             options.push(self.list_literal_option(&return_type));
-        } else if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
+        }
+        if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
             options.push(self.strukt_option(strukt));
         }
         // design decision made here: all placeholders have types. therefore, it is now
