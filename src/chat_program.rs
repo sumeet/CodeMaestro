@@ -88,7 +88,9 @@ impl lang::Function for ChatProgram {
             -> lang::Value {
         // XXX: shouldn't the caller do this???? duped with CodeFunction
         for (id, value) in args.iter() {
-            interpreter.set_local_variable(*id, value.clone());
+            interpreter.env
+                       .borrow_mut()
+                       .set_local_variable(*id, value.clone());
         }
 
         lang::Value::new_future(interpreter.evaluate(&lang::CodeNode::Block(self.code.clone())))
