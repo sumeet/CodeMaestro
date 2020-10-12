@@ -258,7 +258,8 @@ impl Interpreter {
             }
             match func {
                 Some(function) => {
-                    let interp = Self::with_env(Rc::clone(&env));
+                    // TODO: need to generate new copy of locals for stack, but rest of env should be the same
+                    let interp = Self::with_env(Rc::new(RefCell::new(env.borrow_mut().clone())));
                     Ok(function.call(interp, args))
                 }
                 None => Err(ExecutionError::UndefinedFunction),

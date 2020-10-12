@@ -1495,8 +1495,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // don't need it just yet. the insert code menu can insert number literals. perhaps we
         // can implement an InsertionPoint::Replace(node_id) that will suffice for number literals
         self.set_selected_on_click(&|| {
-                                       self.ui_toolkit
-                                           .draw_buttony_text(&number_literal.value.to_string(),
+                                       self.draw_buttony_text(&number_literal.value.to_string(),
                                                               colorscheme!(literal_bg_color))
                                    },
                                    number_literal.id)
@@ -1557,7 +1556,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::ListLiteral(list_literal) => {
                 self.render_list_literal(list_literal, code_node)
             }
-            _ => panic!("wasn't supposed to actually edit this"),
+            otherwise => {
+                self.ui_toolkit
+                    .draw_text(&format!("wasn't supposed to edit this node {:?}", otherwise))
+            }
         }
     }
 

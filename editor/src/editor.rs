@@ -2072,7 +2072,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             .map(|ts| ts.clone())
                             .collect_vec();
         self.ui_toolkit.draw_combo_box_with_label(label,
-                                                  |ts| ts.matches(selected_ts.id()),
+                                                  |ts| ts.id() == selected_ts.id(),
                                                   |ts| format_typespec_select(ts, nesting_level),
                                                   &typespecs.iter().collect_vec(),
                                                   move |newts| onchange(newts))

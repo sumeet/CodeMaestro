@@ -32,6 +32,9 @@
     },
     "f3781fb2-d638-49be-88c0-9eb0dddbed32": {
       "type": "Equals"
+    },
+    "9072ddc8-3e47-4874-adfd-3d564b4c4430": {
+      "type": "LessThan"
     }
   },
   "typespecs": {

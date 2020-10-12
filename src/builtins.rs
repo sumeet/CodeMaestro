@@ -727,7 +727,7 @@ impl lang::Function for Equals {
     }
 
     fn description(&self) -> &str {
-        "Test equality"
+        "Test if both sides have the same value"
     }
 
     fn id(&self) -> lang::ID {
@@ -743,6 +743,55 @@ impl lang::Function for Equals {
                                                    lang::Type::with_params(&*lang::ANY_TYPESPEC,
                                                                            vec![]),
                                                    "RHS".into())
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct LessThan {}
+
+#[typetag::serde]
+impl lang::Function for LessThan {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let lhs = args.remove(&self.takes_args()[0].id)
+                      .unwrap()
+                      .as_i128()
+                      .unwrap();
+        let rhs = args.remove(&self.takes_args()[1].id)
+                      .unwrap()
+                      .as_i128()
+                      .unwrap();
+        lang::Value::Boolean(lhs < rhs)
+    }
+
+    fn name(&self) -> &str {
+        "Less than"
+    }
+
+    fn description(&self) -> &str {
+        "Test if Left is less than Right"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("9072ddc8-3e47-4874-adfd-3d564b4c4430").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("47f4813c-9549-4e7e-98d5-a2eeeca5bfa3").unwrap(),
+                                                   lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
+                                                                           vec![]),
+                                                   "Left".into()),
+             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("e4a7afad-2f81-4d21-a17c-0e0cd38d1c19").unwrap(),
+                                                   lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
+                                                                           vec![]),
+                                                   "Right".into())
         ]
     }
 

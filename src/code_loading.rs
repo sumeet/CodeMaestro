@@ -70,6 +70,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function
         "ParseNumber" => Box::new(builtins::ParseNumber {}),
         "DivideTemp" => Box::new(builtins::DivideTemp {}),
         "Equals" => Box::new(builtins::Equals {}),
+        "LessThan" => Box::new(builtins::LessThan {}),
         "Sum" => Box::new(builtins::Sum {}),
         "Subtract" => Box::new(builtins::Subtract {}),
         "Map" => Box::new(builtins::Map {}),

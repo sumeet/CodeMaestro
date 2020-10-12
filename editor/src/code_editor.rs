@@ -295,8 +295,12 @@ impl CodeEditor {
             | lang::CodeNode::Assignment(_)
             | lang::CodeNode::Block(_)
             | lang::CodeNode::ListLiteral(_)
-            | lang::CodeNode::ListIndex(_) => Some(InsertionPoint::Replace(node_id)),
-            _ => None,
+            | lang::CodeNode::ListIndex(_)
+            | lang::CodeNode::Conditional(_) => Some(InsertionPoint::Replace(node_id)),
+            otherwise => {
+                println!("tried to replace node with parent {:?}", otherwise);
+                None
+            }
         }
     }
 
