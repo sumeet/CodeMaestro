@@ -672,7 +672,6 @@ impl InsertLiteralOptionGenerator {
     }
 
     fn list_literal_option(&self, list_literal_type: &lang::Type) -> InsertCodeMenuOption {
-        let typespec_id = list_literal_type.typespec_id.to_string();
         let element_type = &list_literal_type.params[0];
         InsertCodeMenuOption {
             group_name: LITERALS_GROUP,

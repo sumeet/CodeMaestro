@@ -60,7 +60,7 @@ impl lang::Function for CodeFunction {
             -> lang::Value {
         // XXX: shouldn't the caller do this???? duped with ChatProgram
         for (id, value) in args {
-            interpreter.env.borrow_mut().set_local_variable(id, value);
+            interpreter.set_local_variable(id, value);
         }
         lang::Value::new_future(interpreter.evaluate(&self.code()))
     }

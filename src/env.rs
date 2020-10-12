@@ -36,7 +36,11 @@ impl Interpreter {
     // TODO: instead of setting local variables directly on `env`, set them on a per-interp `locals`
     // object... i think. keep this here like this until we have one
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
-        self.env.borrow_mut().set_local_variable(id, value.clone());
+        self.env.borrow_mut().set_local_variable(id, value);
+    }
+
+    pub fn get_local_variable(&self, id: lang::ID) -> Option<lang::Value> {
+        (*self.env).borrow().get_local_variable(id).cloned()
     }
 
     pub fn with_env(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
@@ -88,13 +92,9 @@ impl Interpreter {
                 })
             }
             lang::CodeNode::VariableReference(variable_reference) => {
-                let env = Rc::clone(&self.env);
-                Box::pin(async move {
-                    (*env).borrow()
-                          .get_local_variable(variable_reference.assignment_id)
-                          .unwrap()
-                          .clone()
-                })
+                let val = self.get_local_variable(variable_reference.assignment_id)
+                              .unwrap();
+                Box::pin(async move { val })
             }
             lang::CodeNode::FunctionReference(_) => Box::pin(async { lang::Value::Null }),
             // TODO: trying to evaluate a placeholder should probably panic... but we don't have a
