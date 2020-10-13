@@ -27,11 +27,12 @@ use std::rc::Rc;
 
 use itertools::Itertools;
 use stdweb::js;
+use stdweb::traits::IDragEvent;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::unstable::TryInto;
-use stdweb::web::html_element::InputElement;
-use stdweb::web::{document, Element, HtmlElement, IEventTarget, IHtmlElement};
+use stdweb::web::html_element::{ImageElement, InputElement};
+use stdweb::web::{document, CloneKind, Element, HtmlElement, IEventTarget, IHtmlElement, INode};
 use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
@@ -286,18 +287,42 @@ impl UiToolkit for YewToolkit {
         }
     }
 
-    // TODO: fix this https://developer.mozilla.org/en-US/docs/Web/API/HTML_Drag_and_Drop_API
     fn drag_drop_source(&self,
                         draw_fn: DrawFnRef<Self>,
                         draw_preview_fn: DrawFnRef<Self>,
                         payload: impl Serialize)
                         -> Self::DrawResult {
+        let serialized = serde_json::to_string(&payload).unwrap();
+        let preview_node_ref = NodeRef::default();
+        let preview_node_ref2 = preview_node_ref.clone();
         html! {
-            <div draggable="true", ondragstart=self.callback(move |e: DragStartEvent| {
-                e.data_transfer.drop_effect = "move";
-                Msg::DontRedraw
-            }),>
-                {{ draw_fn() }}
+            <div>
+                <div style="display: none;" ref={preview_node_ref}>
+                    {{draw_preview_fn()}}
+                </div>
+
+                <div draggable="true", ondragstart=self.callback(move |e: DragStartEvent| {
+                    let data_transfer = e.data_transfer().unwrap();
+                    data_transfer.set_drop_effect(DropEffect::Move);
+                    data_transfer.set_data("application/json", &serialized);
+                    let preview_el : Element  = (&preview_node_ref2).cast().unwrap();
+                    let preview_el : Element = js! {
+                        let previewEl = @{preview_el};
+                        let bgColor = realBackgroundColor(previewEl);
+                        previewEl = previewEl.cloneNode(true);
+                        previewEl.style.backgroundColor = bgColor;
+                        previewEl.style.display = "block";
+                        previewEl.style.position = "absolute";
+                        previewEl.style.top = "-150px";
+                        document.body.appendChild(previewEl);
+                        return previewEl;
+                    }.try_into().unwrap();
+                    let preview_el : ImageElement = unsafe { std::mem::transmute(preview_el) };
+                    data_transfer.set_drag_image(&preview_el, 0, 0);
+                    Msg::DontRedraw
+                }),>
+                    {{ draw_fn() }}
+                </div>
             </div>
         }
     }
@@ -1498,7 +1523,9 @@ fn vtag(html: Html) -> VTag {
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::collections::HashMap;
 use stdweb::unstable::TryFrom;
+use stdweb::web::event::DropEffect;
 use stdweb::web::Node;
 
 fn css(css: &str) -> Html {

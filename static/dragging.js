@@ -35,3 +35,18 @@ function setupInteract(el, onWindowChange) {
 function dragMoveListener(event, onWindowChange) {
     onWindowChange(event.target, event.dx, event.dy, null, null);
 }
+
+// craziness to get real BG color (see YewToolkit.drag_drop_source)
+// from https://stackoverflow.com/a/41663840
+function realBackgroundColor(elem) {
+    var transparent = 'rgba(0, 0, 0, 0)';
+    var transparentIE11 = 'transparent';
+    if (!elem) return transparent;
+
+    var bg = getComputedStyle(elem).backgroundColor;
+    if (bg === transparent || bg === transparentIE11) {
+        return realBackgroundColor(elem.parentElement);
+    } else {
+        return bg;
+    }
+}
