@@ -24,6 +24,7 @@ macro_rules! await_eval_result {
     };
 }
 
+#[derive(Clone)]
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
     pub locals: HashMap<lang::ID, lang::Value>,
@@ -149,23 +150,25 @@ impl Interpreter {
                 })
             }
             lang::CodeNode::Match(mach) => {
+                let mut new_interp = self.clone();
+
                 let match_exp_fut = self.evaluate(&mach.match_expression);
                 let mut branch_by_variant_id: HashMap<_, _> =
                     mach.branch_by_variant_id
-                        .iter()
+                        .into_iter()
                         .map(|(variant_id, branch_expression)| {
-                            (*variant_id, self.evaluate(branch_expression))
+                            let f: Box<dyn Fn(&mut Self) -> _> =
+                                Box::new(move |interp| interp.evaluate(&branch_expression));
+                            (variant_id, f)
                         })
                         .collect();
-                let env = Rc::clone(&self.env);
                 let match_id = mach.id;
                 Box::pin(async move {
                     let (variant_id, value) =
                         await_eval_result!(match_exp_fut).into_enum().unwrap();
-                    env.borrow_mut()
-                       .set_local_variable(lang::Match::make_variable_id(match_id, variant_id),
-                                           value);
-                    await_eval_result!(branch_by_variant_id.remove(&variant_id).unwrap())
+                    let var_id = lang::Match::make_variable_id(match_id, variant_id);
+                    new_interp.set_local_variable(var_id, value);
+                    await_eval_result!(branch_by_variant_id.remove(&variant_id).unwrap()(&mut new_interp))
                 })
             }
             lang::CodeNode::ListLiteral(list_literal) => {
