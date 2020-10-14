@@ -784,7 +784,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                      cmd_buffer.add_integrating_command(move |cont, interp, async_executor, _cmd_buffer| {
                                                         cont.chat_test_window.borrow_mut().add_message("\u{f406}".to_string(), entered_text.clone()) ;
 
-                                                         let interp = interp.shallow_copy();
+                                                         let interp = interp.new_stack_frame();
                                                          let chat_test_window = Rc::clone(&cont.chat_test_window);
                                                          async_executor.exec(async move {
                                                              message_received(&interp, "\u{f406}".to_string(), entered_text).await;

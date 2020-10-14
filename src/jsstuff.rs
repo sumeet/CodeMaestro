@@ -138,8 +138,8 @@ impl<'a> serde::Serialize for ValueWithEnv<'a> {
                 }
                 map.end()
             }
-            (env, Enum { box value, .. }) => Self { value: value.clone(),
-                                                    env }.serialize(serializer),
+            (env, EnumVariant { box value, .. }) => Self { value: value.clone(),
+                                                           env }.serialize(serializer),
             (_env, AnonymousFunction(_)) => unimplemented!(),
             // TODO: map it into a JS future
             (_env, Future(_old_fut)) => serializer.serialize_none(),

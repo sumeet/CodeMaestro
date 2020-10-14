@@ -54,7 +54,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::List(typ, values) => self.render_list(typ, values),
             Value::Struct { struct_id, values } => self.render_struct(struct_id, values),
             Value::Future(_) => self.draw_buttony_text("Future", BLACK_COLOR),
-            Value::Enum { variant_id, value } => self.render_enum(variant_id, value),
+            Value::EnumVariant { variant_id, value } => self.render_enum(variant_id, value),
             Value::AnonymousFunction(_) => panic!("don't worry about rendering functions"),
         }
     }
@@ -84,7 +84,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             | Value::String(_)
             | Value::Number(_)
             | Value::Future(_) => true,
-            Value::Enum { .. } | Value::List(_, _) | Value::Struct { .. } => false,
+            Value::EnumVariant { .. } | Value::List(_, _) | Value::Struct { .. } => false,
             Value::AnonymousFunction(_) => panic!("unimplemented"),
         };
         if is_scalar {

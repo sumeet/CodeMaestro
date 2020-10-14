@@ -26,21 +26,30 @@ macro_rules! await_eval_result {
 
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
+    pub locals: HashMap<lang::ID, lang::Value>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
-        Self { env: Rc::new(RefCell::new(ExecutionEnvironment::new())) }
+        Self { env: Rc::new(RefCell::new(ExecutionEnvironment::new())),
+               locals: HashMap::new() }
     }
 
     // TODO: instead of setting local variables directly on `env`, set them on a per-interp `locals`
     // object... i think. keep this here like this until we have one
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
-        self.env.borrow_mut().set_local_variable(id, value.clone());
+        self.locals.insert(id, value);
+        // self.env.borrow_mut().set_local_variable(id, value.clone());
+    }
+
+    pub fn get_local_variable(&self, id: lang::ID) -> Option<&lang::Value> {
+        self.locals.get(&id)
+        // self.env.borrow_mut().set_local_variable(id, value.clone());
     }
 
     pub fn with_env(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
-        Self { env }
+        Self { env,
+               locals: HashMap::new() }
     }
 
     pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {
@@ -88,13 +97,11 @@ impl Interpreter {
                 })
             }
             lang::CodeNode::VariableReference(variable_reference) => {
-                let env = Rc::clone(&self.env);
-                Box::pin(async move {
-                    (*env).borrow()
-                          .get_local_variable(variable_reference.assignment_id)
-                          .unwrap()
-                          .clone()
-                })
+                let var = self.get_local_variable(variable_reference.assignment_id)
+                              .cloned()
+                              .unwrap();
+                // let env = Rc::clone(&self.env);
+                Box::pin(async move { var })
             }
             lang::CodeNode::FunctionReference(_) => Box::pin(async { lang::Value::Null }),
             // TODO: trying to evaluate a placeholder should probably panic... but we don't have a
@@ -224,15 +231,10 @@ impl Interpreter {
                            assignment: &lang::Assignment)
                            -> impl Future<Output = lang::Value> {
         let value_future = self.evaluate(&assignment.expression);
-        let env = Rc::clone(&self.env);
         let assignment_id = assignment.id;
-        async move {
-            let value = await_eval_result!(value_future);
-            env.borrow_mut()
-               .set_local_variable(assignment_id, value.clone());
-            // the result of an assignment is the value being assigned
-            value
-        }
+        let value = lang::Value::new_future(value_future);
+        self.set_local_variable(assignment_id, value.clone());
+        async move { value }
     }
 
     fn evaluate_function_call(&mut self,
@@ -247,6 +249,7 @@ impl Interpreter {
         let function_id = function_call.function_reference().function_id;
         let env = self.env();
         let func = (*env).borrow().find_function(function_id).cloned();
+        let interp = self.new_stack_frame();
         async move {
             // TODO: ok, can't pass the env in while we're borrowing the function, so we have to clone
             // it... figure out how to not do this :/
@@ -259,7 +262,6 @@ impl Interpreter {
             match func {
                 Some(function) => {
                     // TODO: need to generate new copy of locals for stack, but rest of env should be the same
-                    let interp = Self::with_env(Rc::new(RefCell::new(env.borrow_mut().clone())));
                     Ok(function.call(interp, args))
                 }
                 None => Err(ExecutionError::UndefinedFunction),
@@ -267,7 +269,7 @@ impl Interpreter {
         }
     }
 
-    pub fn shallow_copy(&self) -> Self {
+    pub fn new_stack_frame(&self) -> Self {
         Self::with_env(Rc::clone(&self.env))
     }
 
@@ -281,7 +283,7 @@ impl Interpreter {
 pub struct ExecutionEnvironment {
     pub console: String,
     // TODO: lol, this is going to end up being stack frames, or smth like that
-    pub locals: HashMap<lang::ID, lang::Value>,
+    // pub locals: HashMap<lang::ID, lang::Value>,
     pub functions: HashMap<lang::ID, Box<dyn lang::Function + 'static>>,
     pub typespecs: HashMap<lang::ID, Box<dyn lang::TypeSpec + 'static>>,
     pub prev_eval_result_by_code_id: HashMap<lang::ID, lang::Value>,
@@ -290,7 +292,7 @@ pub struct ExecutionEnvironment {
 impl ExecutionEnvironment {
     pub fn new() -> ExecutionEnvironment {
         return ExecutionEnvironment { console: String::new(),
-                                      locals: HashMap::new(),
+                                      // locals: HashMap::new(),
                                       prev_eval_result_by_code_id: HashMap::new(),
                                       functions: HashMap::new(),
                                       typespecs: Self::built_in_typespecs() };
@@ -361,13 +363,13 @@ impl ExecutionEnvironment {
             .and_then(|ts| ts.downcast_ref::<enums::Enum>())
     }
 
-    pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
-        self.locals.insert(id, value);
-    }
-
-    pub fn get_local_variable(&self, id: lang::ID) -> Option<&lang::Value> {
-        self.locals.get(&id)
-    }
+    // pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
+    //     self.locals.insert(id, value);
+    // }
+    //
+    // pub fn get_local_variable(&self, id: lang::ID) -> Option<&lang::Value> {
+    //     self.locals.get(&id)
+    // }
 
     pub fn println(&mut self, ln: &str) {
         // TODO: hopefully i never need this actual println ever again, because the in-editor rich

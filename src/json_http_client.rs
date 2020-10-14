@@ -110,7 +110,7 @@ impl lang::Function for JSONHTTPClient {
             interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let request = self.http_request(interpreter.shallow_copy(), args);
+        let request = self.http_request(interpreter.new_stack_frame(), args);
         let returns = self.intermediate_parse_schema.clone();
 
         // some issues here:
@@ -135,7 +135,7 @@ impl lang::Function for JSONHTTPClient {
                             // HAPPY CASE: let's do out work side of here
                             // builtins::ok_result(value) <= TODO: use the result later, but for now, we
                             // TODO: get error handling working
-                            let mut interpreter = interpreter.shallow_copy();
+                            let mut interpreter = interpreter.new_stack_frame();
                             interpreter.set_local_variable(intermediate_parse_argument_id, value);
                             interpreter.evaluate(&lang::CodeNode::Block(transform_code))
                                        .await

@@ -88,9 +88,7 @@ impl lang::Function for ChatProgram {
             -> lang::Value {
         // XXX: shouldn't the caller do this???? duped with CodeFunction
         for (id, value) in args.iter() {
-            interpreter.env
-                       .borrow_mut()
-                       .set_local_variable(*id, value.clone());
+            interpreter.set_local_variable(*id, value.clone());
         }
 
         lang::Value::new_future(interpreter.evaluate(&lang::CodeNode::Block(self.code.clone())))
@@ -140,7 +138,7 @@ pub fn message_received(interp: &Interpreter,
     let triggered_values =
         chat_programs.iter()
                      .filter_map(|cp| {
-                         cp.try_to_trigger(interp.shallow_copy(), sender.clone(), text.clone())
+                         cp.try_to_trigger(interp.new_stack_frame(), sender.clone(), text.clone())
                      })
                      .collect_vec();
 

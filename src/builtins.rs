@@ -115,23 +115,23 @@ pub fn new_message(sender: String, argument_text: String, full_text: String) -> 
 }
 
 pub fn some_option_value(value: lang::Value) -> lang::Value {
-    lang::Value::Enum { variant_id: *OPTION_SOME_VARIANT_ID,
-                        value: Box::new(value) }
+    lang::Value::EnumVariant { variant_id: *OPTION_SOME_VARIANT_ID,
+                               value: Box::new(value) }
 }
 
 pub fn none_option_value() -> lang::Value {
-    lang::Value::Enum { variant_id: *OPTION_NONE_VARIANT_ID,
-                        value: Box::new(lang::Value::Null) }
+    lang::Value::EnumVariant { variant_id: *OPTION_NONE_VARIANT_ID,
+                               value: Box::new(lang::Value::Null) }
 }
 
 pub fn ok_result_value(value: lang::Value) -> lang::Value {
-    lang::Value::Enum { variant_id: *RESULT_OK_VARIANT_ID,
-                        value: Box::new(value) }
+    lang::Value::EnumVariant { variant_id: *RESULT_OK_VARIANT_ID,
+                               value: Box::new(value) }
 }
 
 pub fn err_result_value(string: String) -> lang::Value {
-    lang::Value::Enum { variant_id: *RESULT_ERROR_VARIANT_ID,
-                        value: Box::new(lang::Value::String(string)) }
+    lang::Value::EnumVariant { variant_id: *RESULT_ERROR_VARIANT_ID,
+                               value: Box::new(lang::Value::String(string)) }
 }
 
 pub fn convert_lang_value_to_rust_result(value: &lang::Value)
@@ -474,7 +474,7 @@ impl lang::Function for Map {
             let mapped =
                 what_to_map_over.into_iter()
                                 .map(|value| {
-                                    let mut interpreter = interpreter.shallow_copy();
+                                    let mut interpreter = interpreter.new_stack_frame();
                                     let map_fn = map_fn.clone();
                                     async move {
                                         interpreter.set_local_variable(map_fn.takes_arg.id,

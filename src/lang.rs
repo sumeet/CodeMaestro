@@ -186,9 +186,15 @@ pub enum Value {
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Type, Vec<Value>),
-    Struct { struct_id: ID, values: StructValues },
+    Struct {
+        struct_id: ID,
+        values: StructValues,
+    },
     Future(ValueFuture),
-    Enum { variant_id: ID, value: Box<Value> },
+    EnumVariant {
+        variant_id: ID,
+        value: Box<Value>,
+    },
     AnonymousFunction(AnonymousFunction),
 }
 
@@ -292,16 +298,16 @@ impl Value {
 
     pub fn as_enum(&self) -> Option<(ID, &Value)> {
         match self {
-            Value::Enum { variant_id,
-                          box value, } => Some((*variant_id, value)),
+            Value::EnumVariant { variant_id,
+                                 box value, } => Some((*variant_id, value)),
             _ => None,
         }
     }
 
     pub fn into_enum(self) -> Result<(ID, Value), Box<dyn std::error::Error>> {
         match self {
-            Value::Enum { variant_id,
-                          box value, } => Ok((variant_id, value)),
+            Value::EnumVariant { variant_id,
+                                 box value, } => Ok((variant_id, value)),
             _ => Err(format!("expected enum, but got {:?}", self).into()),
         }
     }
