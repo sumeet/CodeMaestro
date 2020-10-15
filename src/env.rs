@@ -149,26 +149,17 @@ impl Interpreter {
                     }
                 })
             }
-            lang::CodeNode::Match(mach) => {
-                let mut new_interp = self.clone();
-
+            lang::CodeNode::Match(mut mach) => {
                 let match_exp_fut = self.evaluate(&mach.match_expression);
-                let mut branch_by_variant_id: HashMap<_, _> =
-                    mach.branch_by_variant_id
-                        .into_iter()
-                        .map(|(variant_id, branch_expression)| {
-                            let f: Box<dyn Fn(&mut Self) -> _> =
-                                Box::new(move |interp| interp.evaluate(&branch_expression));
-                            (variant_id, f)
-                        })
-                        .collect();
-                let match_id = mach.id;
+
+                let mut new_interp = self.clone();
                 Box::pin(async move {
                     let (variant_id, value) =
                         await_eval_result!(match_exp_fut).into_enum().unwrap();
-                    let var_id = lang::Match::make_variable_id(match_id, variant_id);
+                    let var_id = lang::Match::make_variable_id(mach.id, variant_id);
                     new_interp.set_local_variable(var_id, value);
-                    await_eval_result!(branch_by_variant_id.remove(&variant_id).unwrap()(&mut new_interp))
+                    let branch_code = mach.branch_by_variant_id.remove(&variant_id).unwrap();
+                    await_eval_result!(new_interp.evaluate(&branch_code))
                 })
             }
             lang::CodeNode::ListLiteral(list_literal) => {
