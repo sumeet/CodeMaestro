@@ -169,11 +169,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                      .guess_type(assignment.expression.as_ref(), self.env_genie)
                                      .unwrap();
         self.render_assignment_specify_lhs(assignment, &|| {
-            self.set_selected_on_click(&|| {
-                self.render_name_with_type_definition(&assignment.name, colorscheme!(variable_color),
-                                                      &type_of_assignment)
-            }, assignment.id)
-        })
+                self.code_handle(&|| {
+                                     self.render_name_with_type_definition(&assignment.name,
+                                                                       colorscheme!(variable_color),
+                                                                       &type_of_assignment)
+                                 },
+                                 assignment.id)
+            })
     }
 
     fn render_assignment_specify_lhs(&self,
@@ -524,8 +526,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                            code_node: &lang::CodeNode)
                            -> T::DrawResult {
         let lhs = &|| {
-            self.set_selected_on_click(&|| self.render_list_literal_label(code_node),
-                                       list_literal.id)
+            self.code_handle(&|| self.render_list_literal_label(code_node),
+                             list_literal.id)
         };
 
         let insert_pos = match self.code_editor.insert_code_menu {
@@ -836,25 +838,20 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_null_literal(&self, null_literal_id: &lang::ID) -> T::DrawResult {
-        self.set_selected_on_click(&|| {
-                                       self.draw_nested_borders_around(&|| {
-                                               render_null(self.ui_toolkit)
-                                           })
-                                   },
-                                   *null_literal_id)
+        self.code_handle(&|| self.draw_nested_borders_around(&|| render_null(self.ui_toolkit)),
+                         *null_literal_id)
     }
 
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
         // TODO: maybe use the traffic cone instead of the exclamation triangle,
         // which is kinda hard to see
-        self.set_selected_on_click(&|| {
-                                       self.ui_toolkit
-                                           .draw_buttony_text(&format!("{} {}",
-                                                                       PLACEHOLDER_ICON,
-                                                                       placeholder.description),
-                                                              colorscheme!(warning_color))
-                                   },
-                                   placeholder.id)
+        self.code_handle(&|| {
+                             self.ui_toolkit.draw_buttony_text(&format!("{} {}",
+                                                                        PLACEHOLDER_ICON,
+                                                                        placeholder.description),
+                                                               colorscheme!(warning_color))
+                         },
+                         placeholder.id)
     }
 
     fn render_function_reference(&self,
@@ -900,7 +897,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  &|| {})
             }
         };
-        self.set_selected_on_click(draw, variable_reference.id)
+        self.code_handle(draw, variable_reference.id)
     }
 
     fn render_function_name(&self, name: &str, color: Color, typ: &lang::Type) -> T::DrawResult {
@@ -1043,10 +1040,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_code_line_in_block(&self, code_node: &lang::CodeNode) -> T::DrawResult {
         let draw_code_fn = &|| {
-            self.ui_toolkit
-                .drag_drop_source(&|| self.render_code(code_node),
-                                  &|| self.render_code(code_node),
-                                  code_node)
+            self.render_code(code_node)
+            // self.ui_toolkit
+            //     .drag_drop_source(&|| self.render_code(code_node),
+            //                       &|| self.render_code(code_node),
+            //                       code_node)
         };
 
         let value = self.env_genie.get_last_executed_result(code_node.id());
@@ -1173,7 +1171,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         self.ui_toolkit.align(
                               &|| {
-                                  self.set_selected_on_click(
+                                  self.code_handle(
                     &|| self.render_code(&function_call.function_reference),
                     function_call.id)
                               },
@@ -1280,8 +1278,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                    -> T::DrawResult {
         render_struct_field(self.ui_toolkit,
                             &|| {
-                                self.set_selected_on_click(&|| self.render_struct_literal_field_label(field),
-                                           literal_field.id)
+                                self.code_handle(&|| self.render_struct_literal_field_label(field),
+                                                 literal_field.id)
                             },
                             &|| {
                                 self.render_nested(&|| {
@@ -1339,16 +1337,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                })
                .collect_vec();
         self.ui_toolkit.align(&|| {
-                                  self.set_selected_on_click(&|| {
-                                                             self.render_struct_identifier(strukt)
-                                                         },
-                                                         struct_literal.id)
+                                  self.code_handle(&|| self.render_struct_identifier(strukt),
+                                                   struct_literal.id)
                               },
                               &rhs.iter().map(|b| b.as_ref()).collect_vec())
     }
 
     fn render_list_index(&self, list_index: &lang::ListIndex) -> T::DrawResult {
-        self.set_selected_on_click(&|| {
+        self.code_handle(&|| {
             self.draw_nested_borders_around(&|| {
                 self.ui_toolkit.draw_all_on_same_line(&[
                     &|| self.render_without_nesting(&|| self.render_code(&list_index.list_expr)),
@@ -1356,7 +1352,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 ])
             })
         },
-            list_index.id
+                         list_index.id
         )
     }
 
@@ -1365,10 +1361,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                .find_struct_field(sfg.struct_field_id)
                                .unwrap();
 
-        self.set_selected_on_click(
-                                   &|| {
-                                       self.draw_nested_borders_around(&|| {
-                                               self.ui_toolkit.draw_all_on_same_line(&[
+        self.code_handle(
+                         &|| {
+                             self.draw_nested_borders_around(&|| {
+                                     self.ui_toolkit.draw_all_on_same_line(&[
                     &|| self.render_code(&sfg.struct_expr),
                     &|| {
                         self.render_nested(&|| {
@@ -1378,9 +1374,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                             })
                     },
                 ])
-                                           })
-                                   },
-                                   sfg.id,
+                                 })
+                         },
+                         sfg.id,
         )
     }
 
@@ -1468,11 +1464,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_string_literal(&self, string_literal: &lang::StringLiteral) -> T::DrawResult {
-        self.set_selected_on_click(&|| {
+        self.code_handle(&|| {
                                        self.draw_buttony_text(&self.format_string_literal_display(&string_literal.value),
                                                               colorscheme!(literal_bg_color))
                                    },
-                                   string_literal.id)
+                         string_literal.id)
     }
 
     fn format_string_literal_display(&self, value: &str) -> String {
@@ -1494,11 +1490,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // TODO: for now lettttttt's not implement the editor for number literals. i think we
         // don't need it just yet. the insert code menu can insert number literals. perhaps we
         // can implement an InsertionPoint::Replace(node_id) that will suffice for number literals
-        self.set_selected_on_click(&|| {
-                                       self.draw_buttony_text(&number_literal.value.to_string(),
-                                                              colorscheme!(literal_bg_color))
-                                   },
-                                   number_literal.id)
+        self.code_handle(&|| {
+                             self.draw_buttony_text(&number_literal.value.to_string(),
+                                                    colorscheme!(literal_bg_color))
+                         },
+                         number_literal.id)
     }
 
     fn draw_inline_editor(&self, code_node: &CodeNode) -> T::DrawResult {
@@ -1698,20 +1694,31 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         *self.is_rendering_menu.borrow()
     }
 
-    fn set_selected_on_click(&self,
-                             draw_fn: &dyn Fn() -> T::DrawResult,
-                             code_node_id: lang::ID)
-                             -> T::DrawResult {
+    fn code_handle(&self,
+                   draw_handle_fn: &dyn Fn() -> T::DrawResult,
+                   code_node_id: lang::ID)
+                   -> T::DrawResult {
         if self.is_rendering_menu_atm() {
-            return draw_fn();
+            return draw_handle_fn();
         }
+
+        let code_node = self.code_editor.code_genie.find_node(code_node_id).unwrap();
+
         let cmd_buffer = Rc::clone(&self.command_buffer);
-        self.ui_toolkit.buttonize(draw_fn, move || {
-                           cmd_buffer.borrow_mut()
-                                     .add_editor_command(move |editor| {
-                                         editor.set_selected_node_id(Some(code_node_id))
-                                     })
-                       })
+
+        self.ui_toolkit.drag_drop_source(
+                                         &|| {
+                                             let cmd_buffer = Rc::clone(&cmd_buffer);
+                                             self.ui_toolkit.buttonize(draw_handle_fn, move || {
+                                                                cmd_buffer.borrow_mut()
+                    .add_editor_command(move |editor| {
+                        editor.set_selected_node_id(Some(code_node_id))
+                    })
+                                                            })
+                                         },
+                                         &|| self.render_code(code_node),
+                                         code_node.clone(),
+        )
     }
 }
 
