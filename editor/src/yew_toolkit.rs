@@ -26,13 +26,14 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use itertools::Itertools;
+// use stdweb::console;
 use stdweb::js;
 use stdweb::traits::IDragEvent;
 use stdweb::traits::IEvent;
 use stdweb::traits::IKeyboardEvent;
 use stdweb::unstable::TryInto;
 use stdweb::web::html_element::{ImageElement, InputElement};
-use stdweb::web::{document, CloneKind, Element, HtmlElement, IEventTarget, IHtmlElement, INode};
+use stdweb::web::{document, Element, HtmlElement, IEventTarget, IHtmlElement};
 use yew::html;
 use yew::prelude::*;
 use yew::virtual_dom::VTag;
@@ -332,7 +333,68 @@ impl UiToolkit for YewToolkit {
                                              draw_when_hovered: DrawFnRef<Self>,
                                              accepts_payload: impl Fn(D) + 'static)
                                              -> Self::DrawResult {
-        draw_fn()
+        let counter = SharedCounter::new();
+        let counter2 = counter.clone();
+        let counter3 = counter.clone();
+
+        let node_ref_hovered = NodeRef::default();
+        let node_ref_hovered2 = node_ref_hovered.clone();
+        let node_ref_hovered3 = node_ref_hovered.clone();
+        let node_ref_hovered4 = node_ref_hovered.clone();
+
+        let node_ref_non_hovered = NodeRef::default();
+        let node_ref_non_hovered2 = node_ref_non_hovered.clone();
+        let node_ref_non_hovered3 = node_ref_non_hovered.clone();
+        let node_ref_non_hovered4 = node_ref_non_hovered.clone();
+
+        html! {
+            <div ondragover=self.callback(move |e: DragOverEvent| {
+                    e.prevent_default();
+                    Msg::DontRedraw
+                }),
+                ondragenter=self.callback(move |e: DragEnterEvent| {
+                    e.prevent_default();
+
+                    if counter.is_zero() {
+                        hide(&node_ref_non_hovered2);
+                        show(&node_ref_hovered2);
+                    }
+                    counter.incr();
+
+                    Msg::DontRedraw
+                }),
+                ondragleave=self.callback(move |e: DragLeaveEvent| {
+                    counter2.decr();
+                    if counter2.is_zero() {
+                        hide(&node_ref_hovered3);
+                        show(&node_ref_non_hovered3);
+                    }
+                    Msg::DontRedraw
+                }),
+                 >
+
+                <div ref={node_ref_hovered} style="display: none;"
+                    ondrop=self.callback(move |e: DragDropEvent| {
+                        e.prevent_default();
+
+                        let data_transfer = e.data_transfer().unwrap();
+                        let json = data_transfer.get_data("application/json");
+                        accepts_payload(serde_json::from_str(&json).unwrap());
+
+                        counter3.reset();
+                        hide(&node_ref_hovered4);
+                        show(&node_ref_non_hovered4);
+
+                        Msg::Redraw
+                    }), >
+                    {{ draw_when_hovered() }}
+                </div>
+
+                <div ref={node_ref_non_hovered}, >
+                    {{ draw_fn() }}
+                </div>
+            </div>
+        }
     }
 
     fn draw_text_input_with_label<F: Fn(&str) -> () + 'static, D: Fn() + 'static>(
@@ -1523,7 +1585,6 @@ fn vtag(html: Html) -> VTag {
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::collections::HashMap;
 use stdweb::unstable::TryFrom;
 use stdweb::web::event::DropEffect;
 use stdweb::web::Node;
@@ -1563,4 +1624,32 @@ fn show_right_click_menu(el1: stdweb::Value,
         showRightClickMenu(@{&context_menu_el}, @{&context_menu_trigger_el}, @{draw_overlay_around_selection},
                            @{&page_x}, @{&page_y});
     };
+}
+
+#[derive(Clone)]
+struct SharedCounter(Rc<RefCell<usize>>);
+
+impl SharedCounter {
+    fn new() -> Self {
+        Self(Rc::new(RefCell::new(0)))
+    }
+
+    fn is_zero(&self) -> bool {
+        *self.0.borrow() == 0
+    }
+
+    fn incr(&self) {
+        self.0.replace_with(|i| *i + 1);
+    }
+
+    fn decr(&self) {
+        if self.is_zero() {
+            return;
+        }
+        self.0.replace_with(|i| *i - 1);
+    }
+
+    fn reset(&self) {
+        self.0.replace_with(|_| 0);
+    }
 }

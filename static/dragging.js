@@ -36,6 +36,10 @@ function dragMoveListener(event, onWindowChange) {
     onWindowChange(event.target, event.dx, event.dy, null, null);
 }
 
+////////////////////////////////////////////////////////////////////
+/// the following is for drag+drop (too lazy to make dragdrop.js)
+////////////////////////////////////////////////////////////////////
+
 // craziness to get real BG color (see YewToolkit.drag_drop_source)
 // from https://stackoverflow.com/a/41663840
 function realBackgroundColor(elem) {

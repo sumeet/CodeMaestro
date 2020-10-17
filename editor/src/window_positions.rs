@@ -62,7 +62,11 @@ impl WindowPositions {
     }
 
     pub fn set_window(&mut self, window_id: lang::ID, pos: (isize, isize), size: (usize, usize)) {
-        let mut win = self.open_windows.get_mut(&window_id).unwrap();
+        let win = self.open_windows.get_mut(&window_id);
+        if win.is_none() {
+            return;
+        }
+        let mut win = win.unwrap();
         win.size = size;
         win.x = pos.0;
         win.y = pos.1;
