@@ -204,6 +204,7 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
 
 struct State {
     used_labels: HashMap<String, i32>,
+    in_child_window: bool,
 }
 
 fn buf(text: &str) -> ImString {
@@ -214,7 +215,8 @@ fn buf(text: &str) -> ImString {
 
 impl State {
     fn new() -> Self {
-        State { used_labels: HashMap::new() }
+        State { used_labels: HashMap::new(),
+                in_child_window: false }
     }
 }
 
@@ -225,6 +227,39 @@ pub struct ImguiToolkit<'a> {
 }
 
 impl<'a> ImguiToolkit<'a> {
+    fn current_bg_color(&self) -> [f32; 4] {
+        let style = self.ui.clone_style();
+        if self.is_in_child_window() {
+            style.colors[StyleColor::ChildBg as usize]
+        } else {
+            style.colors[StyleColor::WindowBg as usize]
+        }
+    }
+
+    fn is_in_child_window(&self) -> bool {
+        (*self.state.borrow()).in_child_window
+    }
+
+    fn set_in_child_window(&self) {
+        self.state.borrow_mut().in_child_window = true;
+    }
+
+    fn set_not_in_child_window(&self) {
+        self.state.borrow_mut().in_child_window = false;
+    }
+
+    fn blank_out_previously_drawn_item(&self) {
+        let (min, max) = self.get_item_rect();
+        // without the scope here we get a crash for loading drawlist twice, idk what the deal is
+        // tbh
+        {
+            let drawlist = self.ui.get_window_draw_list();
+            drawlist.add_rect(min.into(), max.into(), self.current_bg_color())
+                    .filled(true)
+                    .build();
+        }
+    }
+
     fn get_item_rect(&self) -> (ImVec2, ImVec2) {
         let mut min = ImVec2::zero();
         let mut max = ImVec2::zero();
@@ -420,12 +455,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                              draw_fn: DrawFnRef<Self>,
                                              draw_when_hovered: DrawFnRef<Self>,
                                              accepts_payload: impl Fn(D) + 'static) {
+        let orig_cursor_pos = self.ui.cursor_pos();
         self.ui.group(draw_fn);
         unsafe {
             if igBeginDragDropTarget() {
-                let payload = igAcceptDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
-                                                      // ImGuiDragDropFlags_AcceptBeforeDelivery as _);
-                                                      0);
+                let payload =
+                    igAcceptDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
+                                            // ImGuiDragDropFlags_AcceptBeforeDelivery as _);
+                                            ImGuiDragDropFlags::AcceptNoDrawDefaultRect.bits());
                 if !payload.is_null() {
                     let payload = *payload;
                     let data =
@@ -433,6 +470,11 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     accepts_payload(bincode::deserialize(&*data).unwrap())
                 }
 
+                // XXX: draws over the non-hovered way drag drop target
+                // JANK: not sure how else to do this, imgui api requires that drag drop target
+                // is drawn before making it as the target
+                self.blank_out_previously_drawn_item();
+                self.ui.set_cursor_pos(orig_cursor_pos);
                 draw_when_hovered();
 
                 igEndDragDropTarget()
@@ -578,20 +620,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let orig_cursor_pos = self.ui.cursor_pos();
 
         self.ui.group(draw_fn);
-
-        let style = self.ui.clone_style();
-        let mut blankoutbgcolor = style.colors[StyleColor::FrameBg as usize];
-        // if framebg color is transparent, then make it opaque
-        blankoutbgcolor[3] = 1.;
-
+        self.blank_out_previously_drawn_item();
         let (min, max) = self.get_item_rect();
-        // without the scope here we get a crash for loading drawlist twice, idk what the deal is
-        // tbh
         {
             let drawlist = self.ui.get_window_draw_list();
-            drawlist.add_rect(min.into(), max.into(), blankoutbgcolor)
-                    .filled(true)
-                    .build();
             drawlist.add_rect(min.into(), max.into(), bgcolor)
                     .filled(true)
                     .build();
@@ -980,6 +1012,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         builder
             .build(self.ui, &|| {
+                self.set_in_child_window();
+
                 let child_region_height = self.ui.content_region_avail()[1];
                 self.ui.group(draw_fn);
                 let content_size = self.ui.item_rect_size();
@@ -1010,6 +1044,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         }
                     }
                 }
+
+                self.set_not_in_child_window();
             });
         token.pop(self.ui);
     }
@@ -1033,6 +1069,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     // HAX: this is awfully specific to have in a UI toolkit library... whatever
     fn draw_code_line_separator(&self, plus_char: char, width: f32, height: f32, color: [f32; 4]) {
+        let orig_cursor_pos = self.ui.cursor_pos();
+
         self.ui
             .invisible_button(&self.imlabel("code_line_separator"), [width, height]);
         let min = self.ui.item_rect_min();
@@ -1061,6 +1099,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let textpos = [center_of_line[0], where_to_put_symbol_y];
 
         draw_list.add_text(textpos, color, plus_char);
+
+        // add a dummy to turn this whole thing into a group
+        self.ui.set_cursor_pos(orig_cursor_pos);
+        self.ui.dummy([width, height]);
     }
 
     fn replace_on_hover(&self, draw_when_not_hovered: &dyn Fn(), draw_when_hovered: &dyn Fn()) {

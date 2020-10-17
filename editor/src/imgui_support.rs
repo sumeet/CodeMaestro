@@ -46,7 +46,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     let mut style = imgui.style_mut();
     // currently duped in the loop so we can do it on every frame
     // TODO: clean that up
-    style.colors[StyleColor::WindowBg as usize] = colorscheme!(window_bg_color).into();
+    // style.colors[StyleColor::WindowBg as usize] = colorscheme!(window_bg_color).into();
     style.colors[StyleColor::ButtonActive as usize] = colorscheme!(button_active_color).into();
     style.colors[StyleColor::ButtonHovered as usize] = colorscheme!(button_hover_color).into();
     style.colors[StyleColor::MenuBarBg as usize] = colorscheme!(menubar_color).into();
