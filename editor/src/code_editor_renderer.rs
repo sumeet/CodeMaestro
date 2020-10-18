@@ -88,7 +88,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn draw_right_click_menu(&self) -> T::DrawResult {
         self.ui_toolkit.draw_all(&[
             &|| {
-                if self.code_editor.get_selected_node_id().is_some() {
+                if self.code_editor.get_last_selected_node_id().is_some() {
                     let cmd_buffer1 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit.draw_menu_item("Deselect code", move || {
                                        let cmd_buffer1 = Rc::clone(&cmd_buffer1);
@@ -591,12 +591,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         draw_nested_borders_around(self.ui_toolkit, draw_element_fn, nesting_level as u8)
     }
 
-    fn is_selected(&self, code_node_id: lang::ID) -> bool {
-        Some(code_node_id) == *self.code_editor.get_selected_node_id()
+    fn is_part_of_selection(&self, code_node_id: lang::ID) -> bool {
+        self.code_editor.selected_node_ids.contains(&code_node_id)
+    }
+
+    fn is_selected_for_editing(&self, code_node_id: lang::ID) -> bool {
+        Some(code_node_id) == self.code_editor.get_last_selected_node_id()
     }
 
     fn is_editing(&self, code_node_id: lang::ID) -> bool {
-        self.is_selected(code_node_id) && self.code_editor.editing
+        self.is_selected_for_editing(code_node_id) && self.code_editor.editing
     }
 
     fn help_text(&self, code_node: &CodeNode) -> Option<String> {
@@ -703,7 +707,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         let draw = || self.render_context_menu(code_node, &draw);
 
-        if self.is_selected(code_node.id()) {
+        if self.is_part_of_selection(code_node.id()) {
             self.draw_selected(self.code_node_cursor_scroll_hash(code_node), &draw)
         } else {
             self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)

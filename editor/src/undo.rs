@@ -3,7 +3,7 @@ use cs::lang;
 #[derive(Clone, Debug)]
 pub struct UndoHistoryCell {
     pub root: lang::CodeNode,
-    pub cursor_position: Option<lang::ID>,
+    pub cursor_position: Vec<lang::ID>,
 }
 
 #[derive(Debug, Clone)]
@@ -18,9 +18,7 @@ impl UndoHistory {
                redo_stack: vec![] }
     }
 
-    pub fn record_previous_state(&mut self,
-                                 root: &lang::CodeNode,
-                                 cursor_position: Option<lang::ID>) {
+    pub fn record_previous_state(&mut self, root: &lang::CodeNode, cursor_position: Vec<lang::ID>) {
         let root = root.clone();
         self.undo_stack.push(UndoHistoryCell { root,
                                                cursor_position });
@@ -29,7 +27,7 @@ impl UndoHistory {
 
     pub fn undo(&mut self,
                 current_root: &lang::CodeNode,
-                cursor_position: Option<lang::ID>)
+                cursor_position: Vec<lang::ID>)
                 -> Option<UndoHistoryCell> {
         self.redo_stack
             .push(UndoHistoryCell { root: current_root.clone(),
@@ -39,7 +37,7 @@ impl UndoHistory {
 
     pub fn redo(&mut self,
                 current_root: &lang::CodeNode,
-                cursor_position: Option<lang::ID>)
+                cursor_position: Vec<lang::ID>)
                 -> Option<UndoHistoryCell> {
         let redone_state = self.redo_stack.pop()?;
         self.undo_stack

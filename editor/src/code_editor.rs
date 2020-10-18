@@ -24,7 +24,8 @@ use cs::scripts;
 pub struct CodeEditor {
     pub code_genie: CodeGenie,
     pub editing: bool,
-    selected_node_id: Option<lang::ID>,
+    // selected_node_id: Option<lang::ID>,
+    pub selected_node_ids: Vec<lang::ID>,
     pub insert_code_menu: Option<InsertCodeMenu>,
     mutation_master: MutationMaster,
     // HACK: None when used to display code in Insert Code Menu
@@ -50,7 +51,7 @@ impl CodeEditor {
                                    -> Self {
         let mut new_editor = Self { code_genie: self.code_genie.clone(),
                                     editing: false,
-                                    selected_node_id: None,
+                                    selected_node_ids: vec![],
                                     insert_code_menu: None,
                                     mutation_master: MutationMaster::new(),
                                     location: None };
@@ -61,7 +62,7 @@ impl CodeEditor {
     pub fn new(code: lang::CodeNode, location: CodeLocation) -> Self {
         Self { code_genie: CodeGenie::new(code),
                editing: false,
-               selected_node_id: None,
+               selected_node_ids: vec![],
                insert_code_menu: None,
                mutation_master: MutationMaster::new(),
                location: Some(location) }
@@ -99,7 +100,8 @@ impl CodeEditor {
             | (false, Key::RightArrow, _, false)
             | (false, Key::L, false, false) => self.try_select_forward_one_node(),
             (false, Key::C, false, false) => {
-                if let Some(node) = self.get_selected_node() {
+                // TODO: this needs to delete everything that's selected first
+                if let Some(node) = self.get_last_selected_node() {
                     #[allow(mutable_borrow_reservation_conflict)]
                     if self.can_be_edited(node) {
                         self.mark_as_editing(InsertionPoint::Editing(node.id()));
@@ -168,7 +170,7 @@ impl CodeEditor {
     pub fn mark_as_editing(&mut self, insertion_point: InsertionPoint) -> Option<()> {
         self.insert_code_menu = InsertCodeMenu::for_insertion_point(insertion_point);
         self.save_current_state_to_undo_history();
-        self.selected_node_id = insertion_point.node_id_to_select_when_marking_as_editing();
+        self.set_selected_node_id(insertion_point.node_id_to_select_when_marking_as_editing());
         self.editing = true;
         Some(())
     }
@@ -179,19 +181,27 @@ impl CodeEditor {
 
     pub fn undo(&mut self) {
         if let Some(history) = self.mutation_master
-                                   .undo(self.get_code(), self.selected_node_id)
+                                   .undo(self.get_code(), self.selected_node_ids.clone())
         {
             self.replace_code(history.root);
-            self.set_selected_node_id(history.cursor_position);
+            self.set_selection(history.cursor_position);
         }
     }
 
-    pub fn get_selected_node_id(&self) -> &Option<lang::ID> {
-        &self.selected_node_id
+    pub fn get_last_selected_node_id(&self) -> Option<lang::ID> {
+        self.selected_node_ids.last().cloned()
     }
 
     pub fn set_selected_node_id(&mut self, code_node_id: Option<lang::ID>) {
-        self.selected_node_id = code_node_id;
+        if let Some(code_node_id) = code_node_id {
+            self.selected_node_ids = vec![code_node_id];
+        } else {
+            self.selected_node_ids = vec![];
+        }
+    }
+
+    pub fn set_selection(&mut self, selection: Vec<lang::ID>) {
+        self.selected_node_ids = selection;
     }
 
     pub fn replace_code(&mut self, code: lang::CodeNode) {
@@ -200,28 +210,28 @@ impl CodeEditor {
 
     fn try_select_up_one_node(&mut self) {
         let navigation = Navigation::new(&self.code_genie);
-        if let Some(node_id) = navigation.navigate_up_from(self.selected_node_id) {
+        if let Some(node_id) = navigation.navigate_up_from(self.get_last_selected_node_id()) {
             self.set_selected_node_id(Some(node_id))
         }
     }
 
     fn try_select_down_one_node(&mut self) {
         let navigation = Navigation::new(&self.code_genie);
-        if let Some(node_id) = navigation.navigate_down_from(self.selected_node_id) {
+        if let Some(node_id) = navigation.navigate_down_from(self.get_last_selected_node_id()) {
             self.set_selected_node_id(Some(node_id))
         }
     }
 
     pub fn try_select_back_one_node(&mut self) {
         let navigation = Navigation::new(&self.code_genie);
-        if let Some(node_id) = navigation.navigate_back_from(self.selected_node_id) {
+        if let Some(node_id) = navigation.navigate_back_from(self.get_last_selected_node_id()) {
             self.set_selected_node_id(Some(node_id))
         }
     }
 
     pub fn try_select_forward_one_node(&mut self) {
         let navigation = Navigation::new(&self.code_genie);
-        if let Some(node_id) = navigation.navigate_forward_from(self.selected_node_id) {
+        if let Some(node_id) = navigation.navigate_forward_from(self.get_last_selected_node_id()) {
             self.set_selected_node_id(Some(node_id))
         }
     }
@@ -305,22 +315,22 @@ impl CodeEditor {
     }
 
     pub fn try_enter_wrap_for_selected_node(&mut self) -> Option<()> {
-        self.enter_wrap_for_node(self.selected_node_id?);
+        self.enter_wrap_for_node(self.get_last_selected_node_id()?);
         Some(())
     }
 
     fn try_enter_replace_edit_for_selected_node(&mut self) -> Option<()> {
-        let selected_node_id = self.selected_node_id?;
+        let selected_node_id = self.get_last_selected_node_id()?;
         let insertion_point = self.insertion_point_for_replace(selected_node_id)?;
         self.mark_as_editing(insertion_point)
     }
 
-    fn get_selected_node(&self) -> Option<&lang::CodeNode> {
-        self.code_genie.find_node(self.selected_node_id?)
+    fn get_last_selected_node(&self) -> Option<&lang::CodeNode> {
+        self.code_genie.find_node(self.get_last_selected_node_id()?)
     }
 
     fn try_append_in_selected_node(&mut self) -> Option<()> {
-        let selected_node = self.get_selected_node()?;
+        let selected_node = self.get_last_selected_node()?;
         match selected_node {
             lang::CodeNode::ListLiteral(list_literal) => {
                 let insertion_point = InsertionPoint::ListLiteralElement { list_literal_id:
@@ -372,12 +382,12 @@ impl CodeEditor {
     }
 
     fn no_node_selected(&self) -> bool {
-        self.get_selected_node().is_none()
+        self.selected_node_ids.is_empty()
     }
 
     fn currently_focused_block_expression(&self) -> Option<lang::ID> {
         self.code_genie
-            .find_expression_inside_block_that_contains(self.selected_node_id?)
+            .find_expression_inside_block_that_contains(self.get_last_selected_node_id()?)
     }
 
     pub fn insertion_point(&self) -> Option<InsertionPoint> {
@@ -411,10 +421,10 @@ impl CodeEditor {
 
     fn redo(&mut self) {
         if let Some(next_root) = self.mutation_master
-                                     .redo(self.get_code(), self.selected_node_id)
+                                     .redo(self.get_code(), self.selected_node_ids.clone())
         {
             self.replace_code(next_root.root);
-            self.set_selected_node_id(next_root.cursor_position);
+            self.set_selection(next_root.cursor_position);
         }
     }
 
@@ -446,19 +456,22 @@ impl CodeEditor {
     }
 
     pub fn extract_selected_code_into_variable(&mut self) -> Option<()> {
-        self.extract_into_variable(self.selected_node_id?);
+        // TODO: this should be able to extract a range
+        self.extract_into_variable(self.get_last_selected_node_id()?);
         Some(())
     }
 
     pub fn can_be_deleted(&self, id: lang::ID) -> bool {
+        // TODO: this should be deleting a range
         self.mutation_master
-            .delete_code(id, &self.code_genie, self.selected_node_id)
+            .delete_code(id, &self.code_genie, self.get_last_selected_node_id())
             .is_some()
     }
 
     pub fn delete_node_id(&mut self, id: lang::ID) -> Option<()> {
-        let mutation_result = self.mutation_master
-                                  .delete_code(id, &self.code_genie, self.selected_node_id);
+        let mutation_result =
+            self.mutation_master
+                .delete_code(id, &self.code_genie, self.get_last_selected_node_id());
         if let Some(mutation_result) = mutation_result {
             self.apply_mutation_result(mutation_result)
         }
@@ -466,7 +479,7 @@ impl CodeEditor {
     }
 
     pub fn delete_selected_code(&mut self) -> Option<()> {
-        self.delete_node_id(self.selected_node_id?);
+        self.delete_node_id(self.get_last_selected_node_id()?);
         Some(())
     }
 
@@ -476,15 +489,16 @@ impl CodeEditor {
     }
 
     fn select_current_line(&mut self) -> Option<()> {
-        let code_id = self.code_genie
-                          .find_expression_inside_block_that_contains(self.selected_node_id?)?;
+        let code_id =
+            self.code_genie
+                .find_expression_inside_block_that_contains(self.get_last_selected_node_id()?)?;
         self.set_selected_node_id(Some(code_id));
         Some(())
     }
 
     pub fn save_current_state_to_undo_history(&mut self) {
         self.mutation_master
-            .log_new_mutation(self.get_code(), self.selected_node_id)
+            .log_new_mutation(self.get_code(), self.selected_node_ids.clone())
     }
 }
 
@@ -1293,7 +1307,7 @@ impl MutationMaster {
         }
     }
 
-    fn log_new_mutation(&self, new_root: &lang::CodeNode, cursor_position: Option<lang::ID>) {
+    fn log_new_mutation(&self, new_root: &lang::CodeNode, cursor_position: Vec<lang::ID>) {
         self.history
             .borrow_mut()
             .record_previous_state(new_root, cursor_position);
@@ -1301,7 +1315,7 @@ impl MutationMaster {
 
     pub fn undo(&self,
                 current_root: &lang::CodeNode,
-                cursor_position: Option<lang::ID>)
+                cursor_position: Vec<lang::ID>)
                 -> Option<undo::UndoHistoryCell> {
         self.history
             .borrow_mut()
@@ -1310,7 +1324,7 @@ impl MutationMaster {
 
     pub fn redo(&self,
                 current_root: &lang::CodeNode,
-                cursor_position: Option<lang::ID>)
+                cursor_position: Vec<lang::ID>)
                 -> Option<undo::UndoHistoryCell> {
         self.history
             .borrow_mut()

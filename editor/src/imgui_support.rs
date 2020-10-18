@@ -145,6 +145,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
 
     imgui.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
 
+    imgui.io_mut().config_windows_move_from_title_bar_only = true;
+
     let mut renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
 
     // TODO: not sure if i need this in some form or if i can totally get rid of this line
