@@ -38,28 +38,6 @@ lazy_static! {
     static ref SPACE_IMSTR: ImString = im_str! { "{}", SPACE }.clone();
 }
 
-#[derive(Copy, Clone)]
-struct CommandBuffer {
-    disable_mouse_button_clicked: bool,
-}
-
-impl CommandBuffer {
-    fn empty() -> Self {
-        Self { disable_mouse_button_clicked: false }
-    }
-
-    fn disable_mouse_button_clicked(&mut self) {
-        self.disable_mouse_button_clicked = true;
-    }
-
-    fn flush(&mut self, imgui: &mut imgui::Context) {
-        if self.disable_mouse_button_clicked {
-            imgui.io_mut().mouse_down = [false; 5];
-        }
-        *self = CommandBuffer::empty()
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Debug)]
 struct Window {
     pos: (f32, f32),
@@ -249,6 +227,16 @@ pub struct ImguiToolkit<'a> {
 }
 
 impl<'a> ImguiToolkit<'a> {
+    fn hovered_on_prev_frame(&self, replace_on_hover_label: &ImString) -> bool {
+        TkCache::is_hovered(replace_on_hover_label.as_ref())
+        && !self.is_left_mouse_button_dragging()
+    }
+
+    fn prev_item_hovered_on_this_frame(&self) -> bool {
+        let is_left_mouse_dragging = self.is_left_mouse_button_dragging();
+        self.ui.is_item_hovered() && !is_left_mouse_dragging
+    }
+
     fn is_left_mouse_button_dragging(&self) -> bool {
         self.ui.is_mouse_dragging(MouseButton::Left)
     }
@@ -343,6 +331,10 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn mouse_clicked_in_last_drawn_element(&self) -> bool {
+        if self.is_left_mouse_button_dragging() {
+            return false;
+        }
+
         let (min, max) = self.get_item_rect();
         let mouse_pos = self.ui.io().mouse_pos;
         self.is_left_button_down()
@@ -351,6 +343,10 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn mouse_released_in_last_drawn_element(&self) -> bool {
+        if self.is_left_mouse_button_dragging() {
+            return false;
+        }
+
         let (min, max) = self.get_item_rect();
         let mouse_pos = self.ui.io().mouse_pos;
         self.was_left_button_released()
@@ -382,6 +378,7 @@ struct Rect {
 }
 
 impl Rect {
+    #[allow(unused)]
     pub fn overlaps(&self, other: &Self) -> bool {
         // If one rectangle is on left side of other
         if self.min.0 >= other.max.0 || self.max.0 >= other.min.0 {
@@ -396,6 +393,7 @@ impl Rect {
         return true;
     }
 
+    #[allow(unused)]
     pub fn from_screen_coords(min: [f32; 2], max: [f32; 2]) -> Self {
         Self { min: (min[0], min[1]),
                max: (max[0], max[1]) }
@@ -588,8 +586,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn buttonize<F: Fn() + 'static>(&self, draw_fn: &dyn Fn(), onclick: F) {
         self.ui.group(draw_fn);
 
-        // grabbed this code from draw_box_around
-        if self.ui.is_item_hovered() {
+        if self.prev_item_hovered_on_this_frame() {
+            // grabbed this code from draw_box_around
             let (min, max) = self.get_item_rect();
             self.ui
                 .get_window_draw_list()
@@ -1183,7 +1181,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn replace_on_hover(&self, draw_when_not_hovered: &dyn Fn(), draw_when_hovered: &dyn Fn()) {
         let replace_on_hover_label = self.imlabel("replace_on_hover_label");
         self.ui.group(&|| {
-                   if TkCache::is_hovered(replace_on_hover_label.as_ref()) {
+                   if self.hovered_on_prev_frame(&replace_on_hover_label) {
                        draw_when_hovered()
                    } else {
                        draw_when_not_hovered()
