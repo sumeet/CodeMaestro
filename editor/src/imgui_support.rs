@@ -8,7 +8,7 @@ use crate::colorscheme;
 use imgui_winit_support;
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 
-pub fn run<F: FnMut(&mut imgui::Context, Option<Keypress>) -> bool>(title: String, mut run_ui: F) {
+pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F) {
     use glium::{Display, Surface};
     use imgui_glium_renderer::Renderer;
 
@@ -191,7 +191,6 @@ pub fn run<F: FnMut(&mut imgui::Context, Option<Keypress>) -> bool>(title: Strin
                           let gl_window = display.gl_window();
                           let mut target = display.draw();
                           target.clear_color_srgb(1.0, 1.0, 1.0, 1.0);
-                          let ui = imgui.frame();
                           platform.prepare_render(&ui, &gl_window.window());
                           renderer.render(&mut target, ui.render())
                                   .expect("Rendering failed");

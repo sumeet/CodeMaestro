@@ -80,15 +80,13 @@ struct ChildRegion {
     is_focused: bool,
     content_size: [f32; 2],
     height: f32,
-    screen_coords: Rect,
 }
 
 impl ChildRegion {
-    fn new(is_focused: bool, height: f32, content_size: [f32; 2], screen_coords: Rect) -> Self {
+    fn new(is_focused: bool, height: f32, content_size: [f32; 2]) -> Self {
         Self { is_focused,
                height,
-               content_size,
-               screen_coords }
+               content_size }
     }
 }
 
@@ -165,16 +163,6 @@ impl TkCache {
                  .unwrap_or(&false)
     }
 
-    // pub fn get_child_region_info<T: Copy>(child_window_id: &str,
-    //                                       func: &dyn Fn(&ChildRegion) -> T)
-    //                                       -> Option<T> {
-    //     let tk_cache = TK_CACHE.lock();
-    //     tk_cache.unwrap()
-    //             .child_regions
-    //             .get(child_window_id)
-    //             .map(func)
-    // }
-
     pub fn set_child_region_info(child_window_id: &str, child_region: ChildRegion, flex: u8) {
         let mut cache = TK_CACHE.lock().unwrap();
         cache.child_regions
@@ -223,19 +211,13 @@ impl TkCache {
 }
 
 pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::AsyncExecutor) {
-    imgui_support::run("cs".to_string(), move |imgui, keypress| {
-        // TODO: could create the command buffer here and not have to create a new one every time
-
+    imgui_support::run("cs".to_string(), move |ui, keypress| {
         let mut app = app.borrow_mut();
         app.flush_commands(&mut async_executor);
         async_executor.turn();
-        let mut cmd_buffer = {
-            let frame = imgui.frame();
-            let mut toolkit = ImguiToolkit::new(&frame, /*imgui,*/ keypress);
-            app.draw(&mut toolkit);
-            toolkit.grab_cmd_buffer()
-        };
-        cmd_buffer.flush(imgui);
+        let mut toolkit = ImguiToolkit::new(ui, keypress);
+        app.draw(&mut toolkit);
+
         TkCache::cleanup_after_iteration();
 
         true
@@ -261,16 +243,14 @@ impl State {
 }
 
 pub struct ImguiToolkit<'a> {
-    // imgui: &'a mut Context,
-    cmd_buffer: Rc<RefCell<CommandBuffer>>,
     ui: &'a Ui<'a>,
     keypress: Option<Keypress>,
     state: RefCell<State>,
 }
 
 impl<'a> ImguiToolkit<'a> {
-    fn grab_cmd_buffer(&self) -> CommandBuffer {
-        *self.cmd_buffer.borrow()
+    fn is_left_mouse_button_dragging(&self) -> bool {
+        self.ui.is_mouse_dragging(MouseButton::Left)
     }
 
     fn current_bg_color(&self) -> [f32; 4] {
@@ -324,12 +304,8 @@ impl<'a> ImguiToolkit<'a> {
         max
     }
 
-    pub fn new(ui: &'a Ui,
-               /*imgui: &'a mut Context,*/ keypress: Option<Keypress>)
-               -> ImguiToolkit<'a> {
+    pub fn new(ui: &'a Ui, keypress: Option<Keypress>) -> ImguiToolkit<'a> {
         ImguiToolkit { ui,
-                       cmd_buffer: Rc::new(RefCell::new(CommandBuffer::empty())),
-                       // imgui,
                        keypress,
                        state: RefCell::new(State::new()) }
     }
@@ -1079,69 +1055,73 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             }
         }
 
-        builder
-            .build(self.ui, &mut || {
-                let is_child_focused = self.ui.is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS);
-                // let is_dragging_inside_child_region = TkCache::get_child_region_info(child_frame_id.as_ref(), &|prev_child_region| {
-                //     self.ui.is_mouse_dragging(MouseButton::Left) && prev_child_region.screen_coords.overlaps(mouse_selection_rect)
-                // }) == Some(true);
+        builder.build(self.ui, &mut || {
+                   let is_child_focused =
+                       self.ui
+                           .is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS);
+                   // let is_dragging_inside_child_region = TkCache::get_child_region_info(child_frame_id.as_ref(), &|prev_child_region| {
+                   //     self.ui.is_mouse_dragging(MouseButton::Left) && prev_child_region.screen_coords.overlaps(mouse_selection_rect)
+                   // }) == Some(true);
 
-                self.set_in_child_window();
+                   self.set_in_child_window();
 
-                let mut screen_coords = (self.ui.cursor_screen_pos(), [0., 0.]);
+                   let mut screen_coords = (self.ui.cursor_screen_pos(), [0., 0.]);
 
-                let child_region_height = self.ui.content_region_avail()[1];
-                self.ui.group(draw_fn);
+                   let child_region_height = self.ui.content_region_avail()[1];
+                   self.ui.group(draw_fn);
 
-                if self.ui.is_mouse_dragging(MouseButton::Left) {
-                    println!("mouse is dragging");
-                    if is_child_focused {
-                        println!("in here");
+                   if self.is_left_mouse_button_dragging() {
+                       println!("mouse is dragging");
+                       if is_child_focused {
+                           println!("in here");
 
-                        let current_mouse_pos = self.ui.io().mouse_pos;
-                        let delta = self.ui.mouse_drag_delta(MouseButton::Left);
-                        let draw_list = self.ui.get_window_draw_list();
-                        let initial_mouse_pos = [current_mouse_pos[0] - delta[0], current_mouse_pos[1] - delta[1]];
-                        // let dragged_rect = Rect::from_screen_coords(current_mouse_pos, initial_mouse_pos);
-                        draw_list.add_rect(current_mouse_pos, initial_mouse_pos, [1., 1., 1., 0.1]).filled(true).build();
+                           let current_mouse_pos = self.ui.io().mouse_pos;
+                           let delta = self.ui.mouse_drag_delta(MouseButton::Left);
+                           let draw_list = self.ui.get_window_draw_list();
+                           let initial_mouse_pos = [current_mouse_pos[0] - delta[0],
+                                                    current_mouse_pos[1] - delta[1]];
+                           // let dragged_rect = Rect::from_screen_coords(current_mouse_pos, initial_mouse_pos);
+                           draw_list.add_rect(current_mouse_pos,
+                                              initial_mouse_pos,
+                                              [1., 1., 1., 0.1])
+                                    .filled(true)
+                                    .build();
+                       }
+                   }
 
-                        self.cmd_buffer.borrow_mut().disable_mouse_button_clicked();
-                    }
-                }
+                   let content_size = self.ui.item_rect_size();
+                   screen_coords.1 = self.ui.cursor_screen_pos();
 
+                   if let Some(keypress) = self.keypress {
+                       if is_child_focused {
+                           if let Some(ref handle_keypress) = handle_keypress {
+                               handle_keypress(keypress)
+                           }
+                       }
+                   }
 
-                let content_size = self.ui.item_rect_size();
-                screen_coords.1 = self.ui.cursor_screen_pos();
+                   TkCache::set_child_region_info(child_frame_id.as_ref(),
+                                                  ChildRegion::new(is_child_focused,
+                                                                   child_region_height,
+                                                                   content_size),
+                                                  flex);
 
-                if let Some(keypress) = self.keypress {
-                    if is_child_focused {
-                        if let Some(ref handle_keypress) = handle_keypress {
-                            handle_keypress(keypress)
-                        }
-                    }
-                }
+                   if let Some(draw_context_menu) = draw_context_menu {
+                       let label = self.imlabel("draw_context_menu");
+                       if unsafe {
+                           let flags =
+                               ImGuiPopupFlags_NoOpenOverItems | ImGuiPopupFlags_MouseButtonRight;
+                           imgui_sys::igBeginPopupContextWindow(label.as_ptr(), flags as i32)
+                       } {
+                           draw_context_menu();
+                           unsafe {
+                               imgui_sys::igEndPopup();
+                           }
+                       }
+                   }
 
-                TkCache::set_child_region_info(child_frame_id.as_ref(),
-                                               ChildRegion::new(is_child_focused,
-                                                                child_region_height,
-                                                                content_size, Rect::from_screen_coords(screen_coords.0, screen_coords.1)),
-                                               flex);
-
-                if let Some(draw_context_menu) = draw_context_menu {
-                    let label = self.imlabel("draw_context_menu");
-                    if unsafe {
-                        let flags = ImGuiPopupFlags_NoOpenOverItems | ImGuiPopupFlags_MouseButtonRight;
-                        imgui_sys::igBeginPopupContextWindow(label.as_ptr(), flags as i32)
-                    } {
-                        draw_context_menu();
-                        unsafe {
-                            imgui_sys::igEndPopup();
-                        }
-                    }
-                }
-
-                self.set_not_in_child_window();
-            });
+                   self.set_not_in_child_window();
+               });
         token.pop(self.ui);
     }
 
