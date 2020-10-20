@@ -1069,10 +1069,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                    self.ui.group(draw_fn);
 
                    if self.is_left_mouse_button_dragging() {
-                       println!("mouse is dragging");
                        if is_child_focused {
-                           println!("in here");
-
                            let current_mouse_pos = self.ui.io().mouse_pos;
                            let delta = self.ui.mouse_drag_delta(MouseButton::Left);
                            let draw_list = self.ui.get_window_draw_list();
