@@ -527,8 +527,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         if let Some(dragged_rect) = self.get_current_dragged_rect() {
             let (min, max) = self.get_item_rect(); // this thing should return a rect
-            println!("item rect: {:?}", (min, max));
-            println!("dragged rect: {:?}", dragged_rect);
             if Rect::from_screen_coords([min.x, min.y], [max.x, max.y]).overlaps(&dragged_rect) {
                 callback();
             }
@@ -1147,9 +1145,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                               [1., 1., 1., 0.1])
                                     .filled(true)
                                     .build();
+                           drag_selection_occurred();
                        }
-
-                       drag_selection_occurred();
                    }
 
                    let content_size = self.ui.item_rect_size();
