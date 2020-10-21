@@ -113,6 +113,10 @@ pub trait UiToolkit {
                                                                  onchange: F,
                                                                  ondone: D)
                                                                  -> Self::DrawResult;
+    fn callback_when_drag_intersects<F: Fn() + 'static>(&self,
+                                                        draw_fn: DrawFnRef<Self>,
+                                                        callback: F)
+                                                        -> Self::DrawResult;
     fn drag_drop_source(&self,
                         draw_fn: DrawFnRef<Self>,
                         draw_preview_fn: DrawFnRef<Self>,

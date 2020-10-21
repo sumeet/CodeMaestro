@@ -1706,6 +1706,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             return draw_handle_fn();
         }
 
+        let draw_handle_fn = &|| {
+            let cmd_buffer = self.command_buffer.clone();
+            self.ui_toolkit
+                .callback_when_drag_intersects(draw_handle_fn, move || {
+                    cmd_buffer.borrow_mut()
+                              .add_overlapped_code_node_id(code_node_id);
+                })
+        };
+
         let code_node = self.code_editor.code_genie.find_node(code_node_id).unwrap();
 
         let cmd_buffer = Rc::clone(&self.command_buffer);
@@ -1727,6 +1736,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 }
 
 struct PerEditorCommandBuffer {
+    overlapped_code_node_ids: Vec<lang::ID>,
     actual_command_buffer: Rc<RefCell<editor::CommandBuffer>>,
     editor_id: lang::ID,
 }
@@ -1736,7 +1746,17 @@ impl PerEditorCommandBuffer {
                editor_id: lang::ID)
                -> Self {
         Self { actual_command_buffer,
-               editor_id }
+               editor_id,
+               overlapped_code_node_ids: vec![] }
+    }
+
+    pub fn add_overlapped_code_node_id(&mut self, id: lang::ID) {
+        self.overlapped_code_node_ids.push(id);
+
+        let overlapped_code_node_ids = self.overlapped_code_node_ids.clone();
+        self.add_editor_command(move |editor| {
+                editor.selected_node_ids = overlapped_code_node_ids;
+            });
     }
 
     pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self, f: F) {

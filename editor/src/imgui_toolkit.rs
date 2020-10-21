@@ -58,13 +58,19 @@ struct ChildRegion {
     is_focused: bool,
     content_size: [f32; 2],
     height: f32,
+    dragged_rect: Option<Rect>,
 }
 
 impl ChildRegion {
-    fn new(is_focused: bool, height: f32, content_size: [f32; 2]) -> Self {
+    fn new(is_focused: bool,
+           height: f32,
+           content_size: [f32; 2],
+           dragged_rect: Option<Rect>)
+           -> Self {
         Self { is_focused,
                height,
-               content_size }
+               content_size,
+               dragged_rect }
     }
 }
 
@@ -156,6 +162,14 @@ impl TkCache {
                 .map(|cr| cr.height)
     }
 
+    pub fn get_child_region_dragged_rect(child_window_id: &str) -> Option<Rect> {
+        TK_CACHE.lock()
+                .unwrap()
+                .child_regions
+                .get(child_window_id)
+                .and_then(|cr| cr.dragged_rect)
+    }
+
     pub fn get_child_region_content_height(child_window_id: &str) -> Option<f32> {
         TK_CACHE.lock()
                 .unwrap()
@@ -204,7 +218,7 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
 
 struct State {
     used_labels: HashMap<String, i32>,
-    in_child_window: bool,
+    in_child_window: Option<String>,
 }
 
 fn buf(text: &str) -> ImString {
@@ -216,7 +230,7 @@ fn buf(text: &str) -> ImString {
 impl State {
     fn new() -> Self {
         State { used_labels: HashMap::new(),
-                in_child_window: false }
+                in_child_window: None }
     }
 }
 
@@ -251,15 +265,20 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn is_in_child_window(&self) -> bool {
-        (*self.state.borrow()).in_child_window
+        (*self.state.borrow()).in_child_window.is_some()
     }
 
-    fn set_in_child_window(&self) {
-        self.state.borrow_mut().in_child_window = true;
+    // TODO: this should call get_child_region_dragged_rect inside
+    fn current_child_window_label(&self) -> Option<String> {
+        (*self.state.borrow()).in_child_window.clone()
+    }
+
+    fn set_in_child_window(&self, label: String) {
+        self.state.borrow_mut().in_child_window = Some(label);
     }
 
     fn set_not_in_child_window(&self) {
-        self.state.borrow_mut().in_child_window = false;
+        self.state.borrow_mut().in_child_window = None;
     }
 
     fn blank_out_previously_drawn_item(&self) {
@@ -372,6 +391,7 @@ impl<'a> ImguiToolkit<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 struct Rect {
     min: (f32, f32),
     max: (f32, f32),
@@ -380,17 +400,10 @@ struct Rect {
 impl Rect {
     #[allow(unused)]
     pub fn overlaps(&self, other: &Self) -> bool {
-        // If one rectangle is on left side of other
-        if self.min.0 >= other.max.0 || self.max.0 >= other.min.0 {
-            return false;
-        }
-
-        // If one rectangle is above other
-        if self.min.1 <= other.max.1 || self.max.1 <= other.min.1 {
-            return false;
-        }
-
-        return true;
+        (self.min.0 < other.max.0
+         && self.max.0 > other.min.0
+         && self.max.1 > other.min.1
+         && self.min.1 < other.max.1)
     }
 
     #[allow(unused)]
@@ -473,6 +486,25 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         File::create(&filename).unwrap()
                                .write_all(&contents)
                                .unwrap();
+    }
+
+    fn callback_when_drag_intersects<F: Fn() + 'static>(&self,
+                                                        draw_fn: DrawFnRef<Self>,
+                                                        callback: F) {
+        self.ui.group(draw_fn);
+        let label = self.current_child_window_label();
+        if label.is_none() {
+            return;
+        }
+        let label = label.unwrap();
+        if let Some(dragged_rect) = TkCache::get_child_region_dragged_rect(&label) {
+            let (min, max) = self.get_item_rect(); // this thing should return a rect
+                                                   // println!("item rect: {:?}", (min, max));
+                                                   // println!("dragged rect: {:?}", dragged_rect);
+            if Rect::from_screen_coords([min.x, min.y], [max.x, max.y]).overlaps(&dragged_rect) {
+                callback();
+            }
+        }
     }
 
     fn drag_drop_source(&self,
@@ -1061,13 +1093,14 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                    //     self.ui.is_mouse_dragging(MouseButton::Left) && prev_child_region.screen_coords.overlaps(mouse_selection_rect)
                    // }) == Some(true);
 
-                   self.set_in_child_window();
+                   self.set_in_child_window(child_frame_id.to_string());
 
                    let mut screen_coords = (self.ui.cursor_screen_pos(), [0., 0.]);
 
                    let child_region_height = self.ui.content_region_avail()[1];
                    self.ui.group(draw_fn);
 
+                   let mut dragged_rect = None;
                    if self.is_left_mouse_button_dragging() {
                        if is_child_focused {
                            let current_mouse_pos = self.ui.io().mouse_pos;
@@ -1075,7 +1108,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                            let draw_list = self.ui.get_window_draw_list();
                            let initial_mouse_pos = [current_mouse_pos[0] - delta[0],
                                                     current_mouse_pos[1] - delta[1]];
-                           // let dragged_rect = Rect::from_screen_coords(current_mouse_pos, initial_mouse_pos);
+                           dragged_rect =
+                               Some(Rect::from_screen_coords(current_mouse_pos, initial_mouse_pos));
                            draw_list.add_rect(current_mouse_pos,
                                               initial_mouse_pos,
                                               [1., 1., 1., 0.1])
@@ -1098,7 +1132,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                    TkCache::set_child_region_info(child_frame_id.as_ref(),
                                                   ChildRegion::new(is_child_focused,
                                                                    child_region_height,
-                                                                   content_size),
+                                                                   content_size,
+                                                                   dragged_rect),
                                                   flex);
 
                    if let Some(draw_context_menu) = draw_context_menu {
