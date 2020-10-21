@@ -75,6 +75,7 @@ impl ChildRegion {
 }
 
 struct TkCache {
+    is_drag_drop_active: bool,
     current_window_label: Option<ImString>,
     child_regions: HashMap<String, ChildRegion>,
     windows: HashMap<String, Window>,
@@ -94,13 +95,30 @@ impl TkCache {
                windows: HashMap::new(),
                //               scroll_for_keyboard_nav: HashMap::new(),
                elements_focused_in_prev_iteration: HashSet::new(),
-               elements_focused_in_this_iteration: HashSet::new() }
+               elements_focused_in_this_iteration: HashSet::new(),
+               is_drag_drop_active: false }
+    }
+
+    pub fn is_drag_drop_active() -> bool {
+        TK_CACHE.lock().unwrap().is_drag_drop_active
+    }
+
+    pub fn set_drag_drop_active() {
+        TK_CACHE.lock().unwrap().is_drag_drop_active = true;
+    }
+
+    pub fn set_drag_drop_inactive() {
+        TK_CACHE.lock().unwrap().is_drag_drop_active = false;
     }
 
     pub fn cleanup_after_iteration() {
-        let mut cache = TK_CACHE.lock().unwrap();
-        cache.elements_focused_in_prev_iteration = cache.elements_focused_in_this_iteration.clone();
-        cache.elements_focused_in_this_iteration.clear();
+        {
+            let mut cache = TK_CACHE.lock().unwrap();
+            cache.elements_focused_in_prev_iteration =
+                cache.elements_focused_in_this_iteration.clone();
+            cache.elements_focused_in_this_iteration.clear();
+        }
+        TkCache::set_drag_drop_inactive();
     }
 
     pub fn get_window(window_name_str: &str) -> Option<Window> {
@@ -252,7 +270,7 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn is_left_mouse_button_dragging(&self) -> bool {
-        self.ui.is_mouse_dragging(MouseButton::Left)
+        self.ui.is_mouse_dragging(MouseButton::Left) && !TkCache::is_drag_drop_active()
     }
 
     fn current_bg_color(&self) -> [f32; 4] {
@@ -514,6 +532,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         unsafe {
             if imgui_sys::igBeginDragDropSource(ImGuiDragDropFlags::SourceAllowNullID.bits()) {
+                TkCache::set_drag_drop_active();
+
                 self.ui.group(draw_preview_fn);
                 let payload_bytes = bincode::serialize(&payload).unwrap();
                 igSetDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
@@ -521,7 +541,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                      payload_bytes.len(),
                                      0);
 
-                igEndDragDropSource()
+                igEndDragDropSource();
             }
         }
     }
