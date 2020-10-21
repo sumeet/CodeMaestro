@@ -425,7 +425,14 @@ impl Rect {
     }
 
     #[allow(unused)]
-    pub fn from_screen_coords(min: [f32; 2], max: [f32; 2]) -> Self {
+    pub fn from_screen_coords(mut min: [f32; 2], mut max: [f32; 2]) -> Self {
+        if min[0] > max[0] {
+            std::mem::swap(&mut min[0], &mut max[0])
+        }
+        if min[1] > max[1] {
+            std::mem::swap(&mut min[1], &mut max[1])
+        }
+
         Self { min: (min[0], min[1]),
                max: (max[0], max[1]) }
     }
@@ -517,8 +524,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let label = label.unwrap();
         if let Some(dragged_rect) = TkCache::get_child_region_dragged_rect(&label) {
             let (min, max) = self.get_item_rect(); // this thing should return a rect
-                                                   // println!("item rect: {:?}", (min, max));
-                                                   // println!("dragged rect: {:?}", dragged_rect);
+            println!("item rect: {:?}", (min, max));
+            println!("dragged rect: {:?}", dragged_rect);
             if Rect::from_screen_coords([min.x, min.y], [max.x, max.y]).overlaps(&dragged_rect) {
                 callback();
             }
