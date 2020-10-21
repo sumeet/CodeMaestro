@@ -60,15 +60,16 @@ pub trait UiToolkit {
                                                                     onwindowchange: H)
                                                                     -> Self::DrawResult
         where H: Fn((isize, isize), (usize, usize)) + 'static;
-    fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
-                                                    bg: Color,
-                                                    draw_fn: &dyn Fn() -> Self::DrawResult,
-                                                    frame_style: ChildRegionFrameStyle,
-                                                    height: ChildRegionHeight,
-                                                    width: ChildRegionWidth,
-                                                    draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
-                                                    handle_keypress: Option<F>)
-                                                    -> Self::DrawResult;
+    fn draw_child_region<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self,
+                                                                       bg: Color,
+                                                                       draw_fn: &dyn Fn() -> Self::DrawResult,
+                                                                       frame_style: ChildRegionFrameStyle,
+                                                                       height: ChildRegionHeight,
+                                                                       width: ChildRegionWidth,
+                                                                       draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
+                                                                       handle_keypress: Option<F>,
+                                                                       drag_selection_occurred: G)
+                                                                       -> Self::DrawResult;
     fn draw_layout_with_bottom_bar(&self,
                                    draw_content_fn: &dyn Fn() -> Self::DrawResult,
                                    draw_bottom_bar_fn: &dyn Fn() -> Self::DrawResult)

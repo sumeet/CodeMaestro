@@ -968,14 +968,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_child_region<F: Fn(Keypress) + 'static>(&self,
-                                                    bg: Color,
-                                                    draw_fn: &dyn Fn(),
-                                                    frame_style: ChildRegionFrameStyle,
-                                                    height: ChildRegionHeight,
-                                                    width: ChildRegionWidth,
-                                                    draw_context_menu: Option<&dyn Fn()>,
-                                                    handle_keypress: Option<F>) {
+    fn draw_child_region<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self,
+                                                                       bg: Color,
+                                                                       draw_fn: &dyn Fn(),
+                                                                       frame_style: ChildRegionFrameStyle,
+                                                                       height: ChildRegionHeight,
+                                                                       width: ChildRegionWidth,
+                                                                       draw_context_menu: Option<&dyn Fn()>,
+                                                                       handle_keypress: Option<F>,
+                                                                       drag_selection_occurred: G)
+    {
         let child_frame_id = self.imlabel("");
         let mut flex = 0;
         // MAGICNUMBER: some pixels of padding, for some reason the remaining height gives
@@ -1116,6 +1118,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                     .filled(true)
                                     .build();
                        }
+
+                       drag_selection_occurred();
                    }
 
                    let content_size = self.ui.item_rect_size();

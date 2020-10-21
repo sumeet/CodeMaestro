@@ -70,6 +70,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     pub fn render(&self, height: ChildRegionHeight) -> T::DrawResult {
         let code = self.code_editor.get_code();
         let cmd_buffer = Rc::clone(&self.command_buffer);
+        let cmd_buffer2 = Rc::clone(&cmd_buffer);
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| self.render_code(code),
@@ -82,7 +83,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                              .add_editor_command(move |code_editor| {
                                                  code_editor.handle_keypress(keypress)
                                              })
-                               }))
+                               }),
+                               move || {
+                                   cmd_buffer2.borrow_mut().set_selected_node_ids();
+                               })
     }
 
     fn draw_right_click_menu(&self) -> T::DrawResult {
@@ -286,7 +290,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                   ChildRegionHeight::Pixels(300),
                                                   ChildRegionWidth::All,
                                                   None::<&dyn Fn() -> T::DrawResult>,
-                                                  None::<fn(Keypress)>)
+                                                  None::<fn(Keypress)>, || ())
             }
         ])
     }
@@ -727,7 +731,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                ChildRegionHeight::FitContent,
                                ChildRegionWidth::All,
                                Some(&|| self.draw_right_click_menu()),
-                               None::<fn(Keypress)>)
+                               None::<fn(Keypress)>,
+                               || ())
     }
 
     pub fn render_context_menu(&self,
@@ -1078,7 +1083,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     })
                 }, ChildRegionFrameStyle::NoFrame, ChildRegionHeight::Max(50), ChildRegionWidth::FitContent,
                                                   None::<DrawFnRef<T>>,
-                                                  None::<fn(Keypress)>
+                                                  None::<fn(Keypress)>, || (),
                 )
             }])
     }
@@ -1752,7 +1757,9 @@ impl PerEditorCommandBuffer {
 
     pub fn add_overlapped_code_node_id(&mut self, id: lang::ID) {
         self.overlapped_code_node_ids.push(id);
+    }
 
+    pub fn set_selected_node_ids(&mut self) {
         let overlapped_code_node_ids = self.overlapped_code_node_ids.clone();
         self.add_editor_command(move |editor| {
                 editor.selected_node_ids = overlapped_code_node_ids;
