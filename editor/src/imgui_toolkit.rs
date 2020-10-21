@@ -236,7 +236,7 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
 
 struct State {
     used_labels: HashMap<String, i32>,
-    in_child_window: Option<String>,
+    in_child_window: Vec<String>,
 }
 
 fn buf(text: &str) -> ImString {
@@ -248,7 +248,7 @@ fn buf(text: &str) -> ImString {
 impl State {
     fn new() -> Self {
         State { used_labels: HashMap::new(),
-                in_child_window: None }
+                in_child_window: vec![] }
     }
 }
 
@@ -259,6 +259,11 @@ pub struct ImguiToolkit<'a> {
 }
 
 impl<'a> ImguiToolkit<'a> {
+    fn get_current_dragged_rect(&self) -> Option<Rect> {
+        let label = self.current_child_window_label()?;
+        TkCache::get_child_region_dragged_rect(&label)
+    }
+
     fn hovered_on_prev_frame(&self, replace_on_hover_label: &ImString) -> bool {
         TkCache::is_hovered(replace_on_hover_label.as_ref())
         && !self.is_left_mouse_button_dragging()
@@ -283,20 +288,20 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn is_in_child_window(&self) -> bool {
-        (*self.state.borrow()).in_child_window.is_some()
+        !(*self.state.borrow()).in_child_window.is_empty()
     }
 
     // TODO: this should call get_child_region_dragged_rect inside
     fn current_child_window_label(&self) -> Option<String> {
-        (*self.state.borrow()).in_child_window.clone()
+        (*self.state.borrow()).in_child_window.last().cloned()
     }
 
     fn set_in_child_window(&self, label: String) {
-        self.state.borrow_mut().in_child_window = Some(label);
+        self.state.borrow_mut().in_child_window.push(label);
     }
 
     fn set_not_in_child_window(&self) {
-        self.state.borrow_mut().in_child_window = None;
+        self.state.borrow_mut().in_child_window.pop();
     }
 
     fn blank_out_previously_drawn_item(&self) {
@@ -381,6 +386,9 @@ impl<'a> ImguiToolkit<'a> {
 
     fn mouse_released_in_last_drawn_element(&self) -> bool {
         if self.is_left_mouse_button_dragging() {
+            return false;
+        }
+        if self.get_current_dragged_rect().is_some() {
             return false;
         }
 
@@ -517,12 +525,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                         draw_fn: DrawFnRef<Self>,
                                                         callback: F) {
         self.ui.group(draw_fn);
-        let label = self.current_child_window_label();
-        if label.is_none() {
-            return;
-        }
-        let label = label.unwrap();
-        if let Some(dragged_rect) = TkCache::get_child_region_dragged_rect(&label) {
+        if let Some(dragged_rect) = self.get_current_dragged_rect() {
             let (min, max) = self.get_item_rect(); // this thing should return a rect
             println!("item rect: {:?}", (min, max));
             println!("dragged rect: {:?}", dragged_rect);
