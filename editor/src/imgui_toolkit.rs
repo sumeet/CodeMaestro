@@ -10,7 +10,7 @@ use crate::ui_toolkit::{ChildRegionFrameStyle, ChildRegionHeight, ChildRegionWid
 use imgui::*;
 use imgui_sys::{
     igAcceptDragDropPayload, igBeginDragDropTarget, igEndDragDropSource, igEndDragDropTarget,
-    igSetDragDropPayload, ImGuiCond_Once, ImGuiPopupFlags_MouseButtonRight,
+    igSetDragDropPayload, ImGuiPopupFlags_MouseButtonRight,
     ImGuiPopupFlags_NoOpenOverExistingPopup, ImGuiPopupFlags_NoOpenOverItems, ImVec2,
 };
 use lazy_static::lazy_static;
@@ -547,7 +547,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 igSetDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
                                      payload_bytes.as_ptr() as *const _,
                                      payload_bytes.len(),
-                                     ImGuiCond_Once as _);
+                                     0);
 
                 igEndDragDropSource();
             }
@@ -558,7 +558,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                              draw_fn: DrawFnRef<Self>,
                                              draw_when_hovered: DrawFnRef<Self>,
                                              accepts_payload: impl Fn(D) + 'static) {
-        // let orig_cursor_pos = self.ui.cursor_pos();
+        let orig_cursor_pos = self.ui.cursor_pos();
         self.ui.group(draw_fn);
         unsafe {
             if igBeginDragDropTarget() {
@@ -576,9 +576,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                 // XXX: draws over the non-hovered way drag drop target
                 // JANK: not sure how else to do this, imgui api requires that drag drop target
                 // is drawn before making it as the target
-                // self.blank_out_previously_drawn_item();
-                // self.ui.set_cursor_pos(orig_cursor_pos);
-                // draw_when_hovered();
+                self.blank_out_previously_drawn_item();
+                self.ui.set_cursor_pos(orig_cursor_pos);
+                draw_when_hovered();
 
                 igEndDragDropTarget()
             }
@@ -1100,6 +1100,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let token = self.ui
                         .push_style_colors(&[(StyleColor::Border, color),
                                              (StyleColor::ChildBg, [bg[0], bg[1], bg[2], bg[3]])]);
+
         let mut builder = imgui::ChildWindow::new(&child_frame_id).size([width, height]);
 
         match frame_style {
@@ -1204,76 +1205,40 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     // HAX: this is awfully specific to have in a UI toolkit library... whatever
     fn draw_code_line_separator(&self, plus_char: char, width: f32, height: f32, color: [f32; 4]) {
-        // let orig_cursor_pos = self.ui.cursor_pos();
+        let orig_cursor_pos = self.ui.cursor_pos();
 
-        // first go back -5. height to make the space between code lines feel larger when mousing
-        // over. this helps with drag+drop and mousing over to add new block expressions
-        // let y_spacing = self.ui.clone_style().item_spacing[1];
-        // println!("y spacing: {:?}", y_spacing);
         self.ui
             .invisible_button(&self.imlabel("code_line_separator"), [width, height]);
-        // self.ui
-        //     .set_cursor_pos([orig_cursor_pos[0], orig_cursor_pos[1] - y_spacing * 4.]);
-        return;
+        let min = self.ui.item_rect_min();
+        let max = self.ui.item_rect_max();
 
-        // this should've worked, but the above actually works (i think)
-        let orig_cursor_pos = self.ui.cursor_pos();
-        // // first go back -5. height to make the space between code lines feel larger when mousing
-        // // over. this helps with drag+drop and mousing over to add new block expressions
-        // let new_cursor_pos = [orig_cursor_pos[0], orig_cursor_pos[1] - 10.];
-        // self.ui.set_cursor_pos(new_cursor_pos);
-        //
-        // // add an "invisible button", this will capture mouse events such as drops and hovers,
-        // // with padding of 5. on each end to blend a little into what's above and what's below
-        // self.ui
-        //     .invisible_button(&self.imlabel("code_line_separator"), [width, height + 10.]);
-        //
-        // // reset the cursor position, as if nothing was ever drawn here
-        // self.ui.set_cursor_pos(new_cursor_pos);
+        let draw_list = self.ui.get_window_draw_list();
 
-        // add an "invisible button", this will capture mouse events such as drops and hovers,
-        // with padding of 5. on each end to blend a little into what's above and what's below
-        // self.ui
-        //     .invisible_button(&self.imlabel("code_line_separator"), [width, height + 10.]);
+        let center_of_line = [min[0], (min[1] + max[1]) / 2.];
+        let mut line = (center_of_line, [max[0], center_of_line[1]]);
+        // idk why exactly, but these -0.5s get the line to match up nicely with the circle
+        (line.0)[1] -= 0.5;
+        (line.1)[1] -= 0.5;
+        draw_list.add_line(line.0, line.1, color).build();
 
-        // reset the cursor position, as if nothing was ever drawn here
-        // self.ui.set_cursor_pos(orig_cursor_pos);
+        let mut buf = [0; 4];
+        let plus_char = plus_char.encode_utf8(&mut buf);
 
-        // let orig_cursor_pos = self.ui.cursor_pos();
-        //
-        // self.ui
-        //     .invisible_button(&self.imlabel("code_line_separator"), [width, height + 5.]);
-        // let min = self.ui.item_rect_min();
-        // let max = self.ui.item_rect_max();
-        //
-        // let draw_list = self.ui.get_window_draw_list();
-        //
-        // let center_of_line = [min[0], (min[1] + max[1]) / 2.];
-        // let mut line = (center_of_line, [max[0], center_of_line[1]]);
-        // // idk why exactly, but these -0.5s get the line to match up nicely with the circle
-        // (line.0)[1] -= 0.5;
-        // (line.1)[1] -= 0.5;
-        // draw_list.add_line(line.0, line.1, color).build();
-        //
-        // let mut buf = [0; 4];
-        // let plus_char = plus_char.encode_utf8(&mut buf);
-        //
-        // // draw the text second so it draws over the line
-        // let text_size = self.ui.calc_text_size(&im_str!("{}", plus_char), false, 0.);
-        // // XXX: this is magic that aligns the plus sign drawn with the line
-        // // when height is 15, magic is -5
-        // // when height is 20, magic is -8
-        // // y = (-3/5)x+4
-        // let y_align_magic = ((-3. / 5.) * text_size[1]) + 4.;
-        // let where_to_put_symbol_y = center_of_line[1] - ((2. / text_size[1]) - y_align_magic);
-        // let textpos = [center_of_line[0], where_to_put_symbol_y];
-        //
-        // draw_list.add_text(textpos, color, plus_char);
-        //
-        // // add a dummy to turn this whole thing into a group
-        // self.ui
-        //     .set_cursor_pos([orig_cursor_pos[0], orig_cursor_pos[1] - 10.]);
-        // self.ui.dummy([width, height + 10.]);
+        // draw the text second so it draws over the line
+        let text_size = self.ui.calc_text_size(&im_str!("{}", plus_char), false, 0.);
+        // XXX: this is magic that aligns the plus sign drawn with the line
+        // when height is 15, magic is -5
+        // when height is 20, magic is -8
+        // y = (-3/5)x+4
+        let y_align_magic = ((-3. / 5.) * text_size[1]) + 4.;
+        let where_to_put_symbol_y = center_of_line[1] - ((2. / text_size[1]) - y_align_magic);
+        let textpos = [center_of_line[0], where_to_put_symbol_y];
+
+        draw_list.add_text(textpos, color, plus_char);
+
+        // add a dummy to turn this whole thing into a group
+        self.ui.set_cursor_pos(orig_cursor_pos);
+        self.ui.dummy([width, height]);
     }
 
     fn replace_on_hover(&self, draw_when_not_hovered: &dyn Fn(), draw_when_hovered: &dyn Fn()) {
