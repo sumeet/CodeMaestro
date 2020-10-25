@@ -75,6 +75,8 @@ impl ChildRegion {
 }
 
 struct TkCache {
+    was_mouse_pressed_when_nothing_was_hovered: bool,
+
     is_drag_drop_active: bool,
     current_window_label: Option<ImString>,
     child_regions: HashMap<String, ChildRegion>,
@@ -96,11 +98,18 @@ impl TkCache {
                //               scroll_for_keyboard_nav: HashMap::new(),
                elements_focused_in_prev_iteration: HashSet::new(),
                elements_focused_in_this_iteration: HashSet::new(),
-               is_drag_drop_active: false }
+               is_drag_drop_active: false,
+               was_mouse_pressed_when_nothing_was_hovered: false }
     }
 
     pub fn is_drag_drop_active() -> bool {
         TK_CACHE.lock().unwrap().is_drag_drop_active
+    }
+
+    pub fn mouse_was_pressed_when_nothing_was_hovered() -> bool {
+        TK_CACHE.lock()
+                .unwrap()
+                .was_mouse_pressed_when_nothing_was_hovered
     }
 
     pub fn set_drag_drop_active() {
@@ -111,13 +120,19 @@ impl TkCache {
         TK_CACHE.lock().unwrap().is_drag_drop_active = false;
     }
 
-    pub fn cleanup_after_iteration() {
+    pub fn cleanup_after_iteration(toolkit: &mut ImguiToolkit) {
         {
             let mut cache = TK_CACHE.lock().unwrap();
             cache.elements_focused_in_prev_iteration =
                 cache.elements_focused_in_this_iteration.clone();
             cache.elements_focused_in_this_iteration.clear();
+
+            if toolkit.ui.is_mouse_clicked(MouseButton::Left) {
+                cache.was_mouse_pressed_when_nothing_was_hovered =
+                    !toolkit.ui.is_any_item_hovered();
+            }
         }
+        // TODO: jank
         TkCache::set_drag_drop_inactive();
     }
 
@@ -222,13 +237,14 @@ impl TkCache {
 
 pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::AsyncExecutor) {
     imgui_support::run("cs".to_string(), move |ui, keypress| {
+        println!("anyh item hovered {:?}", ui.is_any_item_hovered());
         let mut app = app.borrow_mut();
         app.flush_commands(&mut async_executor);
         async_executor.turn();
         let mut toolkit = ImguiToolkit::new(ui, keypress);
         app.draw(&mut toolkit);
 
-        TkCache::cleanup_after_iteration();
+        TkCache::cleanup_after_iteration(&mut toolkit);
 
         true
     });
@@ -275,7 +291,9 @@ impl<'a> ImguiToolkit<'a> {
     }
 
     fn is_left_mouse_button_dragging(&self) -> bool {
-        self.ui.is_mouse_dragging(MouseButton::Left) && !TkCache::is_drag_drop_active()
+        TkCache::mouse_was_pressed_when_nothing_was_hovered()
+        && self.ui.is_mouse_dragging(MouseButton::Left)
+        && !TkCache::is_drag_drop_active()
     }
 
     fn current_bg_color(&self) -> [f32; 4] {
@@ -1131,8 +1149,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                    self.ui.group(draw_fn);
 
                    let mut dragged_rect = None;
-                   if self.is_left_mouse_button_dragging() {
-                       if is_child_focused {
+                   if is_child_focused && self.is_left_mouse_button_dragging() {
+                       if self.ui.is_any_item_hovered() {
+                           self.ui.reset_mouse_drag_delta(MouseButton::Left);
+                       } else {
                            let current_mouse_pos = self.ui.io().mouse_pos;
                            let delta = self.ui.mouse_drag_delta(MouseButton::Left);
                            let draw_list = self.ui.get_window_draw_list();
@@ -1242,16 +1262,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn replace_on_hover(&self, draw_when_not_hovered: &dyn Fn(), draw_when_hovered: &dyn Fn()) {
-        let replace_on_hover_label = self.imlabel("replace_on_hover_label");
-        self.ui.group(&|| {
-                   if self.hovered_on_prev_frame(&replace_on_hover_label) {
-                       draw_when_hovered()
-                   } else {
-                       draw_when_not_hovered()
-                   }
-               });
-        let label: &str = replace_on_hover_label.as_ref();
-        TkCache::set_is_hovered(label.to_owned(), self.ui.is_item_hovered())
+        // let replace_on_hover_label = self.imlabel("replace_on_hover_label");
+        // self.ui.group(&|| {
+        //            if self.hovered_on_prev_frame(&replace_on_hover_label) {
+        draw_when_hovered()
+        //            } else {
+        // draw_when_not_hovered()
+        //            }
+        //        });
+        // let label: &str = replace_on_hover_label.as_ref();
+        // TkCache::set_is_hovered(label.to_owned(), self.ui.is_item_hovered())
     }
 
     fn draw_box_around(&self, color: [f32; 4], draw_fn: &dyn Fn()) {
