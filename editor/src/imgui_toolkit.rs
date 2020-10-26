@@ -570,25 +570,17 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         self.ui.group(draw_fn);
         let replace_on_hover_label = self.imlabel("drag_drop_source_label");
         let label: &str = replace_on_hover_label.as_ref();
-        let was_drag_drop_clicked = TkCache::was_drag_drop_source_clicked(label);
-        if was_drag_drop_clicked {
-            println!("{:?}", was_drag_drop_clicked);
+        if self.ui.is_mouse_clicked(MouseButton::Left) {
+            TkCache::set_was_drag_drop_source_clicked(label.to_string(), self.ui.is_item_hovered());
         }
-        let is_mouse_down_on_item =
-            self.ui.is_item_hovered() && self.ui.is_mouse_down(MouseButton::Left);
-
-        let was_source_clicked = self.ui.is_item_clicked(MouseButton::Left)
-                                 || was_drag_drop_clicked && is_mouse_down_on_item;
-        TkCache::set_was_drag_drop_source_clicked(label.to_owned(), was_source_clicked);
-        if !was_drag_drop_clicked {
+        if !TkCache::was_drag_drop_source_clicked(&label) {
             return;
         }
 
         unsafe {
             if imgui_sys::igBeginDragDropSource(ImGuiDragDropFlags::SourceAllowNullID.bits()) {
                 TkCache::set_drag_drop_active();
-
-                // self.ui.group(draw_preview_fn);
+                self.ui.group(draw_preview_fn);
                 let payload_bytes = bincode::serialize(&payload).unwrap();
                 igSetDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
                                      payload_bytes.as_ptr() as *const _,
