@@ -43,17 +43,6 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     unsafe {
         imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
     }
-    let mut style = imgui.style_mut();
-    // currently duped in the loop so we can do it on every frame
-    // TODO: clean that up
-    // style.colors[StyleColor::WindowBg as usize] = colorscheme!(window_bg_color).into();
-    style.colors[StyleColor::ButtonActive as usize] = colorscheme!(button_active_color).into();
-    style.colors[StyleColor::ButtonHovered as usize] = colorscheme!(button_hover_color).into();
-    style.colors[StyleColor::MenuBarBg as usize] = colorscheme!(menubar_color).into();
-    style.colors[StyleColor::TitleBg as usize] = colorscheme!(titlebar_bg_color).into();
-    style.colors[StyleColor::TitleBgCollapsed as usize] = colorscheme!(titlebar_bg_color).into();
-    style.colors[StyleColor::TitleBgActive as usize] =
-        colorscheme!(titlebar_active_bg_color).into();
 
     // debug code to print colors
     //    println!("titlebg: {:?}", style.colors[StyleColor::TitleBg as usize]);
@@ -142,20 +131,13 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     //font_sources.reverse();
 
     imgui.fonts().add_font(&font_sources);
-
     imgui.io_mut().font_global_scale = (1.0 / hidpi_factor) as f32;
-
     imgui.io_mut().config_windows_move_from_title_bar_only = true;
-
     let mut renderer = Renderer::init(&mut imgui, &display).expect("Failed to initialize renderer");
-
-    // TODO: not sure if i need this in some form or if i can totally get rid of this line
-    //imgui_winit_support::configure_keys(&mut imgui);
-
     let mut last_frame = Instant::now();
 
     loop {
-        // duped above... clean this up TODO
+        // TODO: maybe there's a way not to do this on every iteration of the loop to be more efficient?
         let mut style = imgui.style_mut();
         style.colors[StyleColor::WindowBg as usize] = colorscheme!(window_bg_color).into();
         style.colors[StyleColor::ButtonActive as usize] = colorscheme!(button_active_color).into();
