@@ -1193,6 +1193,7 @@ impl MutationMaster {
         let code = code_genie.find_node(node_id).unwrap();
         let mut result = self.delete_code(node_id, code_genie, None).unwrap();
         result.new_root = self.insert_code(code, to, &CodeGenie::new(result.new_root));
+        result.new_cursor_position = Some(node_id);
         result
     }
 
