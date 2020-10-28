@@ -1250,6 +1250,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         token.pop(self.ui);
     }
 
+    fn with_y_padding(&self, amount_px: u32, draw_fn: DrawFnRef<Self>) {
+        let style_var = self.ui
+                            .push_style_var(StyleVar::ItemSpacing([0.0, amount_px as f32]));
+        draw_fn();
+        style_var.pop(&self.ui);
+    }
+
     fn draw_layout_with_bottom_bar(&self,
                                    draw_content_fn: &dyn Fn(),
                                    draw_bottom_bar_fn: &dyn Fn()) {

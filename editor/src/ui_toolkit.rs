@@ -61,6 +61,7 @@ pub trait UiToolkit {
                                                                     onwindowchange: H)
                                                                     -> Self::DrawResult
         where H: Fn((isize, isize), (usize, usize)) + 'static;
+    fn with_y_padding(&self, amount_px: u32, draw_fn: DrawFnRef<Self>) -> Self::DrawResult;
     fn draw_child_region<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self,
                                                                        bg: Color,
                                                                        draw_fn: &dyn Fn() -> Self::DrawResult,

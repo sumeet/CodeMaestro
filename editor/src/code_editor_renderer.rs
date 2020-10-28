@@ -73,7 +73,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let cmd_buffer2 = Rc::clone(&cmd_buffer);
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
-                               &|| self.render_code(code),
+                               &|| {
+                                   self.ui_toolkit
+                                       .with_y_padding(0, &|| self.render_code(code))
+                               },
                                ChildRegionFrameStyle::Framed,
                                height,
                                ChildRegionWidth::All,
@@ -1017,18 +1020,20 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.ui_toolkit.draw_all(&[
                         &|| if not_inserting_code {
                             let first_code_id = block.expressions.first().unwrap().id();
-                            self.render_add_code_here_line(InsertionPoint::Before(first_code_id))
+                            self.render_add_code_here_line(InsertionPoint::Before(first_code_id), false)
                         } else {
                             self.ui_toolkit.draw_all(&[])
                         },
                         &|| {
+                            let len = block.expressions.len();
                             draw_all_iter!(T::self.ui_toolkit,
-                               block.expressions.iter().map(|code| {
+                               block.expressions.iter().enumerate().map(|(i, code)| {
+                                let is_last = i == len - 1;
                                    move || {
                                        if not_inserting_code {
                                            self.ui_toolkit.draw_all(&[
                                                 &|| self.render_code_line_in_block(code),
-                                                &|| self.render_add_code_here_line(InsertionPoint::After(code.id())),
+                                                &|| self.render_add_code_here_line(InsertionPoint::After(code.id()), is_last),
                                            ])
                                        } else {
                                            self.ui_toolkit.draw_all(&[
@@ -1095,7 +1100,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             }])
     }
 
-    fn render_add_code_here_line(&self, insertion_point: InsertionPoint) -> T::DrawResult {
+    fn render_add_code_here_line(&self,
+                                 insertion_point: InsertionPoint,
+                                 is_last: bool)
+                                 -> T::DrawResult {
+        let height = if is_last { 50. } else { 2. };
         self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
             let cmd_buffer = Rc::clone(&self.command_buffer);
             self.ui_toolkit.drag_drop_target(
@@ -1105,7 +1114,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                 // HAX: 70 is the size of the Insert Code button lol
                                 .draw_code_line_separator('\u{f0fe}',
                                                           70.,
-                                                          2.,
+                                                          height,
                                                           colorscheme!(separator_color))
                         },
                                                          &|| self.render_add_code_here_button(insertion_point))
