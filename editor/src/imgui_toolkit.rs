@@ -82,6 +82,12 @@ fn calculate_hash<T: std::hash::Hash>(t: &T) -> u64 {
     s.finish()
 }
 
+fn to_imgui_id(h: impl Hash) -> Id<'static> {
+    let int = calculate_hash(&h);
+    let int = (int % (u32::MAX as u64)) as u32;
+    Id::Int(int as _)
+}
+
 struct TkCache {
     was_mouse_pressed_when_nothing_was_hovered: bool,
 
@@ -580,17 +586,21 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         draw_fn: DrawFnRef<Self>,
                         draw_preview_fn: DrawFnRef<Self>,
                         payload: impl Serialize) {
+        let token = self.ui.push_id(to_imgui_id(source_id.clone()));
         self.ui.group(draw_fn);
+        token.pop(&self.ui);
         if self.ui.is_mouse_clicked(MouseButton::Left) {
             TkCache::set_was_drag_drop_source_clicked(source_id.clone(), self.ui.is_item_hovered());
         }
         if !TkCache::was_drag_drop_source_clicked(source_id.clone()) {
-            println!("returning early bc source wasn't clicked: {:?}", source_id);
             return;
         }
+        // println!("not returning early bc source was in fact clicked: {:?}",
+        //          source_id);
 
         unsafe {
             let flags = ImGuiDragDropFlags::SourceAllowNullID.bits();
+            // let flags = 0;
             if imgui_sys::igBeginDragDropSource(flags) {
                 TkCache::set_drag_drop_active();
 
