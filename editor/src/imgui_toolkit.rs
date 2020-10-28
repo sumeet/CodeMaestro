@@ -578,8 +578,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
 
         unsafe {
-            if imgui_sys::igBeginDragDropSource(ImGuiDragDropFlags::SourceAllowNullID.bits()) {
+            let flags = ImGuiDragDropFlags::SourceAllowNullID.bits();
+            if imgui_sys::igBeginDragDropSource(flags) {
                 TkCache::set_drag_drop_active();
+
+                println!("printing drag drop preview for label {:?}", label);
+
                 self.ui.group(draw_preview_fn);
                 let payload_bytes = bincode::serialize(&payload).unwrap();
                 igSetDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
@@ -598,12 +602,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                              accepts_payload: impl Fn(D) + 'static) {
         let orig_cursor_pos = self.ui.cursor_pos();
         self.ui.group(draw_fn);
+        let is_being_dropped_on = unsafe { igBeginDragDropTarget() };
         unsafe {
-            if igBeginDragDropTarget() {
-                let payload =
-                    igAcceptDragDropPayload(b"_ITEM\0".as_ptr() as *const _,
-                                            // ImGuiDragDropFlags_AcceptBeforeDelivery as _);
-                                            ImGuiDragDropFlags::AcceptNoDrawDefaultRect.bits());
+            // TODO: crashes when nested drag drop targets
+            if is_being_dropped_on {
+                let flags = ImGuiDragDropFlags::AcceptNoDrawDefaultRect.bits();
+                let payload = igAcceptDragDropPayload(b"_ITEM\0".as_ptr() as *const _, flags);
                 if !payload.is_null() {
                     let payload = *payload;
                     let data =
@@ -611,15 +615,17 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                     accepts_payload(bincode::deserialize(&*data).unwrap())
                 }
 
-                // XXX: draws over the non-hovered way drag drop target
-                // JANK: not sure how else to do this, imgui api requires that drag drop target
-                // is drawn before making it as the target
-                self.blank_out_previously_drawn_item();
-                self.ui.set_cursor_pos(orig_cursor_pos);
-                draw_when_hovered();
-
                 igEndDragDropTarget()
             }
+        }
+
+        if is_being_dropped_on {
+            // XXX: draws over the non-hovered way drag drop target
+            // JANK: not sure how else to do this, imgui api requires that drag drop target
+            // is drawn before making it as the target
+            self.blank_out_previously_drawn_item();
+            self.ui.set_cursor_pos(orig_cursor_pos);
+            draw_when_hovered();
         }
     }
 
@@ -1156,9 +1162,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                    let is_child_focused =
                        self.ui
                            .is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS);
-                   // let is_dragging_inside_child_region = TkCache::get_child_region_info(child_frame_id.as_ref(), &|prev_child_region| {
-                   //     self.ui.is_mouse_dragging(MouseButton::Left) && prev_child_region.screen_coords.overlaps(mouse_selection_rect)
-                   // }) == Some(true);
 
                    self.set_in_child_window(child_frame_id.to_string());
 

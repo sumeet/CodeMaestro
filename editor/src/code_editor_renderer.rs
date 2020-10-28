@@ -1071,11 +1071,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                               })
     }
 
-    // TODO: this output stuff is too big, taking up too much space.
-    //
-    // need to explore:
-    // (1) removing the frame from the child region, so we have a scrollable region without the bulk
-    // (2) the padding too, same reason
     fn draw_code_with_output(&self,
                              draw_code_fn: DrawFnRef<T>,
                              value: &lang::Value)
@@ -1743,7 +1738,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     })
                                                             })
                                          },
-                                         &|| self.render_code(code_node),
+                                         &|| {
+                                             println!("drawing preview for {:?}", code_node.id());
+                                             self.render_code(code_node)
+                                         },
                                          code_node.clone(),
         )
     }
