@@ -1729,6 +1729,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let cmd_buffer = Rc::clone(&self.command_buffer);
 
         self.ui_toolkit.drag_drop_source(
+                                         code_node_id,
                                          &|| {
                                              let cmd_buffer = Rc::clone(&cmd_buffer);
                                              self.ui_toolkit.buttonize(draw_handle_fn, move || {

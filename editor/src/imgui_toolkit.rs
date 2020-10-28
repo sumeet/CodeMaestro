@@ -18,9 +18,11 @@ use objekt::private::ptr::slice_from_raw_parts;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::cell::RefCell;
-use std::collections::hash_map::HashMap;
+use std::collections::hash_map::{DefaultHasher, HashMap};
 use std::collections::HashSet;
+use std::fmt::Debug;
 use std::fs::File;
+use std::hash::{Hash, Hasher};
 use std::io::{Read, Write};
 use std::rc::Rc;
 use std::sync::Arc;
@@ -74,6 +76,12 @@ impl ChildRegion {
     }
 }
 
+fn calculate_hash<T: std::hash::Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
+}
+
 struct TkCache {
     was_mouse_pressed_when_nothing_was_hovered: bool,
 
@@ -82,7 +90,7 @@ struct TkCache {
     child_regions: HashMap<String, ChildRegion>,
     windows: HashMap<String, Window>,
     replace_on_hover: HashMap<String, bool>,
-    drag_drop_source_clicked: HashMap<String, bool>,
+    drag_drop_source_clicked: HashMap<u64, bool>,
     //scroll_for_keyboard_nav: HashMap<String, ScrollStatus>,
     elements_focused_in_prev_iteration: HashSet<String>,
     elements_focused_in_this_iteration: HashSet<String>,
@@ -236,15 +244,19 @@ impl TkCache {
                 .insert(label, is_hovered);
     }
 
-    pub fn set_was_drag_drop_source_clicked(label: String, is_hovered: bool) {
+    pub fn set_was_drag_drop_source_clicked(id: impl std::hash::Hash, is_hovered: bool) {
         TK_CACHE.lock()
                 .unwrap()
                 .drag_drop_source_clicked
-                .insert(label, is_hovered);
+                .insert(calculate_hash(&id), is_hovered);
     }
 
-    pub fn was_drag_drop_source_clicked(label: &str) -> bool {
-        Some(&true) == TK_CACHE.lock().unwrap().drag_drop_source_clicked.get(label)
+    pub fn was_drag_drop_source_clicked(id: impl std::hash::Hash) -> bool {
+        Some(&true)
+        == TK_CACHE.lock()
+                   .unwrap()
+                   .drag_drop_source_clicked
+                   .get(&calculate_hash(&id))
     }
 }
 
@@ -564,16 +576,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn drag_drop_source(&self,
+                        source_id: impl Hash + Clone + Debug,
                         draw_fn: DrawFnRef<Self>,
                         draw_preview_fn: DrawFnRef<Self>,
                         payload: impl Serialize) {
         self.ui.group(draw_fn);
-        let replace_on_hover_label = self.imlabel("drag_drop_source_label");
-        let label: &str = replace_on_hover_label.as_ref();
         if self.ui.is_mouse_clicked(MouseButton::Left) {
-            TkCache::set_was_drag_drop_source_clicked(label.to_string(), self.ui.is_item_hovered());
+            TkCache::set_was_drag_drop_source_clicked(source_id.clone(), self.ui.is_item_hovered());
         }
-        if !TkCache::was_drag_drop_source_clicked(&label) {
+        if !TkCache::was_drag_drop_source_clicked(source_id.clone()) {
+            println!("returning early bc source wasn't clicked: {:?}", source_id);
             return;
         }
 
@@ -582,7 +594,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             if imgui_sys::igBeginDragDropSource(flags) {
                 TkCache::set_drag_drop_active();
 
-                println!("printing drag drop preview for label {:?}", label);
+                println!("printing drag drop preview for label {:?}", source_id);
 
                 self.ui.group(draw_preview_fn);
                 let payload_bytes = bincode::serialize(&payload).unwrap();

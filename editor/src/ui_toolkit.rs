@@ -4,6 +4,7 @@ use lazy_static::lazy_static;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::sync::{Arc, Mutex};
 
 lazy_static! {
@@ -119,6 +120,7 @@ pub trait UiToolkit {
                                                         callback: F)
                                                         -> Self::DrawResult;
     fn drag_drop_source(&self,
+                        source_id: impl std::hash::Hash + Clone + Debug,
                         draw_fn: DrawFnRef<Self>,
                         draw_preview_fn: DrawFnRef<Self>,
                         payload: impl Serialize)
