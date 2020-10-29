@@ -8,6 +8,7 @@ use cs::lang;
 use cs::lang::Function;
 
 use crate::code_editor::CodeLocation;
+use crate::insert_code_menu::{find_all_locals_preceding, SearchPosition};
 use cs::env_genie::EnvGenie;
 use lazy_static::lazy_static;
 use std::iter::once;
@@ -53,6 +54,12 @@ enum FixableProblem {
         block: lang::Block,
         required_return_type: lang::Type,
     },
+    MissingVariableReference {
+        location: CodeLocation,
+        block: lang::Block,
+        variable_reference_id: lang::ID,
+        typ: lang::Type,
+    },
 }
 
 struct Validator<'a> {
@@ -89,6 +96,17 @@ impl<'a> Validator<'a> {
                                                 required_return_type, } => {
                 let new_block = self.fix_return_type(block, required_return_type);
                 self.update_code(location, new_block);
+            }
+            FixableProblem::MissingVariableReference { location,
+                                                       typ,
+                                                       block,
+                                                       variable_reference_id, } => {
+                let mut code = lang::CodeNode::Block(block);
+
+                code.replace_with(variable_reference_id,
+                                  code_generation::new_placeholder("Missing variable".into(), typ));
+
+                self.update_code(location, code.into_block().unwrap().clone());
             }
         };
     }
@@ -181,8 +199,10 @@ impl<'a> FixableProblemFinder<'a> {
     fn find_problems(&self,
                      location: CodeLocation,
                      block: &lang::Block)
-                     -> impl Iterator<Item = FixableProblem> {
-        self.find_return_type_problem(location, block).into_iter()
+                     -> impl Iterator<Item = FixableProblem> + '_ {
+        self.find_return_type_problem(location, block)
+            .into_iter()
+            .chain(self.find_variable_reference_problem(location, block))
     }
 
     fn find_return_type_problem(&self,
@@ -197,6 +217,39 @@ impl<'a> FixableProblemFinder<'a> {
         } else {
             None
         }
+    }
+
+    fn find_variable_reference_problem(&self,
+                                       location: CodeLocation,
+                                       block: &lang::Block)
+                                       -> Vec<FixableProblem> {
+        let block = block.clone();
+        let code = lang::CodeNode::Block(block.clone());
+        let code_genie = CodeGenie::new(code.clone());
+        let var_refs =
+            code.all_children_dfs_iter().filter_map(|code| match code {
+                                            lang::CodeNode::VariableReference(var_ref) => {
+                                                Some(var_ref)
+                                            }
+                                            _ => None,
+                                        });
+        var_refs.filter_map(move |var_ref| {
+            let search_position = SearchPosition { before_code_id: var_ref.id,
+                is_search_inclusive: false };
+            if find_all_locals_preceding(search_position, &code_genie, self.env_genie).find(|variable| {
+                variable.locals_id == var_ref.assignment_id
+            }).is_none() {
+                let code_node = lang::CodeNode::VariableReference(var_ref.clone());
+                Some(FixableProblem::MissingVariableReference {
+                    location,
+                    block: block.clone(),
+                    variable_reference_id: var_ref.id,
+                    typ: code_genie.guess_type(&code_node, self.env_genie).unwrap(),
+                })
+            } else {
+                None
+            }
+        }).collect()
     }
 
     fn required_return_type(&self, location: CodeLocation) -> Option<lang::Type> {

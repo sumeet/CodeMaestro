@@ -423,9 +423,9 @@ enum VariableType {
 }
 
 #[derive(Debug)]
-struct Variable {
+pub struct Variable {
     variable_type: VariableType,
-    locals_id: lang::ID,
+    pub locals_id: lang::ID,
     typ: lang::Type,
     name: String,
 }
@@ -463,7 +463,7 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
         }
 
         let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = find_all_locals_preceding(
-            search_params.insertion_point, code_genie, env_genie)
+            search_params.insertion_point.into(), code_genie, env_genie)
             .group_by(|variable| variable.typ.id())
             .into_iter()
             .map(|(id, variables)| (id, variables.collect()))
@@ -501,12 +501,11 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
     }
 }
 
-fn find_anon_func_args_for<'a>(insertion_point: InsertionPoint,
+fn find_anon_func_args_for<'a>(search_position: SearchPosition,
                                code_genie: &'a CodeGenie,
                                _env_genie: &'a EnvGenie)
                                -> impl Iterator<Item = Variable> + 'a {
-    let (node_id, _) = assignment_search_position(insertion_point);
-    code_genie.find_anon_funcs_preceding(node_id)
+    code_genie.find_anon_funcs_preceding(search_position.before_code_id)
               .map(|anon_func| {
                   let arg = &anon_func.takes_arg;
                   Variable { variable_type: VariableType::Argument,
@@ -516,21 +515,35 @@ fn find_anon_func_args_for<'a>(insertion_point: InsertionPoint,
               })
 }
 
-fn find_all_locals_preceding<'a>(insertion_point: InsertionPoint,
-                                 code_genie: &'a CodeGenie,
-                                 env_genie: &'a EnvGenie)
-                                 -> impl Iterator<Item = Variable> + 'a {
-    find_assignments_and_function_args_preceding(insertion_point, code_genie, env_genie)
-        .chain(find_enum_variants_preceding(insertion_point, code_genie, env_genie))
-        .chain(find_anon_func_args_for(insertion_point, code_genie, env_genie))
+#[derive(Copy, Clone)]
+pub struct SearchPosition {
+    pub before_code_id: lang::ID,
+    pub is_search_inclusive: bool,
 }
 
-fn find_assignments_and_function_args_preceding<'a>(insertion_point: InsertionPoint,
-                                                    code_genie: &'a CodeGenie,
-                                                    env_genie: &'a EnvGenie)
-                                                    -> impl Iterator<Item = Variable> + 'a {
-    let (insertion_id, is_search_inclusive) = assignment_search_position(insertion_point);
-    code_genie.find_assignments_that_come_before_code(insertion_id, is_search_inclusive)
+impl From<InsertionPoint> for SearchPosition {
+    fn from(ip: InsertionPoint) -> Self {
+        let (insertion_id, is_search_inclusive) = assignment_search_position(ip);
+        SearchPosition { before_code_id: insertion_id,
+                         is_search_inclusive }
+    }
+}
+
+pub fn find_all_locals_preceding<'a>(search_position: SearchPosition,
+                                     code_genie: &'a CodeGenie,
+                                     env_genie: &'a EnvGenie)
+                                     -> impl Iterator<Item = Variable> + 'a {
+    find_assignments_and_function_args_preceding(search_position, code_genie, env_genie)
+        .chain(find_enum_variants_preceding(search_position, code_genie, env_genie))
+        .chain(find_anon_func_args_for(search_position, code_genie, env_genie))
+}
+
+pub fn find_assignments_and_function_args_preceding<'a>(search_position: SearchPosition,
+                                                        code_genie: &'a CodeGenie,
+                                                        env_genie: &'a EnvGenie)
+                                                        -> impl Iterator<Item = Variable> + 'a {
+    code_genie.find_assignments_that_come_before_code(search_position.before_code_id,
+                                                      search_position.is_search_inclusive)
               .into_iter()
               .map(move |assignment| {
                   let assignment_clone: lang::Assignment = (*assignment).clone();
@@ -549,12 +562,11 @@ fn find_assignments_and_function_args_preceding<'a>(insertion_point: InsertionPo
                                                     name: arg.short_name }))
 }
 
-fn find_enum_variants_preceding<'a>(insertion_point: InsertionPoint,
+fn find_enum_variants_preceding<'a>(search_position: SearchPosition,
                                     code_genie: &'a CodeGenie,
                                     env_genie: &'a EnvGenie)
                                     -> impl Iterator<Item = Variable> + 'a {
-    let (node_id, _) = assignment_search_position(insertion_point);
-    code_genie.find_enum_variants_preceding_iter(node_id, env_genie)
+    code_genie.find_enum_variants_preceding_iter(search_position.before_code_id, env_genie)
               .map(|match_variant| Variable { locals_id: match_variant.assignment_id(),
                                               variable_type: VariableType::MatchVariant,
                                               typ: match_variant.typ,
@@ -749,7 +761,7 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         //            return vec![];
         //        }
 
-        find_all_locals_preceding(search_params.insertion_point,
+        find_all_locals_preceding(search_params.insertion_point.into(),
                                                         code_genie,
                                                         env_genie).filter_map(|variable| {
                                   self.new_option_if_enum(env_genie, &variable.typ, || {
@@ -840,7 +852,7 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
             return vec![];
         }
 
-        let optionss = find_all_locals_preceding(search_params.insertion_point,
+        let optionss = find_all_locals_preceding(search_params.insertion_point.into(),
                                                  code_genie,
                                                  env_genie).filter_map(|variable| {
                            let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
@@ -883,7 +895,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
         find_all_locals_preceding(
-            search_params.insertion_point, code_genie, env_genie)
+            search_params.insertion_point.into(), code_genie, env_genie)
             .filter_map(|variable| {
                 let list_elem_typ = get_result_type_from_indexing_into_list(variable.typ)?;
                 if let Some(search_type) = &search_params.return_type {
