@@ -84,7 +84,6 @@ fn calculate_hash<T: std::hash::Hash>(t: &T) -> u64 {
 
 fn to_imgui_id(h: impl Hash) -> Id<'static> {
     let int = calculate_hash(&h);
-    let int = (int % (u32::MAX as u64)) as u32;
     Id::Int(int as _)
 }
 
@@ -148,7 +147,7 @@ impl TkCache {
                     !toolkit.ui.is_any_item_hovered();
             }
         }
-        // TODO: jank
+        // TODO: jank... we're already unlocking TK_CACHE above, but then doing it again down here
         TkCache::set_drag_drop_inactive();
     }
 
@@ -600,11 +599,10 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
         unsafe {
             let flags = ImGuiDragDropFlags::SourceAllowNullID.bits();
-            // let flags = 0;
             if imgui_sys::igBeginDragDropSource(flags) {
                 TkCache::set_drag_drop_active();
 
-                println!("printing drag drop preview for label {:?}", source_id);
+                println!("showing drag drop preview for label {:?}", source_id);
 
                 self.ui.group(draw_preview_fn);
                 let payload_bytes = bincode::serialize(&payload).unwrap();
