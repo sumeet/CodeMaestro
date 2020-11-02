@@ -46,12 +46,7 @@ pub trait UiToolkit {
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static);
     fn open_file_open_dialog(callback: impl Fn(&[u8]) + 'static);
     fn open_file_save_dialog(filename_suggestion: &str, contents: &[u8], mimetype: &str);
-    fn draw_code_line_separator(&self,
-                                plus_char: char,
-                                width: f32,
-                                height: f32,
-                                color: Color)
-                                -> Self::DrawResult;
+    fn draw_code_line_separator(&self, width: f32, height: f32) -> Self::DrawResult;
     fn replace_on_hover(&self,
                         draw_when_not_hovered: &dyn Fn() -> Self::DrawResult,
                         draw_when_hovered: &dyn Fn() -> Self::DrawResult)

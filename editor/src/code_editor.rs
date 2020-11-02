@@ -1181,20 +1181,19 @@ impl MutationMaster {
                      node_id: lang::ID,
                      to: InsertionPoint)
                      -> MutationResult {
-        println!("inserting {:?} into {:?}", node_id, to);
+        let new_cursor_position = Some(node_id);
         match to {
-            InsertionPoint::Before(id) | InsertionPoint::After(id) => {
-                if id == node_id {
-                    return MutationResult::new(code_genie.code.clone(), None, false);
-                }
+            InsertionPoint::Before(id) | InsertionPoint::After(id) if id == node_id => {
+                MutationResult::new(code_genie.code.clone(), new_cursor_position, false)
             }
-            _ => (),
-        };
-        let code = code_genie.find_node(node_id).unwrap();
-        let mut result = self.delete_code(node_id, code_genie, None).unwrap();
-        result.new_root = self.insert_code(code, to, &CodeGenie::new(result.new_root));
-        result.new_cursor_position = Some(node_id);
-        result
+            _ => {
+                let code = code_genie.find_node(node_id).unwrap();
+                let mut result = self.delete_code(node_id, code_genie, None).unwrap();
+                result.new_root = self.insert_code(code, to, &CodeGenie::new(result.new_root));
+                result.new_cursor_position = new_cursor_position;
+                result
+            }
+        }
     }
 
     pub fn extract_into_variable(&self,

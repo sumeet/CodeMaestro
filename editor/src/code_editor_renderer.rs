@@ -74,9 +74,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| {
-                                   self.render_code(code)
-                                   // self.ui_toolkit
-                                   //     .with_y_padding(0, &|| self.render_code(code))
+                                   self.ui_toolkit
+                                       .with_y_padding(0, &|| self.render_code(code))
                                },
                                ChildRegionFrameStyle::Framed,
                                height,
@@ -273,29 +272,35 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.draw_all(&[
             &|| {
                 self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
-                    self.ui_toolkit.draw_with_bgcolor(transparent_black, &|| {
-                        self.ui_toolkit.draw_taking_up_full_width(&|| {
-                            self.render_insertion_header(menu)
-                        })
-                    })
-                })
+                                   self.ui_toolkit.draw_with_bgcolor(transparent_black, &|| {
+                                                      self.ui_toolkit
+                                                          .draw_taking_up_full_width(&|| {
+                                                              self.render_insertion_header(menu)
+                                                          })
+                                                  })
+                               })
             },
             &|| {
                 self.ui_toolkit.draw_child_region(transparent_black,
                                                   &|| {
-                                                      let options_groups = menu.grouped_options(&self.code_editor.code_genie, self.env_genie);
-                                                          draw_all_iter!(T::self.ui_toolkit,
-                                                      options_groups.iter().map(|group| {
-                                                          move || self.render_insertion_options_group(group, menu.insertion_point)
-                                                      })
-                                                  )
+                                                      let options_groups =
+                                                          menu.grouped_options(&self.code_editor
+                                                                                    .code_genie,
+                                                                               self.env_genie);
+                                                      self.ui_toolkit
+                                                          .with_y_padding(2, &|| {
+                                                              draw_all_iter!(T::self.ui_toolkit, options_groups.iter().map(|group| {
+                                                                  move || self.render_insertion_options_group(group, menu.insertion_point)
+                                                              }))
+                                                          })
                                                   },
                                                   ChildRegionFrameStyle::Framed,
                                                   ChildRegionHeight::Pixels(300),
                                                   ChildRegionWidth::All,
                                                   None::<&dyn Fn() -> T::DrawResult>,
-                                                  None::<fn(Keypress)>, || ())
-            }
+                                                  None::<fn(Keypress)>,
+                                                  || ())
+            },
         ])
     }
 
@@ -1015,7 +1020,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         // THE NULL STATE
                         self.render_add_code_here_button(InsertionPoint::BeginningOfBlock(block.id))
                     } else {
-                        self.ui_toolkit.draw_all(&[&|| self.render_code_insertion_menu_here_if_it_was_requested()])
+                        self.render_code_insertion_menu_here_if_it_was_requested()
                     }
                 } else {
                     self.ui_toolkit.draw_all(&[
@@ -1113,10 +1118,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         self.ui_toolkit.replace_on_hover(&|| {
                             self.ui_toolkit
                                 // HAX: 70 is the size of the Insert Code button lol
-                                .draw_code_line_separator('\u{f0fe}',
-                                                          70.,
-                                                          height,
-                                                          colorscheme!(separator_color))
+                                .draw_code_line_separator( 70., height)
                         },
                                                          &|| self.render_add_code_here_button(insertion_point))
                     },
@@ -1754,10 +1756,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     })
                                                             })
                                          },
-                                         &|| {
-                                             println!("drawing preview for {:?}", code_node.id());
-                                             self.render_code(code_node)
-                                         },
+                                         &|| self.render_code(code_node),
                                          code_node.clone(),
         )
     }
