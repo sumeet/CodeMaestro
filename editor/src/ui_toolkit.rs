@@ -96,9 +96,7 @@ pub trait UiToolkit {
     fn draw_child_region<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self,
                                                                        bg: Color,
                                                                        draw_fn: &dyn Fn() -> Self::DrawResult,
-                                                                       frame_style: ChildRegionFrameStyle,
-                                                                       height: ChildRegionHeight,
-                                                                       width: ChildRegionWidth,
+                                                                       style: ChildRegionStyle,
                                                                        draw_context_menu: Option<&dyn Fn() -> Self::DrawResult>,
                                                                        handle_keypress: Option<F>,
                                                                        drag_selection_occurred: G)
@@ -295,6 +293,13 @@ pub enum SelectableItem<T: 'static> {
         label: String,
         is_selected: bool,
     },
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct ChildRegionStyle {
+    pub height: ChildRegionHeight,
+    pub width: ChildRegionWidth,
+    pub frame_style: ChildRegionFrameStyle,
 }
 
 #[derive(Debug, Copy, Clone)]

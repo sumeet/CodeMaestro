@@ -6,7 +6,9 @@ use super::ui_toolkit::{Color, SelectableItem, UiToolkit};
 use nfd;
 
 use crate::colorscheme;
-use crate::ui_toolkit::{ChildRegionFrameStyle, ChildRegionHeight, ChildRegionWidth, DrawFnRef};
+use crate::ui_toolkit::{
+    ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionWidth, DrawFnRef,
+};
 use imgui::*;
 use imgui_sys::{
     igAcceptDragDropPayload, igBeginDragDropTarget, igEndDragDropSource, igEndDragDropTarget,
@@ -1052,13 +1054,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     fn draw_child_region<F: Fn(Keypress) + 'static, G: Fn() + 'static>(&self,
                                                                        bg: Color,
                                                                        draw_fn: &dyn Fn(),
-                                                                       frame_style: ChildRegionFrameStyle,
-                                                                       height: ChildRegionHeight,
-                                                                       width: ChildRegionWidth,
+                                                                       style: ChildRegionStyle,
                                                                        draw_context_menu: Option<&dyn Fn()>,
                                                                        handle_keypress: Option<F>,
                                                                        drag_selection_occurred: G)
     {
+        let frame_style = style.frame_style;
+        let height = style.height;
+        let width = style.width;
+
         let child_frame_id = self.imlabel("");
         let mut flex = 0;
         // MAGICNUMBER: some pixels of padding, for some reason the remaining height gives

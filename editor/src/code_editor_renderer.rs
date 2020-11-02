@@ -20,7 +20,9 @@ use crate::draw_all_iter;
 use crate::editor::value_renderer::ValueRenderer;
 use crate::editor::{CommandBuffer, Keypress};
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
-use crate::ui_toolkit::{ChildRegionFrameStyle, ChildRegionHeight, ChildRegionWidth, DrawFnRef};
+use crate::ui_toolkit::{
+    ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionWidth, DrawFnRef,
+};
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{AnonymousFunction, CodeNode, FunctionRenderingStyle};
@@ -71,15 +73,17 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let code = self.code_editor.get_code();
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let cmd_buffer2 = Rc::clone(&cmd_buffer);
+
+        let style = ChildRegionStyle { height,
+                                       width: ChildRegionWidth::All,
+                                       frame_style: ChildRegionFrameStyle::Framed };
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| {
                                    self.ui_toolkit
                                        .with_y_padding(0, &|| self.render_code(code))
                                },
-                               ChildRegionFrameStyle::Framed,
-                               height,
-                               ChildRegionWidth::All,
+                               style,
                                Some(&move || self.draw_right_click_menu()),
                                Some(move |keypress| {
                                    cmd_buffer.borrow_mut()
@@ -281,6 +285,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                })
             },
             &|| {
+                let style = ChildRegionStyle {
+                    height: ChildRegionHeight::Pixels(300),
+                    width: ChildRegionWidth::All,
+                    frame_style: ChildRegionFrameStyle::Framed
+                };
                 self.ui_toolkit.draw_child_region(transparent_black,
                                                   &|| {
                                                       let options_groups =
@@ -294,9 +303,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                               }))
                                                           })
                                                   },
-                                                  ChildRegionFrameStyle::Framed,
-                                                  ChildRegionHeight::Pixels(300),
-                                                  ChildRegionWidth::All,
+                                                  style,
                                                   None::<&dyn Fn() -> T::DrawResult>,
                                                   None::<fn(Keypress)>,
                                                   || ())
@@ -728,6 +735,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     pub fn render_anonymous_function(&self, anon_func: &AnonymousFunction) -> T::DrawResult {
+        let style = ChildRegionStyle { height: ChildRegionHeight::FitContent,
+                                       width: ChildRegionWidth::All,
+                                       frame_style: ChildRegionFrameStyle::Framed };
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| {
@@ -736,9 +746,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                .into_block()
                                                                .unwrap())
                                },
-                               ChildRegionFrameStyle::Framed,
-                               ChildRegionHeight::FitContent,
-                               ChildRegionWidth::All,
+                               style,
                                Some(&|| self.draw_right_click_menu()),
                                None::<fn(Keypress)>,
                                || ())
@@ -1091,6 +1099,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                              draw_code_fn: DrawFnRef<T>,
                              value: &lang::Value)
                              -> T::DrawResult {
+        let style = ChildRegionStyle { height: ChildRegionHeight::Max(50),
+                                       width: ChildRegionWidth::FitContent,
+                                       frame_style: ChildRegionFrameStyle::NoFrame };
         self.ui_toolkit
             .draw_all(&[draw_code_fn, &|| {
                 self.ui_toolkit.draw_child_region([0., 0., 0., 0.2], &|| {
@@ -1099,7 +1110,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                             ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(value)
                         }])
                     })
-                }, ChildRegionFrameStyle::NoFrame, ChildRegionHeight::Max(50), ChildRegionWidth::FitContent,
+                }, style,
                                                   None::<DrawFnRef<T>>,
                                                   None::<fn(Keypress)>, || (),
                 )
