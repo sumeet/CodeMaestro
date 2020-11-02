@@ -74,8 +74,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| {
-                                   self.ui_toolkit
-                                       .with_y_padding(0, &|| self.render_code(code))
+                                   self.render_code(code)
+                                   // self.ui_toolkit
+                                   //     .with_y_padding(0, &|| self.render_code(code))
                                },
                                ChildRegionFrameStyle::Framed,
                                height,

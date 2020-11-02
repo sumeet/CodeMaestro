@@ -10,7 +10,7 @@ use crate::ui_toolkit::{ChildRegionFrameStyle, ChildRegionHeight, ChildRegionWid
 use imgui::*;
 use imgui_sys::{
     igAcceptDragDropPayload, igBeginDragDropTarget, igEndDragDropSource, igEndDragDropTarget,
-    igSetDragDropPayload, ImGuiCond_Once, ImGuiPopupFlags_MouseButtonRight,
+    igSetDragDropPayload, ImGuiPopupFlags_MouseButtonRight,
     ImGuiPopupFlags_NoOpenOverExistingPopup, ImGuiPopupFlags_NoOpenOverItems, ImVec2,
 };
 use lazy_static::lazy_static;
@@ -80,11 +80,6 @@ fn calculate_hash<T: std::hash::Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
-}
-
-fn to_imgui_id(h: impl Hash) -> Id<'static> {
-    let int = calculate_hash(&h);
-    Id::Int(int as _)
 }
 
 struct TkCache {
@@ -585,24 +580,18 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                         draw_fn: DrawFnRef<Self>,
                         draw_preview_fn: DrawFnRef<Self>,
                         payload: impl Serialize) {
-        let token = self.ui.push_id(to_imgui_id(source_id.clone()));
         self.ui.group(draw_fn);
-        token.pop(&self.ui);
         if self.ui.is_mouse_clicked(MouseButton::Left) {
             TkCache::set_was_drag_drop_source_clicked(source_id.clone(), self.ui.is_item_hovered());
         }
         if !TkCache::was_drag_drop_source_clicked(source_id.clone()) {
             return;
         }
-        // println!("not returning early bc source was in fact clicked: {:?}",
-        //          source_id);
 
         unsafe {
             let flags = ImGuiDragDropFlags::SourceAllowNullID.bits();
             if imgui_sys::igBeginDragDropSource(flags) {
                 TkCache::set_drag_drop_active();
-
-                println!("showing drag drop preview for label {:?}", source_id);
 
                 self.ui.group(draw_preview_fn);
                 let payload_bytes = bincode::serialize(&payload).unwrap();

@@ -21,6 +21,23 @@ impl TkCache {
     }
 }
 
+#[macro_export]
+macro_rules! draw_all_iter {
+    // creates a new scope so the variable doesn't leak out
+    ($t:ident::$ui_toolkit:expr, $iterator:expr) => {{
+        use itertools::Itertools;
+        let __boxeds = $iterator.map(|f| {
+                                    let b: Box<dyn Fn() -> $t::DrawResult> =
+                                        std::boxed::Box::new(f);
+                                    b
+                                })
+                                .collect_vec();
+        $ui_toolkit.draw_all(&__boxeds.iter()
+                                      .map(|boxed_draw_fn| boxed_draw_fn.as_ref())
+                                      .collect_vec())
+    }};
+}
+
 pub type Color = [f32; 4];
 
 pub trait UiToolkit {
@@ -43,6 +60,25 @@ pub trait UiToolkit {
     //    fn draw_iter(&self, i: impl Iterator<Item = DrawFn<Self>>) -> Self::DrawResult {
     //        self.draw_all(&[])
     //    }
+    fn draw_all_with_no_spacing_in_between(&self,
+                                           draw_fns: &[DrawFnRef<Self>])
+                                           -> Self::DrawResult {
+        // TODO: if this was implemented inside individual toolkit level, probably wouldn't have
+        // to allocate with draw_all_iter! (which uses a box) but whatever
+        let len = draw_fns.len();
+        let to_draw =
+            draw_fns.iter().enumerate().map(|(i, draw_fn)| {
+                                           let is_last = i == len - 1;
+                                           move || {
+                                               if is_last {
+                                                   draw_fn()
+                                               } else {
+                                                   self.draw_with_no_spacing_afterwards(draw_fn)
+                                               }
+                                           }
+                                       });
+        draw_all_iter!(Self::self, to_draw)
+    }
     fn draw_all(&self, draw_fns: &[DrawFnRef<Self>]) -> Self::DrawResult;
     // if there's no `onclose` specified, then the window isn't closable and won't show a close button
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
@@ -287,23 +323,6 @@ pub enum ChildRegionFrameStyle {
 }
 
 pub type DrawFnRef<'a, T> = &'a dyn Fn() -> <T as UiToolkit>::DrawResult;
-
-#[macro_export]
-macro_rules! draw_all_iter {
-    // creates a new scope so the variable doesn't leak out
-    ($t:ident::$ui_toolkit:expr, $iterator:expr) => {{
-        use itertools::Itertools;
-        let __boxeds = $iterator.map(|f| {
-                                    let b: Box<dyn Fn() -> $t::DrawResult> =
-                                        std::boxed::Box::new(f);
-                                    b
-                                })
-                                .collect_vec();
-        $ui_toolkit.draw_all(&__boxeds.iter()
-                                      .map(|boxed_draw_fn| boxed_draw_fn.as_ref())
-                                      .collect_vec())
-    }};
-}
 
 #[macro_export]
 macro_rules! align {
