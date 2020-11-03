@@ -1172,16 +1172,18 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             }
         }
 
-        let imgui_style = self.ui.clone_style();
-        let child_region_padding = match style.top_padding {
-            ChildRegionTopPadding::Default => imgui_style.window_padding,
-            ChildRegionTopPadding::None => [imgui_style.window_padding[0], 0.],
-        };
-        let style_padding_token =
-            self.ui
-                .push_style_var(StyleVar::WindowPadding(child_region_padding));
-
         builder.build(self.ui, &mut || {
+                   match style.top_padding {
+                       ChildRegionTopPadding::Default => (),
+                       ChildRegionTopPadding::None => {
+                           let style = self.ui.clone_style();
+                           let y_padding = style.window_padding[1];
+                           let current_pos = self.ui.cursor_pos();
+                           self.ui
+                               .set_cursor_pos([current_pos[0], current_pos[1] - y_padding]);
+                       }
+                   }
+
                    let is_child_focused =
                        self.ui
                            .is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS);
@@ -1248,7 +1250,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
                    self.set_not_in_child_window();
                });
-        style_padding_token.pop(&self.ui);
         token.pop(self.ui);
     }
 
