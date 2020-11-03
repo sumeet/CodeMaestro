@@ -1060,18 +1060,23 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                                        handle_keypress: Option<F>,
                                                                        drag_selection_occurred: G)
     {
+        let child_frame_id = self.imlabel("");
+
+        let y_padding = self.ui.clone_style().window_padding[1];
+
         let frame_style = style.frame_style;
         let height = style.height;
         let width = style.width;
 
-        let child_frame_id = self.imlabel("");
         let mut flex = 0;
+
         // MAGICNUMBER: some pixels of padding, for some reason the remaining height gives
         // a few pixels less than we actually need to use up the whole screen
         let magic = {
-            match frame_style {
-                ChildRegionFrameStyle::Framed => 16.,
-                ChildRegionFrameStyle::NoFrame => 0.,
+            match (frame_style, style.top_padding) {
+                (ChildRegionFrameStyle::Framed, ChildRegionTopPadding::Default) => 16.,
+                (ChildRegionFrameStyle::Framed, ChildRegionTopPadding::None) => 8.,
+                (ChildRegionFrameStyle::NoFrame, _) => 0.,
             }
         };
 
@@ -1176,8 +1181,6 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                    match style.top_padding {
                        ChildRegionTopPadding::Default => (),
                        ChildRegionTopPadding::None => {
-                           let style = self.ui.clone_style();
-                           let y_padding = style.window_padding[1];
                            let current_pos = self.ui.cursor_pos();
                            self.ui
                                .set_cursor_pos([current_pos[0], current_pos[1] - y_padding]);
