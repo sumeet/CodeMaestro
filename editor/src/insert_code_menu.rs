@@ -477,7 +477,7 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
         // };
 
         let mut variables = match &search_params.return_type {
-            Some(search_type) if !search_type.matches_spec_id(lang::ANY_TYPESPEC.id()) => {
+            Some(search_type) if search_type.typespec_id != lang::ANY_TYPESPEC.id() => {
                 variables_by_type_id.remove(&search_type.id())
                                     .unwrap_or_else(|| vec![])
             }
@@ -954,7 +954,7 @@ impl InsertLiteralOptionGenerator {
             if let Some(number) = search_params.parse_number_input() {
                 options.push(self.number_literal_option(number));
             }
-        } else if return_type.matches_spec_id(lang::ANY_TYPESPEC.id()) {
+        } else if return_type.typespec_id == lang::ANY_TYPESPEC.id() {
             options.push(self.number_literal_option(0));
         }
         // TODO: kind of a nasty if check for params.len()... that's to make sure it's not Any

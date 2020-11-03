@@ -35,6 +35,9 @@
     },
     "9072ddc8-3e47-4874-adfd-3d564b4c4430": {
       "type": "LessThan"
+    },
+    "10e4ce44-fe9d-476f-9e2f-848e14c1ad1d": {
+      "type": "UpdateListIndex"
     }
   },
   "typespecs": {

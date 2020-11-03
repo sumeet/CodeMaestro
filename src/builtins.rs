@@ -797,3 +797,65 @@ impl lang::Function for LessThan {
         lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC)
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct UpdateIndex {}
+
+#[typetag::serde]
+impl lang::Function for UpdateIndex {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let intermediate = args.remove(&self.takes_args()[0].id).unwrap();
+        let (typ, list_to_update) = intermediate
+                                                // this should be into because we're already consuming the value, wouldn't need to clone it
+                                                .as_vec_with_type()
+                                                .unwrap();
+        let index = args.remove(&self.takes_args()[1].id)
+                        .unwrap()
+                        .as_i128()
+                        .unwrap();
+        let value = args.remove(&self.takes_args()[2].id).unwrap();
+        let mut new_list = list_to_update.clone();
+        new_list.insert(index as _, value);
+        lang::Value::List(typ.clone(), new_list)
+    }
+
+    fn name(&self) -> &str {
+        "UpdateListIndex"
+    }
+
+    fn description(&self) -> &str {
+        "Makes a new list with item changed"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("10e4ce44-fe9d-476f-9e2f-848e14c1ad1d").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![
+            lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("783ab1ae-a9f9-46fa-99a6-205fceadbea1").unwrap(),
+                                                   lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                                                           vec![lang::Type::with_params(&*lang::ANY_TYPESPEC,
+                                                                                                        vec![])]),
+                                                   "List to update".into()),
+            lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("26a931cf-3227-419b-8cd9-8a2531b822f7").unwrap(),
+                                                  lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
+                                                                          vec![]),
+                                                  "Index".into()),
+            lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("78686b46-774a-45ae-a69e-bd326b57eb2d").unwrap(),
+                                                  // NOT a number, but the same param as above
+                                                  lang::Type::with_params(&*lang::ANY_TYPESPEC,
+                                                                          vec![]),
+                                                   "Value".into())
+        ]
+    }
+
+    // TODO: returns a result
+    fn returns(&self) -> lang::Type {
+        lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                vec![lang::Type::with_params(&*lang::ANY_TYPESPEC, vec![])])
+    }
+}

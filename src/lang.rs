@@ -186,15 +186,9 @@ pub enum Value {
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Type, Vec<Value>),
-    Struct {
-        struct_id: ID,
-        values: StructValues,
-    },
+    Struct { struct_id: ID, values: StructValues },
     Future(ValueFuture),
-    EnumVariant {
-        variant_id: ID,
-        value: Box<Value>,
-    },
+    EnumVariant { variant_id: ID, value: Box<Value> },
     AnonymousFunction(AnonymousFunction),
 }
 
@@ -251,6 +245,13 @@ impl Value {
         match self {
             Value::String(s) => Ok(s),
             _ => Err(format!("expected String, but got {:?}", self).into()),
+        }
+    }
+
+    pub fn as_vec_with_type(&self) -> Option<(&Type, &Vec<Value>)> {
+        match self {
+            Value::List(typ, v) => Some((typ, v)),
+            _ => None,
         }
     }
 
