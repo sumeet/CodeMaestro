@@ -618,8 +618,7 @@ pub struct Subtract {}
 #[typetag::serde]
 impl lang::Function for Subtract {
     fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Infix(vec![], "-");
-        lang::FunctionRenderingStyle::Default
+        lang::FunctionRenderingStyle::Infix(vec![], "-")
     }
 
     fn call(&self,
