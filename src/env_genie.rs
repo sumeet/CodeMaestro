@@ -64,11 +64,6 @@ impl<'a> EnvGenie<'a> {
     }
 
     pub fn get_symbol_for_type(&self, t: &lang::Type) -> String {
-        // if t.typespec_id == lang::GENERIC_TYPESPEC_ID {
-        //
-        //    return
-        // }
-
         let typespec = self.find_typespec(t.typespec_id).unwrap();
         if typespec.num_params() == 0 {
             return typespec.symbol().to_string();

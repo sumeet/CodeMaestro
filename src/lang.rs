@@ -76,9 +76,6 @@ lazy_static! {
         Box::new(NUMBER_TYPESPEC.clone()),
         Box::new(LIST_TYPESPEC.clone()), Box::new(ERROR_TYPESPEC.clone()),
         Box::new(ANON_FUNC_TYPESPEC.clone()), Box::new(ANY_TYPESPEC.clone())];
-
-    pub static ref GENERIC_TYPESPEC_ID : Uuid =
-        uuid::Uuid::parse_str("601f301f-5916-4ac0-b972-8ac187916581").unwrap();
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -371,44 +368,6 @@ impl TypeSpec for BuiltInTypeSpec {
     fn num_params(&self) -> usize {
         self.num_params
     }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct GenericTypeParam {
-    pub index: ID,
-}
-
-impl GenericTypeParam {
-    pub fn new(index: ID) -> Self {
-        Self { index }
-    }
-}
-
-#[typetag::serde]
-impl TypeSpec for GenericTypeParam {
-    fn readable_name(&self) -> &str {
-        "Generic"
-    }
-
-    fn description(&self) -> &str {
-        "Generic"
-    }
-
-    fn id(&self) -> ID {
-        GENERIC_TYPESPEC_ID.clone()
-    }
-
-    fn symbol(&self) -> &str {
-        "G"
-    }
-
-    fn num_params(&self) -> usize {
-        0
-    }
-
-    // fn matches(&self, typespec_id: ID) -> bool {
-    //     panic!("this isn't being used")
-    // }
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
