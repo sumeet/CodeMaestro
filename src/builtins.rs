@@ -583,8 +583,7 @@ impl lang::Function for DivideTemp {
     }
 
     fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Default
-        //lang::FunctionRenderingStyle::Infix(vec![], "/")
+        lang::FunctionRenderingStyle::Infix(vec![], "÷")
     }
 
     fn name(&self) -> &str {

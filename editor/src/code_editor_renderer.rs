@@ -910,7 +910,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 self.render_function_name(&func.name(), colorscheme!(action_color), &func.returns())
             }
             FunctionRenderingStyle::Infix(_, _) => {
-                self.render_function_name("", colorscheme!(action_color), &func.returns())
+                self.ui_toolkit.draw_all(&[])
+                // self.render_function_name("", colorscheme!(action_color), &func.returns())
             }
         }
     }
@@ -1124,9 +1125,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_add_code_here_line(&self,
                                  insertion_point: InsertionPoint,
-                                 is_last: bool)
+                                 #[allow(unused)] is_last: bool)
                                  -> T::DrawResult {
-        let height = if is_last { 50. } else { 6. };
+        // let height = if is_last { 50. } else { 6. };
+        let height = 6.;
         self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
             let cmd_buffer = Rc::clone(&self.command_buffer);
             self.ui_toolkit.drag_drop_target(
@@ -1191,13 +1193,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                         infix_symbol: &str,
                                         function_call: &lang::FunctionCall)
                                         -> T::DrawResult {
-        // function_call.args[0]
-        // function_call.args[1]
         self.ui_toolkit
             .draw_all_on_same_line(&[
                 &|| self.render_code(&function_call.function_reference),
                 &|| self.render_code(&function_call.args[0]),
-                                     &|| self.ui_toolkit.draw_text(infix_symbol),
+                                     &|| {
+                                         self.code_handle(&|| {
+                                             self.ui_toolkit.draw_text(infix_symbol)
+                                         }, function_call.id)
+                                     },
                                      &|| self.render_code(&function_call.args[1])])
     }
 
