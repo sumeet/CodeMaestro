@@ -801,6 +801,12 @@ impl lang::Function for LessThan {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UpdateIndex {}
 
+impl UpdateIndex {
+    fn generic_type_param_index() -> lang::ID {
+        uuid::Uuid::parse_str("92ec9cae-f3ce-4e24-ae80-27f78fdddb6f").unwrap()
+    }
+}
+
 #[typetag::serde]
 impl lang::Function for UpdateIndex {
     fn call(&self,
@@ -838,8 +844,7 @@ impl lang::Function for UpdateIndex {
         vec![
             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("783ab1ae-a9f9-46fa-99a6-205fceadbea1").unwrap(),
                                                    lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                                                           vec![lang::Type::with_params(&*lang::ANY_TYPESPEC,
-                                                                                                        vec![])]),
+                                                                           vec![lang::Type::from_spec(&lang::GenericTypeParam::new(Self::generic_type_param_index()))]),
                                                    "List to update".into()),
             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("26a931cf-3227-419b-8cd9-8a2531b822f7").unwrap(),
                                                   lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
@@ -847,15 +852,13 @@ impl lang::Function for UpdateIndex {
                                                   "Index".into()),
             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("78686b46-774a-45ae-a69e-bd326b57eb2d").unwrap(),
                                                   // NOT a number, but the same param as above
-                                                  lang::Type::with_params(&*lang::ANY_TYPESPEC,
-                                                                          vec![]),
+                                                  lang::Type::from_spec(&lang::GenericTypeParam::new(Self::generic_type_param_index())),
                                                    "Value".into())
         ]
     }
 
     // TODO: returns a result
     fn returns(&self) -> lang::Type {
-        lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                vec![lang::Type::with_params(&*lang::ANY_TYPESPEC, vec![])])
+        lang::Type::from_spec(&lang::GenericTypeParam::new(Self::generic_type_param_index()))
     }
 }
