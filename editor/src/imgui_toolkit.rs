@@ -7,7 +7,8 @@ use nfd;
 
 use crate::colorscheme;
 use crate::ui_toolkit::{
-    ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionWidth, DrawFnRef,
+    ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionTopPadding,
+    ChildRegionWidth, DrawFnRef,
 };
 use imgui::*;
 use imgui_sys::{
@@ -1171,6 +1172,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             }
         }
 
+        let imgui_style = self.ui.clone_style();
+        let child_region_padding = match style.top_padding {
+            ChildRegionTopPadding::Default => imgui_style.window_padding,
+            ChildRegionTopPadding::None => [imgui_style.window_padding[0], 0.],
+        };
+        let style_padding_token =
+            self.ui
+                .push_style_var(StyleVar::WindowPadding(child_region_padding));
+
         builder.build(self.ui, &mut || {
                    let is_child_focused =
                        self.ui
@@ -1238,6 +1248,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
                    self.set_not_in_child_window();
                });
+        style_padding_token.pop(&self.ui);
         token.pop(self.ui);
     }
 

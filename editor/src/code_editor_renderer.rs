@@ -21,7 +21,8 @@ use crate::editor::value_renderer::ValueRenderer;
 use crate::editor::{CommandBuffer, Keypress};
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
 use crate::ui_toolkit::{
-    ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionWidth, DrawFnRef,
+    ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionTopPadding,
+    ChildRegionWidth, DrawFnRef,
 };
 use cs::env_genie::EnvGenie;
 use cs::lang;
@@ -76,7 +77,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         let style = ChildRegionStyle { height,
                                        width: ChildRegionWidth::All,
-                                       frame_style: ChildRegionFrameStyle::Framed };
+                                       frame_style: ChildRegionFrameStyle::Framed,
+                                       top_padding: ChildRegionTopPadding::None };
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| {
@@ -288,7 +290,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 let style = ChildRegionStyle {
                     height: ChildRegionHeight::Pixels(300),
                     width: ChildRegionWidth::All,
-                    frame_style: ChildRegionFrameStyle::Framed
+                    frame_style: ChildRegionFrameStyle::Framed,
+                    top_padding: ChildRegionTopPadding::Default
                 };
                 self.ui_toolkit.draw_child_region(transparent_black,
                                                   &|| {
@@ -737,7 +740,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     pub fn render_anonymous_function(&self, anon_func: &AnonymousFunction) -> T::DrawResult {
         let style = ChildRegionStyle { height: ChildRegionHeight::FitContent,
                                        width: ChildRegionWidth::All,
-                                       frame_style: ChildRegionFrameStyle::Framed };
+                                       frame_style: ChildRegionFrameStyle::Framed,
+                                       top_padding: ChildRegionTopPadding::None };
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| {
@@ -1101,7 +1105,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                              -> T::DrawResult {
         let style = ChildRegionStyle { height: ChildRegionHeight::Max(50),
                                        width: ChildRegionWidth::FitContent,
-                                       frame_style: ChildRegionFrameStyle::NoFrame };
+                                       frame_style: ChildRegionFrameStyle::NoFrame,
+                                       top_padding: ChildRegionTopPadding::Default };
         self.ui_toolkit
             .draw_all(&[draw_code_fn, &|| {
                 self.ui_toolkit.draw_child_region([0., 0., 0., 0.2], &|| {
@@ -1121,7 +1126,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  insertion_point: InsertionPoint,
                                  is_last: bool)
                                  -> T::DrawResult {
-        let height = if is_last { 50. } else { 2. };
+        let height = if is_last { 50. } else { 6. };
         self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
             let cmd_buffer = Rc::clone(&self.command_buffer);
             self.ui_toolkit.drag_drop_target(

@@ -300,6 +300,13 @@ pub struct ChildRegionStyle {
     pub height: ChildRegionHeight,
     pub width: ChildRegionWidth,
     pub frame_style: ChildRegionFrameStyle,
+    pub top_padding: ChildRegionTopPadding,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum ChildRegionTopPadding {
+    Default,
+    None,
 }
 
 #[derive(Debug, Copy, Clone)]
