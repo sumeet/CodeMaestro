@@ -2232,6 +2232,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             | Some(CodeLocation::JSONHTTPClientTestSection(_))
             | Some(CodeLocation::JSONHTTPClientTransform(_))
             | Some(CodeLocation::JSONHTTPClientURLParams(_)) => ChildRegionHeight::FitContent,
+            // TODO: this is hax... Max(0) happens to work in imgui
+            Some(CodeLocation::Script(_)) => ChildRegionHeight::Max(0),
             _ => ChildRegionHeight::ExpandFill { min_height: 100. },
         };
         CodeEditorRenderer::new(self.ui_toolkit,
