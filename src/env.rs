@@ -286,7 +286,6 @@ pub struct ExecutionEnvironment {
 impl ExecutionEnvironment {
     pub fn new() -> ExecutionEnvironment {
         return ExecutionEnvironment { console: String::new(),
-                                      // locals: HashMap::new(),
                                       prev_eval_result_by_code_id: HashMap::new(),
                                       functions: HashMap::new(),
                                       typespecs: Self::built_in_typespecs() };
