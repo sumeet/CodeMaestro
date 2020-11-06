@@ -957,6 +957,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_script(&self, script: &scripts::Script, window: &Window) -> T::DrawResult {
+        let script_code = script.code();
+        let cmd_buffer = Rc::clone(&self.command_buffer);
         self.draw_managed_window(
                                  window,
                                  &format!("Script {}", script.id()),
@@ -966,7 +968,15 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         self.render_run_button(script.code())
                     })
                                  },
-                                 None::<fn(Keypress)>,
+                                 Some(move |keypress| match keypress {
+                                     Keypress { key: Key::R,
+                                                ctrl: true,
+                                                shift: true, } => {
+                                         let mut cmd_buffer = cmd_buffer.borrow_mut();
+                                         cmd_buffer.run(&script_code, |_| ());
+                                     }
+                                     _ => (),
+                                 }),
         )
     }
 
@@ -975,9 +985,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit
             .draw_button("Run", colorscheme!(action_color), move || {
                 let mut cmd_buffer = cmd_buffer.borrow_mut();
-                cmd_buffer.run(&code_node, |_val| {
-                              //println!("{:?}", val)
-                          });
+                cmd_buffer.run(&code_node, |_| ());
             })
     }
 

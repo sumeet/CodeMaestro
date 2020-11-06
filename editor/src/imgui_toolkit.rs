@@ -1037,11 +1037,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                .insert(window_name_str.to_string(), drawn_window);
 
                           if let Some(keypress) = self.keypress {
-                              if self.ui.is_window_focused() {
-                                  if let Some(ref handle_keypress) = handle_keypress {
-                                      handle_keypress(keypress)
-                                  }
-                              }
+                              if self.ui
+                       .is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS)
+                {
+                    if let Some(ref handle_keypress) = handle_keypress {
+                        handle_keypress(keypress)
+                    }
+                }
                           }
                       });
 
