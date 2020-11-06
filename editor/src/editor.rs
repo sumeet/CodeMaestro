@@ -255,10 +255,15 @@ impl<'a> Controller {
         self.test_by_id.insert(test.id, test);
     }
 
+    pub fn find_script(&self, id: lang::ID) -> Option<&scripts::Script> {
+        self.script_by_id.get(&id)
+    }
+
     pub fn load_script(&mut self, script: scripts::Script) {
         let id = script.id();
         self.load_code(script.code(), code_editor::CodeLocation::Script(id));
         self.script_by_id.insert(id, script);
+        self.open_window(id);
     }
 
     pub fn load_code(&mut self, code_node: CodeNode, location: code_editor::CodeLocation) {
@@ -690,12 +695,15 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                   .load_json_http_client(JSONHTTPClient::new());
                     })
             },
-            // disable scripts for now while we sprint to chat bot functionality
-            //                        self.ui_toolkit.draw_menu_item("Add new script", move || {
-            //                            cmdb6.borrow_mut().add_controller_command(|controller| {
-            //                                controller.load_script(scripts::Script::new());
-            //                            });
-            //                        }),
+            &|| {
+                let cmd_buffer = Rc::clone(&self.command_buffer);
+                self.ui_toolkit.draw_menu_item("Add new script", move || {
+                                   cmd_buffer.borrow_mut()
+                                             .add_controller_command(|controller| {
+                                                 controller.load_script(scripts::Script::new());
+                                             })
+                               })
+            },
             &|| {
                 let cmd_buffer = Rc::clone(&self.command_buffer);
                 self.ui_toolkit.draw_menu_item("Add new function", move || {

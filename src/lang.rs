@@ -473,7 +473,15 @@ impl CodeNode {
         }
     }
 
-    pub fn into_block(&self) -> Option<&Block> {
+    pub fn into_block(self) -> Option<Block> {
+        if let CodeNode::Block(block) = self {
+            Some(block)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_block(&self) -> Option<&Block> {
         if let CodeNode::Block(ref block) = self {
             Some(block)
         } else {

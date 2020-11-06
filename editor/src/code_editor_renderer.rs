@@ -744,12 +744,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                        top_padding: ChildRegionTopPadding::None };
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
-                               &|| {
-                                   self.render_block(&anon_func.block
-                                                               .as_ref()
-                                                               .into_block()
-                                                               .unwrap())
-                               },
+                               &|| self.render_block(&anon_func.block.as_ref().as_block().unwrap()),
                                style,
                                Some(&|| self.draw_right_click_menu()),
                                None::<fn(Keypress)>,

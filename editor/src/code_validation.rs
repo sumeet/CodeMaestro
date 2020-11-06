@@ -106,7 +106,7 @@ impl<'a> Validator<'a> {
                 code.replace_with(variable_reference_id,
                                   code_generation::new_placeholder("Missing variable".into(), typ));
 
-                self.update_code(location, code.into_block().unwrap().clone());
+                self.update_code(location, code.as_block().unwrap().clone());
             }
         };
     }

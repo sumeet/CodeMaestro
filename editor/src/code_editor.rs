@@ -18,7 +18,6 @@ use cs::env::ExecutionEnvironment;
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::CodeNode;
-use cs::scripts;
 
 #[derive(Clone)]
 pub struct CodeEditor {
@@ -839,7 +838,7 @@ impl<'a> Navigation<'a> {
 
         let block = self.code_genie
                         .find_parent(containing_block_expression_id)?
-                        .into_block()?;
+                        .as_block()?;
         let position_of_block_expression_inside_block =
             block.find_position(containing_block_expression_id)?;
 
@@ -878,7 +877,7 @@ impl<'a> Navigation<'a> {
 
         let block = self.code_genie
                         .find_parent(containing_block_expression_id)?
-                        .into_block()?;
+                        .as_block()?;
         let position_of_block_expression_inside_block =
             block.find_position(containing_block_expression_id)?;
         let previous_position_inside_block =
@@ -1131,7 +1130,7 @@ impl MutationMaster {
                                                   -> lang::CodeNode {
         let mut block = genie.find_node(block_id)
                              .unwrap()
-                             .into_block()
+                             .as_block()
                              .unwrap()
                              .clone();
         block.expressions.insert(0, node_to_insert);
@@ -1215,7 +1214,7 @@ impl MutationMaster {
 
         // replace the node to be extracted with a variable reference
         let orig_block = code_genie.find_parent(block_expression_parent_id).unwrap();
-        let orig_block = orig_block.into_block().unwrap();
+        let orig_block = orig_block.as_block().unwrap();
         let pos = orig_block.find_position(block_expression_parent_id)
                             .unwrap();
 
@@ -1487,45 +1486,46 @@ pub fn update_code_in_env(location: CodeLocation,
         CodeLocation::Function(func_id) => {
             let func = env.find_function(func_id).cloned().unwrap();
             let mut code_function = func.downcast::<code_function::CodeFunction>().unwrap();
-            code_function.set_code(code.into_block().unwrap().clone());
+            code_function.set_code(code.as_block().unwrap().clone());
             env.add_function(*code_function);
         }
-        CodeLocation::Script(_script_id) => {
-            let script = scripts::Script { code: code.into_block().unwrap().clone() };
+        CodeLocation::Script(script_id) => {
+            let mut script = cont.find_script(script_id).unwrap().clone();
+            script.code = code.into_block().unwrap();
             cont.load_script(script)
         }
         CodeLocation::Test(test_id) => {
             let mut test = cont.get_test(test_id).unwrap().clone();
-            test.set_code(code.into_block().unwrap().clone());
+            test.set_code(code.as_block().unwrap().clone());
         }
         CodeLocation::JSONHTTPClientURLParams(client_id) => {
             let env_genie = EnvGenie::new(&env);
             let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
-            client.gen_url_params_code = code.into_block().unwrap().clone();
+            client.gen_url_params_code = code.as_block().unwrap().clone();
             env.add_function(client);
         }
         CodeLocation::JSONHTTPClientURL(client_id) => {
             let env_genie = EnvGenie::new(&env);
             let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
-            client.gen_url_code = code.into_block().unwrap().clone();
+            client.gen_url_code = code.as_block().unwrap().clone();
             env.add_function(client);
         }
         CodeLocation::JSONHTTPClientTestSection(client_id) => {
             let env_genie = EnvGenie::new(&env);
             let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
-            client.test_code = code.into_block().unwrap().clone();
+            client.test_code = code.as_block().unwrap().clone();
             env.add_function(client);
         }
         CodeLocation::JSONHTTPClientTransform(client_id) => {
             let env_genie = EnvGenie::new(&env);
             let mut client = env_genie.get_json_http_client(client_id).unwrap().clone();
-            client.transform_code = code.into_block().unwrap().clone();
+            client.transform_code = code.as_block().unwrap().clone();
             env.add_function(client);
         }
         CodeLocation::ChatProgram(chat_program_id) => {
             let env_genie = EnvGenie::new(&env);
             let mut chat_program = env_genie.get_chat_program(chat_program_id).unwrap().clone();
-            chat_program.code = code.into_block().unwrap().clone();
+            chat_program.code = code.as_block().unwrap().clone();
             env.add_function(chat_program);
         }
     }
