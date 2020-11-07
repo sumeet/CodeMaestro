@@ -57,6 +57,7 @@ pub mod value_renderer;
 use crate::code_editor::CodeLocation;
 use crate::code_editor_renderer::BLACK_COLOR;
 use crate::schema_builder::{FieldIdentifier, Schema};
+use cs::validation::{find_problems_for_code, ProblemPreventingRun};
 use std::hash::{Hash, Hasher};
 use value_renderer::ValueRenderer;
 
@@ -973,6 +974,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_script(&self, script: &scripts::Script, window: &Window) -> T::DrawResult {
         let script_code = script.code();
         let cmd_buffer = Rc::clone(&self.command_buffer);
+        let problems = find_problems_for_code(&script_code, self.env_genie).collect::<Vec<_>>();
+        let has_problems = !problems.is_empty();
         self.draw_managed_window(
                                  window,
                                  &format!("Script {}", script.id()),
@@ -997,13 +1000,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                             &|| self.render_code(script.id())
                         ])
                     }, &|| {
-                        self.render_run_button(script.code())
+                        self.ui_toolkit.draw_all_on_same_line(&[
+                            &|| self.render_run_button(script.code(), !has_problems),
+                            &|| self.render_warnings_for_script(&problems),
+                        ])
                     })
                                  },
                                  Some(move |keypress| match keypress {
                                      Keypress { key: Key::R,
                                                 ctrl: true,
-                                                shift: true, } => {
+                                                shift: true, } if !has_problems => {
                                          let mut cmd_buffer = cmd_buffer.borrow_mut();
                                          cmd_buffer.run(&script_code, |_| ());
                                      }
@@ -1012,13 +1018,30 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         )
     }
 
-    fn render_run_button(&self, code_node: CodeNode) -> T::DrawResult {
+    fn render_warnings_for_script(&self, problems: &[ProblemPreventingRun]) -> T::DrawResult {
+        if problems.is_empty() {
+            return self.ui_toolkit.draw_all(&[]);
+        }
+        self.ui_toolkit.draw_with_margin((20., 0.), &|| {
+                           self.ui_toolkit
+                               .draw_button(&format!("{} Warnings", problems.len()),
+                                            colorscheme!(warning_color),
+                                            || ())
+                       })
+    }
+
+    fn render_run_button(&self, code_node: CodeNode, is_enabled: bool) -> T::DrawResult {
         let cmd_buffer = self.command_buffer.clone();
-        self.ui_toolkit
-            .draw_button("Run", colorscheme!(action_color), move || {
-                let mut cmd_buffer = cmd_buffer.borrow_mut();
-                cmd_buffer.run(&code_node, |_| ());
-            })
+        if is_enabled {
+            self.ui_toolkit
+                .draw_button("Run", colorscheme!(action_color), move || {
+                    let mut cmd_buffer = cmd_buffer.borrow_mut();
+                    cmd_buffer.run(&code_node, |_| ());
+                })
+        } else {
+            self.ui_toolkit
+                .draw_buttony_text("Run", colorscheme!(window_bg_color))
+        }
     }
 
     fn render_edit_code_func(&self,

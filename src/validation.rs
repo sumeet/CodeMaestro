@@ -1,25 +1,23 @@
-use super::env_genie;
 use super::env_genie::EnvGenie;
 use super::lang;
 
 #[derive(Debug)]
 pub enum ProblemPreventingRun {
-    ContainsPlaceholderNode(lang::ID),
+    HasPlaceholderNode(lang::ID),
+    FunctionCannotBeRun(lang::ID),
 }
 
-// this finds any problems globally (we're not going to use it yet) as opposed to local problems
-// w/ particular functions
-#[allow(unused)]
-pub fn find_all_problems_preventing_run(env_genie: &env_genie::EnvGenie)
-                                        -> Vec<ProblemPreventingRun> {
-    // for now, we only have a single check (finding placeholder nodes)
-    //
-    // there coudl be other problems preventing run later
-    // all_code(env_genie).flat_map(|(_code_location, block)| &block.expressions)
-    //                    .flat_map(|expression| find_placeholder_nodes(expression))
-    //                    .map(|id| ProblemPreventingRun::ContainsPlaceholderNode(id))
-    //                    .collect()
-    unimplemented!()
+pub fn find_problems_for_code<'a>(code: &'a lang::CodeNode,
+                                  env_genie: &'a EnvGenie)
+                                  -> impl Iterator<Item = ProblemPreventingRun> + 'a {
+    let function_cant_be_runs = find_functions_referred_to_by(&code, env_genie)
+        // in the case of the JSON HTTP client, the test code refers to itself. 
+        // so we want to skip it here or else we'll get a stack overflow
+        .filter(move |func| { !can_be_run(func.as_ref(), env_genie) })
+        .map(|func| ProblemPreventingRun::FunctionCannotBeRun(func.id()));
+
+    find_placeholder_nodes(code).map(|id| ProblemPreventingRun::HasPlaceholderNode(id))
+                                .chain(function_cant_be_runs)
 }
 
 pub fn can_be_run(func: &dyn lang::Function, env_genie: &EnvGenie) -> bool {
