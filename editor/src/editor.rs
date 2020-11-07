@@ -477,6 +477,16 @@ impl CommandBuffer {
             });
     }
 
+    pub fn change_script(&mut self,
+                         script_id: lang::ID,
+                         change_fn: impl FnOnce(&mut scripts::Script) + 'static) {
+        self.add_controller_command(move |controller| {
+                let mut script = controller.find_script(script_id).unwrap().clone();
+                change_fn(&mut script);
+                controller.load_script(script);
+            })
+    }
+
     pub fn load_function(&mut self, func: impl lang::Function + 'static) {
         self.add_environment_command(move |env| env.add_function(func))
     }
@@ -964,7 +974,25 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                  &format!("Script {}", script.id()),
                                  &|| {
                                      self.ui_toolkit
-                    .draw_layout_with_bottom_bar(&|| self.render_code(script.id()), &|| {
+                    .draw_layout_with_bottom_bar(&|| {
+                        self.ui_toolkit.draw_all(&[
+                            &|| {
+                                let cmd_buffer = Rc::clone(&self.command_buffer);
+                                let script_id = script.id();
+                                self.ui_toolkit.draw_text_input_with_label("Script name",
+                                                                           &script.name,
+                                                                           move |newvalue| {
+                                                                                   let new_script_name = newvalue.to_owned();
+                                                                               cmd_buffer.borrow_mut()
+                                                                                   .change_script(script_id, |script| {
+                                                                                       script.name = new_script_name;
+                                                                                   })
+                                                                           },
+                                                                           || {})
+                            },
+                            &|| self.render_code(script.id())
+                        ])
+                    }, &|| {
                         self.render_run_button(script.code())
                     })
                                  },
