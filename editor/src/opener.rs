@@ -9,8 +9,8 @@ use matches::matches;
 use std::iter;
 
 lazy_static! {
-    static ref CATEGORIES: Vec<Box<dyn MenuCategory + Send + Sync>> =
-        vec![Box::new(ChatPrograms {}),
+    static ref CATEGORIES: Vec<Box<dyn MenuCategory + Send + Sync>> = vec![Box::new(Scripts {}),
+        Box::new(ChatPrograms {}),
              Box::new(JSONHTTPClients {}),
              Box::new(Functions {}),
              Box::new(Enums {}),
@@ -242,6 +242,37 @@ impl MenuCategory for JSONHTTPClients {
                     }
                 ))
             }))
+    }
+}
+
+struct Scripts;
+
+impl MenuCategory for Scripts {
+    fn label(&self) -> &'static str {
+        "Scripts"
+    }
+
+    fn items<'a>(&'a self,
+                 options_lister: &'a OptionsLister<'a>)
+                 -> Box<dyn Iterator<Item = MenuItem> + 'a> {
+        Box::new(
+                 options_lister.controller
+                               .list_scripts()
+                               .filter(move |script| {
+                                   !options_lister.controller.is_builtin(script.id())
+                               })
+                               .map(|script| {
+                                   let script_id = script.id();
+                                   MenuItem::selectable(
+                script.name.clone(),
+                move |command_buffer| {
+                    command_buffer.add_controller_command(move |cont| {
+                                      cont.open_window(script_id);
+                                  })
+                },
+            )
+                               }),
+        )
     }
 }
 

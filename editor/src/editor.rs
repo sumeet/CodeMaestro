@@ -266,6 +266,10 @@ impl<'a> Controller {
         self.open_window(id);
     }
 
+    pub fn list_scripts(&self) -> impl Iterator<Item = &scripts::Script> {
+        self.script_by_id.values()
+    }
+
     pub fn load_code(&mut self, code_node: CodeNode, location: code_editor::CodeLocation) {
         let id = code_node.id();
         if !self.code_editor_by_id.contains_key(&id) {
