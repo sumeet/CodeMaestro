@@ -125,6 +125,9 @@ pub trait UiToolkit {
                                     onclick: F)
                                     -> Self::DrawResult;
     fn draw_buttony_text(&self, label: &str, color: Color) -> Self::DrawResult;
+    fn draw_disabled_button(&self, label: &str, color: Color) -> Self::DrawResult {
+        self.draw_box_around([1., 1., 1., 0.2], &|| self.draw_buttony_text(label, color))
+    }
     fn draw_button<F: Fn() + 'static>(&self,
                                       label: &str,
                                       color: Color,

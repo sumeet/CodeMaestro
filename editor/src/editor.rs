@@ -622,7 +622,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                    &|| self.render_colortheme_editor(),
                                    &|| self.render_chat_test_window(),
                                    &|| self.render_scripts(),
-                                   &|| self.render_script_warnings(),
+                                   &|| self.render_script_warning_windows(),
                                    //&|| self.render_console_window(),
                                    &|| self.render_edit_code_funcs(),
                                    &|| self.render_edit_pyfuncs(),
@@ -981,7 +981,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                                       &window)))
     }
 
-    fn render_script_warnings(&self) -> T::DrawResult {
+    fn render_script_warning_windows(&self) -> T::DrawResult {
         let script_id_by_script_warning_window_id =
             self.controller
                 .list_scripts()
@@ -1013,8 +1013,28 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                     -> T::DrawResult {
         self.draw_managed_window(window,
                                  &format!("Warnings {}", script.id()),
-                                 &|| self.ui_toolkit.draw_all(&[]),
+                                 &|| self.render_script_warnings(script),
                                  None::<fn(Keypress)>)
+    }
+
+    fn render_script_warnings(&self, script: &scripts::Script) -> T::DrawResult {
+        let problems = find_problems_for_code(&script.code(), self.env_genie).collect::<Vec<_>>();
+        draw_all_iter!(T::self.ui_toolkit,
+                       problems.iter()
+                               .map(|problem| { move || self.render_script_warning(problem) }))
+    }
+
+    fn render_script_warning(&self, problem: &ProblemPreventingRun) -> T::DrawResult {
+        match problem {
+            ProblemPreventingRun::HasPlaceholderNode(_) => {
+                self.ui_toolkit.draw_text("Placeholder present")
+            }
+            ProblemPreventingRun::FunctionCannotBeRun(function_id) => {
+                let function = self.env_genie.find_function(*function_id).unwrap();
+                self.ui_toolkit
+                    .draw_text(&format!("Function cannot be run: {}", function.name()))
+            }
+        }
     }
 
     fn render_script(&self, script: &scripts::Script, window: &Window) -> T::DrawResult {
@@ -1094,7 +1114,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 })
         } else {
             self.ui_toolkit
-                .draw_buttony_text("Run", colorscheme!(window_bg_color))
+                .draw_disabled_button("Run", colorscheme!(action_color))
         }
     }
 
