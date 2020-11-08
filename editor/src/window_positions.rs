@@ -85,9 +85,9 @@ impl WindowPositions {
     }
 
     pub fn get_open_windows<'a>(&'a self,
-                                ids: impl Iterator<Item = &'a lang::ID> + 'a)
+                                ids: impl Iterator<Item = lang::ID> + 'a)
                                 -> impl Iterator<Item = Window> + 'a {
-        ids.filter_map(move |id| self.get_open_window(id))
+        ids.filter_map(move |id| self.get_open_window(&id))
     }
 
     pub fn close_window(&mut self, id: lang::ID) {

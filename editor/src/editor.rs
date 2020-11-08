@@ -145,6 +145,15 @@ impl<'a> Controller {
                      chat_test_window: Rc::new(RefCell::new(ChatTestWindow::new())) }
     }
 
+    fn open_script_warning_window(&mut self, script_id: lang::ID) {
+        self.open_window(self.script_warning_window_id(script_id))
+    }
+
+    fn script_warning_window_id(&self, script_id: lang::ID) -> lang::ID {
+        uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID,
+                           format!("script_warning:{}", script_id).as_bytes())
+    }
+
     pub fn load_serialized_window_positions(&mut self, window_positions: WindowPositions) {
         self.window_positions = window_positions;
     }
@@ -224,7 +233,7 @@ impl<'a> Controller {
         &self)
         -> impl Iterator<Item = (&JSONHTTPClientBuilder, Window)> {
         self.window_positions
-            .get_open_windows(self.json_client_builder_by_func_id.keys())
+            .get_open_windows(self.json_client_builder_by_func_id.keys().cloned())
             .map(move |window| {
                 (self.json_client_builder_by_func_id.get(&window.id).unwrap(), window)
             })
@@ -613,6 +622,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                    &|| self.render_colortheme_editor(),
                                    &|| self.render_chat_test_window(),
                                    &|| self.render_scripts(),
+                                   &|| self.render_script_warnings(),
                                    //&|| self.render_console_window(),
                                    &|| self.render_edit_code_funcs(),
                                    &|| self.render_edit_pyfuncs(),
@@ -963,12 +973,48 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let open_scripts =
             self.controller
                 .window_positions
-                .get_open_windows(self.controller.script_by_id.keys())
+                .get_open_windows(self.controller.script_by_id.keys().cloned())
                 .map(move |window| (self.controller.script_by_id.get(&window.id).unwrap(), window));
 
         draw_all_iter!(T::self.ui_toolkit,
                        open_scripts.map(|(script, window)| move || self.render_script(script,
                                                                                       &window)))
+    }
+
+    fn render_script_warnings(&self) -> T::DrawResult {
+        let script_id_by_script_warning_window_id =
+            self.controller
+                .list_scripts()
+                .map(|script| {
+                    let script_id = script.id();
+                    (self.controller.script_warning_window_id(script_id), script_id)
+                })
+                .collect::<HashMap<_, _>>();
+        let script_warning_ids = script_id_by_script_warning_window_id.keys().cloned();
+        let open_script_warning_windows =
+            self.controller
+                .window_positions
+                .get_open_windows(script_warning_ids)
+                .map(|window| {
+                    let script_id = script_id_by_script_warning_window_id.get(&window.id)
+                                                                         .unwrap();
+                    (self.controller.script_by_id.get(script_id).unwrap(), window)
+                });
+        draw_all_iter!(T::self.ui_toolkit,
+                       open_script_warning_windows.map(|(script, window)| move || {
+                                                      self.render_script_warning_window(script,
+                                                                                        &window)
+                                                  }))
+    }
+
+    fn render_script_warning_window(&self,
+                                    script: &scripts::Script,
+                                    window: &Window)
+                                    -> T::DrawResult {
+        self.draw_managed_window(window,
+                                 &format!("Warnings {}", script.id()),
+                                 &|| self.ui_toolkit.draw_all(&[]),
+                                 None::<fn(Keypress)>)
     }
 
     fn render_script(&self, script: &scripts::Script, window: &Window) -> T::DrawResult {
@@ -1002,7 +1048,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     }, &|| {
                         self.ui_toolkit.draw_all_on_same_line(&[
                             &|| self.render_run_button(script.code(), !has_problems),
-                            &|| self.render_warnings_for_script(&problems),
+                            &|| self.render_warnings_section_in_script_window(script.id(), &problems),
                         ])
                     })
                                  },
@@ -1018,15 +1064,23 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         )
     }
 
-    fn render_warnings_for_script(&self, problems: &[ProblemPreventingRun]) -> T::DrawResult {
+    fn render_warnings_section_in_script_window(&self,
+                                                script_id: lang::ID,
+                                                problems: &[ProblemPreventingRun])
+                                                -> T::DrawResult {
         if problems.is_empty() {
             return self.ui_toolkit.draw_all(&[]);
         }
         self.ui_toolkit.draw_with_margin((20., 0.), &|| {
+            let cmd_buffer = Rc::clone(&self.command_buffer);
                            self.ui_toolkit
                                .draw_button(&format!("{} Warnings", problems.len()),
                                             colorscheme!(warning_color),
-                                            || ())
+                                            move || {
+                                                cmd_buffer.borrow_mut().add_controller_command(move |cont| {
+                                                    cont.open_script_warning_window(script_id)
+                                                })
+                                            })
                        })
     }
 
