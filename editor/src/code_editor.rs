@@ -108,6 +108,7 @@ impl CodeEditor {
                 }
             }
             (false, Key::D, false, false) => {
+                println!("deleting selected code via hotkey");
                 self.delete_selected_code();
             }
             (false, Key::A, false, false) => {
@@ -466,14 +467,16 @@ impl CodeEditor {
     pub fn can_be_deleted(&self, id: lang::ID) -> bool {
         // TODO: this should be deleting a range
         self.mutation_master
-            .delete_code(id, &self.code_genie, self.get_last_selected_node_id())
+            .delete_code(std::iter::once(id),
+                         self.code_genie.clone(),
+                         self.get_last_selected_node_id())
             .is_some()
     }
 
-    pub fn delete_node_id(&mut self, id: lang::ID) -> Option<()> {
-        let mutation_result =
-            self.mutation_master
-                .delete_code(id, &self.code_genie, self.get_last_selected_node_id());
+    pub fn delete_node_ids(&mut self, ids: impl ExactSizeIterator<Item = lang::ID>) -> Option<()> {
+        let mutation_result = self.mutation_master.delete_code(ids,
+                                                               self.code_genie.clone(),
+                                                               self.get_last_selected_node_id());
         if let Some(mutation_result) = mutation_result {
             self.apply_mutation_result(mutation_result)
         }
@@ -481,7 +484,9 @@ impl CodeEditor {
     }
 
     pub fn delete_selected_code(&mut self) -> Option<()> {
-        self.delete_node_id(self.get_last_selected_node_id()?);
+        println!("deleting selected node ids: {:?}", self.selected_node_ids);
+        let node_ids = self.selected_node_ids.clone().into_iter();
+        self.delete_node_ids(node_ids);
         Some(())
     }
 
@@ -1193,7 +1198,9 @@ impl MutationMaster {
             }
             _ => {
                 let code = code_genie.find_node(node_id).unwrap();
-                let mut result = self.delete_code(node_id, code_genie, None).unwrap();
+                let mut result =
+                    self.delete_code(std::iter::once(node_id), code_genie.clone(), None)
+                        .unwrap();
                 result.new_root = self.insert_code(code, to, &CodeGenie::new(result.new_root));
                 result.new_cursor_position = new_cursor_position;
                 result
@@ -1242,14 +1249,43 @@ impl MutationMaster {
                          new_cursor_position: Some(assignment_expression_id) }
     }
 
-    pub fn delete_code(&self,
+    fn delete_code(&self,
+                   node_ids: impl ExactSizeIterator<Item = lang::ID>,
+                   genie: CodeGenie,
+                   original_cursor_position: Option<lang::ID>)
+                   -> Option<MutationResult> {
+        let num_node_ids = node_ids.len();
+        let mut i = node_ids.scan(genie.code, |root, node_id| {
+                                let genie = CodeGenie::new(root.clone());
+                                let result =
+                                    self.delete_one_code(node_id, &genie, original_cursor_position);
+                                match result {
+                                    None => result,
+                                    Some(result) => {
+                                        *root = result.new_root.clone();
+                                        Some(result)
+                                    }
+                                }
+                            });
+        let mut last_mutation_result = None;
+        for _ in 0..num_node_ids {
+            let this_result = i.next();
+            if let Some(this_result) = this_result {
+                last_mutation_result = Some(this_result);
+            }
+        }
+        last_mutation_result
+    }
+
+    fn delete_one_code(&self,
                        node_id_to_delete: lang::ID,
                        genie: &CodeGenie,
                        _original_cursor_position: Option<lang::ID>)
                        -> Option<MutationResult> {
         let parent = genie.find_parent(node_id_to_delete);
         if parent.is_none() {
-            panic!("idk when this happens, let's take care of this if / when it does")
+            // can't delete code, can't find the parent (it was probably already deleted)
+            return None;
         }
         let parent = parent.unwrap();
 

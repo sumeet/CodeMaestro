@@ -757,11 +757,20 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         let draw = || self.render_context_menu(code_node, &draw);
 
-        if self.is_part_of_selection(code_node.id()) {
-            self.draw_selected(self.code_node_cursor_scroll_hash(code_node), &draw)
-        } else {
-            self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
-        }
+        let draw_fn = &|| {
+            if self.is_part_of_selection(code_node.id()) {
+                self.draw_selected(self.code_node_cursor_scroll_hash(code_node), &draw)
+            } else {
+                self.draw_code_node_and_insertion_point_if_before_or_after(code_node, &draw)
+            }
+        };
+
+        // this is good for debugging
+        // self.ui_toolkit
+        //     .draw_all_on_same_line(&[draw_fn, &|| {
+        //                                self.ui_toolkit.draw_text(&format!("{:?}", code_node.id()))
+        //                            }])
+        draw_fn()
     }
 
     pub fn render_anonymous_function(&self, anon_func: &AnonymousFunction) -> T::DrawResult {
@@ -873,7 +882,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         self.ui_toolkit.draw_menu_item("Delete", move || {
                             cmd_buffer.borrow_mut()
                                 .add_editor_command(move |editor| {
-                                    editor.delete_node_id(code_node_id_to_act_on);
+                                    editor.delete_node_ids(std::iter::once(code_node_id_to_act_on));
                                 })
                         })
                     } else {
