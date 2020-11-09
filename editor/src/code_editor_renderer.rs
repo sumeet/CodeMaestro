@@ -1808,7 +1808,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     })
                                                             })
                                          },
+                                         // TODO: draw everything that's selected
                                          &|| self.render_code(code_node),
+                                         // TODO: everything that's selected
                                          code_node.clone(),
         )
     }
