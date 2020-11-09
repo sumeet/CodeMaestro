@@ -27,6 +27,7 @@ lazy_static! {
         Box::new(InsertConditionalOptionGenerator {}),
         Box::new(InsertMatchOptionGenerator {}),
         Box::new(InsertAssignmentOptionGenerator {}),
+        Box::new(InsertReassignmentOptionGenerator {}),
         Box::new(InsertLiteralOptionGenerator {}),
         Box::new(InsertBlockOptionGenerator {}),
     ];
@@ -469,13 +470,6 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             .map(|(id, variables)| (id, variables.collect()))
             .collect();
 
-        // let mut variables: Vec<Variable> = if let Some(search_type) = &search_params.return_type && (!search_type.matches_spec(&lang::ANY_TYPESPEC)) {
-        //     variables_by_type_id.remove(&search_type.id())
-        //                         .unwrap_or_else(|| vec![])
-        // } else {
-        //     Iterator::flatten(variables_by_type_id.drain().map(|(_, v)| v)).collect()
-        // };
-
         let mut variables = match &search_params.return_type {
             Some(search_type) if search_type.typespec_id != lang::ANY_TYPESPEC.id() => {
                 variables_by_type_id.remove(&search_type.id())
@@ -834,6 +828,23 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
                     variable_name,
                     lang::Type::from_spec(&*lang::NULL_TYPESPEC)))
         }]
+    }
+}
+
+#[derive(Clone)]
+struct InsertReassignmentOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertReassignmentOptionGenerator {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               _env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        if !should_insert_block_expression(search_params.insertion_point, code_genie) {
+            return vec![];
+        }
+        // TODO: insert in here
+        vec![]
     }
 }
 
