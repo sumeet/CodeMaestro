@@ -248,6 +248,7 @@ impl CodeEditor {
         self.insertion_point_for_replace(node_id).is_some()
     }
 
+    // TODO: this and below can probably be combined
     pub fn can_be_edited(&self, code_node: &CodeNode) -> bool {
         match code_node {
             CodeNode::StringLiteral(_)
@@ -267,7 +268,8 @@ impl CodeEditor {
             | CodeNode::Match(_)
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
-            | CodeNode::ListIndex(_) => false,
+            | CodeNode::ListIndex(_)
+            | CodeNode::Reassignment(_) => false,
         }
     }
 
@@ -281,6 +283,7 @@ impl CodeEditor {
             CodeNode::FunctionCall(_)
             | CodeNode::FunctionReference(_)
             | CodeNode::NullLiteral(_)
+            | CodeNode::Reassignment(_)
             | CodeNode::Block(_)
             | CodeNode::AnonymousFunction(_)
             | CodeNode::VariableReference(_)
@@ -626,6 +629,9 @@ impl CodeGenie {
             CodeNode::StringLiteral(_) => Ok(lang::Type::from_spec(&*lang::STRING_TYPESPEC)),
             CodeNode::NumberLiteral(_) => Ok(lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)),
             CodeNode::Assignment(assignment) => self.guess_type(&*assignment.expression, env_genie),
+            CodeNode::Reassignment(reassignment) => {
+                self.guess_type(&*reassignment.expression, env_genie)
+            }
             CodeNode::Block(block) => {
                 if block.expressions.len() > 0 {
                     let last_expression_in_block = &block.expressions[block.expressions.len() - 1];

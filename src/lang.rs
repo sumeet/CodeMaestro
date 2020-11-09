@@ -439,6 +439,13 @@ impl CodeNode {
         }
     }
 
+    pub fn as_assignment(&self) -> Result<&Assignment, Box<dyn std::error::Error>> {
+        match self {
+            CodeNode::Assignment(assignment) => Ok(assignment),
+            _ => Err(format!("expected assignment, got {:?} instead", self).into()),
+        }
+    }
+
     pub fn as_function_call(&self) -> Result<&FunctionCall, Box<dyn std::error::Error>> {
         match self {
             CodeNode::FunctionCall(ref fc) => Ok(fc),

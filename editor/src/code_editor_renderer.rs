@@ -191,6 +191,31 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             })
     }
 
+    fn render_reassignment(&self, reassignment: &lang::Reassignment) -> T::DrawResult {
+        let type_of_assignment = self.code_editor
+                                     .code_genie
+                                     .guess_type(reassignment.expression.as_ref(), self.env_genie)
+                                     .unwrap();
+        let assignment = self.code_editor
+                             .code_genie
+                             .find_node(reassignment.assignment_id)
+                             .unwrap()
+                             .as_assignment()
+                             .unwrap();
+        let render_reassignment_name = &|| {
+            self.code_handle(&|| {
+                                 self.render_name_with_type_definition(&assignment.name,
+                                                                       colorscheme!(variable_color),
+                                                                       &type_of_assignment)
+                             },
+                             reassignment.id)
+        };
+        self.ui_toolkit
+            .draw_all_on_same_line(&[render_reassignment_name,
+                                     &|| self.draw_text("   \u{f30a}   "),
+                                     &|| self.render_code(reassignment.expression.as_ref())])
+    }
+
     fn render_assignment_specify_lhs(&self,
                                      assignment: &lang::Assignment,
                                      draw_lhs_func: DrawFnRef<T>)
@@ -638,6 +663,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::StringLiteral(_) => Some(lang::STRING_TYPESPEC.description.clone()),
             CodeNode::NullLiteral(_) => Some(lang::NULL_TYPESPEC.description.clone()),
             CodeNode::Assignment(_) => Some("Make a new variable".to_string()),
+            CodeNode::Reassignment(_) => Some("Change variable to a new value".to_string()),
             CodeNode::Block(_) => None,
             CodeNode::VariableReference(vr) => {
                 let (_name, typ) = self.lookup_variable_name_and_type(vr)?;
@@ -698,6 +724,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.render_number_literal(&number_literal)
                 }
                 CodeNode::Assignment(assignment) => self.render_assignment(&assignment),
+                CodeNode::Reassignment(reassignment) => self.render_reassignment(&reassignment),
                 CodeNode::Block(block) => self.render_block(&block),
                 CodeNode::VariableReference(variable_reference) => {
                     self.render_variable_reference(&variable_reference)
@@ -769,6 +796,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::StringLiteral(_)
             | CodeNode::NullLiteral(_)
             | CodeNode::Assignment(_)
+            | CodeNode::Reassignment(_)
             | CodeNode::VariableReference(_)
             | CodeNode::Placeholder(_)
             | CodeNode::StructLiteral(_)
