@@ -146,6 +146,7 @@ pub enum CodeNode {
     StringLiteral(StringLiteral),
     NullLiteral(ID),
     Assignment(Assignment),
+    Reassignment(Reassignment),
     Block(Block),
     AnonymousFunction(AnonymousFunction),
     VariableReference(VariableReference),
@@ -531,6 +532,7 @@ impl CodeNode {
                 format!("Number literal: {}", number_literal.value)
             }
             CodeNode::Assignment(assignment) => format!("Assignment: {}", assignment.name),
+            CodeNode::Reassignment(reassignment) => format!("Reassignment: {}", reassignment.id),
             CodeNode::Block(block) => format!("Code block: ID {}", block.id),
             CodeNode::VariableReference(variable_reference) => {
                 format!("Variable reference: Assignment ID {}",
@@ -567,6 +569,7 @@ impl CodeNode {
             CodeNode::StringLiteral(string_literal) => string_literal.id,
             CodeNode::NumberLiteral(number_literal) => number_literal.id,
             CodeNode::Assignment(assignment) => assignment.id,
+            CodeNode::Reassignment(reassignment) => reassignment.id,
             CodeNode::Block(block) => block.id,
             CodeNode::VariableReference(variable_reference) => variable_reference.id,
             CodeNode::FunctionReference(function_reference) => function_reference.id,
@@ -623,6 +626,9 @@ impl CodeNode {
             CodeNode::Assignment(assignment) => {
                 Box::new(iter::once(assignment.expression.borrow()))
             }
+            CodeNode::Reassignment(reassignment) => {
+                Box::new(iter::once(reassignment.expression.borrow()))
+            }
             CodeNode::Block(block) => Box::new(block.expressions.iter()),
             CodeNode::VariableReference(_) => Box::new(iter::empty()),
             CodeNode::FunctionReference(_) => Box::new(iter::empty()),
@@ -678,6 +684,7 @@ impl CodeNode {
             CodeNode::StringLiteral(_) => Vec::new(),
             CodeNode::NumberLiteral(_) => Vec::new(),
             CodeNode::Assignment(assignment) => vec![assignment.expression.borrow_mut()],
+            CodeNode::Reassignment(reassignment) => vec![reassignment.expression.borrow_mut()],
             CodeNode::Block(block) => block.expressions.iter_mut().collect(),
             CodeNode::VariableReference(_) => Vec::new(),
             CodeNode::FunctionReference(_) => Vec::new(),
@@ -811,6 +818,14 @@ pub struct Assignment {
     // TODO: consider differentiating between CodeNodes and Expressions.
     pub expression: Box<CodeNode>,
     pub id: ID,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct Reassignment {
+    pub id: ID,
+    pub assignment_id: ID,
+    // TODO: consider differentiating between CodeNodes and Expressions.
+    pub expression: Box<CodeNode>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]

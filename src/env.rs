@@ -81,6 +81,9 @@ impl Interpreter {
             lang::CodeNode::Assignment(assignment) => {
                 Box::pin(self.evaluate_assignment(&assignment))
             }
+            lang::CodeNode::Reassignment(reassignment) => {
+                Box::pin(self.evaluate_reassignment(&reassignment))
+            }
             // TODO: pretty sure i need something here to ensure these futures run serially
             // it exists, check out futures_ordered. will have to do a little bit of hacking to get
             // it to work with async / await i believe
@@ -226,6 +229,16 @@ impl Interpreter {
                            -> impl Future<Output = lang::Value> {
         let value_future = self.evaluate(&assignment.expression);
         let assignment_id = assignment.id;
+        let value = lang::Value::new_future(value_future);
+        self.set_local_variable(assignment_id, value.clone());
+        async move { value }
+    }
+
+    fn evaluate_reassignment(&mut self,
+                             reassignment: &lang::Reassignment)
+                             -> impl Future<Output = lang::Value> {
+        let value_future = self.evaluate(&reassignment.expression);
+        let assignment_id = reassignment.assignment_id;
         let value = lang::Value::new_future(value_future);
         self.set_local_variable(assignment_id, value.clone());
         async move { value }
