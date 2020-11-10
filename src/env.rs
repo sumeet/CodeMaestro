@@ -213,9 +213,6 @@ impl Interpreter {
             CodeNode::AnonymousFunction(anon_func) => {
                 Box::pin(async move { lang::Value::AnonymousFunction(anon_func) })
             }
-            // guess_type of this will return Result<Null, Number>
-            // here, Number is the index that didn't exist in the list we're changing
-            CodeNode::ReassignListIndex(rli) => {}
         };
         let env = Rc::clone(&self.env);
         async move {
