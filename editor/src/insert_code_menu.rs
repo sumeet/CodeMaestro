@@ -871,8 +871,7 @@ impl InsertCodeMenuOptionGenerator for InsertReassignmentOptionGenerator {
                 if lowercased_trimmed_search_str.is_empty() {
                     return true
                 }
-                // println!("var name: {:?}", var.name);
-                lowercased_trimmed_search_str.contains(&var.name)
+                var.name.contains(lowercased_trimmed_search_str)
             })
             .map(|var| {
                 InsertCodeMenuOption {
