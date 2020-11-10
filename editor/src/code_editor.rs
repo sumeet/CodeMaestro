@@ -1270,8 +1270,8 @@ impl MutationMaster {
         let mut last_mutation_result = None;
         for _ in 0..num_node_ids {
             let this_result = i.next();
-            if let Some(this_result) = this_result {
-                last_mutation_result = Some(this_result);
+            if this_result.is_some() {
+                last_mutation_result = this_result;
             }
         }
         last_mutation_result

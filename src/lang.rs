@@ -835,6 +835,12 @@ pub struct Reassignment {
     pub expression: Box<CodeNode>,
 }
 
+impl Into<CodeNode> for Reassignment {
+    fn into(self) -> CodeNode {
+        CodeNode::Reassignment(self)
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Block {
     pub expressions: Vec<CodeNode>,

@@ -37,7 +37,7 @@ const FUNCTION_CALL_GROUP: &str = "Functions";
 const LOCALS_GROUP: &str = "Local variables";
 const LITERALS_GROUP: &str = "Create new value";
 const CONTROL_FLOW_GROUP: &str = "Control flow";
-const ASSIGN_VARIABLE_GROUP: &str = "New local variable";
+const ASSIGN_VARIABLE_GROUP: &str = "Add or change variables";
 
 #[derive(Clone)]
 pub struct InsertCodeMenu {
@@ -523,6 +523,7 @@ impl From<InsertionPoint> for SearchPosition {
     }
 }
 
+// TODO: this should probably go near the code genie
 pub fn find_all_locals_preceding<'a>(search_position: SearchPosition,
                                      code_genie: &'a CodeGenie,
                                      env_genie: &'a EnvGenie)
@@ -532,10 +533,10 @@ pub fn find_all_locals_preceding<'a>(search_position: SearchPosition,
         .chain(find_anon_func_args_for(search_position, code_genie, env_genie))
 }
 
-pub fn find_assignments_and_function_args_preceding<'a>(search_position: SearchPosition,
-                                                        code_genie: &'a CodeGenie,
-                                                        env_genie: &'a EnvGenie)
-                                                        -> impl Iterator<Item = Variable> + 'a {
+pub fn find_assignments_preceding<'a>(search_position: SearchPosition,
+                                      code_genie: &'a CodeGenie,
+                                      env_genie: &'a EnvGenie)
+                                      -> impl Iterator<Item = Variable> + 'a {
     code_genie.find_assignments_that_come_before_code(search_position.before_code_id,
                                                       search_position.is_search_inclusive)
               .into_iter()
@@ -549,6 +550,13 @@ pub fn find_assignments_and_function_args_preceding<'a>(search_position: SearchP
                              typ: guessed_type.unwrap(),
                              name: assignment.name.clone() }
               })
+}
+
+pub fn find_assignments_and_function_args_preceding<'a>(search_position: SearchPosition,
+                                                        code_genie: &'a CodeGenie,
+                                                        env_genie: &'a EnvGenie)
+                                                        -> impl Iterator<Item = Variable> + 'a {
+    find_assignments_preceding(search_position, code_genie, env_genie)
               .chain(env_genie.code_takes_args(code_genie.root().id())
                               .map(|arg| Variable { locals_id: arg.id,
                                                     variable_type: VariableType::Argument,
@@ -701,7 +709,7 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
                code_genie: &CodeGenie,
                _env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        if !should_insert_block_expression(search_params.insertion_point, code_genie) {
+        if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
             return vec![];
         }
 
@@ -734,7 +742,7 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
                code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        if !should_insert_block_expression(search_params.insertion_point, code_genie) {
+        if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
             return vec![];
         }
 
@@ -792,7 +800,7 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
                code_genie: &CodeGenie,
                _env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        if !should_insert_block_expression(search_params.insertion_point, code_genie) {
+        if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
             return vec![];
         }
 
@@ -838,13 +846,43 @@ impl InsertCodeMenuOptionGenerator for InsertReassignmentOptionGenerator {
     fn options(&self,
                search_params: &CodeSearchParams,
                code_genie: &CodeGenie,
-               _env_genie: &EnvGenie)
+               env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        if !should_insert_block_expression(search_params.insertion_point, code_genie) {
+        // reassignments only go inside of block expressions
+        if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
             return vec![];
         }
-        // TODO: insert in here
-        vec![]
+
+        let lowercased_trimmed_search_str = search_params.lowercased_trimmed_search_str();
+
+        let sort_key_prefix = if lowercased_trimmed_search_str.contains('=') {
+            // if the user typed a =, then it's very likely they wanted an assignment statement. sort
+            // this up to the top, in that case
+            "000"
+        } else {
+            "zzz"
+        };
+
+        let lowercased_trimmed_search_str =
+            lowercased_trimmed_search_str.trim_end_matches(|c| c == '=' || c == ' ');
+
+        find_assignments_preceding(search_params.insertion_point.into(), code_genie, env_genie)
+            .filter(|var| {
+                if lowercased_trimmed_search_str.is_empty() {
+                    return true
+                }
+                // println!("var name: {:?}", var.name);
+                lowercased_trimmed_search_str.contains(&var.name)
+            })
+            .map(|var| {
+                InsertCodeMenuOption {
+                    sort_key: format!("{}changevariable{}", sort_key_prefix, var.name),
+                    new_node: code_generation::new_reassignment(var.locals_id,
+                                                                code_generation::new_placeholder(var.name, var.typ)).into(),
+                    is_selected: false,
+                    group_name: ASSIGN_VARIABLE_GROUP,
+                }
+            }).collect()
     }
 }
 
@@ -932,9 +970,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
 
 // hmmm this is used by code search
 // TODO: move into insert_code_menu.rs
-pub fn should_insert_block_expression(insertion_point: InsertionPoint,
-                                      code_genie: &CodeGenie)
-                                      -> bool {
+pub fn is_inserting_inside_block(insertion_point: InsertionPoint, code_genie: &CodeGenie) -> bool {
     match insertion_point {
         InsertionPoint::BeginningOfBlock(_)
         | InsertionPoint::Before(_)

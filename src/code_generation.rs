@@ -159,6 +159,12 @@ pub fn new_assignment(name: String, expression: lang::CodeNode) -> lang::Assignm
                        expression: Box::new(expression) }
 }
 
+pub fn new_reassignment(assignment_id: lang::ID, expression: lang::CodeNode) -> lang::Reassignment {
+    lang::Reassignment { id: lang::new_id(),
+                         assignment_id,
+                         expression: Box::new(expression) }
+}
+
 pub fn new_assignment_code_node(name: String, expression: lang::CodeNode) -> lang::CodeNode {
     lang::CodeNode::Assignment(new_assignment(name, expression))
 }
