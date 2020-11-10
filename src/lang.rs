@@ -159,6 +159,7 @@ pub enum CodeNode {
     StructFieldGet(StructFieldGet),
     NumberLiteral(NumberLiteral),
     ListIndex(ListIndex),
+    ReassignListIndex(ReassignListIndex),
 }
 
 use crate::code_generation::new_block;
@@ -565,6 +566,9 @@ impl CodeNode {
             CodeNode::AnonymousFunction(anon_func) => {
                 format!("Anonymous function: {}", anon_func.id)
             }
+            CodeNode::ReassignListIndex(reassign_list_index) => {
+                format!("Reassign List Index: {:?}", reassign_list_index.id)
+            }
         }
     }
 
@@ -591,6 +595,7 @@ impl CodeNode {
             CodeNode::StructFieldGet(sfg) => sfg.id,
             CodeNode::ListIndex(list_index) => list_index.id,
             CodeNode::AnonymousFunction(anon_func) => anon_func.id,
+            CodeNode::ReassignListIndex(rli) => rli.id,
         }
     }
 
@@ -665,6 +670,13 @@ impl CodeNode {
             CodeNode::AnonymousFunction(anon_func) => {
                 Box::new(std::iter::once(anon_func.block.as_ref()))
             }
+            CodeNode::ReassignListIndex(rli) => {
+                Box::new(
+                    std::iter::once(rli.index_expr.as_ref()).chain(
+                        std::iter::once(rli.set_to_expr.as_ref())
+                    )
+                )
+            }
         }
     }
 
@@ -718,6 +730,9 @@ impl CodeNode {
             CodeNode::ListIndex(list_index) => vec![list_index.list_expr.borrow_mut(),
                                                     list_index.index_expr.borrow_mut(),],
             CodeNode::AnonymousFunction(anon_func) => vec![anon_func.block.borrow_mut()],
+            CodeNode::ReassignListIndex(rli) => {
+                vec![rli.index_expr.borrow_mut(), rli.set_to_expr.borrow_mut()]
+            }
         }
     }
 
@@ -839,6 +854,16 @@ impl Into<CodeNode> for Reassignment {
     fn into(self) -> CodeNode {
         CodeNode::Reassignment(self)
     }
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct ReassignListIndex {
+    pub id: ID,
+    // this must refer to a list of something, that's the list we'll be mutating
+    pub assignment_id: ID,
+    pub index_expr: Box<CodeNode>,
+    // this must evaluate to the T in List<T> (which assignment_id refers to)
+    pub set_to_expr: Box<CodeNode>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
