@@ -11,7 +11,7 @@ use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_generation;
 use crate::editor::Controller;
-use cs::builtins::new_result_with_null_error;
+use cs::builtins::{new_result, new_result_with_null_error};
 use cs::code_function;
 use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
@@ -270,7 +270,8 @@ impl CodeEditor {
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
             | CodeNode::ListIndex(_)
-            | CodeNode::Reassignment(_) => false,
+            | CodeNode::Reassignment(_)
+            | CodeNode::ReassignListIndex(_) => false,
         }
     }
 
@@ -294,6 +295,7 @@ impl CodeEditor {
             | CodeNode::Match(_)
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
+            | CodeNode::ReassignListIndex(_)
             | CodeNode::ListIndex(_) => unimplemented!(),
         }
     }
@@ -720,6 +722,10 @@ impl CodeGenie {
                 // TODO: could possibly use type inference here w/ the last element of the block...
                 // or should this be definable some other way? or inferred another way?
                 Ok(anon_func.returns.clone())
+            }
+            CodeNode::ReassignListIndex(_) => {
+                Ok(new_result(lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                              lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)))
             }
         }
     }

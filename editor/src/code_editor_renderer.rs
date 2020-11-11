@@ -216,6 +216,42 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                      &|| self.render_code(reassignment.expression.as_ref())])
     }
 
+    fn render_reassign_list_index(&self, rli: &lang::ReassignListIndex) -> T::DrawResult {
+        // copy+pasted from render_reassignment
+        let type_of_assignment = self.code_editor
+                                     .code_genie
+                                     .guess_type(rli.set_to_expr.as_ref(), self.env_genie)
+                                     .unwrap();
+        let assignment = self.code_editor
+                             .code_genie
+                             .find_node(rli.assignment_id)
+                             .unwrap()
+                             .as_assignment()
+                             .unwrap();
+        let render_variable_name = &|| {
+            self.render_name_with_type_definition(&assignment.name,
+                                                  colorscheme!(variable_color),
+                                                  &type_of_assignment)
+        };
+        // copy+pasted from render_list_index
+        let render_lvalue = &|| {
+            self.code_handle(&|| {
+            self.draw_nested_borders_around(&|| {
+                self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.render_without_nesting(render_variable_name),
+                    &|| self.render_without_nesting(&|| self.render_nested(&|| self.render_code(&rli.index_expr))),
+                ])
+            })
+        },
+                         rli.id
+        )
+        };
+
+        self.ui_toolkit.draw_all_on_same_line(&[render_lvalue,
+                                                &|| self.draw_text("   \u{f30a}   "),
+                                                &|| self.render_code(rli.set_to_expr.as_ref())])
+    }
+
     fn render_assignment_specify_lhs(&self,
                                      assignment: &lang::Assignment,
                                      draw_lhs_func: DrawFnRef<T>)
@@ -696,6 +732,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::AnonymousFunction(_) => {
                 Some("Executable code that can be passed around like data, and executed later. Sometimes referred to as a \"callback\"".into())
             }
+            CodeNode::ReassignListIndex(_) => {
+                Some("Change one element in a list".into())
+            }
         }
     }
 
@@ -725,6 +764,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 }
                 CodeNode::Assignment(assignment) => self.render_assignment(&assignment),
                 CodeNode::Reassignment(reassignment) => self.render_reassignment(&reassignment),
+                CodeNode::ReassignListIndex(reassign_list_index) => {
+                    self.render_reassign_list_index(reassign_list_index)
+                }
                 CodeNode::Block(block) => self.render_block(&block),
                 CodeNode::VariableReference(variable_reference) => {
                     self.render_variable_reference(&variable_reference)
