@@ -40,12 +40,10 @@ impl Interpreter {
     // object... i think. keep this here like this until we have one
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
         self.locals.insert(id, value);
-        // self.env.borrow_mut().set_local_variable(id, value.clone());
     }
 
     pub fn get_local_variable(&self, id: lang::ID) -> Option<&lang::Value> {
         self.locals.get(&id)
-        // self.env.borrow_mut().set_local_variable(id, value.clone());
     }
 
     pub fn with_env(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
