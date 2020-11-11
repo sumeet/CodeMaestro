@@ -280,10 +280,10 @@ impl Value {
         }
     }
 
-    pub fn as_mut_vec(&mut self) -> Option<&mut Vec<Value>> {
+    pub fn as_mut_vec(&mut self) -> Result<&mut Vec<Value>, Box<dyn std::error::Error>> {
         match self {
-            Value::List(_, v) => Some(v),
-            _ => None,
+            Value::List(_, v) => Ok(v),
+            otherwise => Err(format!("expected List, but this was a {:?}", otherwise).into()),
         }
     }
 

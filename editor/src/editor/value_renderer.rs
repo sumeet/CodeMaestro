@@ -56,6 +56,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::Future(_) => self.draw_buttony_text("Future", BLACK_COLOR),
             Value::EnumVariant { variant_id, value } => self.render_enum(variant_id, value),
             Value::AnonymousFunction(_) => panic!("don't worry about rendering functions"),
+            Value::Shared(value) => self.render(&value.borrow()),
         }
     }
 
@@ -78,22 +79,28 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
     }
 
     fn render_nested_value(&self, value: &lang::Value) -> T::DrawResult {
-        let is_scalar = match value {
-            Value::Null
-            | Value::Boolean(_)
-            | Value::String(_)
-            | Value::Number(_)
-            | Value::Future(_) => true,
-            Value::EnumVariant { .. } | Value::List(_, _) | Value::Struct { .. } => false,
-            Value::AnonymousFunction(_) => panic!("unimplemented"),
-        };
-        if is_scalar {
+        if self.is_scalar(value) {
             self.nesting_renderer.draw_nested(&|| self.render(value))
         } else {
             self.nesting_renderer.incr_nesting_level();
             let rendered = self.render(value);
             self.nesting_renderer.decr_nesting_level();
             rendered
+        }
+    }
+
+    fn is_scalar(&self, value: &lang::Value) -> bool {
+        match value {
+            Value::Null
+            | Value::Boolean(_)
+            | Value::String(_)
+            | Value::Number(_)
+            | Value::Future(_) => true,
+            Value::EnumVariant { .. } | Value::List(_, _) | Value::Struct { .. } => false,
+            Value::AnonymousFunction(_) => {
+                panic!("no value rendering implemented for anonymous functions")
+            }
+            Value::Shared(value) => self.is_scalar(&value.borrow()),
         }
     }
 

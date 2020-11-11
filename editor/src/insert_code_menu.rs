@@ -9,7 +9,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
 
-use crate::code_editor::get_result_type_from_indexing_into_list;
+use crate::code_editor::{get_result_type_from_indexing_into_list, get_type_from_list};
 use cs::chat_program::ChatProgram;
 use cs::code_generation::new_anon_func;
 use cs::lang::{ArgumentDefinition, TypeSpec};
@@ -21,6 +21,7 @@ lazy_static! {
     static ref OPTIONS_GENERATORS : Vec<Box<dyn InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
         Box::new(InsertFunctionWrappingOptionGenerator {}),
         Box::new(InsertListIndexOfLocal {}),
+        Box::new(InsertReassignListIndexOfLocalVariable {}),
         Box::new(InsertVariableReferenceOptionGenerator {}),
         Box::new(InsertStructFieldGetOfLocal {}),
         Box::new(InsertFunctionOptionGenerator {}),
@@ -955,13 +956,46 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                     return None
                 }
                 Some(InsertCodeMenuOption {
-                    // TODO: can we add fonts to support these symbols?
                     group_name: LOCALS_GROUP,
                     sort_key: format!("listindex{}", variable.locals_id),
                     new_node: code_generation::new_list_index(code_generation::new_variable_reference(
                         variable.locals_id)),
                     is_selected: false
                 })
+            })
+            .collect()
+    }
+}
+
+#[derive(Clone)]
+struct InsertReassignListIndexOfLocalVariable {}
+
+impl InsertCodeMenuOptionGenerator for InsertReassignListIndexOfLocalVariable {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
+            return vec![];
+        }
+
+        find_assignments_preceding(
+            search_params.insertion_point.into(), code_genie, env_genie)
+            .filter_map(|variable| {
+
+                if !search_params.search_matches_identifier(&variable.name) {
+                    return None
+                }
+
+                let list_typ = get_type_from_list(variable.typ)?;
+
+                Some(InsertCodeMenuOption {
+                        group_name: ASSIGN_VARIABLE_GROUP,
+                        sort_key: format!("reassignlistindex{}", variable.locals_id),
+                        new_node: lang::CodeNode::ReassignListIndex(code_generation::new_reassign_list_index(variable.locals_id, list_typ)),
+                        is_selected: false
+                    })
             })
             .collect()
     }

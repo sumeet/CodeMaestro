@@ -165,6 +165,16 @@ pub fn new_reassignment(assignment_id: lang::ID, expression: lang::CodeNode) -> 
                          expression: Box::new(expression) }
 }
 
+pub fn new_reassign_list_index(assignment_id: lang::ID,
+                               typ: lang::Type)
+                               -> lang::ReassignListIndex {
+    lang::ReassignListIndex { id: lang::new_id(),
+                              assignment_id,
+                              index_expr: Box::new(new_placeholder("Index".to_string(), lang::Type::from_spec(&*lang::NUMBER_TYPESPEC))),
+                              set_to_expr: Box::new(new_placeholder("Change to".to_string(),
+                                                                    typ)) }
+}
+
 pub fn new_assignment_code_node(name: String, expression: lang::CodeNode) -> lang::CodeNode {
     lang::CodeNode::Assignment(new_assignment(name, expression))
 }

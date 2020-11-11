@@ -863,6 +863,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::FunctionCall(_)
             | CodeNode::Block(_)
             | CodeNode::Argument(_)
+            | CodeNode::ReassignListIndex(_)
             | CodeNode::AnonymousFunction(_) => draw_code_fn(),
         }
     }
