@@ -165,10 +165,8 @@ pub enum CodeNode {
 use crate::code_generation::new_block;
 use futures_util::future::Shared;
 use futures_util::FutureExt;
-use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::pin::Pin;
-use std::rc::Rc;
 
 // pub type ValueFuture = Shared<Pin<Box<dyn Future<Output = Value>>>>;
 
@@ -194,7 +192,6 @@ pub enum Value {
     Future(ValueFuture),
     EnumVariant { variant_id: ID, value: Box<Value> },
     AnonymousFunction(AnonymousFunction),
-    Shared(Rc<RefCell<Value>>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -216,19 +213,6 @@ impl AnonymousFunction {
 }
 
 impl Value {
-    pub fn share(&mut self) -> Rc<RefCell<Self>> {
-        match self {
-            Value::Shared(v) => Rc::clone(v), // already shared
-            // feels like there should be a way to do this without cloning, might be a limitation
-            // of the borrow checker
-            _ => {
-                let new_shared = Rc::new(RefCell::new(self.clone()));
-                *self = Self::Shared(Rc::clone(&new_shared));
-                new_shared
-            }
-        }
-    }
-
     pub fn into_anon_func(self) -> Result<AnonymousFunction, Box<dyn std::error::Error>> {
         match self {
             Value::AnonymousFunction(af) => Ok(af),

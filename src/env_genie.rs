@@ -47,7 +47,6 @@ impl<'a> EnvGenie<'a> {
             Value::Future(_) => {
                 panic!("currently unimplemented for futures, not sure if we'll ever need this")
             }
-            Value::Shared(value) => self.guess_type_of_value(&value.borrow()),
             Value::EnumVariant { variant_id: _variant_id,
                                  value, } => self.guess_type_of_value(value),
             Value::AnonymousFunction(anonymous_function) => {

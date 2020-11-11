@@ -56,7 +56,6 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::Future(_) => self.draw_buttony_text("Future", BLACK_COLOR),
             Value::EnumVariant { variant_id, value } => self.render_enum(variant_id, value),
             Value::AnonymousFunction(_) => panic!("don't worry about rendering functions"),
-            Value::Shared(value) => self.render(&value.borrow()),
         }
     }
 
@@ -100,7 +99,6 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::AnonymousFunction(_) => {
                 panic!("no value rendering implemented for anonymous functions")
             }
-            Value::Shared(value) => self.is_scalar(&value.borrow()),
         }
     }
 

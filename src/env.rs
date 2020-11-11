@@ -1,7 +1,6 @@
 use super::lang;
 use super::structs;
 
-use std::borrow::Borrow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::future::Future;
@@ -11,7 +10,7 @@ use std::rc::Rc;
 use crate::builtins::ok_result_value;
 use crate::builtins::{err_result_string, err_result_value};
 use crate::lang::CodeNode;
-use crate::{enums, EnvGenie};
+use crate::{enums, resolve_all_futures, EnvGenie};
 use failure::_core::fmt::Formatter;
 use futures_util::FutureExt;
 use itertools::Itertools;
@@ -27,28 +26,28 @@ macro_rules! await_eval_result {
 #[derive(Clone)]
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
-    pub locals: HashMap<lang::ID, lang::Value>,
+    pub locals: Rc<RefCell<HashMap<lang::ID, lang::Value>>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self { env: Rc::new(RefCell::new(ExecutionEnvironment::new())),
-               locals: HashMap::new() }
+               locals: Rc::new(RefCell::new(HashMap::new())) }
     }
 
     // TODO: instead of setting local variables directly on `env`, set them on a per-interp `locals`
     // object... i think. keep this here like this until we have one
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
-        self.locals.insert(id, value);
+        self.locals.borrow_mut().insert(id, value);
     }
 
-    pub fn get_local_variable(&self, id: lang::ID) -> Option<&lang::Value> {
-        self.locals.get(&id)
+    pub fn get_local_variable(&self, id: lang::ID) -> Option<lang::Value> {
+        (&self.locals.borrow()).get(&id).cloned()
     }
 
     pub fn with_env(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
         Self { env,
-               locals: HashMap::new() }
+               locals: Rc::new(RefCell::new(HashMap::new())) }
     }
 
     pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {
@@ -67,7 +66,9 @@ impl Interpreter {
                 Box::pin(self.evaluate_function_call(&function_call)
                              .unwrap_or_else(|e| panic!(e)))
             }
-            lang::CodeNode::Argument(argument) => Box::pin(self.evaluate(argument.expr.borrow())),
+            lang::CodeNode::Argument(argument) => {
+                Box::pin(self.evaluate(std::borrow::Borrow::borrow(&argument.expr)))
+            }
             lang::CodeNode::StringLiteral(string_literal) => {
                 let val = string_literal.value;
                 Box::pin(async move { lang::Value::String(val) })
@@ -100,9 +101,7 @@ impl Interpreter {
             }
             lang::CodeNode::VariableReference(variable_reference) => {
                 let var = self.get_local_variable(variable_reference.assignment_id)
-                              .cloned()
                               .unwrap();
-                // let env = Rc::clone(&self.env);
                 Box::pin(async move { var })
             }
             lang::CodeNode::FunctionReference(_) => Box::pin(async { lang::Value::Null }),
@@ -216,16 +215,33 @@ impl Interpreter {
             CodeNode::ReassignListIndex(rli) => {
                 let index_fut = self.evaluate(rli.index_expr.as_ref());
                 let set_to_val_fut = self.evaluate(rli.set_to_expr.as_ref());
-                let var_to_mutate = self.locals.get_mut(&rli.assignment_id).unwrap().share();
+                let mut current_local_var = self.get_local_variable(rli.assignment_id).unwrap();
+                let current_local_var2 = current_local_var.clone();
+
+                let index_fut = lang::Value::new_future(index_fut).clone();
+                let index_fut2 = index_fut.clone();
+                self.set_local_variable(rli.assignment_id,
+                                        lang::Value::new_future(async move {
+                                            let index = resolve_all_futures(index_fut).await
+                                                                                      .as_i128()
+                                                                                      .unwrap();
+                                            let value = await_eval_result!(set_to_val_fut);
+                                            current_local_var =
+                                                resolve_all_futures(current_local_var).await;
+                                            let vec_to_change =
+                                                current_local_var.as_mut_vec().unwrap();
+                                            vec_to_change.get_mut(index as usize)
+                                                         .map(|hole| *hole = value);
+                                            current_local_var
+                                        }));
+
                 Box::pin(async move {
-                    let i = await_eval_result!(index_fut).as_i128().unwrap();
-                    let mut borrow = var_to_mutate.borrow_mut();
-                    let vec_to_change = borrow.as_mut_vec().unwrap();
-                    if vec_to_change.len() < i as usize + 1 {
-                        // the type is wrong, this should just be a number
-                        return err_result_value(lang::Value::Number(i));
+                    let index = resolve_all_futures(index_fut2).await.as_i128().unwrap();
+                    let current_local_var = resolve_all_futures(current_local_var2).await;
+                    let vec = current_local_var.as_vec().unwrap();
+                    if vec.len() < index as usize + 1 {
+                        return err_result_value(lang::Value::Number(index));
                     }
-                    vec_to_change[i as usize] = await_eval_result!(set_to_val_fut);
                     ok_result_value(lang::Value::Null)
                 })
             }
