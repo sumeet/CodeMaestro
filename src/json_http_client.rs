@@ -140,10 +140,10 @@ impl lang::Function for JSONHTTPClient {
                             interpreter.evaluate(&lang::CodeNode::Block(transform_code))
                                        .await
                         }
-                        Err(e) => builtins::err_result_value(e),
+                        Err(e) => builtins::err_result_string(e),
                     }
                 }
-                Err(err_string) => builtins::err_result_value(err_string.to_string()),
+                Err(err_string) => builtins::err_result_string(err_string.to_string()),
             }
         })
     }

@@ -129,7 +129,12 @@ pub fn ok_result_value(value: lang::Value) -> lang::Value {
                                value: Box::new(value) }
 }
 
-pub fn err_result_value(string: String) -> lang::Value {
+pub fn err_result_value(value: lang::Value) -> lang::Value {
+    lang::Value::EnumVariant { variant_id: *RESULT_ERROR_VARIANT_ID,
+                               value: Box::new(value) }
+}
+
+pub fn err_result_string(string: String) -> lang::Value {
     lang::Value::EnumVariant { variant_id: *RESULT_ERROR_VARIANT_ID,
                                value: Box::new(lang::Value::String(string)) }
 }

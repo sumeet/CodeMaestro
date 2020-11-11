@@ -8,8 +8,8 @@ use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
 
-use crate::builtins::err_result_value;
 use crate::builtins::ok_result_value;
+use crate::builtins::{err_result_string, err_result_value};
 use crate::lang::CodeNode;
 use crate::{enums, EnvGenie};
 use failure::_core::fmt::Formatter;
@@ -193,17 +193,17 @@ impl Interpreter {
                 Box::pin(async move {
                     let index = await_eval_result!(index_fut).as_i128().unwrap();
                     if index.is_negative() {
-                        return err_result_value(format!("can't index into a list with a negative index: {}", index));
+                        return err_result_string(format!("can't index into a list with a negative index: {}", index));
                     }
                     let index_usize: Option<usize> = index.try_into().ok();
                     if index_usize.is_none() {
-                        return err_result_value(format!("{} isn't a valid index", index));
+                        return err_result_string(format!("{} isn't a valid index", index));
                     }
 
                     let index_usize = index_usize.unwrap();
                     let mut vec = await_eval_result!(list_fut).into_vec().unwrap();
                     if vec.len() == 0 || index_usize > vec.len() - 1 {
-                        return err_result_value(format!("list of size {} doesn't contain index {}",
+                        return err_result_string(format!("list of size {} doesn't contain index {}",
                                                         vec.len(),
                                                         index));
                     }
@@ -215,7 +215,22 @@ impl Interpreter {
             }
             // guess_type of this will return Result<Null, Number>
             // here, Number is the index that didn't exist in the list we're changing
-            CodeNode::ReassignListIndex(rli) => {}
+            CodeNode::ReassignListIndex(rli) => {
+                let index_fut = self.evaluate(rli.index_expr.as_ref());
+                let set_to_val_fut = self.evaluate(rli.set_to_expr.as_ref());
+                let var_to_mutate = self.locals.get_mut(&rli.assignment_id).unwrap().share();
+                Box::pin(async move {
+                    let i = await_eval_result!(index_fut).as_i128().unwrap();
+                    let mut borrow = var_to_mutate.borrow_mut();
+                    let vec_to_change = borrow.as_mut_vec().unwrap();
+                    if vec_to_change.len() < i as usize + 1 {
+                        // the type is wrong, this should just be a number
+                        return err_result_value(lang::Value::Number(i));
+                    }
+                    vec_to_change[i as usize] = await_eval_result!(set_to_val_fut);
+                    ok_result_value(lang::Value::Null)
+                })
+            }
         };
         let env = Rc::clone(&self.env);
         async move {

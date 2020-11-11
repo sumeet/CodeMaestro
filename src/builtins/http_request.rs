@@ -57,7 +57,7 @@ impl lang::Function for HTTPRequest {
                                                                 *HTTP_RESPONSE_STATUS_CODE_INT_FIELD_ID => Value::Number(status_code as _),
                                                             }))
                 }
-                Err(err) => super::err_result_value(err.to_string()),
+                Err(err) => super::err_result_string(err.to_string()),
             }
         })
     }
