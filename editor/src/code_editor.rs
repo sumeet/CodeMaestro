@@ -18,6 +18,7 @@ use cs::env::ExecutionEnvironment;
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::CodeNode;
+use objekt::private::collections::HashSet;
 
 #[derive(Clone)]
 pub struct CodeEditor {
@@ -579,6 +580,26 @@ impl CodeGenie {
             Some(parent_node) => self.find_expression_inside_block_that_contains(parent_node.id()),
             None => None,
         }
+    }
+
+    pub fn dedup_children(&self, ids: impl Iterator<Item = lang::ID>) -> Vec<lang::ID> {
+        let ids_set = ids.collect::<HashSet<_>>();
+        let mut result = Vec::new();
+        let mut q = vec![&self.code];
+        while !q.is_empty() {
+            q = q.into_iter()
+                 .filter_map(|code| {
+                     if ids_set.contains(&code.id()) {
+                         result.push(code.id());
+                         None
+                     } else {
+                         Some(code.children_iter())
+                     }
+                 })
+                 .flatten()
+                 .collect();
+        }
+        result
     }
 
     pub fn find_node(&self, id: lang::ID) -> Option<&lang::CodeNode> {

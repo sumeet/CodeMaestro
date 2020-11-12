@@ -1852,7 +1852,21 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                             })
                                          },
                                          // TODO: draw everything that's selected
-                                         &|| self.render_code(code_node),
+                                         &|| {
+                                             let selected_nodes = self.code_editor
+                                                                      .selected_node_ids
+                                                                      .iter()
+                                                                      .map(|id| {
+                                                                          self.code_editor
+                                                                              .code_genie
+                                                                              .find_node(*id)
+                                                                              .unwrap()
+                                                                      });
+                                             draw_all_iter!(T::self.ui_toolkit,
+                                                            selected_nodes.map(move |code_node| {
+                                                                move || self.render_code(code_node)
+                                                            }))
+                                         },
                                          // TODO: everything that's selected
                                          code_node.clone(),
         )
@@ -1881,7 +1895,9 @@ impl PerEditorCommandBuffer {
     pub fn set_selected_node_ids(&mut self) {
         let overlapped_code_node_ids = self.overlapped_code_node_ids.clone();
         self.add_editor_command(move |editor| {
-                editor.selected_node_ids = overlapped_code_node_ids;
+                let ids = editor.code_genie
+                                .dedup_children(overlapped_code_node_ids.iter().cloned());
+                editor.selected_node_ids = ids;
             });
     }
 
