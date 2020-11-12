@@ -26,28 +26,28 @@ macro_rules! await_eval_result {
 #[derive(Clone)]
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
-    pub locals: Rc<RefCell<HashMap<lang::ID, lang::Value>>>,
+    pub locals: HashMap<lang::ID, lang::Value>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self { env: Rc::new(RefCell::new(ExecutionEnvironment::new())),
-               locals: Rc::new(RefCell::new(HashMap::new())) }
+               locals: HashMap::new() }
     }
 
     // TODO: instead of setting local variables directly on `env`, set them on a per-interp `locals`
     // object... i think. keep this here like this until we have one
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
-        self.locals.borrow_mut().insert(id, value);
+        self.locals.insert(id, value);
     }
 
-    pub fn get_local_variable(&self, id: lang::ID) -> Option<lang::Value> {
-        (&self.locals.borrow()).get(&id).cloned()
+    pub fn get_local_variable(&self, id: lang::ID) -> Option<&lang::Value> {
+        self.locals.get(&id)
     }
 
     pub fn with_env(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
         Self { env,
-               locals: Rc::new(RefCell::new(HashMap::new())) }
+               locals: HashMap::new() }
     }
 
     pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {
@@ -101,6 +101,7 @@ impl Interpreter {
             }
             lang::CodeNode::VariableReference(variable_reference) => {
                 let var = self.get_local_variable(variable_reference.assignment_id)
+                              .cloned()
                               .unwrap();
                 Box::pin(async move { var })
             }
@@ -215,7 +216,8 @@ impl Interpreter {
             CodeNode::ReassignListIndex(rli) => {
                 let index_fut = self.evaluate(rli.index_expr.as_ref());
                 let set_to_val_fut = self.evaluate(rli.set_to_expr.as_ref());
-                let mut current_local_var = self.get_local_variable(rli.assignment_id).unwrap();
+                let mut current_local_var =
+                    self.get_local_variable(rli.assignment_id).cloned().unwrap();
                 let current_local_var2 = current_local_var.clone();
 
                 let index_fut = lang::Value::new_future(index_fut).clone();
