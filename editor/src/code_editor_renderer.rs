@@ -1167,11 +1167,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                self.ui_toolkit.draw_empty_line()
                                                            }])
                               },
-                              move |code_node: CodeNode| {
-                                  cmd_buffer.borrow_mut()
-                                            .add_editor_command(move |editor| {
-                                                editor.move_code(code_node.id(), insertion_point);
-                                            })
+                              move |code_nodes: Vec<CodeNode>| {
+                                  cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                                             let code_node =
+                                                                 code_nodes.first().unwrap();
+                                                             editor.move_code(code_node.id(),
+                                                                              insertion_point);
+                                                         })
                               })
     }
 
@@ -1836,9 +1838,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 })
         };
 
-        let code_node = self.code_editor.code_genie.find_node(code_node_id).unwrap();
-
         let cmd_buffer = Rc::clone(&self.command_buffer);
+        let code_to_drag_drop = self.code_to_drag_drop(code_node_id)
+                                    .cloned()
+                                    .collect::<Vec<_>>();
 
         self.ui_toolkit.drag_drop_source(
                                          code_node_id,
@@ -1853,23 +1856,34 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                          },
                                          // TODO: draw everything that's selected
                                          &|| {
-                                             let selected_nodes = self.code_editor
-                                                                      .selected_node_ids
-                                                                      .iter()
-                                                                      .map(|id| {
-                                                                          self.code_editor
-                                                                              .code_genie
-                                                                              .find_node(*id)
-                                                                              .unwrap()
-                                                                      });
                                              draw_all_iter!(T::self.ui_toolkit,
-                                                            selected_nodes.map(move |code_node| {
-                                                                move || self.render_code(code_node)
-                                                            }))
+                                                            self.code_to_drag_drop(code_node_id)
+                                                                .map(move |code_node| {
+                                                                    move || {
+                                                                        self.render_code(code_node)
+                                                                    }
+                                                                }))
                                          },
                                          // TODO: everything that's selected
-                                         code_node.clone(),
+                                         code_to_drag_drop,
         )
+    }
+
+    fn code_to_drag_drop(&self,
+                         clicked_code_node_id: lang::ID)
+                         -> Box<dyn Iterator<Item = &lang::CodeNode> + '_> {
+        if self.code_editor.selected_node_ids.is_empty() {
+            Box::new(self.code_editor
+                         .code_genie
+                         .find_node(clicked_code_node_id)
+                         .into_iter())
+        } else {
+            Box::new(self.code_editor
+                         .selected_node_ids
+                         .iter()
+                         .map(move |id| self.code_editor.code_genie.find_node(*id))
+                         .flatten())
+        }
     }
 }
 
