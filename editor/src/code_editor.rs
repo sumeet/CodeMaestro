@@ -32,7 +32,7 @@ pub struct CodeEditor {
     pub location: Option<CodeLocation>,
 }
 
-#[derive(Copy, Clone, Serialize, Deserialize, Debug, Hash, PartialEq, Eq)]
+#[derive(Copy, Clone, Serialize, Deserialize, Debug)]
 pub enum CodeLocation {
     Function(lang::ID),
     Script(lang::ID),
