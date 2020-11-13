@@ -55,7 +55,7 @@ impl CodeEditor {
                                     insert_code_menu: None,
                                     mutation_master: MutationMaster::new(),
                                     location: None };
-        new_editor.insert_code(new_node, insertion_point);
+        new_editor.insert_code(std::iter::once(new_node), insertion_point);
         new_editor
     }
 
@@ -404,9 +404,11 @@ impl CodeEditor {
         }
     }
 
-    pub fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
+    pub fn insert_code(&mut self,
+                       code_nodes: impl Iterator<Item = CodeNode>,
+                       insertion_point: InsertionPoint) {
         let new_root = self.mutation_master
-                           .insert_code(code_node, insertion_point, &self.code_genie);
+                           .insert_code(code_nodes, insertion_point, &self.code_genie);
         self.replace_code(new_root);
     }
 
@@ -415,7 +417,7 @@ impl CodeEditor {
     pub fn insert_code_and_set_where_cursor_ends_up_next(&mut self,
                                                          code_node: CodeNode,
                                                          insertion_point: InsertionPoint) {
-        self.insert_code(code_node.clone(), insertion_point);
+        self.insert_code(std::iter::once(code_node.clone()), insertion_point);
         match post_insertion_cursor(&code_node, &self.code_genie) {
             PostInsertionAction::SelectNode(id) => {
                 self.set_selected_node_id(Some(id));
@@ -444,14 +446,6 @@ impl CodeEditor {
         }
         // TODO: intelligently select a nearby node to select after deleting
         self.set_selected_node_id(mutation_result.new_cursor_position);
-    }
-
-    pub fn move_code(&mut self, code_node_id: lang::ID, to: InsertionPoint) -> Option<()> {
-        let mutation_result = self.mutation_master
-                                  .move_code(&self.code_genie, code_node_id, to);
-        // TODO: these save current state calls can go inside of the mutation master
-        self.apply_mutation_result(mutation_result);
-        Some(())
     }
 
     pub fn extract_into_variable(&mut self, code_node_id: lang::ID) -> Option<()> {
@@ -1079,40 +1073,44 @@ impl MutationMaster {
     }
 
     fn insert_code(&self,
-                   node_to_insert: lang::CodeNode,
+                   nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
                    insertion_point: InsertionPoint,
                    genie: &CodeGenie)
                    -> lang::CodeNode {
         match insertion_point {
             InsertionPoint::BeginningOfBlock(block_id) => {
-                self.insertion_expression_in_beginning_of_block(block_id, node_to_insert, genie)
+                self.insertion_expression_in_beginning_of_block(block_id, nodes_to_insert, genie)
             }
             InsertionPoint::Before(id) | InsertionPoint::After(id) => {
                 let parent =
-                    genie.find_parent(id)
-                         .unwrap_or_else(|| {
-                             panic!("unable to insert new code {:?} into {:?}, couldn't find parent to insert into", node_to_insert.id(), insertion_point)
-                         });
-                self.insert_new_expression_in_block(node_to_insert,
+                        genie.find_parent(id)
+                            .unwrap_or_else(|| {
+                                panic!("unable to insert new code into {:?}, couldn't find parent to insert into", insertion_point)
+                            });
+                self.insert_new_expression_in_block(nodes_to_insert,
                                                     insertion_point,
                                                     parent.clone(),
                                                     genie)
             }
             InsertionPoint::StructLiteralField(struct_literal_field_id) => {
-                self.insert_expression_into_struct_literal_field(node_to_insert,
+                self.insert_expression_into_struct_literal_field(nodes_to_insert,
                                                                  struct_literal_field_id,
                                                                  genie)
             }
             InsertionPoint::ListLiteralElement { list_literal_id,
                                                  pos, } => {
-                self.insertion_expression_into_list_literal(node_to_insert,
+                self.insertion_expression_into_list_literal(nodes_to_insert,
                                                             list_literal_id,
                                                             pos,
                                                             genie)
             }
             InsertionPoint::Replace(node_id_to_replace)
             | InsertionPoint::Wrap(node_id_to_replace) => {
-                self.replace_node(node_to_insert, node_id_to_replace, genie)
+                let mut all_nodes = nodes_to_insert.collect_vec();
+                if all_nodes.len() != 1 {
+                    panic!("something weird is going on, trying to replace/wrap more than one node");
+                }
+                self.replace_node(all_nodes.remove(0), node_id_to_replace, genie)
             }
             // TODO: perhaps we should have edits go through this codepath as well!
             InsertionPoint::Editing(_) => panic!("this is currently unused"),
@@ -1120,7 +1118,7 @@ impl MutationMaster {
     }
 
     fn insertion_expression_into_list_literal(&self,
-                                              node_to_insert: lang::CodeNode,
+                                              mut nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
                                               list_literal_id: lang::ID,
                                               pos: usize,
                                               genie: &CodeGenie)
@@ -1129,7 +1127,8 @@ impl MutationMaster {
                                     .unwrap()
                                     .into_list_literal()
                                     .clone();
-        list_literal.elements.insert(pos, node_to_insert);
+        list_literal.elements
+                    .insert(pos, nodes_to_insert.nth(0).unwrap());
         let mut root = genie.root().clone();
         root.replace(lang::CodeNode::ListLiteral(list_literal));
         root
@@ -1146,10 +1145,11 @@ impl MutationMaster {
     }
 
     fn insert_expression_into_struct_literal_field(&self,
-                                                   code_node: lang::CodeNode,
+                                                   mut code_nodes: impl Iterator<Item = lang::CodeNode>,
                                                    struct_literal_field_id: lang::ID,
                                                    genie: &CodeGenie)
                                                    -> lang::CodeNode {
+        let code_node = code_nodes.nth(0).unwrap();
         let mut struct_literal_field = genie.find_node(struct_literal_field_id)
                                             .unwrap()
                                             .into_struct_literal_field()
@@ -1163,7 +1163,7 @@ impl MutationMaster {
 
     fn insertion_expression_in_beginning_of_block(&self,
                                                   block_id: lang::ID,
-                                                  node_to_insert: lang::CodeNode,
+                                                  nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
                                                   genie: &CodeGenie)
                                                   -> lang::CodeNode {
         let mut block = genie.find_node(block_id)
@@ -1171,14 +1171,17 @@ impl MutationMaster {
                              .as_block()
                              .unwrap()
                              .clone();
-        block.expressions.insert(0, node_to_insert);
+
+        for (i, node_to_insert) in nodes_to_insert.enumerate() {
+            block.expressions.insert(i, node_to_insert);
+        }
         let mut root = genie.root().clone();
         root.replace(lang::CodeNode::Block(block));
         root
     }
 
     fn insert_new_expression_in_block(&self,
-                                      code_node: lang::CodeNode,
+                                      nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
                                       insertion_point: InsertionPoint,
                                       parent: lang::CodeNode,
                                       genie: &CodeGenie)
@@ -1194,11 +1197,17 @@ impl MutationMaster {
                 match insertion_point {
                     InsertionPoint::Before(id) => {
                         let insertion_point = get_insertion_point(id);
-                        block.expressions.insert(insertion_point, code_node)
+                        for (i, node_to_insert) in nodes_to_insert.enumerate() {
+                            block.expressions
+                                 .insert(insertion_point + i, node_to_insert);
+                        }
                     }
                     InsertionPoint::After(id) => {
                         let insertion_point = get_insertion_point(id);
-                        block.expressions.insert(insertion_point + 1, code_node)
+                        for (i, node_to_insert) in nodes_to_insert.enumerate() {
+                            block.expressions
+                                 .insert(insertion_point + i + 1, node_to_insert);
+                        }
                     }
                     _ => panic!("bad insertion point type for a block: {:?}",
                                 insertion_point),
@@ -1210,29 +1219,6 @@ impl MutationMaster {
             }
             _ => panic!("should be inserting into type parent, got {:?} instead",
                         parent),
-        }
-    }
-
-    pub fn move_code(&self,
-                     code_genie: &CodeGenie,
-                     node_id: lang::ID,
-                     to: InsertionPoint)
-                     -> MutationResult {
-        let new_cursor_position = Some(node_id);
-        match to {
-            InsertionPoint::Before(id) | InsertionPoint::After(id) if id == node_id => {
-                MutationResult::new(code_genie.code.clone(), new_cursor_position, false)
-            }
-            _ => {
-                let code = code_genie.find_node(node_id).unwrap();
-                let mut result =
-                    self.delete_code(std::iter::once(node_id), code_genie.clone(), None)
-                        .unwrap();
-                result.new_root =
-                    self.insert_code(code.clone(), to, &CodeGenie::new(result.new_root));
-                result.new_cursor_position = new_cursor_position;
-                result
-            }
         }
     }
 

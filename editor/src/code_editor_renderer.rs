@@ -1160,6 +1160,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let insertion_point = InsertionPoint::After(code_node.id());
+        let target_editor_id = self.code_editor.id();
         self.ui_toolkit
             .drag_drop_target(draw_code_with_output_if_present,
                               &|| {
@@ -1168,8 +1169,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                            }])
                               },
                               move |payload: DragDropPayload| {
-                                  cmd_buffer.borrow_mut()
-                                            .handle_drag_drop(payload, insertion_point);
+                                  cmd_buffer.borrow_mut().handle_drag_drop(payload,
+                                                                           insertion_point,
+                                                                           target_editor_id);
                               })
     }
 
@@ -1202,6 +1204,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  -> T::DrawResult {
         // let height = if is_last { 50. } else { 6. };
         let height = 6.;
+        let target_editor_id = self.code_editor.id();
         self.ui_toolkit.draw_with_no_spacing_afterwards(&|| {
             let cmd_buffer = Rc::clone(&self.command_buffer);
             self.ui_toolkit.drag_drop_target(
@@ -1214,12 +1217,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                          &|| self.render_add_code_here_button(insertion_point))
                     },
                     &|| self.ui_toolkit.draw_empty_line(),
-                    move |code_node: CodeNode| {
-                        cmd_buffer.borrow_mut()
-                            .add_editor_command(move |editor| {
-                                editor.move_code(code_node.id(),
-                                                 insertion_point);
-                            })
+                    move |payload: DragDropPayload| {
+                        cmd_buffer.borrow_mut().handle_drag_drop(payload, insertion_point, target_editor_id)
                     },
                 )
             })
@@ -1912,7 +1911,10 @@ impl PerEditorCommandBuffer {
             });
     }
 
-    pub fn handle_drag_drop(&mut self, payload: DragDropPayload, to: InsertionPoint) {
+    pub fn handle_drag_drop(&mut self,
+                            payload: DragDropPayload,
+                            to: InsertionPoint,
+                            target_editor_id: lang::ID) {
         let node_ids = payload.code_nodes
                               .iter()
                               .map(|code| code.id())
@@ -1924,10 +1926,12 @@ impl PerEditorCommandBuffer {
                 editor.delete_node_ids(node_ids.into_iter());
             });
 
-        self.add_editor_command(move |editor| {
-                let code_node = payload.code_nodes.first().unwrap();
-                editor.move_code(code_node.id(), to);
-            })
+        // insert into target
+        self.actual_command_buffer
+            .borrow_mut()
+            .add_editor_command(target_editor_id, move |editor| {
+                editor.insert_code(payload.code_nodes.into_iter(), to);
+            });
     }
 
     pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self, f: F) {
