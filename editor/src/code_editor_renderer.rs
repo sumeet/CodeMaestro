@@ -17,6 +17,7 @@ use crate::code_rendering::{
 };
 use crate::colorscheme;
 use crate::draw_all_iter;
+use crate::editor::drag_drop::DragDropPayload;
 use crate::editor::value_renderer::ValueRenderer;
 use crate::editor::{CommandBuffer, Keypress};
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
@@ -1166,13 +1167,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                self.ui_toolkit.draw_empty_line()
                                                            }])
                               },
-                              move |code_nodes: Vec<CodeNode>| {
-                                  cmd_buffer.borrow_mut().add_editor_command(move |editor| {
-                                                             let code_node =
-                                                                 code_nodes.first().unwrap();
-                                                             editor.move_code(code_node.id(),
-                                                                              insertion_point);
-                                                         })
+                              move |payload: DragDropPayload| {
+                                  cmd_buffer.borrow_mut()
+                                            .handle_drag_drop(payload, insertion_point);
                               })
     }
 
@@ -1841,6 +1838,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let code_to_drag_drop = self.code_to_drag_drop(code_node_id)
                                     .cloned()
                                     .collect::<Vec<_>>();
+        let drag_drop_payload = DragDropPayload::new(self.code_editor.id(), code_to_drag_drop);
 
         self.ui_toolkit.drag_drop_source(
                                          code_node_id,
@@ -1864,7 +1862,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                 }))
                                          },
                                          // TODO: everything that's selected
-                                         code_to_drag_drop,
+                                         drag_drop_payload,
         )
     }
 
@@ -1912,6 +1910,13 @@ impl PerEditorCommandBuffer {
                                 .dedup_children(overlapped_code_node_ids.iter().cloned());
                 editor.selected_node_ids = ids;
             });
+    }
+
+    pub fn handle_drag_drop(&mut self, payload: DragDropPayload, to: InsertionPoint) {
+        self.add_editor_command(move |editor| {
+                let code_node = payload.code_nodes.first().unwrap();
+                editor.move_code(code_node.id(), to);
+            })
     }
 
     pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self, f: F) {

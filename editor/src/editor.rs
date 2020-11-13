@@ -53,6 +53,7 @@ use cs::structs;
 use cs::tests;
 use cs::{await_eval_result, EnvGenie};
 
+pub mod drag_drop;
 pub mod value_renderer;
 use crate::code_editor::CodeLocation;
 use crate::code_editor_renderer::BLACK_COLOR;
