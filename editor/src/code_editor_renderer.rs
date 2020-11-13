@@ -9,6 +9,7 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
+use crate::code_editor::CodeLocation;
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
@@ -60,7 +61,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                command_buffer: Rc<RefCell<editor::CommandBuffer>>,
                env_genie: &'a EnvGenie)
                -> Self {
-        let command_buffer = PerEditorCommandBuffer::new(command_buffer, code_editor.id());
+        let command_buffer = PerEditorCommandBuffer::new(command_buffer, code_editor.location);
         Self { ui_toolkit,
                code_editor,
                command_buffer: Rc::new(RefCell::new(command_buffer)),
@@ -1889,15 +1890,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 struct PerEditorCommandBuffer {
     overlapped_code_node_ids: Vec<lang::ID>,
     actual_command_buffer: Rc<RefCell<editor::CommandBuffer>>,
-    editor_id: lang::ID,
+    code_location: Option<CodeLocation>,
 }
 
 impl PerEditorCommandBuffer {
     pub fn new(actual_command_buffer: Rc<RefCell<editor::CommandBuffer>>,
-               editor_id: lang::ID)
+               code_location: Option<CodeLocation>)
                -> Self {
         Self { actual_command_buffer,
-               editor_id,
+               code_location,
                overlapped_code_node_ids: vec![] }
     }
 
@@ -1915,11 +1916,11 @@ impl PerEditorCommandBuffer {
     }
 
     pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self, f: F) {
-        let editor_id = self.editor_id;
+        let code_location = self.code_location.unwrap();
         self.actual_command_buffer
             .borrow_mut()
             .add_controller_command(move |controller| {
-                controller.get_editor_mut(editor_id).map(f);
+                controller.get_editor_mut(&code_location).map(f);
             });
 
         // update the function that the code being edited belongs to
@@ -1928,7 +1929,7 @@ impl PerEditorCommandBuffer {
             .add_integrating_command(move |cont, interpreter, _, _| {
                 let mut env = interpreter.env.borrow_mut();
 
-                let editor = cont.get_editor_mut(editor_id).unwrap();
+                let editor = cont.get_editor_mut(&code_location).unwrap();
                 let code = editor.get_code().clone();
                 code_editor::update_code_in_env(editor.location.unwrap(), code, cont, &mut env)
             });

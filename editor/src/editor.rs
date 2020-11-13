@@ -117,7 +117,7 @@ pub struct Controller {
     test_by_id: HashMap<ID, tests::Test>,
     // this is purely ephemeral GUI state for display only:
     selected_test_id_by_subject: HashMap<tests::TestSubject, ID>,
-    code_editor_by_id: HashMap<ID, code_editor::CodeEditor>,
+    code_editor_by_location: HashMap<CodeLocation, code_editor::CodeEditor>,
     test_result_by_func_id: HashMap<ID, TestResult>,
     json_client_builder_by_func_id: HashMap<ID, JSONHTTPClientBuilder>,
     // a record of the builtins kept here so we know which things are builtins
@@ -133,7 +133,7 @@ pub struct Controller {
 impl<'a> Controller {
     pub fn new(builtins: builtins::Builtins) -> Controller {
         Controller { test_result_by_func_id: HashMap::new(),
-                     code_editor_by_id: HashMap::new(),
+                     code_editor_by_location: HashMap::new(),
                      script_by_id: HashMap::new(),
                      test_by_id: HashMap::new(),
                      selected_test_id_by_subject: HashMap::new(),
@@ -177,7 +177,7 @@ impl<'a> Controller {
     }
 
     fn save_state(&self) {
-        let open_code_editors = self.code_editor_by_id
+        let open_code_editors = self.code_editor_by_location
                                     .values()
                                     .map(|editor| editor.location.unwrap())
                                     .collect_vec();
@@ -243,12 +243,14 @@ impl<'a> Controller {
         self.test_by_id.get(&test_id)
     }
 
-    pub fn get_editor_mut(&mut self, id: lang::ID) -> Option<&mut code_editor::CodeEditor> {
-        self.code_editor_by_id.get_mut(&id)
+    pub fn get_editor_mut(&mut self,
+                          location: &CodeLocation)
+                          -> Option<&mut code_editor::CodeEditor> {
+        self.code_editor_by_location.get_mut(&location)
     }
 
-    pub fn get_editor(&self, id: lang::ID) -> Option<&code_editor::CodeEditor> {
-        self.code_editor_by_id.get(&id)
+    pub fn get_editor(&self, location: &CodeLocation) -> Option<&code_editor::CodeEditor> {
+        self.code_editor_by_location.get(location)
     }
 
     fn get_test_result(&self, func: &dyn lang::Function) -> String {
@@ -282,11 +284,11 @@ impl<'a> Controller {
 
     pub fn load_code(&mut self, code_node: CodeNode, location: code_editor::CodeLocation) {
         let id = code_node.id();
-        if !self.code_editor_by_id.contains_key(&id) {
-            self.code_editor_by_id
-                .insert(id, code_editor::CodeEditor::new(code_node, location));
+        if !self.code_editor_by_location.contains_key(&location) {
+            self.code_editor_by_location
+                .insert(location, code_editor::CodeEditor::new(code_node, location));
         } else {
-            let code_editor = self.code_editor_by_id.get_mut(&id).unwrap();
+            let code_editor = self.code_editor_by_location.get_mut(&location).unwrap();
             code_editor.replace_code(code_node);
         }
     }
@@ -1063,7 +1065,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                            },
                                                                            || {})
                             },
-                            &|| self.render_code(script.id())
+                            &|| self.render_code(CodeLocation::Script(script.id()))
                         ])
                     }, &|| {
                         self.ui_toolkit.draw_all_on_same_line(&[
@@ -2362,7 +2364,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     //        None::<fn()>)
     //    }
 
-    fn render_code(&self, code_id: lang::ID) -> T::DrawResult {
+    fn render_code(&self, location: CodeLocation) -> T::DrawResult {
         let code_editor = self.controller.get_editor(code_id).unwrap();
         let height = match code_editor.location {
             Some(CodeLocation::JSONHTTPClientURL(_))
