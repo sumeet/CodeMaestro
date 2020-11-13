@@ -1157,7 +1157,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             }
         };
 
-        // return draw_code_with_output_if_present();
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let insertion_point = InsertionPoint::After(code_node.id());
         self.ui_toolkit
