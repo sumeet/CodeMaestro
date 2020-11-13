@@ -534,6 +534,23 @@ impl CommandBuffer {
         self.controller_commands.push(Box::new(f));
     }
 
+    pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self,
+                                                                                 editor_id: lang::ID,
+                                                                                 f: F) {
+        self.add_controller_command(move |controller| {
+                controller.get_editor_mut(editor_id).map(f);
+            });
+
+        // update the function that the code being edited belongs to
+        self.add_integrating_command(move |cont, interpreter, _, _| {
+                let mut env = interpreter.env.borrow_mut();
+
+                let editor = cont.get_editor_mut(editor_id).unwrap();
+                let code = editor.get_code().clone();
+                code_editor::update_code_in_env(editor.location.unwrap(), code, cont, &mut env)
+            });
+    }
+
     pub fn flush_to_controller(&mut self, controller: &mut Controller) {
         for command in self.controller_commands.drain(..) {
             command(controller)

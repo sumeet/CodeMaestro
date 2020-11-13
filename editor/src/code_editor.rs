@@ -46,7 +46,7 @@ pub enum CodeLocation {
 
 impl CodeEditor {
     pub fn for_insert_code_preview(&self,
-                                   new_node: &lang::CodeNode,
+                                   new_node: lang::CodeNode,
                                    insertion_point: InsertionPoint)
                                    -> Self {
         let mut new_editor = Self { code_genie: self.code_genie.clone(),
@@ -404,9 +404,9 @@ impl CodeEditor {
         }
     }
 
-    pub fn insert_code(&mut self, code_node: &CodeNode, insertion_point: InsertionPoint) {
+    pub fn insert_code(&mut self, code_node: CodeNode, insertion_point: InsertionPoint) {
         let new_root = self.mutation_master
-                           .insert_code(&code_node, insertion_point, &self.code_genie);
+                           .insert_code(code_node, insertion_point, &self.code_genie);
         self.replace_code(new_root);
     }
 
@@ -415,7 +415,7 @@ impl CodeEditor {
     pub fn insert_code_and_set_where_cursor_ends_up_next(&mut self,
                                                          code_node: CodeNode,
                                                          insertion_point: InsertionPoint) {
-        self.insert_code(&code_node, insertion_point);
+        self.insert_code(code_node.clone(), insertion_point);
         match post_insertion_cursor(&code_node, &self.code_genie) {
             PostInsertionAction::SelectNode(id) => {
                 self.set_selected_node_id(Some(id));
@@ -1079,11 +1079,10 @@ impl MutationMaster {
     }
 
     fn insert_code(&self,
-                   node_to_insert: &lang::CodeNode,
+                   node_to_insert: lang::CodeNode,
                    insertion_point: InsertionPoint,
                    genie: &CodeGenie)
                    -> lang::CodeNode {
-        let node_to_insert = node_to_insert.clone();
         match insertion_point {
             InsertionPoint::BeginningOfBlock(block_id) => {
                 self.insertion_expression_in_beginning_of_block(block_id, node_to_insert, genie)
@@ -1229,7 +1228,8 @@ impl MutationMaster {
                 let mut result =
                     self.delete_code(std::iter::once(node_id), code_genie.clone(), None)
                         .unwrap();
-                result.new_root = self.insert_code(code, to, &CodeGenie::new(result.new_root));
+                result.new_root =
+                    self.insert_code(code.clone(), to, &CodeGenie::new(result.new_root));
                 result.new_cursor_position = new_cursor_position;
                 result
             }

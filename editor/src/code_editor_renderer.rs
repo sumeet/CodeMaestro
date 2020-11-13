@@ -577,7 +577,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                               insertion_point: InsertionPoint)
                                               -> T::DrawResult {
         let new_editor = self.code_editor
-                             .for_insert_code_preview(&new_node, insertion_point);
+                             .for_insert_code_preview(new_node.clone(), insertion_point);
         let command_buffer_that_does_nothing = Rc::new(RefCell::new(CommandBuffer::new()));
         let new_renderer = CodeEditorRenderer::new(self.ui_toolkit,
                                                    &new_editor,
@@ -1913,6 +1913,17 @@ impl PerEditorCommandBuffer {
     }
 
     pub fn handle_drag_drop(&mut self, payload: DragDropPayload, to: InsertionPoint) {
+        let node_ids = payload.code_nodes
+                              .iter()
+                              .map(|code| code.id())
+                              .collect_vec();
+        // delete code from source
+        self.actual_command_buffer
+            .borrow_mut()
+            .add_editor_command(payload.from_code_editor_id, move |editor| {
+                editor.delete_node_ids(node_ids.into_iter());
+            });
+
         self.add_editor_command(move |editor| {
                 let code_node = payload.code_nodes.first().unwrap();
                 editor.move_code(code_node.id(), to);
@@ -1920,22 +1931,8 @@ impl PerEditorCommandBuffer {
     }
 
     pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self, f: F) {
-        let editor_id = self.editor_id;
         self.actual_command_buffer
             .borrow_mut()
-            .add_controller_command(move |controller| {
-                controller.get_editor_mut(editor_id).map(f);
-            });
-
-        // update the function that the code being edited belongs to
-        self.actual_command_buffer
-            .borrow_mut()
-            .add_integrating_command(move |cont, interpreter, _, _| {
-                let mut env = interpreter.env.borrow_mut();
-
-                let editor = cont.get_editor_mut(editor_id).unwrap();
-                let code = editor.get_code().clone();
-                code_editor::update_code_in_env(editor.location.unwrap(), code, cont, &mut env)
-            });
+            .add_editor_command(self.editor_id, f);
     }
 }
