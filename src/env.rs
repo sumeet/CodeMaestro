@@ -45,7 +45,7 @@ impl Interpreter {
         self.locals.get(&id)
     }
 
-    pub fn with_env(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
+    pub fn with_env_and_new_locals(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
         Self { env,
                locals: HashMap::new() }
     }
@@ -321,12 +321,12 @@ impl Interpreter {
     }
 
     pub fn new_stack_frame(&self) -> Self {
-        Self::with_env(Rc::clone(&self.env))
+        Self::with_env_and_new_locals(Rc::clone(&self.env))
     }
 
     pub fn deep_clone_env(&self) -> Self {
         let env = self.env.as_ref();
-        Self::with_env(Rc::new(RefCell::new(env.borrow().clone())))
+        Self::with_env_and_new_locals(Rc::new(RefCell::new(env.borrow().clone())))
     }
 }
 

@@ -169,8 +169,6 @@ use futures_util::FutureExt;
 use std::collections::BTreeMap;
 use std::pin::Pin;
 
-// pub type ValueFuture = Shared<Pin<Box<dyn Future<Output = Value>>>>;
-
 #[derive(Clone, Debug)]
 pub struct ValueFuture(pub Shared<Pin<Box<dyn Future<Output = Value>>>>);
 
