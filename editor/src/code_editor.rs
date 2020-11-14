@@ -1080,7 +1080,7 @@ impl MutationMaster {
                    -> lang::CodeNode {
         match insertion_point {
             InsertionPoint::BeginningOfBlock(block_id) => {
-                self.insertion_expression_in_beginning_of_block(block_id, nodes_to_insert, genie)
+                self.insert_expression_in_beginning_of_block(block_id, nodes_to_insert, genie)
             }
             InsertionPoint::Before(id) | InsertionPoint::After(id) => {
                 let parent =
@@ -1162,11 +1162,11 @@ impl MutationMaster {
         root
     }
 
-    fn insertion_expression_in_beginning_of_block(&self,
-                                                  block_id: lang::ID,
-                                                  nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
-                                                  genie: &CodeGenie)
-                                                  -> lang::CodeNode {
+    fn insert_expression_in_beginning_of_block(&self,
+                                               block_id: lang::ID,
+                                               nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
+                                               genie: &CodeGenie)
+                                               -> lang::CodeNode {
         let mut block = genie.find_node(block_id)
                              .unwrap()
                              .as_block()
