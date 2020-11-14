@@ -299,7 +299,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                         let new_code_node = new_code_node.clone();
                                                         cmdb.add_editor_command(move |editor| {
                             editor.hide_insert_code_menu();
-                            editor.insert_code_and_set_where_cursor_ends_up_next(new_code_node.clone(),
+                            editor.insert_code_and_set_where_cursor_ends_up_next(vec![new_code_node.clone()],
                                                                                  insertion_point);
                         });
                                                     } else {
@@ -559,7 +559,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                           let ncn = new_code_node.clone();
                                           cmdb.borrow_mut().add_editor_command(move |editor| {
                                                                editor.hide_insert_code_menu();
-                                                               editor.insert_code_and_set_where_cursor_ends_up_next(ncn.clone(),
+                                                               editor.insert_code_and_set_where_cursor_ends_up_next(vec![ncn.clone()],
                                                                                                                     insertion_point);
                                                            });
                                       },
@@ -1930,7 +1930,7 @@ impl PerEditorCommandBuffer {
         self.actual_command_buffer
             .borrow_mut()
             .add_editor_command(target_editor_id, move |editor| {
-                editor.insert_code(payload.code_nodes.into_iter(), to);
+                editor.insert_code_and_set_where_cursor_ends_up_next(payload.code_nodes, to);
             });
     }
 

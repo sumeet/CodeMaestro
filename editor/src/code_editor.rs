@@ -415,10 +415,11 @@ impl CodeEditor {
     // TODO: return a result instead of returning nothing? it seems like there might be places this
     // thing can error
     pub fn insert_code_and_set_where_cursor_ends_up_next(&mut self,
-                                                         code_node: CodeNode,
+                                                         code_nodes: Vec<CodeNode>,
                                                          insertion_point: InsertionPoint) {
-        self.insert_code(std::iter::once(code_node.clone()), insertion_point);
-        match post_insertion_cursor(&code_node, &self.code_genie) {
+        let last_node = code_nodes.last().unwrap().clone();
+        self.insert_code(code_nodes.into_iter(), insertion_point);
+        match post_insertion_cursor(&last_node, &self.code_genie) {
             PostInsertionAction::SelectNode(id) => {
                 self.set_selected_node_id(Some(id));
             }
