@@ -150,6 +150,16 @@ impl Interpreter {
                     }
                 })
             }
+            CodeNode::WhileLoop(while_loop) => {
+                let condition_fut = self.evaluate(while_loop.condition.as_ref());
+                let body_fut = self.evaluate(while_loop.body.as_ref());
+                Box::pin(async move {
+                    while await_eval_result!(condition_fut).as_boolean().unwrap() {
+                        await_eval_result!(body_fut);
+                    }
+                    lang::Value::Null
+                })
+            }
             lang::CodeNode::Match(mut mach) => {
                 let match_exp_fut = self.evaluate(&mach.match_expression);
 

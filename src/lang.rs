@@ -154,6 +154,7 @@ pub enum CodeNode {
     StructLiteral(StructLiteral),
     StructLiteralField(StructLiteralField),
     Conditional(Conditional),
+    WhileLoop(WhileLoop),
     Match(Match),
     ListLiteral(ListLiteral),
     StructFieldGet(StructFieldGet),
@@ -576,6 +577,7 @@ impl CodeNode {
             CodeNode::ReassignListIndex(reassign_list_index) => {
                 format!("Reassign List Index: {:?}", reassign_list_index.id)
             }
+            CodeNode::WhileLoop(while_loop) => format!("While loop: {:?}", while_loop.id),
         }
     }
 
@@ -603,6 +605,7 @@ impl CodeNode {
             CodeNode::ListIndex(list_index) => list_index.id,
             CodeNode::AnonymousFunction(anon_func) => anon_func.id,
             CodeNode::ReassignListIndex(rli) => rli.id,
+            CodeNode::WhileLoop(while_loop) => while_loop.id,
         }
     }
 
@@ -684,6 +687,13 @@ impl CodeNode {
                     )
                 )
             }
+            CodeNode::WhileLoop(while_loop) => {
+                Box::new(
+                    std::iter::once(while_loop.condition.as_ref()).chain(
+                        std::iter::once(while_loop.body.as_ref())
+                    )
+                )
+            }
         }
     }
 
@@ -740,6 +750,8 @@ impl CodeNode {
             CodeNode::ReassignListIndex(rli) => {
                 vec![rli.index_expr.borrow_mut(), rli.set_to_expr.borrow_mut()]
             }
+            CodeNode::WhileLoop(while_loop) => vec![while_loop.condition.borrow_mut(),
+                                                    while_loop.body.borrow_mut()],
         }
     }
 
@@ -966,6 +978,15 @@ pub struct Conditional {
     pub true_branch: Box<CodeNode>,
     // this'll be a block
     pub else_branch: Option<Box<CodeNode>>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct WhileLoop {
+    pub id: ID,
+    // this can be any expression returning a boolean
+    pub condition: Box<CodeNode>,
+    // this'll be a block
+    pub body: Box<CodeNode>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
