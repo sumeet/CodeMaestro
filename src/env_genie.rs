@@ -172,8 +172,7 @@ impl<'a> EnvGenie<'a> {
     }
 
     pub fn find_enum(&self, enum_id: lang::ID) -> Option<&enums::Enum> {
-        self.find_typespec(enum_id)
-            .and_then(|ts| ts.downcast_ref::<enums::Enum>())
+        self.env.find_enum(enum_id)
     }
 
     pub fn all_functions(&self) -> impl Iterator<Item = &Box<dyn lang::Function>> {

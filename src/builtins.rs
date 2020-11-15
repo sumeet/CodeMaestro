@@ -737,13 +737,19 @@ impl lang::Function for Equals {
         uuid::Uuid::parse_str("7809f2da-0ae1-4181-8fd9-b72b27fe7aa4").unwrap()
     }
 
+    fn defines_generics(&self) -> Vec<lang::AnyTypeSpec2> {
+        vec![lang::AnyTypeSpec2::new(uuid::Uuid::parse_str("98928b40-5aff-48df-ba9e-6871fd8c81a0").unwrap())]
+    }
+
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let generic = self.defines_generics().pop().unwrap();
+
         vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("c5effe9a-e4e9-4c58-ba35-73b59e8b3368").unwrap(),
-                                                   lang::Type::with_params(&*lang::ANY_TYPESPEC,
+                                                   lang::Type::with_params(&generic,
                                                                            vec![]),
                                                    "LHS".into()),
              lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("fe065a78-e84f-4365-8e3f-06331f8f2241").unwrap(),
-                                                   lang::Type::with_params(&*lang::ANY_TYPESPEC,
+                                                   lang::Type::with_params(&generic,
                                                                            vec![]),
                                                    "RHS".into())
         ]

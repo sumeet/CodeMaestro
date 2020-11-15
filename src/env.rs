@@ -367,10 +367,18 @@ impl ExecutionEnvironment {
     }
 
     pub fn add_function(&mut self, function: impl lang::Function + 'static) {
+        for generic in function.defines_generics() {
+            self.add_typespec(generic)
+        }
+
         self.functions.insert(function.id(), Box::new(function));
     }
 
     pub fn add_function_box(&mut self, function: Box<dyn lang::Function>) {
+        for generic in function.defines_generics() {
+            self.add_typespec(generic)
+        }
+
         self.functions.insert(function.id(), function);
     }
 

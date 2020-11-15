@@ -79,7 +79,47 @@ lazy_static! {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct AnyTypeSpec;
+pub struct AnyTypeSpec2 {
+    id: ID,
+    // resolved_param: Option<Type>,
+}
+
+impl AnyTypeSpec2 {
+    pub fn new(id: ID) -> Self {
+        Self { id }
+        // resolved_param: None }
+    }
+}
+
+#[typetag::serde()]
+impl TypeSpec for AnyTypeSpec2 {
+    fn readable_name(&self) -> &str {
+        "Any Type 2"
+    }
+
+    fn description(&self) -> &str {
+        "Any type can be used here 2"
+    }
+
+    fn id(&self) -> ID {
+        self.id
+    }
+
+    fn symbol(&self) -> &str {
+        "\u{f12a}"
+    }
+
+    fn num_params(&self) -> usize {
+        return 0;
+    }
+
+    fn matches(&self, _: ID) -> bool {
+        return true;
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct AnyTypeSpec {}
 
 #[typetag::serde()]
 impl TypeSpec for AnyTypeSpec {
@@ -121,6 +161,9 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     }
     fn cs_code(&self) -> Box<dyn Iterator<Item = &Block> + '_> {
         Box::new(std::iter::empty())
+    }
+    fn defines_generics(&self) -> Vec<AnyTypeSpec2> {
+        vec![]
     }
 }
 
