@@ -26,6 +26,7 @@ lazy_static! {
         Box::new(InsertStructFieldGetOfLocal {}),
         Box::new(InsertFunctionOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
+        Box::new(InsertWhileOptionGenerator {}),
         Box::new(InsertMatchOptionGenerator {}),
         Box::new(InsertAssignmentOptionGenerator {}),
         Box::new(InsertReassignmentOptionGenerator {}),
@@ -728,6 +729,47 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
         let search_str = search_params.lowercased_trimmed_search_str();
         if "if".contains(&search_str) || "conditional".contains(&search_str) {
             options.push(Self::generate_option(search_params))
+        }
+        options
+    }
+}
+
+#[derive(Clone)]
+struct InsertWhileOptionGenerator {}
+
+impl InsertWhileOptionGenerator {
+    fn generate_option() -> InsertCodeMenuOption {
+        InsertCodeMenuOption { sort_key: "while".to_string(),
+                               group_name: CONTROL_FLOW_GROUP,
+                               is_selected: false,
+                               new_node: code_generation::new_while_loop() }
+    }
+}
+
+impl InsertCodeMenuOptionGenerator for InsertWhileOptionGenerator {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               _env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
+            return vec![];
+        }
+
+        if let Some(wraps_type) = search_params.wraps_type.as_ref() {
+            // if wrapping a boolean, then we should suggest creating a conditional.
+            if wraps_type.matches_spec(&*lang::BOOLEAN_TYPESPEC) {
+                return vec![Self::generate_option()];
+            // otherwise we shouldn't pop up in the suggestions
+            } else {
+                return vec![];
+            }
+        }
+
+        let mut options = vec![];
+        let search_str = search_params.lowercased_trimmed_search_str();
+        if "while".contains(&search_str) {
+            options.push(Self::generate_option())
         }
         options
     }

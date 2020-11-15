@@ -226,6 +226,7 @@ fn map_key(key: VirtualKeyCode) -> Option<AppKey> {
         VirtualKeyCode::O => Some(AppKey::O),
         VirtualKeyCode::U => Some(AppKey::U),
         VirtualKeyCode::V => Some(AppKey::V),
+        VirtualKeyCode::Delete => Some(AppKey::Delete),
         VirtualKeyCode::Return => Some(AppKey::Enter),
         VirtualKeyCode::Escape => Some(AppKey::Escape),
         VirtualKeyCode::Tab => Some(AppKey::Tab),

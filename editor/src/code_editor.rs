@@ -108,7 +108,7 @@ impl CodeEditor {
                     }
                 }
             }
-            (false, Key::D, false, false) => {
+            (false, Key::D, false, false) | (_, Key::Delete, _, _) => {
                 println!("deleting selected code via hotkey");
                 self.delete_selected_code();
             }
@@ -272,7 +272,8 @@ impl CodeEditor {
             | CodeNode::NumberLiteral(_)
             | CodeNode::ListIndex(_)
             | CodeNode::Reassignment(_)
-            | CodeNode::ReassignListIndex(_) => false,
+            | CodeNode::ReassignListIndex(_)
+            | CodeNode::WhileLoop(_) => false,
         }
     }
 
@@ -297,7 +298,8 @@ impl CodeEditor {
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
             | CodeNode::ReassignListIndex(_)
-            | CodeNode::ListIndex(_) => unimplemented!(),
+            | CodeNode::ListIndex(_)
+            | CodeNode::WhileLoop(_) => unimplemented!(),
         }
     }
 
@@ -313,7 +315,8 @@ impl CodeEditor {
             | lang::CodeNode::ListLiteral(_)
             | lang::CodeNode::ListIndex(_)
             | lang::CodeNode::ReassignListIndex(_)
-            | lang::CodeNode::Conditional(_) => Some(InsertionPoint::Replace(node_id)),
+            | lang::CodeNode::Conditional(_)
+            | lang::CodeNode::WhileLoop(_) => Some(InsertionPoint::Replace(node_id)),
             otherwise => {
                 println!("tried to replace node with parent {:?}", otherwise);
                 None
@@ -744,6 +747,7 @@ impl CodeGenie {
                 Ok(new_result(lang::Type::from_spec(&*lang::NULL_TYPESPEC),
                               lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)))
             }
+            CodeNode::WhileLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
         }
     }
 

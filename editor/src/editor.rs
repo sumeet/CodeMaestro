@@ -92,6 +92,7 @@ pub enum Key {
     O,
     U,
     V,
+    Delete,
     Tab,
     Enter,
     Escape,

@@ -26,28 +26,28 @@ macro_rules! await_eval_result {
 #[derive(Clone)]
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
-    pub locals: HashMap<lang::ID, lang::Value>,
+    pub locals: Rc<RefCell<HashMap<lang::ID, lang::Value>>>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
         Self { env: Rc::new(RefCell::new(ExecutionEnvironment::new())),
-               locals: HashMap::new() }
+               locals: Rc::new(RefCell::new(HashMap::new())) }
     }
 
     // TODO: instead of setting local variables directly on `env`, set them on a per-interp `locals`
     // object... i think. keep this here like this until we have one
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
-        self.locals.insert(id, value);
+        self.locals.borrow_mut().insert(id, value);
     }
 
-    pub fn get_local_variable(&self, id: lang::ID) -> Option<&lang::Value> {
-        self.locals.get(&id)
+    pub fn get_local_variable(&self, id: lang::ID) -> Option<lang::Value> {
+        self.locals.borrow().get(&id).cloned()
     }
 
     pub fn with_env_and_new_locals(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
         Self { env,
-               locals: HashMap::new() }
+               locals: Rc::new(RefCell::new(HashMap::new())) }
     }
 
     pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {
@@ -101,7 +101,6 @@ impl Interpreter {
             }
             lang::CodeNode::VariableReference(variable_reference) => {
                 let var = self.get_local_variable(variable_reference.assignment_id)
-                              .cloned()
                               .unwrap();
                 Box::pin(async move { var })
             }
@@ -151,11 +150,12 @@ impl Interpreter {
                 })
             }
             CodeNode::WhileLoop(while_loop) => {
-                let condition_fut = self.evaluate(while_loop.condition.as_ref());
-                let body_fut = self.evaluate(while_loop.body.as_ref());
+                let mut interp = self.clone();
                 Box::pin(async move {
-                    while await_eval_result!(condition_fut).as_boolean().unwrap() {
-                        await_eval_result!(body_fut);
+                    while await_eval_result!(interp.evaluate(&while_loop.condition)).as_boolean()
+                                                                                    .unwrap()
+                    {
+                        await_eval_result!(interp.evaluate(&while_loop.body));
                     }
                     lang::Value::Null
                 })
@@ -226,8 +226,7 @@ impl Interpreter {
             CodeNode::ReassignListIndex(rli) => {
                 let index_fut = self.evaluate(rli.index_expr.as_ref());
                 let set_to_val_fut = self.evaluate(rli.set_to_expr.as_ref());
-                let mut current_local_var =
-                    self.get_local_variable(rli.assignment_id).cloned().unwrap();
+                let mut current_local_var = self.get_local_variable(rli.assignment_id).unwrap();
                 let current_local_var2 = current_local_var.clone();
 
                 let index_fut = lang::Value::new_future(index_fut).clone();

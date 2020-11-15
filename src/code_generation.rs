@@ -119,6 +119,20 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
     })
 }
 
+pub fn new_while_loop() -> lang::CodeNode {
+    let null_type = lang::Type::from_spec(&*lang::NULL_TYPESPEC);
+    let block = new_block(vec![new_placeholder("While loop body".to_string(), null_type)]);
+
+    lang::CodeNode::WhileLoop(lang::WhileLoop {
+        id: lang::new_id(),
+        condition: Box::new(new_placeholder(
+            "Condition".to_string(),
+            lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC),
+        )),
+        body: Box::new(lang::CodeNode::Block(block)),
+    })
+}
+
 pub fn new_block(inside_block: Vec<lang::CodeNode>) -> lang::Block {
     let mut block = lang::Block::new();
     block.expressions = inside_block;

@@ -1519,6 +1519,7 @@ fn map_key(key: &str) -> Option<AppKey> {
         "arrowdown" => Some(AppKey::DownArrow),
         "enter" | "return" => Some(AppKey::Enter),
         "esc" | "escape" => Some(AppKey::Escape),
+        "delete" => Some(AppKey::Delete),
         _ => None,
     }
 }

@@ -736,6 +736,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::ReassignListIndex(_) => {
                 Some("Change one element in a list".into())
             }
+            CodeNode::WhileLoop(_) => {
+                Some("Run code again and again until the condition is false".into())
+            }
         }
     }
 
@@ -795,6 +798,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::StructFieldGet(sfg) => self.render_struct_field_get(&sfg),
                 CodeNode::ListIndex(list_index) => self.render_list_index(&list_index),
                 CodeNode::AnonymousFunction(anon_func) => self.render_anonymous_function(anon_func),
+                CodeNode::WhileLoop(while_loop) => self.render_while_loop(while_loop),
             }
         };
 
@@ -854,6 +858,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::StructLiteral(_)
             | CodeNode::StructLiteralField(_)
             | CodeNode::Conditional(_)
+            | CodeNode::WhileLoop(_)
             | CodeNode::Match(_)
             | CodeNode::ListLiteral(_)
             | CodeNode::StructFieldGet(_)
@@ -1535,11 +1540,23 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         ])
     }
 
+    fn render_while_loop(&self, while_loop: &lang::WhileLoop) -> T::DrawResult {
+        self.ui_toolkit.draw_all(&[
+            &|| {
+                self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.draw_button("While", colorscheme!(action_color), &|| {}),
+                    &|| self.render_code(&while_loop.condition),
+                ])
+            },
+            &|| self.render_indented(&|| self.render_code(&while_loop.body)),
+        ])
+    }
+
     fn render_match(&self, mach: &lang::Match) -> T::DrawResult {
         self.ui_toolkit.draw_all(&[
             &|| {
                 self.ui_toolkit.draw_all_on_same_line(&[&|| {
-                                                            self.draw_button("Match",
+                    self.draw_button("Match",
                                                                              colorscheme!(action_color),
                                                                              &|| {})
                                                         },
