@@ -87,14 +87,11 @@ impl Interpreter {
             // it exists, check out futures_ordered. will have to do a little bit of hacking to get
             // it to work with async / await i believe
             lang::CodeNode::Block(block) => {
-                let futures = block.expressions
-                                   .iter()
-                                   .map(|exp| self.evaluate(exp))
-                                   .collect_vec();
+                let mut interp = self.clone();
                 Box::pin(async move {
                     let mut return_value = lang::Value::Null;
-                    for future in futures.into_iter() {
-                        return_value = await_eval_result!(future);
+                    for exp in block.expressions {
+                        return_value = await_eval_result!(interp.evaluate(&exp));
                     }
                     return_value
                 })

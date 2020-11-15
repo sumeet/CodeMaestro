@@ -1613,7 +1613,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                    evl: &lang::EnumVariantLiteral,
                                    typ: &lang::Type)
                                    -> T::DrawResult {
-        let enum_variant = self.env_genie.find_enum_variant(evl.variant_id).unwrap();
+        let (_, enum_variant) = self.env_genie.find_enum_variant(evl.variant_id).unwrap();
         self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                     render_enum_variant_identifier(self.ui_toolkit,
                                                                                    self.env_genie,

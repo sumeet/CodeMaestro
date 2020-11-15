@@ -62,11 +62,10 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
     fn render_enum(&self, variant_id: &lang::ID, value: &lang::Value) -> T::DrawResult {
         // TODO: perhaps share this later with the enum literal code (no enum literal yet)
         self.ui_toolkit.draw_all_on_same_line(&[&|| {
-                                                    let enum_variant =
+                                                    let (_, enum_variant) =
                                                         self.env_genie
                                                             .find_enum_variant(*variant_id)
                                                             .unwrap();
-                                                    // TODO: how to get a type for the value???
                                                     let typ =
                                                         self.env_genie.guess_type_of_value(value);
                                                     render_enum_variant_identifier(self.ui_toolkit,

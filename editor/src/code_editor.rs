@@ -751,12 +751,12 @@ impl CodeGenie {
             }
             CodeNode::WhileLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::EnumVariantLiteral(evl) => {
-                env_genie.find_enum_variant(evl.variant_id)
-                         .unwrap()
-                         .variant_type
-                         .clone()
-                         .ok_or("unable to find enum")
-                         .and_then(|_| self.guess_type(evl.variant_value_expr.as_ref(), env_genie))
+                let (eneom, variant) = env_genie.find_enum_variant(evl.variant_id).unwrap();
+                unimplemented!()
+                // .variant_type
+                // .clone()
+                // .ok_or("unable to find enum")
+                // .and_then(|_| self.guess_type(evl.variant_value_expr.as_ref(), env_genie))
             }
         }
     }

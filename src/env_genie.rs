@@ -158,11 +158,13 @@ impl<'a> EnvGenie<'a> {
             .filter_map(|ts| ts.as_ref().downcast_ref::<enums::Enum>())
     }
 
-    pub fn find_enum_variant(&self, variant_id: lang::ID) -> Option<&enums::EnumVariant> {
+    pub fn find_enum_variant(&self,
+                             variant_id: lang::ID)
+                             -> Option<(&enums::Enum, &enums::EnumVariant)> {
         for eneom in self.list_enums() {
             for variant in &eneom.variants {
                 if variant.id == variant_id {
-                    return Some(variant);
+                    return Some((eneom, variant));
                 }
             }
         }
