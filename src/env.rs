@@ -256,6 +256,13 @@ impl Interpreter {
                     ok_result_value(lang::Value::Null)
                 })
             }
+            CodeNode::EnumVariantLiteral(evl) => {
+                let value_fut = self.evaluate(&evl.variant_value_expr);
+                Box::pin(async move {
+                    lang::Value::EnumVariant { variant_id: evl.variant_id,
+                                               value: Box::new(await_eval_result!(value_fut)) }
+                })
+            }
         };
         let env = Rc::clone(&self.env);
         async move {

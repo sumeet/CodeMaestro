@@ -739,6 +739,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::WhileLoop(_) => {
                 Some("Run code again and again until the condition is false".into())
             }
+            CodeNode::EnumVariantLiteral(_) => {
+                Some("A variant of an enumeration".into())
+            }
         }
     }
 
@@ -799,6 +802,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::ListIndex(list_index) => self.render_list_index(&list_index),
                 CodeNode::AnonymousFunction(anon_func) => self.render_anonymous_function(anon_func),
                 CodeNode::WhileLoop(while_loop) => self.render_while_loop(while_loop),
+                CodeNode::EnumVariantLiteral(evl) => {
+                    let typ = self.code_editor
+                                  .code_genie
+                                  .guess_type(code_node, self.env_genie)
+                                  .unwrap();
+                    self.render_enum_variant_literal(evl, &typ)
+                }
             }
         };
 
@@ -863,7 +873,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::ListLiteral(_)
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
-            | CodeNode::ListIndex(_) => {
+            | CodeNode::ListIndex(_)
+            | CodeNode::EnumVariantLiteral(_) => {
                 self.render_general_code_context_menu(draw_code_fn, code_node_id)
             }
             CodeNode::FunctionCall(_)
@@ -1596,6 +1607,24 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 )
             },
         ])
+    }
+
+    fn render_enum_variant_literal(&self,
+                                   evl: &lang::EnumVariantLiteral,
+                                   typ: &lang::Type)
+                                   -> T::DrawResult {
+        let enum_variant = self.env_genie.find_enum_variant(evl.variant_id).unwrap();
+        self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                    render_enum_variant_identifier(self.ui_toolkit,
+                                                                                   self.env_genie,
+                                                                                   enum_variant,
+                                                                                   &typ)
+                                                },
+                                                &|| {
+                                                    self.render_nested(&|| {
+                                                        self.render_code(&evl.variant_value_expr)
+                                                    })
+                                                }])
     }
 
     fn render_indented(&self, draw_fn: &dyn Fn() -> T::DrawResult) -> T::DrawResult {

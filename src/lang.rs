@@ -161,6 +161,7 @@ pub enum CodeNode {
     NumberLiteral(NumberLiteral),
     ListIndex(ListIndex),
     ReassignListIndex(ReassignListIndex),
+    EnumVariantLiteral(EnumVariantLiteral),
 }
 
 use crate::code_generation::new_block;
@@ -576,6 +577,7 @@ impl CodeNode {
                 format!("Reassign List Index: {:?}", reassign_list_index.id)
             }
             CodeNode::WhileLoop(while_loop) => format!("While loop: {:?}", while_loop.id),
+            CodeNode::EnumVariantLiteral(evl) => format!("Enum variant literal: {:?}", evl.id),
         }
     }
 
@@ -604,6 +606,7 @@ impl CodeNode {
             CodeNode::AnonymousFunction(anon_func) => anon_func.id,
             CodeNode::ReassignListIndex(rli) => rli.id,
             CodeNode::WhileLoop(while_loop) => while_loop.id,
+            CodeNode::EnumVariantLiteral(evl) => evl.id,
         }
     }
 
@@ -692,6 +695,9 @@ impl CodeNode {
                     )
                 )
             }
+            CodeNode::EnumVariantLiteral(evl) => {
+                Box::new(std::iter::once(evl.variant_value_expr.as_ref()))
+            }
         }
     }
 
@@ -750,6 +756,7 @@ impl CodeNode {
             }
             CodeNode::WhileLoop(while_loop) => vec![while_loop.condition.borrow_mut(),
                                                     while_loop.body.borrow_mut()],
+            CodeNode::EnumVariantLiteral(evl) => vec![evl.variant_value_expr.borrow_mut()],
         }
     }
 
@@ -1036,4 +1043,12 @@ pub struct ListIndex {
     pub id: ID,
     pub list_expr: Box<CodeNode>,
     pub index_expr: Box<CodeNode>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct EnumVariantLiteral {
+    pub id: ID,
+    pub enum_id: ID,
+    pub variant_id: ID,
+    pub variant_value_expr: Box<CodeNode>,
 }

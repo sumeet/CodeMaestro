@@ -273,7 +273,8 @@ impl CodeEditor {
             | CodeNode::ListIndex(_)
             | CodeNode::Reassignment(_)
             | CodeNode::ReassignListIndex(_)
-            | CodeNode::WhileLoop(_) => false,
+            | CodeNode::WhileLoop(_)
+            | CodeNode::EnumVariantLiteral(_) => false,
         }
     }
 
@@ -299,7 +300,8 @@ impl CodeEditor {
             | CodeNode::NumberLiteral(_)
             | CodeNode::ReassignListIndex(_)
             | CodeNode::ListIndex(_)
-            | CodeNode::WhileLoop(_) => unimplemented!(),
+            | CodeNode::WhileLoop(_)
+            | CodeNode::EnumVariantLiteral(_) => unimplemented!(),
         }
     }
 
@@ -748,6 +750,14 @@ impl CodeGenie {
                               lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)))
             }
             CodeNode::WhileLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+            CodeNode::EnumVariantLiteral(evl) => {
+                env_genie.find_enum_variant(evl.variant_id)
+                         .unwrap()
+                         .variant_type
+                         .clone()
+                         .ok_or("unable to find enum")
+                         .and_then(|_| self.guess_type(evl.variant_value_expr.as_ref(), env_genie))
+            }
         }
     }
 
