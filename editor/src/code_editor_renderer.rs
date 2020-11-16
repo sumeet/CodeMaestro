@@ -1322,11 +1322,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                        .get_function_containing_arg(argument.argument_definition_id)
                        .unwrap();
 
-        let parent = self.code_editor
-                         .code_genie
-                         .find_parent(argument.id)
-                         .unwrap();
-
         let render_inner_code = &|| self.render_code(argument.expr.as_ref());
 
         match func.style() {

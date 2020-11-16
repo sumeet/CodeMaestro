@@ -532,28 +532,11 @@ impl CodeGenie {
         &self.code
     }
 
-    fn resolve_type_for_param(&self,
-                              function_call_id: lang::ID,
-                              orig_typ: &lang::Type,
-                              env_genie: &EnvGenie)
-                              -> lang::Type {
-        let typespec = env_genie.find_typespec(orig_typ.typespec_id).unwrap();
-        if let Some(generic_typespec) = typespec.downcast_ref::<lang::GenericParamTypeSpec>() {
-            self.try_to_resolve_generic(function_call_id, generic_typespec, env_genie)
-        } else {
-            orig_typ.clone()
-        }
-    }
-
     fn try_to_resolve_generic(&self,
-                              function_call_id: lang::ID,
+                              function_call: &lang::FunctionCall,
                               generic_typespec: &lang::GenericParamTypeSpec,
                               env_genie: &EnvGenie)
                               -> lang::Type {
-        let function_call = self.find_node(function_call_id)
-                                .unwrap()
-                                .as_function_call()
-                                .unwrap();
         for arg in function_call.args() {
             let arg_def_id = arg.argument_definition_id;
             let typ = env_genie.get_type_for_arg(arg_def_id).unwrap();
@@ -800,8 +783,18 @@ impl CodeGenie {
                                    arg: &lang::Argument,
                                    env_genie: &EnvGenie)
                                    -> Result<lang::Type, &'static str> {
-        env_genie.get_type_for_arg(arg.argument_definition_id)
-                 .ok_or("unable to guess type")
+        let func_call = self.find_parent(arg.id)
+                            .unwrap()
+                            .as_function_call()
+                            .unwrap();
+        let typ = env_genie.get_type_for_arg(arg.argument_definition_id)
+                           .ok_or("couldn't find type to this argument")?;
+        let typespec = env_genie.find_typespec(typ.typespec_id).unwrap();
+        if let Some(generic_typespec) = typespec.downcast_ref::<lang::GenericParamTypeSpec>() {
+            Ok(self.try_to_resolve_generic(func_call, generic_typespec, env_genie))
+        } else {
+            Ok(typ)
+        }
     }
 
     pub fn match_variant_by_variant_id(&self,
