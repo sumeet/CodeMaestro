@@ -1336,13 +1336,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                               .get_arg_definition(argument.argument_definition_id)
                     {
                         Some(arg_def) => {
-                            // handles generics
-                            let resolved_type = self.code_editor
-                                                    .code_genie
-                                                    .resolve_type_for_param(parent.id(),
-                                                                            &arg_def.arg_type,
-                                                                            self.env_genie);
-                            let type_symbol = self.env_genie.get_symbol_for_type(&resolved_type);
+                            let typ = self.code_editor
+                                          .code_genie
+                                          .guess_type_for_argument(argument, self.env_genie)
+                                          .unwrap();
+                            let type_symbol = self.env_genie.get_symbol_for_type(&typ);
                             format!("{} {}", type_symbol, arg_def.short_name)
                         }
                         None => "\u{f059}".to_string(),

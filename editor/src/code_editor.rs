@@ -532,41 +532,39 @@ impl CodeGenie {
         &self.code
     }
 
-    pub fn resolve_type_for_param(&self,
-                                  function_call_id: lang::ID,
-                                  orig_typ: &lang::Type,
-                                  env_genie: &EnvGenie)
-                                  -> lang::Type {
+    fn resolve_type_for_param(&self,
+                              function_call_id: lang::ID,
+                              orig_typ: &lang::Type,
+                              env_genie: &EnvGenie)
+                              -> lang::Type {
         let typespec = env_genie.find_typespec(orig_typ.typespec_id).unwrap();
-        if let Some(any_ts2) = typespec.downcast_ref::<lang::GenericParamTypeSpec>() {
-            self.try_to_resolve_any_ts2(function_call_id, any_ts2, env_genie)
+        if let Some(generic_typespec) = typespec.downcast_ref::<lang::GenericParamTypeSpec>() {
+            self.try_to_resolve_generic(function_call_id, generic_typespec, env_genie)
         } else {
             orig_typ.clone()
         }
     }
 
-    fn try_to_resolve_any_ts2(&self,
+    fn try_to_resolve_generic(&self,
                               function_call_id: lang::ID,
-                              any_ts2: &lang::GenericParamTypeSpec,
+                              generic_typespec: &lang::GenericParamTypeSpec,
                               env_genie: &EnvGenie)
                               -> lang::Type {
-        let function_call = self.find_node(function_call_id).unwrap();
-        for code in function_call.all_children_dfs_iter() {
-            match code {
-                lang::CodeNode::Argument(arg) => {
-                    let arg_def_id = arg.argument_definition_id;
-                    let typ = env_genie.get_type_for_arg(arg_def_id).unwrap();
-                    if typ.typespec_id == any_ts2.id() {
-                        let guessed_type = self.guess_type(arg.expr.as_ref(), env_genie).unwrap();
-                        if guessed_type.typespec_id != any_ts2.id() {
-                            return guessed_type;
-                        }
-                    }
+        let function_call = self.find_node(function_call_id)
+                                .unwrap()
+                                .as_function_call()
+                                .unwrap();
+        for arg in function_call.args() {
+            let arg_def_id = arg.argument_definition_id;
+            let typ = env_genie.get_type_for_arg(arg_def_id).unwrap();
+            if typ.typespec_id == generic_typespec.id() {
+                let guessed_type = self.guess_type(arg.expr.as_ref(), env_genie).unwrap();
+                if guessed_type.typespec_id != generic_typespec.id() {
+                    return guessed_type;
                 }
-                _ => (),
             }
         }
-        lang::Type::from_spec(any_ts2)
+        lang::Type::from_spec(generic_typespec)
     }
 
     // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made
@@ -728,8 +726,7 @@ impl CodeGenie {
                 }
             }
             CodeNode::FunctionReference(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
-            CodeNode::Argument(arg) => env_genie.get_type_for_arg(arg.argument_definition_id)
-                                                .ok_or("unable to guess type"),
+            CodeNode::Argument(arg) => self.guess_type_for_argument(arg, env_genie),
             CodeNode::Placeholder(placeholder) => Ok(placeholder.typ.clone()),
             CodeNode::NullLiteral(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::StructLiteral(struct_literal) => {
@@ -796,6 +793,15 @@ impl CodeGenie {
                 // .and_then(|_| self.guess_type(evl.variant_value_expr.as_ref(), env_genie))
             }
         }
+    }
+
+    // handles generics
+    pub fn guess_type_for_argument(&self,
+                                   arg: &lang::Argument,
+                                   env_genie: &EnvGenie)
+                                   -> Result<lang::Type, &'static str> {
+        env_genie.get_type_for_arg(arg.argument_definition_id)
+                 .ok_or("unable to guess type")
     }
 
     pub fn match_variant_by_variant_id(&self,

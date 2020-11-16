@@ -462,11 +462,11 @@ impl Type {
 
     pub fn matches(&self, other: &Self) -> bool {
         // // TODO: duplication, search for ANY_TYPESPEC
-        // if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
-        //     return true;
-        // }
-        // self.id() == other.id()
-        self.matches_spec_id(other.id())
+        if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
+            return true;
+        }
+        self.id() == other.id()
+        // self.matches_spec_id(other.id())
     }
 
     // XXX: idk if this is right but it'll at least get me farther i think
