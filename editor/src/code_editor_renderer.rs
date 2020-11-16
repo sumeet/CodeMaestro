@@ -1322,6 +1322,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                        .get_function_containing_arg(argument.argument_definition_id)
                        .unwrap();
 
+        let parent = self.code_editor
+                         .code_genie
+                         .find_parent(argument.id)
+                         .unwrap();
+
         let render_inner_code = &|| self.render_code(argument.expr.as_ref());
 
         match func.style() {
@@ -1331,7 +1336,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                               .get_arg_definition(argument.argument_definition_id)
                     {
                         Some(arg_def) => {
-                            let type_symbol = self.env_genie.get_symbol_for_type(&arg_def.arg_type);
+                            // handles generics
+                            let resolved_type = self.code_editor
+                                                    .code_genie
+                                                    .resolve_type_for_param(parent.id(),
+                                                                            &arg_def.arg_type,
+                                                                            self.env_genie);
+                            let type_symbol = self.env_genie.get_symbol_for_type(&resolved_type);
                             format!("{} {}", type_symbol, arg_def.short_name)
                         }
                         None => "\u{f059}".to_string(),

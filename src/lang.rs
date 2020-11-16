@@ -79,12 +79,12 @@ lazy_static! {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct AnyTypeSpec2 {
+pub struct GenericParamTypeSpec {
     id: ID,
     // resolved_param: Option<Type>,
 }
 
-impl AnyTypeSpec2 {
+impl GenericParamTypeSpec {
     pub fn new(id: ID) -> Self {
         Self { id }
         // resolved_param: None }
@@ -92,7 +92,7 @@ impl AnyTypeSpec2 {
 }
 
 #[typetag::serde()]
-impl TypeSpec for AnyTypeSpec2 {
+impl TypeSpec for GenericParamTypeSpec {
     fn readable_name(&self) -> &str {
         "Any Type 2"
     }
@@ -162,7 +162,7 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn cs_code(&self) -> Box<dyn Iterator<Item = &Block> + '_> {
         Box::new(std::iter::empty())
     }
-    fn defines_generics(&self) -> Vec<AnyTypeSpec2> {
+    fn defines_generics(&self) -> Vec<GenericParamTypeSpec> {
         vec![]
     }
 }
@@ -461,11 +461,12 @@ impl Type {
     }
 
     pub fn matches(&self, other: &Self) -> bool {
-        // TODO: duplication, search for ANY_TYPESPEC
-        if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
-            return true;
-        }
-        self.id() == other.id()
+        // // TODO: duplication, search for ANY_TYPESPEC
+        // if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
+        //     return true;
+        // }
+        // self.id() == other.id()
+        self.matches_spec_id(other.id())
     }
 
     // XXX: idk if this is right but it'll at least get me farther i think
@@ -473,8 +474,7 @@ impl Type {
         self.matches_spec_id(spec.id)
     }
 
-    pub fn matches_spec_id(&self, spec_id: ID) -> bool {
-        // TODO: duplication, search for ANY_TYPESPEC
+    fn matches_spec_id(&self, spec_id: ID) -> bool {
         if self.typespec_id == ANY_TYPESPEC.id() || spec_id == ANY_TYPESPEC.id() {
             return true;
         }

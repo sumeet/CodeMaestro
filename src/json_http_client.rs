@@ -306,7 +306,7 @@ fn serde_value_to_lang_value(value: &serde_json::Value,
         if let Some(value) = serde_value_into_struct(value.clone(), strukt, env) {
             return Ok(value);
         }
-    } else if into_type.matches_spec_id(*builtins::OPTION_ENUM_ID) {
+    } else if into_type.typespec_id == *builtins::OPTION_ENUM_ID {
         return serde_value_into_option(value.clone(), &into_type.params[0], env).map_err(|e| {
                                                                                     e.to_string()
                                                                                 });
@@ -341,8 +341,7 @@ fn serde_value_into_struct(mut value: serde_json::Value,
         strukt.fields
               .iter()
               .map(|strukt_field| {
-                  if strukt_field.field_type
-                                 .matches_spec_id(*builtins::OPTION_ENUM_ID)
+                  if strukt_field.field_type.typespec_id == *builtins::OPTION_ENUM_ID
                      && !map.contains_key(&strukt_field.name)
                   {
                       return Some((strukt_field.id, none_option_value()));

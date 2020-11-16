@@ -2443,6 +2443,11 @@ fn save_world(cont: &Controller, env: &env::ExecutionEnvironment) -> code_loadin
                              typespecs: env.typespecs
                                            .values()
                                            .filter(|ts| !cont.builtins.is_builtin(ts.id()))
+                                           // filters out generics which get loaded alongside functions
+                                           .filter(|ts| {
+                                               ts.downcast_ref::<lang::GenericParamTypeSpec>()
+                                                 .is_none()
+                                           })
                                            .cloned()
                                            .collect() }
 }

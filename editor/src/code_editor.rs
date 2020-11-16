@@ -17,7 +17,7 @@ use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
 use cs::env_genie::EnvGenie;
 use cs::lang;
-use cs::lang::CodeNode;
+use cs::lang::{CodeNode, TypeSpec};
 use objekt::private::collections::HashSet;
 
 #[derive(Clone)]
@@ -530,6 +530,43 @@ impl CodeGenie {
 
     pub fn root(&self) -> &lang::CodeNode {
         &self.code
+    }
+
+    pub fn resolve_type_for_param(&self,
+                                  function_call_id: lang::ID,
+                                  orig_typ: &lang::Type,
+                                  env_genie: &EnvGenie)
+                                  -> lang::Type {
+        let typespec = env_genie.find_typespec(orig_typ.typespec_id).unwrap();
+        if let Some(any_ts2) = typespec.downcast_ref::<lang::GenericParamTypeSpec>() {
+            self.try_to_resolve_any_ts2(function_call_id, any_ts2, env_genie)
+        } else {
+            orig_typ.clone()
+        }
+    }
+
+    fn try_to_resolve_any_ts2(&self,
+                              function_call_id: lang::ID,
+                              any_ts2: &lang::GenericParamTypeSpec,
+                              env_genie: &EnvGenie)
+                              -> lang::Type {
+        let function_call = self.find_node(function_call_id).unwrap();
+        for code in function_call.all_children_dfs_iter() {
+            match code {
+                lang::CodeNode::Argument(arg) => {
+                    let arg_def_id = arg.argument_definition_id;
+                    let typ = env_genie.get_type_for_arg(arg_def_id).unwrap();
+                    if typ.typespec_id == any_ts2.id() {
+                        let guessed_type = self.guess_type(arg.expr.as_ref(), env_genie).unwrap();
+                        if guessed_type.typespec_id != any_ts2.id() {
+                            return guessed_type;
+                        }
+                    }
+                }
+                _ => (),
+            }
+        }
+        lang::Type::from_spec(any_ts2)
     }
 
     // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made

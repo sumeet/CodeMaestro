@@ -737,8 +737,8 @@ impl lang::Function for Equals {
         uuid::Uuid::parse_str("7809f2da-0ae1-4181-8fd9-b72b27fe7aa4").unwrap()
     }
 
-    fn defines_generics(&self) -> Vec<lang::AnyTypeSpec2> {
-        vec![lang::AnyTypeSpec2::new(uuid::Uuid::parse_str("98928b40-5aff-48df-ba9e-6871fd8c81a0").unwrap())]
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("98928b40-5aff-48df-ba9e-6871fd8c81a0").unwrap())]
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
