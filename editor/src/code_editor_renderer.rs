@@ -1333,7 +1333,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         Some(arg_def) => {
                             let typ = self.code_editor
                                           .code_genie
-                                          .guess_type_for_argument(argument, self.env_genie)
+                                          .guess_type(&lang::CodeNode::Argument(argument.clone()),
+                                                      self.env_genie)
                                           .unwrap();
                             let type_symbol = self.env_genie.get_symbol_for_type(&typ);
                             format!("{} {}", type_symbol, arg_def.short_name)

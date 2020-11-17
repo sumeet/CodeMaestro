@@ -390,6 +390,10 @@ pub trait TypeSpec: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     }
 }
 
+pub fn is_generic(typespec: &dyn TypeSpec) -> bool {
+    typespec.downcast_ref::<GenericParamTypeSpec>().is_some()
+}
+
 clone_trait_object!(TypeSpec);
 impl_downcast!(TypeSpec);
 

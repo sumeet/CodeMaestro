@@ -181,16 +181,18 @@ impl InsertCodeMenu {
             InsertionPoint::Replace(node_id_to_replace) => {
                 let node = code_genie.find_node(node_id_to_replace).unwrap();
                 let exact_type = code_genie.guess_type(node, env_genie).unwrap();
-                let parent = code_genie.find_parent(node.id());
-                if let Some(lang::CodeNode::Assignment(assignment)) = parent {
-                    // if we're replacing the value of an assignment statement, and that assignment
-                    // isn't being used anywhere, then we could change the type to anything. so don't
-                    // require a type when searching for nodes
-                    if !code_genie.any_variable_referencing_assignment(assignment.id) {
-                        return self.new_params(None);
-                    }
+                let ts = env_genie.find_typespec(exact_type.typespec_id).unwrap();
+                if lang::is_generic(ts.as_ref()) {
+                    return self.new_params(None);
                 }
-                self.new_params(Some(exact_type))
+                match code_genie.find_parent(node.id()) {
+                    Some(lang::CodeNode::Assignment(assignment))
+                        if !code_genie.any_variable_referencing_assignment(assignment.id) =>
+                    {
+                        self.new_params(None)
+                    }
+                    _ => self.new_params(Some(exact_type)),
+                }
             }
             InsertionPoint::Wrap(node_id_to_wrap) => {
                 let node = code_genie.find_node(node_id_to_wrap).unwrap();

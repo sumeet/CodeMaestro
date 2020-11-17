@@ -17,7 +17,7 @@ use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
 use cs::env_genie::EnvGenie;
 use cs::lang;
-use cs::lang::{CodeNode, TypeSpec};
+use cs::lang::{is_generic, CodeNode};
 use objekt::private::collections::HashSet;
 
 #[derive(Clone)]
@@ -533,21 +533,32 @@ impl CodeGenie {
     }
 
     fn try_to_resolve_generic(&self,
-                              function_call: &lang::FunctionCall,
-                              generic_typespec: &lang::GenericParamTypeSpec,
+                              code_node: &lang::CodeNode,
+                              generic_typespec_id: lang::ID,
                               env_genie: &EnvGenie)
                               -> lang::Type {
-        for arg in function_call.args() {
-            let arg_def_id = arg.argument_definition_id;
-            let typ = env_genie.get_type_for_arg(arg_def_id).unwrap();
-            if typ.typespec_id == generic_typespec.id() {
-                let guessed_type = self.guess_type(arg.expr.as_ref(), env_genie).unwrap();
-                if guessed_type.typespec_id != generic_typespec.id() {
-                    return guessed_type;
+        for parent in self.all_parents_including_node(code_node.id()) {
+            if let CodeNode::Argument(arg) = parent {
+                let func_call = self.find_parent(arg.id)
+                                    .unwrap()
+                                    .as_function_call()
+                                    .unwrap();
+                for arg in func_call.args() {
+                    let arg_def_id = arg.argument_definition_id;
+                    let typ = env_genie.get_type_for_arg(arg_def_id).unwrap();
+                    if typ.typespec_id == generic_typespec_id {
+                        let guessed_type = self.guess_type_without_resolving_generics(arg.expr
+                                                                                         .as_ref(),
+                                                                                      env_genie)
+                                               .unwrap();
+                        if guessed_type.typespec_id != generic_typespec_id {
+                            return guessed_type;
+                        }
+                    }
                 }
             }
         }
-        lang::Type::from_spec(generic_typespec)
+        lang::Type::from_spec_id(generic_typespec_id, vec![])
     }
 
     // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made
@@ -628,6 +639,12 @@ impl CodeGenie {
         self.code.find_parent(id)
     }
 
+    pub fn all_parents_including_node(&self, id: lang::ID) -> impl Iterator<Item = &CodeNode> {
+        self.find_node(id)
+            .into_iter()
+            .chain(self.all_parents_of(id))
+    }
+
     pub fn all_parents_of(&self, mut id: lang::ID) -> impl Iterator<Item = &CodeNode> {
         GenIter(move || {
             while let Some(parent) = self.find_parent(id) {
@@ -664,6 +681,22 @@ impl CodeGenie {
                       code_node: &lang::CodeNode,
                       env_genie: &EnvGenie)
                       -> Result<lang::Type, &'static str> {
+        match self.guess_type_without_resolving_generics(code_node, env_genie) {
+            Ok(typ)
+                if env_genie.find_typespec(typ.typespec_id)
+                            .map(|ts| is_generic(ts.as_ref()))
+                   == Some(true) =>
+            {
+                Ok(self.try_to_resolve_generic(code_node, typ.typespec_id, env_genie))
+            }
+            otherwise => otherwise,
+        }
+    }
+
+    fn guess_type_without_resolving_generics(&self,
+                                             code_node: &CodeNode,
+                                             env_genie: &EnvGenie)
+                                             -> Result<lang::Type, &'static str> {
         match code_node {
             CodeNode::FunctionCall(function_call) => {
                 let func_id = function_call.function_reference().function_id;
@@ -709,7 +742,8 @@ impl CodeGenie {
                 }
             }
             CodeNode::FunctionReference(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
-            CodeNode::Argument(arg) => self.guess_type_for_argument(arg, env_genie),
+            CodeNode::Argument(arg) => env_genie.get_type_for_arg(arg.argument_definition_id)
+                                                .ok_or("couldn't find type to this argument"),
             CodeNode::Placeholder(placeholder) => Ok(placeholder.typ.clone()),
             CodeNode::NullLiteral(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::StructLiteral(struct_literal) => {
@@ -768,32 +802,8 @@ impl CodeGenie {
             }
             CodeNode::WhileLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::EnumVariantLiteral(evl) => {
-                let (eneom, variant) = env_genie.find_enum_variant(evl.variant_id).unwrap();
-                unimplemented!()
-                // .variant_type
-                // .clone()
-                // .ok_or("unable to find enum")
-                // .and_then(|_| self.guess_type(evl.variant_value_expr.as_ref(), env_genie))
+                Ok(lang::Type::from_spec_id(evl.enum_id, evl.enum_param_types.clone()))
             }
-        }
-    }
-
-    // handles generics
-    pub fn guess_type_for_argument(&self,
-                                   arg: &lang::Argument,
-                                   env_genie: &EnvGenie)
-                                   -> Result<lang::Type, &'static str> {
-        let func_call = self.find_parent(arg.id)
-                            .unwrap()
-                            .as_function_call()
-                            .unwrap();
-        let typ = env_genie.get_type_for_arg(arg.argument_definition_id)
-                           .ok_or("couldn't find type to this argument")?;
-        let typespec = env_genie.find_typespec(typ.typespec_id).unwrap();
-        if let Some(generic_typespec) = typespec.downcast_ref::<lang::GenericParamTypeSpec>() {
-            Ok(self.try_to_resolve_generic(func_call, generic_typespec, env_genie))
-        } else {
-            Ok(typ)
         }
     }
 
