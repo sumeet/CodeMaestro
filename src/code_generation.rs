@@ -211,3 +211,15 @@ pub fn new_list_index(list_expr: lang::CodeNode) -> lang::CodeNode {
         )),
     })
 }
+
+pub fn new_enum_variant_literal(enum_name: String,
+                                typ: lang::Type,
+                                variant_id: lang::ID,
+                                variant_type: lang::Type)
+                                -> lang::EnumVariantLiteral {
+    lang::EnumVariantLiteral { id: lang::new_id(),
+                               typ,
+                               variant_id,
+                               variant_value_expr: Box::new(new_placeholder(enum_name,
+                                                                            variant_type)) }
+}

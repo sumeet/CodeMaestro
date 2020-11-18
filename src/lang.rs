@@ -1095,8 +1095,7 @@ pub struct ListIndex {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct EnumVariantLiteral {
     pub id: ID,
-    pub enum_param_types: Vec<Type>,
-    pub enum_id: ID,
+    pub typ: Type,
     pub variant_id: ID,
     pub variant_value_expr: Box<CodeNode>,
 }

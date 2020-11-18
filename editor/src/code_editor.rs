@@ -318,7 +318,8 @@ impl CodeEditor {
             | lang::CodeNode::ListIndex(_)
             | lang::CodeNode::ReassignListIndex(_)
             | lang::CodeNode::Conditional(_)
-            | lang::CodeNode::WhileLoop(_) => Some(InsertionPoint::Replace(node_id)),
+            | lang::CodeNode::WhileLoop(_)
+            | lang::CodeNode::EnumVariantLiteral(_) => Some(InsertionPoint::Replace(node_id)),
             otherwise => {
                 println!("tried to replace node with parent {:?}", otherwise);
                 None
@@ -801,9 +802,7 @@ impl CodeGenie {
                               lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)))
             }
             CodeNode::WhileLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
-            CodeNode::EnumVariantLiteral(evl) => {
-                Ok(lang::Type::from_spec_id(evl.enum_id, evl.enum_param_types.clone()))
-            }
+            CodeNode::EnumVariantLiteral(evl) => Ok(evl.typ.clone()),
         }
     }
 

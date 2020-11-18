@@ -2,8 +2,8 @@ use super::code_editor::CodeGenie;
 use super::code_editor::InsertionPoint;
 use super::code_generation;
 use cs::env_genie::EnvGenie;
-use cs::lang;
 use cs::structs;
+use cs::{enums, lang};
 
 use itertools::Itertools;
 use lazy_static::lazy_static;
@@ -594,55 +594,12 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
             return vec![];
         }
 
-        let mut options = vec![];
         let input_str = &search_params.input_str;
         if let Some(ref return_type) = search_params.return_type {
-            self.generate_options_for_return_type(search_params,
-                                                  env_genie,
-                                                  &mut options,
-                                                  input_str,
-                                                  &return_type);
+            self.generate_options_for_return_type(search_params, env_genie, input_str, &return_type)
         } else {
-            if let Some(list_search_query) = search_params.search_prefix("list") {
-                let matching_list_type_options = env_genie
-                    .find_types_matching(&list_search_query)
-                    .map(|t| {
-                        let list_type = lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![t]);
-                        self.list_literal_option(&list_type)
-                    });
-                options.extend(matching_list_type_options)
-            }
-
-            // struct literals
-            // TODO: need to implement fuzzy matching because struct names sometimes have spaces and
-            // lowercasing isn't good enough
-            let lowercased_trimmed_search_str = search_params.lowercased_trimmed_search_str();
-            let matching_struct_options =
-                env_genie.find_public_structs_matching(&lowercased_trimmed_search_str)
-                         .map(|strukt| self.strukt_option(strukt));
-            options.extend(matching_struct_options);
-
-            // wanna just show all literal options all the time because we want users to be able to
-            // discover everything they can do from the menu
-
-            // TODO: wanna boost up null if there's null anywhere
-            // XXX: why did i have this conditional commented out before?
-            if search_params.search_matches_identifier("null") {
-                options.push(self.null_literal_option());
-            }
-
-            if let Some(number) = search_params.parse_number_input() {
-                options.push(self.number_literal_option(number));
-            } else if input_str.is_empty() {
-                options.push(self.number_literal_option(0));
-            }
-
-            // TODO: maybe boost string literal if there is something entered?
-            //            if !input_str.is_empty() {
-            options.push(self.string_literal_option(input_str.clone()));
-            //            }
+            self.generate_options_when_no_return_type_specified(search_params, env_genie, input_str)
         }
-        options
     }
 }
 
@@ -701,6 +658,114 @@ impl InsertLiteralOptionGenerator {
                 elements: vec![]
             })
         }
+    }
+
+    fn enum_options<'a>(&'a self,
+                        enum_name: &'a str,
+                        eneom: &'a enums::Enum,
+                        enum_typ: &'a lang::Type)
+                        -> impl Iterator<Item = InsertCodeMenuOption> + 'a {
+        eneom.variant_types(&enum_typ.params)
+             .into_iter()
+             .map(move |(variant, variant_type)| InsertCodeMenuOption { sort_key: format!("enumliteral{}",
+                                                                            variant.id),
+                                                          new_node: lang::CodeNode::EnumVariantLiteral(code_generation::new_enum_variant_literal(
+                                                              enum_name.to_string(),
+                                                              enum_typ.clone(),
+                                                              variant.id,
+                                                              variant_type.clone()
+                                                          )),
+                                                          is_selected: false,
+                                                          group_name: LITERALS_GROUP })
+    }
+
+    fn generate_options_when_no_return_type_specified(&self,
+                                                      search_params: &CodeSearchParams,
+                                                      env_genie: &EnvGenie,
+                                                      input_str: &String)
+                                                      -> Vec<InsertCodeMenuOption> {
+        let mut options = vec![];
+
+        if let Some(list_search_query) = search_params.search_prefix("list") {
+            let matching_list_type_options = env_genie
+                .find_types_matching(&list_search_query)
+                .map(|t| {
+                    let list_type = lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![t]);
+                    self.list_literal_option(&list_type)
+                });
+            options.extend(matching_list_type_options)
+        }
+
+        // struct literals
+        // TODO: need to implement fuzzy matching because struct names sometimes have spaces and
+        // lowercasing isn't good enough
+        let lowercased_trimmed_search_str = search_params.lowercased_trimmed_search_str();
+        let matching_struct_options =
+            env_genie.find_public_structs_matching(&lowercased_trimmed_search_str)
+                     .map(|strukt| self.strukt_option(strukt));
+        options.extend(matching_struct_options);
+
+        // wanna just show all literal options all the time because we want users to be able to
+        // discover everything they can do from the menu
+
+        // TODO: wanna boost up null if there's null anywhere
+        // XXX: why did i have this conditional commented out before?
+        if search_params.search_matches_identifier("null") {
+            options.push(self.null_literal_option());
+        }
+
+        if let Some(number) = search_params.parse_number_input() {
+            options.push(self.number_literal_option(number));
+        } else if input_str.is_empty() {
+            options.push(self.number_literal_option(0));
+        }
+
+        // TODO: maybe boost string literal if there is something entered?
+        //            if !input_str.is_empty() {
+        options.push(self.string_literal_option(input_str.clone()));
+        //            }
+
+        options
+    }
+
+    fn generate_options_for_return_type(&self,
+                                        search_params: &CodeSearchParams,
+                                        env_genie: &EnvGenie,
+                                        input_str: &String,
+                                        return_type: &lang::Type)
+                                        -> Vec<InsertCodeMenuOption> {
+        let mut options = vec![];
+
+        if return_type.matches_spec(&lang::STRING_TYPESPEC) {
+            options.push(self.string_literal_option(input_str.clone()));
+        }
+        if return_type.matches_spec(&lang::NULL_TYPESPEC) {
+            options.push(self.null_literal_option());
+        }
+        if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
+            if let Some(number) = search_params.parse_number_input() {
+                options.push(self.number_literal_option(number));
+            }
+        } else if return_type.typespec_id == lang::ANY_TYPESPEC.id() {
+            options.push(self.number_literal_option(0));
+        }
+        // TODO: kind of a nasty if check for params.len()... that's to make sure it's not Any
+        // TODO: shouldn't there be a way to insert list and then select the type though?
+        if return_type.matches_spec(&lang::LIST_TYPESPEC) && return_type.params.len() > 0 {
+            options.push(self.list_literal_option(&return_type));
+        }
+        if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
+            options.push(self.strukt_option(strukt));
+        } else if let Some(eneom) = env_genie.find_enum(return_type.typespec_id) {
+            options.extend(self.enum_options(&eneom.name, eneom, return_type))
+        }
+        // design decision made here: all placeholders have types. therefore, it is now
+        // required for a placeholder node to have a type, meaning we need to know what the
+        // type of a placeholder is to create it. under current conditions that's ok, but i
+        // think we can make this less restrictive in the future if we need to
+        options.push(self.placeholder_option(input_str.clone(), return_type));
+
+        options
     }
 }
 
@@ -1058,42 +1123,6 @@ pub fn is_inserting_inside_block(insertion_point: InsertionPoint, code_genie: &C
         InsertionPoint::StructLiteralField(_)
         | InsertionPoint::Editing(_)
         | InsertionPoint::ListLiteralElement { .. } => false,
-    }
-}
-
-impl InsertLiteralOptionGenerator {
-    fn generate_options_for_return_type(&self,
-                                        search_params: &CodeSearchParams,
-                                        env_genie: &EnvGenie,
-                                        options: &mut Vec<InsertCodeMenuOption>,
-                                        input_str: &String,
-                                        return_type: &lang::Type) {
-        if return_type.matches_spec(&lang::STRING_TYPESPEC) {
-            options.push(self.string_literal_option(input_str.clone()));
-        }
-        if return_type.matches_spec(&lang::NULL_TYPESPEC) {
-            options.push(self.null_literal_option());
-        }
-        if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
-            if let Some(number) = search_params.parse_number_input() {
-                options.push(self.number_literal_option(number));
-            }
-        } else if return_type.typespec_id == lang::ANY_TYPESPEC.id() {
-            options.push(self.number_literal_option(0));
-        }
-        // TODO: kind of a nasty if check for params.len()... that's to make sure it's not Any
-        // TODO: shouldn't there be a way to insert list and then select the type though?
-        if return_type.matches_spec(&lang::LIST_TYPESPEC) && return_type.params.len() > 0 {
-            options.push(self.list_literal_option(&return_type));
-        }
-        if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
-            options.push(self.strukt_option(strukt));
-        }
-        // design decision made here: all placeholders have types. therefore, it is now
-        // required for a placeholder node to have a type, meaning we need to know what the
-        // type of a placeholder is to create it. under current conditions that's ok, but i
-        // think we can make this less restrictive in the future if we need to
-        options.push(self.placeholder_option(input_str.clone(), return_type));
     }
 }
 
