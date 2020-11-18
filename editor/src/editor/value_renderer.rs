@@ -56,6 +56,13 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::Future(_) => self.draw_buttony_text("Future", BLACK_COLOR),
             Value::EnumVariant { variant_id, value } => self.render_enum(variant_id, value),
             Value::AnonymousFunction(_) => panic!("don't worry about rendering functions"),
+            Value::EarlyReturn(inner) => {
+                self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                            self.ui_toolkit
+                                                                .draw_text("Early return: ")
+                                                        },
+                                                        &|| self.render(inner.as_ref())])
+            }
         }
     }
 
@@ -98,6 +105,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::AnonymousFunction(_) => {
                 panic!("no value rendering implemented for anonymous functions")
             }
+            Value::EarlyReturn(inner) => self.is_scalar(inner.as_ref()),
         }
     }
 

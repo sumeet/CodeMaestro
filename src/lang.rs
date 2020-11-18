@@ -205,6 +205,7 @@ pub enum CodeNode {
     ListIndex(ListIndex),
     ReassignListIndex(ReassignListIndex),
     EnumVariantLiteral(EnumVariantLiteral),
+    EarlyReturn(EarlyReturn),
 }
 
 use crate::code_generation::new_block;
@@ -235,6 +236,7 @@ pub enum Value {
     Future(ValueFuture),
     EnumVariant { variant_id: ID, value: Box<Value> },
     AnonymousFunction(AnonymousFunction),
+    EarlyReturn(Box<Value>),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -256,6 +258,20 @@ impl AnonymousFunction {
 }
 
 impl Value {
+    pub fn unwrap_early_return(self) -> Self {
+        match self {
+            Value::EarlyReturn(inner) => *inner,
+            otherwise => otherwise,
+        }
+    }
+
+    pub fn is_early_return(&self) -> bool {
+        match self {
+            Value::EarlyReturn(_) => true,
+            _ => false,
+        }
+    }
+
     pub fn into_anon_func(self) -> Result<AnonymousFunction, Box<dyn std::error::Error>> {
         match self {
             Value::AnonymousFunction(af) => Ok(af),
@@ -625,6 +641,7 @@ impl CodeNode {
             }
             CodeNode::WhileLoop(while_loop) => format!("While loop: {:?}", while_loop.id),
             CodeNode::EnumVariantLiteral(evl) => format!("Enum variant literal: {:?}", evl.id),
+            CodeNode::EarlyReturn(early_return) => format!("Early return: {:?}", early_return.id),
         }
     }
 
@@ -654,6 +671,7 @@ impl CodeNode {
             CodeNode::ReassignListIndex(rli) => rli.id,
             CodeNode::WhileLoop(while_loop) => while_loop.id,
             CodeNode::EnumVariantLiteral(evl) => evl.id,
+            CodeNode::EarlyReturn(evl) => evl.id,
         }
     }
 
@@ -745,6 +763,9 @@ impl CodeNode {
             CodeNode::EnumVariantLiteral(evl) => {
                 Box::new(std::iter::once(evl.variant_value_expr.as_ref()))
             }
+            CodeNode::EarlyReturn(early_return) => {
+                Box::new(std::iter::once(early_return.code.as_ref()))
+            }
         }
     }
 
@@ -804,6 +825,7 @@ impl CodeNode {
             CodeNode::WhileLoop(while_loop) => vec![while_loop.condition.borrow_mut(),
                                                     while_loop.body.borrow_mut()],
             CodeNode::EnumVariantLiteral(evl) => vec![evl.variant_value_expr.borrow_mut()],
+            CodeNode::EarlyReturn(early_return) => vec![early_return.code.borrow_mut()],
         }
     }
 
@@ -1098,4 +1120,9 @@ pub struct EnumVariantLiteral {
     pub typ: Type,
     pub variant_id: ID,
     pub variant_value_expr: Box<CodeNode>,
+}
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct EarlyReturn {
+    pub id: ID,
+    pub code: Box<CodeNode>,
 }

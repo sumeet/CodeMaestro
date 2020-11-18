@@ -742,6 +742,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::EnumVariantLiteral(_) => {
                 Some("A variant of an enumeration".into())
             }
+            CodeNode::EarlyReturn(_) => {
+                Some("Return from the function early".into())
+            }
         }
     }
 
@@ -809,6 +812,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                   .unwrap();
                     self.render_enum_variant_literal(evl, &typ)
                 }
+                CodeNode::EarlyReturn(early_return) => {
+                    self.ui_toolkit
+                        .draw_all_on_same_line(&[&|| self.ui_toolkit.draw_text("Return"),
+                                                 &|| self.render_code(early_return.code.as_ref())])
+                }
             }
         };
 
@@ -874,7 +882,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
             | CodeNode::ListIndex(_)
-            | CodeNode::EnumVariantLiteral(_) => {
+            | CodeNode::EnumVariantLiteral(_)
+            | CodeNode::EarlyReturn(_) => {
                 self.render_general_code_context_menu(draw_code_fn, code_node_id)
             }
             CodeNode::FunctionCall(_)

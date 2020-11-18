@@ -104,6 +104,11 @@ pub fn new_placeholder(description: String, typ: lang::Type) -> lang::CodeNode {
                                                     typ })
 }
 
+pub fn new_early_return() -> lang::CodeNode {
+    lang::CodeNode::EarlyReturn(lang::EarlyReturn { id: lang::new_id(),
+                                                    code: Box::new(new_placeholder("early return".into(), lang::Type::from_spec(&*lang::ANY_TYPESPEC))) })
+}
+
 pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
     let (true_branch, else_branch) = match for_type {
         Some(for_type) => {

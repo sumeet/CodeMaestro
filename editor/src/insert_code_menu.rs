@@ -32,6 +32,7 @@ lazy_static! {
         Box::new(InsertReassignmentOptionGenerator {}),
         Box::new(InsertLiteralOptionGenerator {}),
         Box::new(InsertBlockOptionGenerator {}),
+        Box::new(InsertEarlyReturnOptionGenerator {}),
     ];
 }
 
@@ -798,6 +799,25 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
             options.push(Self::generate_option(search_params))
         }
         options
+    }
+}
+
+#[derive(Clone)]
+struct InsertEarlyReturnOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertEarlyReturnOptionGenerator {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               _env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
+            return vec![];
+        }
+        vec![InsertCodeMenuOption { sort_key: "earlyreturn".to_string(),
+                                    new_node: code_generation::new_early_return(),
+                                    is_selected: false,
+                                    group_name: CONTROL_FLOW_GROUP }]
     }
 }
 

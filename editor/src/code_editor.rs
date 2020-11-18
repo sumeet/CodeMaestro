@@ -274,7 +274,8 @@ impl CodeEditor {
             | CodeNode::Reassignment(_)
             | CodeNode::ReassignListIndex(_)
             | CodeNode::WhileLoop(_)
-            | CodeNode::EnumVariantLiteral(_) => false,
+            | CodeNode::EnumVariantLiteral(_)
+            | CodeNode::EarlyReturn(_) => false,
         }
     }
 
@@ -301,7 +302,8 @@ impl CodeEditor {
             | CodeNode::ReassignListIndex(_)
             | CodeNode::ListIndex(_)
             | CodeNode::WhileLoop(_)
-            | CodeNode::EnumVariantLiteral(_) => unimplemented!(),
+            | CodeNode::EnumVariantLiteral(_)
+            | CodeNode::EarlyReturn(_) => unimplemented!(),
         }
     }
 
@@ -803,6 +805,9 @@ impl CodeGenie {
             }
             CodeNode::WhileLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::EnumVariantLiteral(evl) => Ok(evl.typ.clone()),
+            CodeNode::EarlyReturn(inner) => {
+                self.guess_type_without_resolving_generics(inner.code.as_ref(), env_genie)
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 use super::env;
 use super::function;
 use super::lang;
+use crate::lang::Value;
 use objekt::clone_trait_object;
 use std::collections::HashMap;
 
@@ -42,6 +43,9 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
                 } else {
                     awaited_value
                 }
+            }
+            lang::Value::EarlyReturn(inner) => {
+                lang::Value::EarlyReturn(Box::new(resolve_futures(*inner)))
             }
             lang::Value::List(typ, v) => {
                 lang::Value::List(typ, v.into_iter().map(resolve_futures).collect())
@@ -94,5 +98,6 @@ fn contains_futures(val: &lang::Value) -> bool {
         | lang::Value::Number(_)
         | lang::Value::Boolean(_)
         | lang::Value::AnonymousFunction(_) => false,
+        Value::EarlyReturn(inner) => contains_futures(inner),
     }
 }

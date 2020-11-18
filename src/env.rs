@@ -92,6 +92,9 @@ impl Interpreter {
                     let mut return_value = lang::Value::Null;
                     for exp in block.expressions {
                         return_value = await_eval_result!(interp.evaluate(&exp));
+                        if return_value.is_early_return() {
+                            break;
+                        }
                     }
                     return_value
                 })
@@ -260,6 +263,10 @@ impl Interpreter {
                                                value: Box::new(await_eval_result!(value_fut)) }
                 })
             }
+            CodeNode::EarlyReturn(early_return) => {
+                let expr_fut = self.evaluate(&early_return.code);
+                Box::pin(async move { lang::Value::EarlyReturn(Box::new(await_eval_result!(expr_fut))) })
+            }
         };
         let env = Rc::clone(&self.env);
         async move {
@@ -316,7 +323,11 @@ impl Interpreter {
             match func {
                 Some(function) => {
                     // TODO: need to generate new copy of locals for stack, but rest of env should be the same
-                    Ok(function.call(interp, args))
+
+                    let returned_val = function.call(interp, args);
+                    Ok(resolve_all_futures(returned_val).await
+                                                        .unwrap_early_return())
+                    // Ok(returned_val.unwrap_early_return())
                 }
                 None => Err(ExecutionError::UndefinedFunction),
             }

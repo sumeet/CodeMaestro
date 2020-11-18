@@ -54,6 +54,7 @@ impl<'a> EnvGenie<'a> {
                                         vec![anonymous_function.takes_arg.arg_type.clone(),
                                              anonymous_function.returns.clone(),])
             }
+            Value::EarlyReturn(value) => self.guess_type_of_value(&value),
         }
     }
 
