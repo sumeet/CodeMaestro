@@ -105,8 +105,13 @@ pub fn new_placeholder(description: String, typ: lang::Type) -> lang::CodeNode {
 }
 
 pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
-    let branch_type = for_type.clone()
-                              .unwrap_or_else(|| lang::Type::from_spec(&*lang::NULL_TYPESPEC));
+    let (true_branch, else_branch) = match for_type {
+        Some(for_type) => {
+            (new_block(vec![new_placeholder("True branch".to_string(), for_type.clone())]),
+             new_block(vec![new_placeholder("Else branch".to_string(), for_type.clone())]))
+        }
+        None => (new_block(vec![]), new_block(vec![])),
+    };
     lang::CodeNode::Conditional(lang::Conditional {
         id: lang::new_id(),
         // TODO: change to boolean type once we add it
@@ -114,8 +119,8 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
             "Condition".to_string(),
             lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC),
         )),
-        true_branch: Box::new(lang::CodeNode::Block(new_block(vec![new_placeholder("True branch".to_string(), branch_type.clone())]))),
-        else_branch: Some(Box::new(lang::CodeNode::Block(new_block(vec![new_placeholder("Else branch".to_string(), branch_type.clone())])))),
+        true_branch: Box::new(lang::CodeNode::Block(true_branch)),
+        else_branch: Some(Box::new(lang::CodeNode::Block(else_branch))),
     })
 }
 
