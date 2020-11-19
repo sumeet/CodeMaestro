@@ -12,7 +12,10 @@ use super::undo;
 use crate::code_generation;
 use crate::editor::Controller;
 use cs::builtins;
-use cs::builtins::{new_result, new_result_with_null_error};
+use cs::builtins::{
+    get_ok_type_from_result_type, get_some_type_from_option_type, new_result,
+    new_result_with_null_error,
+};
 use cs::code_function;
 use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
@@ -814,7 +817,17 @@ impl CodeGenie {
                 self.guess_type_without_resolving_generics(inner.code.as_ref(), env_genie)
             }
             CodeNode::Try(trai) => {
-                self.guess_type_without_resolving_generics(trai.expr.as_ref(), env_genie)
+                let maybe_error_typ =
+                    self.guess_type_without_resolving_generics(trai.maybe_error_expr.as_ref(),
+                                                               env_genie)?;
+                if let Ok(result_ok_typ) = get_ok_type_from_result_type(&maybe_error_typ) {
+                    Ok(result_ok_typ.clone())
+                } else if let Ok(option_some_typ) = get_some_type_from_option_type(&maybe_error_typ)
+                {
+                    Ok(option_some_typ.clone())
+                } else {
+                    Err("invalid node inside of try")
+                }
             }
         }
     }

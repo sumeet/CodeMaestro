@@ -273,7 +273,7 @@ impl Interpreter {
             CodeNode::Try(trai) => {
                 let mut interp = self.clone();
                 Box::pin(async move {
-                    let evaluated = await_eval_result!(interp.evaluate(&trai.expr));
+                    let evaluated = await_eval_result!(interp.evaluate(&trai.maybe_error_expr));
                     let (enum_variant_id, _) = evaluated.as_enum().unwrap();
                     let enum_id =
                         EnvGenie::new(&interp.env.borrow()).find_enum_variant(enum_variant_id)

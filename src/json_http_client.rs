@@ -126,7 +126,7 @@ impl lang::Function for JSONHTTPClient {
                 Ok(json_value) => {
                     let converted_lang_value =
                         serde_value_to_lang_value(&json_value,
-                                                  get_ok_type_from_result_type(&returns),
+                                                  get_ok_type_from_result_type(&returns).unwrap(),
                                                   &interpreter.env.borrow());
                     match converted_lang_value {
                         Ok(inner_ok_value) => {

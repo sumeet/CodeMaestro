@@ -843,7 +843,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     pub fn render_try(&self, trai: &lang::Try) -> T::DrawResult {
         self.ui_toolkit.draw_all_on_same_line(&[
-            &|| self.render_code(&trai.expr),
+            &|| self.render_code(&trai.maybe_error_expr),
             &|| {
                 self.ui_toolkit
                     .draw_buttony_text("\u{f059}", colorscheme!(warning_color))

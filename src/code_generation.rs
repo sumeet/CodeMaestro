@@ -106,7 +106,7 @@ pub fn new_placeholder(description: String, typ: lang::Type) -> lang::CodeNode {
 
 pub fn new_early_return() -> lang::CodeNode {
     lang::CodeNode::EarlyReturn(lang::EarlyReturn { id: lang::new_id(),
-                                                    code: Box::new(new_placeholder("early return".into(), lang::Type::from_spec(&*lang::ANY_TYPESPEC))) })
+                                                    code: Box::new(new_placeholder("Early return".into(), lang::Type::from_spec(&*lang::ANY_TYPESPEC))) })
 }
 
 pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
@@ -232,4 +232,12 @@ pub fn new_enum_variant_literal(enum_name: String,
                                variant_id,
                                variant_value_expr: Box::new(new_placeholder(enum_name,
                                                                             variant_type)) }
+}
+
+pub fn new_try(maybe_error_expr: lang::CodeNode) -> lang::Try {
+    lang::Try { id: lang::new_id(),
+                maybe_error_expr: Box::new(maybe_error_expr),
+                or_else_return_expr:
+                    Box::new(new_placeholder("Early return".into(),
+                                             lang::Type::from_spec(&*lang::ANY_TYPESPEC))) }
 }

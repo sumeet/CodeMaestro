@@ -12,6 +12,7 @@ use objekt::clone_trait_object;
 use crate::code_editor::{
     get_result_type_from_indexing_into_list, get_type_from_list, required_return_type, CodeLocation,
 };
+use cs::builtins;
 use cs::chat_program::ChatProgram;
 use cs::code_generation::new_anon_func;
 use cs::lang::{ArgumentDefinition, TypeSpec};
@@ -35,6 +36,7 @@ lazy_static! {
         Box::new(InsertLiteralOptionGenerator {}),
         Box::new(InsertBlockOptionGenerator {}),
         Box::new(InsertEarlyReturnOptionGenerator {}),
+        Box::new(InsertTryOptionGenerator {}),
     ];
 }
 
@@ -1196,5 +1198,36 @@ impl InsertCodeMenuOptionGenerator for InsertBlockOptionGenerator {
                                     new_node: new_anon_func(takes_arg, return_type.clone()),
                                     is_selected: false,
                                     group_name: "Executable Code" }]
+    }
+}
+
+#[derive(Clone)]
+struct InsertTryOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertTryOptionGenerator {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               _env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        if let Some(wraps_type) = &search_params.wraps_type {
+            if [*builtins::RESULT_ENUM_ID, *builtins::OPTION_ENUM_ID].contains(&wraps_type.typespec_id) {
+                let wrapped_node = find_wrapped_node(code_genie, search_params);
+                return vec![InsertCodeMenuOption { sort_key: "tryoption".to_string(),
+                    new_node: lang::CodeNode::Try(code_generation::new_try(wrapped_node.clone())),
+                    is_selected: false,
+                    group_name: CONTROL_FLOW_GROUP }];
+            }
+            // let type_to_search_for =
+            //     if let Ok(result_ok_typ) = get_ok_type_from_result_type(wraps_type) {
+            //         result_ok_typ
+            //     } else if let Ok(option_some_typ) = get_some_type_from_option_type(wraps_type) {
+            //         option_some_typ
+            //     } else {
+            //         // not wrapping a Result or Option, bail out
+            //         return vec![];
+            //     };
+        }
+        vec![]
     }
 }
