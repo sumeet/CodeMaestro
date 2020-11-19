@@ -1,24 +1,15 @@
 use super::code_editor::CodeGenie;
 use super::code_generation;
 use super::editor;
-use cs::builtins;
 use cs::env;
 use cs::env_genie;
 use cs::lang;
 use cs::lang::Function;
 
-use crate::code_editor::CodeLocation;
+use crate::code_editor::{required_return_type, CodeLocation};
 use crate::insert_code_menu::{find_all_locals_preceding, SearchPosition};
 use cs::env_genie::EnvGenie;
-use lazy_static::lazy_static;
 use std::iter::once;
-
-lazy_static! {
-    static ref HTTP_FORM_PARAM_TYPE: lang::Type =
-        lang::Type::from_spec_id(*builtins::HTTP_FORM_PARAM_STRUCT_ID, vec![]);
-    static ref LIST_OF_FORM_PARAMS: lang::Type =
-        lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![HTTP_FORM_PARAM_TYPE.clone()]);
-}
 
 // TODO: instead of applying fixes right away, show them in a popup modal and ask the user to either
 // confirm or back out the change that caused it
@@ -209,7 +200,7 @@ impl<'a> FixableProblemFinder<'a> {
                                 location: CodeLocation,
                                 block: &lang::Block)
                                 -> Option<FixableProblem> {
-        let required_return_type = self.required_return_type(location)?;
+        let required_return_type = required_return_type(location, self.env_genie)?;
         if !required_return_type.matches(&self.returned_type(block)) {
             Some(FixableProblem::InvalidReturnType { location,
                                                      block: block.clone(),
@@ -250,28 +241,6 @@ impl<'a> FixableProblemFinder<'a> {
                 None
             }
         }).collect()
-    }
-
-    fn required_return_type(&self, location: CodeLocation) -> Option<lang::Type> {
-        match location {
-            CodeLocation::Function(func_id) => {
-                Some(self.env_genie.get_code_func(func_id).unwrap().returns())
-            }
-            CodeLocation::JSONHTTPClientTransform(client_id) => {
-                Some(self.env_genie
-                         .get_json_http_client(client_id)
-                         .unwrap()
-                         .returns())
-            }
-            CodeLocation::JSONHTTPClientURLParams(_) => Some(LIST_OF_FORM_PARAMS.clone()),
-            CodeLocation::JSONHTTPClientURL(_) => {
-                Some(lang::Type::from_spec(&*lang::STRING_TYPESPEC))
-            }
-            CodeLocation::ChatProgram(_)
-            | CodeLocation::Script(_)
-            | CodeLocation::Test(_)
-            | CodeLocation::JSONHTTPClientTestSection(_) => None,
-        }
     }
 
     fn returned_type(&self, block: &lang::Block) -> lang::Type {

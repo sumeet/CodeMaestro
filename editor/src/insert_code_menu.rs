@@ -9,7 +9,9 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
 
-use crate::code_editor::{get_result_type_from_indexing_into_list, get_type_from_list};
+use crate::code_editor::{
+    get_result_type_from_indexing_into_list, get_type_from_list, required_return_type, CodeLocation,
+};
 use cs::chat_program::ChatProgram;
 use cs::code_generation::new_anon_func;
 use cs::lang::{ArgumentDefinition, TypeSpec};
@@ -101,9 +103,10 @@ impl InsertCodeMenu {
 
     pub fn selected_option_code(&self,
                                 code_genie: &CodeGenie,
-                                env_genie: &EnvGenie)
+                                env_genie: &EnvGenie,
+                                location: CodeLocation)
                                 -> Option<lang::CodeNode> {
-        let options_groups = self.grouped_options(code_genie, env_genie);
+        let options_groups = self.grouped_options(code_genie, env_genie, location);
         let mut all_options = options_groups.into_iter()
                                             .flat_map(|og| og.options)
                                             .collect::<Vec<_>>();
@@ -117,9 +120,10 @@ impl InsertCodeMenu {
 
     pub fn grouped_options<'a>(&'a self,
                                code_genie: &'a CodeGenie,
-                               env_genie: &'a EnvGenie)
+                               env_genie: &'a EnvGenie,
+                               location: CodeLocation)
                                -> Vec<InsertCodeMenuOptionsGroup> {
-        let all_options = self.list_options(code_genie, env_genie);
+        let all_options = self.list_options(code_genie, env_genie, location);
 
         let mut options_groups = vec![];
         let selected_index = self.selected_index(all_options.len());
@@ -157,9 +161,10 @@ impl InsertCodeMenu {
     // TODO: can we return iterators all the way down instead of vectors? pretty sure we can!
     pub fn list_options(&self,
                         code_genie: &CodeGenie,
-                        env_genie: &EnvGenie)
+                        env_genie: &EnvGenie,
+                        location: CodeLocation)
                         -> Vec<InsertCodeMenuOption> {
-        let search_params = self.search_params(code_genie, env_genie);
+        let search_params = self.search_params(code_genie, env_genie, location);
         OPTIONS_GENERATORS.iter()
                           .flat_map(|generator| {
                               generator.options(&search_params, code_genie, env_genie)
@@ -167,7 +172,11 @@ impl InsertCodeMenu {
                           .collect()
     }
 
-    pub fn search_params(&self, code_genie: &CodeGenie, env_genie: &EnvGenie) -> CodeSearchParams {
+    pub fn search_params(&self,
+                         code_genie: &CodeGenie,
+                         env_genie: &EnvGenie,
+                         location: CodeLocation)
+                         -> CodeSearchParams {
         match self.insertion_point {
             // TODO: if it's the last line of a function, we might wanna use the function's type...
             // but that could be too limiting
@@ -191,6 +200,9 @@ impl InsertCodeMenu {
                         if !code_genie.any_variable_referencing_assignment(assignment.id) =>
                     {
                         self.new_params(None)
+                    }
+                    Some(lang::CodeNode::EarlyReturn(_)) => {
+                        self.new_params(required_return_type(location, env_genie))
                     }
                     _ => self.new_params(Some(exact_type)),
                 }

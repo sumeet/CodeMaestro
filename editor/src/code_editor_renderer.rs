@@ -277,7 +277,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                            let insertion_point = menu.insertion_point.clone();
                            let new_code_node = menu.selected_option_code(&self.code_editor
                                                                               .code_genie,
-                                                                         self.env_genie);
+                                                                         self.env_genie, self.code_editor.location.unwrap());
 
                            self.draw_text_input(
                                                 menu.input_str(),
@@ -360,7 +360,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                       let options_groups =
                                                           menu.grouped_options(&self.code_editor
                                                                                     .code_genie,
-                                                                               self.env_genie);
+                                                                               self.env_genie, self.code_editor.location.unwrap());
                                                       self.ui_toolkit
                                                           .with_y_padding(2, &|| {
                                                               draw_all_iter!(T::self.ui_toolkit, options_groups.iter().map(|group| {
@@ -381,7 +381,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // show hints: like if you want a list of something, type list
         // or if the type is number, then tell the user they can start typing numbers
         // or even better, maybe have clickable numbers? idk how that would work tho
-        let search_params = menu.search_params(&self.code_editor.code_genie, self.env_genie);
+        let search_params = menu.search_params(&self.code_editor.code_genie,
+                                               self.env_genie,
+                                               self.code_editor.location.unwrap());
         //        self.ui_toolkit.draw_with_margin((0., 0.), &|| {
         self.ui_toolkit
             .draw_with_bgcolor(transparency(BLACK_COLOR, 0.68), &|| {

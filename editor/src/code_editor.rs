@@ -11,13 +11,15 @@ use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_generation;
 use crate::editor::Controller;
+use cs::builtins;
 use cs::builtins::{new_result, new_result_with_null_error};
 use cs::code_function;
 use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
 use cs::env_genie::EnvGenie;
 use cs::lang;
-use cs::lang::{is_generic, CodeNode};
+use cs::lang::{is_generic, CodeNode, Function};
+use lazy_static::lazy_static;
 use objekt::private::collections::HashSet;
 
 #[derive(Clone)]
@@ -321,7 +323,8 @@ impl CodeEditor {
             | lang::CodeNode::ReassignListIndex(_)
             | lang::CodeNode::Conditional(_)
             | lang::CodeNode::WhileLoop(_)
-            | lang::CodeNode::EnumVariantLiteral(_) => Some(InsertionPoint::Replace(node_id)),
+            | lang::CodeNode::EnumVariantLiteral(_)
+            | lang::CodeNode::EarlyReturn(_) => Some(InsertionPoint::Replace(node_id)),
             otherwise => {
                 println!("tried to replace node with parent {:?}", otherwise);
                 None
@@ -1649,5 +1652,29 @@ pub fn update_code_in_env(location: CodeLocation,
             chat_program.code = code.as_block().unwrap().clone();
             env.add_function(chat_program);
         }
+    }
+}
+
+pub fn required_return_type(location: CodeLocation, env_genie: &EnvGenie) -> Option<lang::Type> {
+    lazy_static! {
+        static ref HTTP_FORM_PARAM_TYPE: lang::Type =
+            lang::Type::from_spec_id(*builtins::HTTP_FORM_PARAM_STRUCT_ID, vec![]);
+        static ref LIST_OF_FORM_PARAMS: lang::Type =
+            lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![HTTP_FORM_PARAM_TYPE.clone()]);
+    }
+
+    match location {
+        CodeLocation::Function(func_id) => {
+            Some(env_genie.get_code_func(func_id).unwrap().returns())
+        }
+        CodeLocation::JSONHTTPClientTransform(client_id) => {
+            Some(env_genie.get_json_http_client(client_id).unwrap().returns())
+        }
+        CodeLocation::JSONHTTPClientURLParams(_) => Some(LIST_OF_FORM_PARAMS.clone()),
+        CodeLocation::JSONHTTPClientURL(_) => Some(lang::Type::from_spec(&*lang::STRING_TYPESPEC)),
+        CodeLocation::ChatProgram(_)
+        | CodeLocation::Script(_)
+        | CodeLocation::Test(_)
+        | CodeLocation::JSONHTTPClientTestSection(_) => None,
     }
 }
