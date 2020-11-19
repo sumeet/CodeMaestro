@@ -39,6 +39,8 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     let icon_font_size = font_size / 1.75;
     let fontawesome_icon_y_offset = (-2.0 * hidpi_factor) as f32;
     let custom_icon_y_offset = 1.; //(-0.25 * hidpi_factor) as f32;
+    let noto_sans_font_size = font_size * 1.75;
+    let noto_sans_y_offset = -0.4;
 
     unsafe {
         imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
@@ -60,6 +62,19 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                config: Some(FontConfig { rasterizer_multiply: 1.75,
                                                          glyph_ranges:
                                                              FontGlyphRanges::default(),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) },
+         FontSource::TtfData { data: include_bytes!("../../fonts/NotoSansSymbols-Black.ttf"),
+                               size_pixels: noto_sans_font_size,
+                               config: Some(FontConfig { glyph_offset: [0.0, noto_sans_y_offset],
+                                                         rasterizer_multiply: 1.75,
+                                                         glyph_ranges:
+                                                         // The "Miscellaneous Technical" range:
+                                                         // https://www.compart.com/en/unicode/block/U+2300
+                                                             FontGlyphRanges::from_slice(&[0x2300,
+                                                                                           0x23ff, // the range for custom fonts, small because it's only the ones we use
+                                                                                           0]),
                                                          pixel_snap_h: true,
                                                          oversample_h: 1,
                                                          ..FontConfig::default() }) },

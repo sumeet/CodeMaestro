@@ -812,11 +812,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                   .unwrap();
                     self.render_enum_variant_literal(evl, &typ)
                 }
-                CodeNode::EarlyReturn(early_return) => {
-                    self.ui_toolkit
-                        .draw_all_on_same_line(&[&|| self.ui_toolkit.draw_text("Return"),
-                                                 &|| self.render_code(early_return.code.as_ref())])
-                }
+                CodeNode::EarlyReturn(early_return) => self.render_early_return(early_return),
             }
         };
 
@@ -836,6 +832,17 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         //                                self.ui_toolkit.draw_text(&format!("{:?}", code_node.id()))
         //                            }])
         draw_fn()
+    }
+
+    pub fn render_early_return(&self, early_return: &lang::EarlyReturn) -> T::DrawResult {
+        self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                    self.code_handle(&|| {
+                                                                         self.ui_toolkit
+                                                                             .draw_text("⎆ ")
+                                                                     },
+                                                                     early_return.id)
+                                                },
+                                                &|| self.render_code(early_return.code.as_ref())])
     }
 
     pub fn render_anonymous_function(&self, anon_func: &AnonymousFunction) -> T::DrawResult {
@@ -1541,19 +1548,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
         self.ui_toolkit.draw_all(&[
             &|| {
-                self.ui_toolkit.draw_all_on_same_line(&[&|| {
-                                                            self.draw_button("If",
-                                                                             colorscheme!(action_color),
-                                                                             &|| {})
-                                                        },
-                                                        &|| {
-                                                            self.render_code(&conditional.condition)
-                                                        }])
+                self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.code_handle(&|| self.draw_text("If "), conditional.id),
+                    &|| self.render_code(&conditional.condition),
+                ])
             },
             &|| self.render_indented(&|| self.render_code(&conditional.true_branch)),
-            &|| self.draw_button("Else",
-                                 colorscheme!(action_color),
-                                 &|| {}),
+            &|| self.code_handle(&|| self.draw_text("Else"), conditional.id),
             &|| {
                 if let Some(else_branch) = &conditional.else_branch {
                     self.render_indented(&|| self.render_code(else_branch))
@@ -1561,7 +1562,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.ui_toolkit.draw_all(&[])
                 }
             },
-
         ])
     }
 
@@ -1928,7 +1928,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn code_to_drag_drop(&self,
                          clicked_code_node_id: lang::ID)
                          -> Box<dyn Iterator<Item = &lang::CodeNode> + '_> {
-        if self.code_editor.selected_node_ids.is_empty() {
+        if !self.code_editor
+                .selected_node_ids
+                .contains(&clicked_code_node_id)
+        {
             Box::new(self.code_editor
                          .code_genie
                          .find_node(clicked_code_node_id)
