@@ -139,13 +139,35 @@ pub fn err_result_string(string: String) -> lang::Value {
                                value: Box::new(lang::Value::String(string)) }
 }
 
-pub fn convert_lang_value_to_rust_result(value: &lang::Value)
+pub fn convert_lang_value_to_rust_result(value: lang::Value) -> Result<lang::Value, lang::Value> {
+    let (variant_id, inner_value) = value.into_enum().unwrap();
+    if variant_id == *RESULT_OK_VARIANT_ID {
+        Ok(inner_value)
+    } else if variant_id == *RESULT_ERROR_VARIANT_ID {
+        Err(inner_value)
+    } else {
+        panic!("that's an enum, but not a Result: {:?}", inner_value)
+    }
+}
+
+pub fn convert_lang_value_as_rust_result(value: &lang::Value)
                                          -> Result<&lang::Value, &lang::Value> {
     let (variant_id, inner_value) = value.as_enum().unwrap();
     if variant_id == *RESULT_OK_VARIANT_ID {
         Ok(inner_value)
     } else if variant_id == *RESULT_ERROR_VARIANT_ID {
         Err(inner_value)
+    } else {
+        panic!("that's an enum, but not a Result: {:?}", inner_value)
+    }
+}
+
+pub fn convert_lang_option_to_rust_option(value: lang::Value) -> Option<lang::Value> {
+    let (variant_id, inner_value) = value.into_enum().unwrap();
+    if variant_id == *OPTION_SOME_VARIANT_ID {
+        Some(inner_value)
+    } else if variant_id == *OPTION_NONE_VARIANT_ID {
+        None
     } else {
         panic!("that's an enum, but not a Result: {:?}", inner_value)
     }

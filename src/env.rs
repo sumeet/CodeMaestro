@@ -7,9 +7,12 @@ use std::future::Future;
 use std::pin::Pin;
 use std::rc::Rc;
 
-use crate::builtins::ok_result_value;
+use crate::builtins;
+use crate::builtins::{
+    convert_lang_option_to_rust_option, convert_lang_value_to_rust_result, ok_result_value,
+};
 use crate::builtins::{err_result_string, err_result_value};
-use crate::lang::CodeNode;
+use crate::lang::{CodeNode, Value};
 use crate::{enums, resolve_all_futures, EnvGenie};
 use failure::_core::fmt::Formatter;
 use futures_util::FutureExt;
@@ -266,6 +269,34 @@ impl Interpreter {
             CodeNode::EarlyReturn(early_return) => {
                 let expr_fut = self.evaluate(&early_return.code);
                 Box::pin(async move { lang::Value::EarlyReturn(Box::new(await_eval_result!(expr_fut))) })
+            }
+            CodeNode::Try(trai) => {
+                let mut interp = self.clone();
+                Box::pin(async move {
+                    let evaluated = await_eval_result!(interp.evaluate(&trai.expr));
+                    let (enum_variant_id, _) = evaluated.as_enum().unwrap();
+                    let enum_id =
+                        EnvGenie::new(&interp.env.borrow()).find_enum_variant(enum_variant_id)
+                                                           .unwrap()
+                                                           .0
+                                                           .id;
+                    let opt = if enum_id == *builtins::RESULT_ENUM_ID {
+                        // TODO: if result, we should be able to pass the error value to anonymous
+                        // function inside of or_else_return_expr
+                        convert_lang_value_to_rust_result(evaluated).ok()
+                    } else if enum_id == *builtins::OPTION_ENUM_ID {
+                        convert_lang_option_to_rust_option(evaluated)
+                    } else {
+                        panic!("expected Result or Option, but got enum {:?}",
+                               interp.env.borrow().find_enum(enum_id))
+                    };
+                    match opt {
+                        Some(ok_value) => ok_value,
+                        None => {
+                            lang::Value::EarlyReturn(Box::new(await_eval_result!(interp.evaluate(&trai.or_else_return_expr))))
+                        }
+                    }
+                })
             }
         };
         let env = Rc::clone(&self.env);

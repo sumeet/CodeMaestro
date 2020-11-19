@@ -206,6 +206,7 @@ pub enum CodeNode {
     ReassignListIndex(ReassignListIndex),
     EnumVariantLiteral(EnumVariantLiteral),
     EarlyReturn(EarlyReturn),
+    Try(Try),
 }
 
 use crate::code_generation::new_block;
@@ -642,6 +643,7 @@ impl CodeNode {
             CodeNode::WhileLoop(while_loop) => format!("While loop: {:?}", while_loop.id),
             CodeNode::EnumVariantLiteral(evl) => format!("Enum variant literal: {:?}", evl.id),
             CodeNode::EarlyReturn(early_return) => format!("Early return: {:?}", early_return.id),
+            CodeNode::Try(trai) => format!("Try: {:?}", trai.id),
         }
     }
 
@@ -672,6 +674,7 @@ impl CodeNode {
             CodeNode::WhileLoop(while_loop) => while_loop.id,
             CodeNode::EnumVariantLiteral(evl) => evl.id,
             CodeNode::EarlyReturn(evl) => evl.id,
+            CodeNode::Try(trai) => trai.id,
         }
     }
 
@@ -766,6 +769,9 @@ impl CodeNode {
             CodeNode::EarlyReturn(early_return) => {
                 Box::new(std::iter::once(early_return.code.as_ref()))
             }
+            CodeNode::Try(trai) => {
+                Box::new(std::iter::once(trai.expr.as_ref()).chain(std::iter::once(trai.or_else_return_expr.as_ref())))
+            }
         }
     }
 
@@ -826,6 +832,8 @@ impl CodeNode {
                                                     while_loop.body.borrow_mut()],
             CodeNode::EnumVariantLiteral(evl) => vec![evl.variant_value_expr.borrow_mut()],
             CodeNode::EarlyReturn(early_return) => vec![early_return.code.borrow_mut()],
+            CodeNode::Try(trai) => vec![trai.expr.borrow_mut(),
+                                        trai.or_else_return_expr.borrow_mut()],
         }
     }
 
@@ -1121,8 +1129,16 @@ pub struct EnumVariantLiteral {
     pub variant_id: ID,
     pub variant_value_expr: Box<CodeNode>,
 }
+
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct EarlyReturn {
     pub id: ID,
     pub code: Box<CodeNode>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct Try {
+    pub id: ID,
+    pub expr: Box<CodeNode>,
+    pub or_else_return_expr: Box<CodeNode>,
 }
