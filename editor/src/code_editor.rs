@@ -277,7 +277,8 @@ impl CodeEditor {
             | CodeNode::ReassignListIndex(_)
             | CodeNode::WhileLoop(_)
             | CodeNode::EnumVariantLiteral(_)
-            | CodeNode::EarlyReturn(_) => false,
+            | CodeNode::EarlyReturn(_)
+            | CodeNode::Try(_) => false,
         }
     }
 
@@ -305,7 +306,8 @@ impl CodeEditor {
             | CodeNode::ListIndex(_)
             | CodeNode::WhileLoop(_)
             | CodeNode::EnumVariantLiteral(_)
-            | CodeNode::EarlyReturn(_) => unimplemented!(),
+            | CodeNode::EarlyReturn(_)
+            | CodeNode::Try(_) => unimplemented!(),
         }
     }
 
@@ -810,6 +812,9 @@ impl CodeGenie {
             CodeNode::EnumVariantLiteral(evl) => Ok(evl.typ.clone()),
             CodeNode::EarlyReturn(inner) => {
                 self.guess_type_without_resolving_generics(inner.code.as_ref(), env_genie)
+            }
+            CodeNode::Try(trai) => {
+                self.guess_type_without_resolving_generics(trai.expr.as_ref(), env_genie)
             }
         }
     }

@@ -12,7 +12,7 @@ use crate::builtins::{
     convert_lang_option_to_rust_option, convert_lang_value_to_rust_result, ok_result_value,
 };
 use crate::builtins::{err_result_string, err_result_value};
-use crate::lang::{CodeNode, Value};
+use crate::lang::CodeNode;
 use crate::{enums, resolve_all_futures, EnvGenie};
 use failure::_core::fmt::Formatter;
 use futures_util::FutureExt;

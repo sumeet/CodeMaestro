@@ -741,11 +741,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::WhileLoop(_) => {
                 Some("Run code again and again until the condition is false".into())
             }
-            CodeNode::EnumVariantLiteral(_) => {
-                Some("A variant of an enumeration".into())
+            CodeNode::EnumVariantLiteral(evl) => {
+                let (eneom, variant) = self.env_genie.find_enum_variant(evl.variant_id).unwrap();
+                Some(format!("A variant of {}: {}", eneom.name, variant.name))
             }
             CodeNode::EarlyReturn(_) => {
                 Some("Return from the function early".into())
+            }
+            CodeNode::Try(_) => {
+                Some("Either unwraps an error (Result or Option) or exits the function early".into())
             }
         }
     }
@@ -815,6 +819,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.render_enum_variant_literal(evl, &typ)
                 }
                 CodeNode::EarlyReturn(early_return) => self.render_early_return(early_return),
+                CodeNode::Try(trai) => self.render_try(trai),
             }
         };
 
@@ -834,6 +839,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         //                                self.ui_toolkit.draw_text(&format!("{:?}", code_node.id()))
         //                            }])
         draw_fn()
+    }
+
+    pub fn render_try(&self, trai: &lang::Try) -> T::DrawResult {
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &|| self.render_code(&trai.expr),
+            &|| {
+                self.ui_toolkit
+                    .draw_buttony_text("\u{f059}", colorscheme!(warning_color))
+            },
+            &|| self.ui_toolkit.draw_text(" ⎆"),
+            &|| self.render_code(&trai.or_else_return_expr),
+        ])
     }
 
     pub fn render_early_return(&self, early_return: &lang::EarlyReturn) -> T::DrawResult {
@@ -892,9 +909,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::NumberLiteral(_)
             | CodeNode::ListIndex(_)
             | CodeNode::EnumVariantLiteral(_)
-            | CodeNode::EarlyReturn(_) => {
-                self.render_general_code_context_menu(draw_code_fn, code_node_id)
-            }
+            | CodeNode::EarlyReturn(_)
+            | CodeNode::Try(_) => self.render_general_code_context_menu(draw_code_fn, code_node_id),
             CodeNode::FunctionCall(_)
             | CodeNode::Block(_)
             | CodeNode::Argument(_)
