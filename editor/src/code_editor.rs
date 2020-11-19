@@ -605,7 +605,7 @@ impl CodeGenie {
                               .iter()
                               // position in the block is 0 indexed, so this will take every node up TO it
                               .take(position_in_block)
-                              .filter_map(|code| code.into_assignment())
+                              .filter_map(|code| code.as_assignment().ok())
                               .chain(self.find_assignments_that_come_before_code(block.id, false)))
             }
             _ => panic!("this shouldn't have happened, find_expression_inside_block_that_contains \

@@ -44,7 +44,6 @@ const FUNCTION_CALL_GROUP: &str = "Functions";
 const LOCALS_GROUP: &str = "Local variables";
 const LITERALS_GROUP: &str = "Create new value";
 const CONTROL_FLOW_GROUP: &str = "Control flow";
-const ASSIGN_VARIABLE_GROUP: &str = "Add or change variables";
 
 #[derive(Clone)]
 pub struct InsertCodeMenu {
@@ -130,6 +129,8 @@ impl InsertCodeMenu {
         let mut options_groups = vec![];
         let selected_index = self.selected_index(all_options.len());
         for (group_name, options) in all_options.into_iter()
+                                                // TODO: more efficient than sorting?
+                                                .sorted_by_key(|o| o.group_name)
                                                 .group_by(|o| o.group_name)
                                                 .into_iter()
         {
@@ -971,7 +972,7 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
         }
 
         vec![InsertCodeMenuOption {
-            group_name: ASSIGN_VARIABLE_GROUP,
+            group_name: LOCALS_GROUP,
             sort_key: format!("{}newvariable{}", sort_key_prefix, variable_name),
             is_selected: false,
             new_node: code_generation::new_assignment_code_node(
@@ -1023,7 +1024,7 @@ impl InsertCodeMenuOptionGenerator for InsertReassignmentOptionGenerator {
                     new_node: code_generation::new_reassignment(var.locals_id,
                                                                 code_generation::new_placeholder(var.name, var.typ)).into(),
                     is_selected: false,
-                    group_name: ASSIGN_VARIABLE_GROUP,
+                    group_name: LOCALS_GROUP,
                 }
             }).collect()
     }
@@ -1134,7 +1135,7 @@ impl InsertCodeMenuOptionGenerator for InsertReassignListIndexOfLocalVariable {
                 let list_typ = get_type_from_list(variable.typ)?;
 
                 Some(InsertCodeMenuOption {
-                        group_name: ASSIGN_VARIABLE_GROUP,
+                        group_name: LOCALS_GROUP,
                         sort_key: format!("reassignlistindex{}", variable.locals_id),
                         new_node: lang::CodeNode::ReassignListIndex(code_generation::new_reassign_list_index(variable.locals_id, list_typ)),
                         is_selected: false

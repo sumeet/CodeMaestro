@@ -31,6 +31,7 @@ use cs::lang::{AnonymousFunction, CodeNode, FunctionRenderingStyle};
 use cs::structs;
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
+const EARLY_RETURN_ICON: &str = "\u{f2f5}";
 // TODO: move this into the color scheme, but we'll leave it in here for now -- lazy
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
 
@@ -746,7 +747,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 Some(format!("A variant of {}: {}", eneom.name, variant.name))
             }
             CodeNode::EarlyReturn(_) => {
-                Some("Return from the function early".into())
+                Some("Exit the function early".into())
             }
             CodeNode::Try(_) => {
                 Some("Either unwraps an error (Result or Option) or exits the function early".into())
@@ -848,7 +849,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 self.ui_toolkit
                     .draw_buttony_text("\u{f059}", colorscheme!(warning_color))
             },
-            &|| self.ui_toolkit.draw_text(" ⎆"),
+            &|| {
+                self.ui_toolkit
+                    .draw_text(&format!(" {}", EARLY_RETURN_ICON))
+            },
             &|| self.render_code(&trai.or_else_return_expr),
         ])
     }
@@ -857,7 +861,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                     self.code_handle(&|| {
                                                                          self.ui_toolkit
-                                                                             .draw_text("⎆ ")
+                                                                             .draw_text(&format!("{} ", EARLY_RETURN_ICON))
                                                                      },
                                                                      early_return.id)
                                                 },
@@ -1521,16 +1525,23 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_list_index(&self, list_index: &lang::ListIndex) -> T::DrawResult {
-        self.code_handle(&|| {
-            self.draw_nested_borders_around(&|| {
+        self.draw_nested_borders_around(&|| {
                 self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| self.render_without_nesting(&|| self.render_code(&list_index.list_expr)),
-                    &|| self.render_without_nesting(&|| self.render_nested(&|| self.render_code(&list_index.index_expr))),
-                ])
+                &|| {
+                    self.code_handle(&|| {
+                                         self.render_without_nesting(&|| {
+                                                 self.render_code(&list_index.list_expr)
+                                             })
+                                     },
+                                     list_index.id)
+                },
+                &|| {
+                    self.render_without_nesting(&|| {
+                            self.render_nested(&|| self.render_code(&list_index.index_expr))
+                        })
+                },
+            ])
             })
-        },
-                         list_index.id
-        )
     }
 
     fn render_struct_field_get(&self, sfg: &lang::StructFieldGet) -> T::DrawResult {

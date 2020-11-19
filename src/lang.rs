@@ -546,13 +546,6 @@ impl CodeNode {
         }
     }
 
-    pub fn into_assignment(&self) -> Option<&Assignment> {
-        match self {
-            CodeNode::Assignment(ref assignment) => Some(assignment),
-            _ => None,
-        }
-    }
-
     pub fn into_block(self) -> Option<Block> {
         if let CodeNode::Block(block) = self {
             Some(block)
