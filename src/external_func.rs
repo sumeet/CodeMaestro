@@ -33,11 +33,15 @@ pub fn to_named_args(func: &dyn lang::Function,
 
 pub fn resolve_futures(value: lang::Value) -> lang::Value {
     lang::Value::new_future(async {
+        println!("start of the future");
         match value {
             lang::Value::Future(value_future) => {
+                println!("future!");
                 // need to recursive call here because even after resolving the
                 // future, the Value could contain MORE nested futures!
+                println!("awaiting {:?}", value_future.0);
                 let awaited_value = value_future.0.await;
+                println!("awaited");
                 if contains_futures(&awaited_value) {
                     resolve_futures(awaited_value)
                 } else {
@@ -45,12 +49,15 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
                 }
             }
             lang::Value::EarlyReturn(inner) => {
+                println!("early_return!");
                 lang::Value::EarlyReturn(Box::new(resolve_futures(*inner)))
             }
             lang::Value::List(typ, v) => {
+                println!("list!");
                 lang::Value::List(typ, v.into_iter().map(resolve_futures).collect())
             }
             lang::Value::Struct { values, struct_id } => {
+                println!("struct!");
                 lang::Value::Struct { struct_id,
                                       values: values.into_iter()
                                                     .map(|(value_id, value)| {
@@ -73,13 +80,22 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
 }
 
 pub async fn resolve_all_futures(mut val: lang::Value) -> lang::Value {
+    println!("resolving {:?}", val);
     while contains_futures(&val) {
         val = resolve_futures(val);
+        println!("now resolved partial {:?}", val);
         val = match val {
-            lang::Value::Future(value_future) => value_future.0.await,
-            _ => val,
+            lang::Value::Future(value_future) => {
+                println!("now resolved partial in future {:?}", value_future);
+                value_future.0.await
+            }
+            _ => {
+                println!("now resolved partial out of future {:?}", val);
+                val
+            }
         }
     }
+    println!("now resolved done {:?}", val);
     val
 }
 

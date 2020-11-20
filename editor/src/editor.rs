@@ -517,6 +517,10 @@ impl CommandBuffer {
     pub fn run(&mut self, code: &lang::CodeNode, callback: impl FnOnce(lang::Value) + 'static) {
         let code = code.clone();
         self.add_integrating_command(move |_controller, interpreter, async_executor, _| {
+                {
+                    let mut env = interpreter.env.borrow_mut();
+                    env.prev_eval_result_by_code_id.clear();
+                }
                 run(interpreter, async_executor, &code, callback);
             })
     }
@@ -1096,7 +1100,9 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                 ctrl: true,
                                                 shift: true, } if !has_problems => {
                                          let mut cmd_buffer = cmd_buffer.borrow_mut();
-                                         cmd_buffer.run(&script_code, |_| ());
+                                         cmd_buffer.run(&script_code, |_| {
+                                             println!("doine running future");
+                                         });
                                      }
                                      _ => (),
                                  }),

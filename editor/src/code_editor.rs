@@ -329,7 +329,8 @@ impl CodeEditor {
             | lang::CodeNode::Conditional(_)
             | lang::CodeNode::WhileLoop(_)
             | lang::CodeNode::EnumVariantLiteral(_)
-            | lang::CodeNode::EarlyReturn(_) => Some(InsertionPoint::Replace(node_id)),
+            | lang::CodeNode::EarlyReturn(_)
+            | lang::CodeNode::Try(_) => Some(InsertionPoint::Replace(node_id)),
             otherwise => {
                 println!("tried to replace node with parent {:?}", otherwise);
                 None

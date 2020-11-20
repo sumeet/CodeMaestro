@@ -59,9 +59,10 @@ impl Interpreter {
 
     // TODO: this is insane that we have to clone the code just to evaluate it. this is gonna slow
     // down evaluation so much
-    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
-        let code_node = code_node.clone();
+    pub fn evaluate(&mut self, cwode_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
+        let code_node = cwode_node.clone();
         let code_node_id = code_node.id();
+        println!("we are now evaluating {:?}", code_node.description());
         let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
                 // TODO: get rid of the unwrap and bubble up the error
@@ -86,15 +87,25 @@ impl Interpreter {
             lang::CodeNode::Reassignment(reassignment) => {
                 Box::pin(self.evaluate_reassignment(&reassignment))
             }
-            // TODO: pretty sure i need something here to ensure these futures run serially
-            // it exists, check out futures_ordered. will have to do a little bit of hacking to get
-            // it to work with async / await i believe
             lang::CodeNode::Block(block) => {
                 let mut interp = self.clone();
+                let is_in_interesting_block =
+                    block.id.to_string() == "d99b5e7b-40a0-428d-88a2-ec36af632d96".to_string();
                 Box::pin(async move {
                     let mut return_value = lang::Value::Null;
-                    for exp in block.expressions {
+                    for (i, exp) in block.expressions.into_iter().enumerate() {
+                        if is_in_interesting_block {
+                            println!("evaluating {}th expression in interesting block: {:?}",
+                                     i, exp);
+                            // if i == 8 {
+                            //     "jaiwefjoawef";
+                            // }
+                        }
                         return_value = await_eval_result!(interp.evaluate(&exp));
+                        if is_in_interesting_block {
+                            println!("evaluated {}th expression in interesting block: return val: {:?}",
+                                     i, return_value);
+                        }
                         if return_value.is_early_return() {
                             break;
                         }
@@ -155,9 +166,12 @@ impl Interpreter {
             CodeNode::WhileLoop(while_loop) => {
                 let mut interp = self.clone();
                 Box::pin(async move {
-                    while await_eval_result!(interp.evaluate(&while_loop.condition)).as_boolean()
-                                                                                    .unwrap()
-                    {
+                    while {
+                        println!("evaluyating condition in while loop");
+                        await_eval_result!(interp.evaluate(&while_loop.condition)).as_boolean()
+                                                                                  .unwrap()
+                    } {
+                        println!("looping single iteratrion");
                         await_eval_result!(interp.evaluate(&while_loop.body));
                     }
                     lang::Value::Null
@@ -236,12 +250,19 @@ impl Interpreter {
                 let index_fut2 = index_fut.clone();
                 self.set_local_variable(rli.assignment_id,
                                         lang::Value::new_future(async move {
+                                            println!("set index starting");
                                             let index = resolve_all_futures(index_fut).await
                                                                                       .as_i128()
                                                                                       .unwrap();
+                                            println!("set index ended");
+                                            println!("about to await set to val fut");
                                             let value = await_eval_result!(set_to_val_fut);
+                                            println!("awaited set to val fut: {:?}", value);
+                                            println!("about to await current_local_var");
                                             current_local_var =
                                                 resolve_all_futures(current_local_var).await;
+                                            println!("resolved current local var");
+                                            println!("current local var: {:?}", current_local_var);
                                             let vec_to_change =
                                                 current_local_var.as_mut_vec().unwrap();
                                             vec_to_change.get_mut(index as usize)
@@ -250,7 +271,9 @@ impl Interpreter {
                                         }));
 
                 Box::pin(async move {
+                    println!("set index2 starting");
                     let index = resolve_all_futures(index_fut2).await.as_i128().unwrap();
+                    println!("set index2 ended");
                     let current_local_var = resolve_all_futures(current_local_var2).await;
                     let vec = current_local_var.as_vec().unwrap();
                     if vec.len() < index as usize + 1 {
@@ -268,6 +291,7 @@ impl Interpreter {
             }
             CodeNode::EarlyReturn(early_return) => {
                 let expr_fut = self.evaluate(&early_return.code);
+                println!("there is an early return happening");
                 Box::pin(async move { lang::Value::EarlyReturn(Box::new(await_eval_result!(expr_fut))) })
             }
             CodeNode::Try(trai) => {
@@ -293,12 +317,14 @@ impl Interpreter {
                     match opt {
                         Some(ok_value) => ok_value,
                         None => {
+                            println!("early return happened {:?}", trai.id);
                             lang::Value::EarlyReturn(Box::new(await_eval_result!(interp.evaluate(&trai.or_else_return_expr))))
                         }
                     }
                 })
             }
         };
+        println!("we have finished evaluating {:?}", cwode_node.description());
         let env = Rc::clone(&self.env);
         async move {
             let result = await_eval_result!(result);

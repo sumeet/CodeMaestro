@@ -16,7 +16,6 @@ use cs::builtins;
 use cs::chat_program::ChatProgram;
 use cs::code_generation::new_anon_func;
 use cs::lang::{ArgumentDefinition, TypeSpec};
-use std::collections::HashMap;
 
 lazy_static! {
     // the order is significant here. it defines which order the options appear in (no weighting
@@ -263,6 +262,15 @@ pub struct CodeSearchParams {
 }
 
 impl CodeSearchParams {
+    pub fn search_matches_type(&self, typ: &lang::Type) -> bool {
+        if let Some(return_type) = &self.return_type {
+            return_type.matches(typ)
+        } else {
+            // if there's no return type being searched for, then we match everything
+            true
+        }
+    }
+
     pub fn wraps_type(mut self, typ: lang::Type) -> Self {
         self.wraps_type = Some(typ);
         self
@@ -1092,22 +1100,40 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
         find_all_locals_preceding(
             search_params.insertion_point.into(), code_genie, env_genie)
             .filter_map(|variable| {
-                let list_elem_typ = get_result_type_from_indexing_into_list(variable.typ)?;
-                if let Some(search_type) = &search_params.return_type {
-                    if !search_type.matches(&list_elem_typ) {
+                let list_elem_result_typ = get_result_type_from_indexing_into_list(variable.typ.clone())?;
+                // if let Some(search_type) = &search_params.return_type {
+                //     if !search_type.matches(&list_elem_result_typ) {
+                //         return None
+                //     }
+                // }
+                if search_params.search_matches_type(&list_elem_result_typ) && search_params.search_matches_identifier(&variable.name) {
+                    Some(InsertCodeMenuOption {
+                        group_name: LOCALS_GROUP,
+                        sort_key: format!("listindex{}", variable.locals_id),
+                        new_node: code_generation::new_list_index(code_generation::new_variable_reference(
+                            variable.locals_id)),
+                        is_selected: false
+                    })
+                } else {
+                    // also
+
+                    let list_elem_result_typ = get_type_from_list(variable.typ)?;
+                    if let Some(search_type) = &search_params.return_type {
+                        if !search_type.matches(&list_elem_result_typ) {
+                            return None
+                        }
+                    }
+                    if !search_params.search_matches_identifier(&variable.name) {
                         return None
                     }
+                    Some(InsertCodeMenuOption {
+                        group_name: LOCALS_GROUP,
+                        sort_key: format!("listindextry{}", variable.locals_id),
+                        new_node: lang::CodeNode::Try(code_generation::new_try(code_generation::new_list_index(code_generation::new_variable_reference(
+                            variable.locals_id)))),
+                        is_selected: false
+                    })
                 }
-                if !search_params.search_matches_identifier(&variable.name) {
-                    return None
-                }
-                Some(InsertCodeMenuOption {
-                    group_name: LOCALS_GROUP,
-                    sort_key: format!("listindex{}", variable.locals_id),
-                    new_node: code_generation::new_list_index(code_generation::new_variable_reference(
-                        variable.locals_id)),
-                    is_selected: false
-                })
             })
             .collect()
     }

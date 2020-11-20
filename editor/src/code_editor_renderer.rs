@@ -843,18 +843,28 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     pub fn render_try(&self, trai: &lang::Try) -> T::DrawResult {
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| self.render_code(&trai.maybe_error_expr),
-            &|| {
-                self.ui_toolkit
-                    .draw_buttony_text("\u{f059}", colorscheme!(warning_color))
-            },
-            &|| {
-                self.ui_toolkit
-                    .draw_text(&format!(" {}", EARLY_RETURN_ICON))
-            },
-            &|| self.render_code(&trai.or_else_return_expr),
-        ])
+        let draw_fn = &|| {
+            self.draw_nested_borders_around(&|| {
+                    self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.render_code(&trai.maybe_error_expr),
+                    &|| {
+                        self.ui_toolkit
+                            .draw_buttony_text(&format!("\u{f059}{}", EARLY_RETURN_ICON),
+                                               colorscheme!(warning_color))
+                    },
+                    &|| {
+                        self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
+                    },
+                ])
+                })
+        };
+        if let Some(value) = self.env_genie
+                                 .get_last_executed_result(trai.or_else_return_expr.id())
+        {
+            self.draw_code_with_output(draw_fn, value)
+        } else {
+            draw_fn()
+        }
     }
 
     pub fn render_early_return(&self, early_return: &lang::EarlyReturn) -> T::DrawResult {

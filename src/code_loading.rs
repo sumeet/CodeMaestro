@@ -74,6 +74,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function
         "UpdateListIndex" => Box::new(builtins::UpdateIndex {}),
         "Sum" => Box::new(builtins::Sum {}),
         "Subtract" => Box::new(builtins::Subtract {}),
+        "Multiply" => Box::new(builtins::Multiply {}),
         "Map" => Box::new(builtins::Map {}),
         "Print" => Box::new(builtins::Print {}),
         "JSONHTTPClient" => Box::new(serde_json::from_value::<JSONHTTPClient>(value)?),

@@ -701,6 +701,57 @@ impl lang::Function for Subtract {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
+pub struct Multiply {}
+
+#[typetag::serde]
+impl lang::Function for Multiply {
+    fn style(&self) -> lang::FunctionRenderingStyle {
+        lang::FunctionRenderingStyle::Infix(vec![], "*")
+    }
+
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        // TODO: fix the names
+        let dividend = args.get(&self.takes_args()[0].id)
+                           .unwrap()
+                           .as_i128()
+                           .unwrap();
+        let divisor = args.get(&self.takes_args()[1].id)
+                          .unwrap()
+                          .as_i128()
+                          .unwrap();
+        lang::Value::Number(dividend * divisor)
+    }
+
+    fn name(&self) -> &str {
+        "Multiply"
+    }
+
+    fn description(&self) -> &str {
+        "Multiply two numbers"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("092e3cec-954d-47f2-9574-075624311297").unwrap()
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("83aa68ce-910a-40f5-87ee-73689b0f3287").unwrap(),
+                                                   lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+                                                   "Multiplier".into()),
+             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("7d3918e6-f3f2-4b80-b449-7b6f35e067fc").unwrap(),
+                                                   lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+                                                   "Multiplicand".into())]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Sum {}
 
 #[typetag::serde]
