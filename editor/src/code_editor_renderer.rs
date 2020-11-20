@@ -1608,7 +1608,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.ui_toolkit.draw_all(&[
             &|| {
                 self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| self.draw_button("While", colorscheme!(action_color), &|| {}),
+                    &|| {
+                        self.code_handle(&|| {
+                                             self.draw_button("While",
+                                                              colorscheme!(action_color),
+                                                              &|| {})
+                                         },
+                                         while_loop.id)
+                    },
                     &|| self.render_code(&while_loop.condition),
                 ])
             },
