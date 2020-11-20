@@ -432,9 +432,6 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
     }
 }
 
-#[derive(Clone)]
-struct InsertVariableReferenceOptionGenerator {}
-
 // just need this for debugging, tho maybe i'll keep it around, it's probably good to have
 #[derive(Debug)]
 enum VariableType {
@@ -468,6 +465,9 @@ fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, boo
     }
 }
 
+#[derive(Clone)]
+struct InsertVariableReferenceOptionGenerator {}
+
 // shows insertion options for "locals", which are:
 // 1. local variables via Assignment
 // 2. function arguments
@@ -483,12 +483,14 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             return vec![];
         }
 
-        let mut variables_by_type_id : HashMap<lang::ID, Vec<Variable>> = find_all_locals_preceding(
-            search_params.insertion_point.into(), code_genie, env_genie)
-            .group_by(|variable| variable.typ.id())
-            .into_iter()
-            .map(|(id, variables)| (id, variables.collect()))
-            .collect();
+        let mut variables_by_type_id = find_assignments_preceding(search_params.insertion_point
+                                                                               .into(),
+                                                                  code_genie,
+                                                                  env_genie).map(|variable| {
+                                                                                (variable.typ.id(),
+                                                                                 variable)
+                                                                            })
+                                                                            .into_group_map();
 
         let mut variables = match &search_params.return_type {
             Some(search_type) if search_type.typespec_id != lang::ANY_TYPESPEC.id() => {
