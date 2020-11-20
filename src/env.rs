@@ -62,7 +62,6 @@ impl Interpreter {
     pub fn evaluate(&mut self, cwode_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
         let code_node = cwode_node.clone();
         let code_node_id = code_node.id();
-        println!("we are now evaluating {:?}", code_node.description());
         let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
                 // TODO: get rid of the unwrap and bubble up the error
@@ -89,23 +88,10 @@ impl Interpreter {
             }
             lang::CodeNode::Block(block) => {
                 let mut interp = self.clone();
-                let is_in_interesting_block =
-                    block.id.to_string() == "d99b5e7b-40a0-428d-88a2-ec36af632d96".to_string();
                 Box::pin(async move {
                     let mut return_value = lang::Value::Null;
-                    for (i, exp) in block.expressions.into_iter().enumerate() {
-                        if is_in_interesting_block {
-                            println!("evaluating {}th expression in interesting block: {:?}",
-                                     i, exp);
-                            // if i == 8 {
-                            //     "jaiwefjoawef";
-                            // }
-                        }
+                    for exp in block.expressions {
                         return_value = await_eval_result!(interp.evaluate(&exp));
-                        if is_in_interesting_block {
-                            println!("evaluated {}th expression in interesting block: return val: {:?}",
-                                     i, return_value);
-                        }
                         if return_value.is_early_return() {
                             break;
                         }
@@ -241,46 +227,62 @@ impl Interpreter {
             // guess_type of this will return Result<Null, Number>
             // here, Number is the index that didn't exist in the list we're changing
             CodeNode::ReassignListIndex(rli) => {
-                let index_fut = self.evaluate(rli.index_expr.as_ref());
-                let set_to_val_fut = self.evaluate(rli.set_to_expr.as_ref());
-                let mut current_local_var = self.get_local_variable(rli.assignment_id).unwrap();
-                let current_local_var2 = current_local_var.clone();
-
-                let index_fut = lang::Value::new_future(index_fut).clone();
-                let index_fut2 = index_fut.clone();
-                self.set_local_variable(rli.assignment_id,
-                                        lang::Value::new_future(async move {
-                                            println!("set index starting");
-                                            let index = resolve_all_futures(index_fut).await
-                                                                                      .as_i128()
-                                                                                      .unwrap();
-                                            println!("set index ended");
-                                            println!("about to await set to val fut");
-                                            let value = await_eval_result!(set_to_val_fut);
-                                            println!("awaited set to val fut: {:?}", value);
-                                            println!("about to await current_local_var");
-                                            current_local_var =
-                                                resolve_all_futures(current_local_var).await;
-                                            println!("resolved current local var");
-                                            println!("current local var: {:?}", current_local_var);
-                                            let vec_to_change =
-                                                current_local_var.as_mut_vec().unwrap();
-                                            vec_to_change.get_mut(index as usize)
-                                                         .map(|hole| *hole = value);
-                                            current_local_var
-                                        }));
-
+                let mut interp = self.clone();
                 Box::pin(async move {
-                    println!("set index2 starting");
-                    let index = resolve_all_futures(index_fut2).await.as_i128().unwrap();
-                    println!("set index2 ended");
-                    let current_local_var = resolve_all_futures(current_local_var2).await;
-                    let vec = current_local_var.as_vec().unwrap();
-                    if vec.len() < index as usize + 1 {
-                        return err_result_value(lang::Value::Number(index));
+                    let index =
+                        await_eval_result!(interp.evaluate(rli.index_expr.as_ref())).as_i128()
+                                                                                    .unwrap();
+                    let set_to_val = await_eval_result!(interp.evaluate(rli.set_to_expr.as_ref()));
+
+                    let mut current_local_var = resolve_all_futures(interp.get_local_variable(rli.assignment_id).unwrap()).await;
+                    let vec_to_change = current_local_var.as_mut_vec().unwrap();
+                    let index_exists = vec_to_change.get_mut(index as usize)
+                                                    .map(|hole| *hole = set_to_val)
+                                                    .is_some();
+                    interp.set_local_variable(rli.assignment_id, current_local_var);
+                    if index_exists {
+                        ok_result_value(lang::Value::Null)
+                    } else {
+                        err_result_value(lang::Value::Number(index))
                     }
-                    ok_result_value(lang::Value::Null)
                 })
+                // let mut current_local_var = self.get_local_variable(rli.assignment_id).unwrap();
+                // let current_local_var2 = current_local_var.clone();
+                //
+                // let index_fut = lang::Value::new_future(index_fut).clone();
+                // let index_fut2 = index_fut.clone();
+                // self.set_local_variable(rli.assignment_id,
+                //                         lang::Value::new_future(async move {
+                //                             println!("set index starting");
+                //                             let index = resolve_all_futures(index_fut).await
+                //                                                                       .as_i128()
+                //                                                                       .unwrap();
+                //                             println!("set index ended");
+                //                             println!("about to await set to val fut");
+                //                             let value = await_eval_result!(set_to_val_fut);
+                //                             println!("awaited set to val fut: {:?}", value);
+                //                             println!("about to await current_local_var");
+                //                             current_local_var =
+                //                                 resolve_all_futures(current_local_var).await;
+                //                             println!("resolved current local var");
+                //                             println!("current local var: {:?}", current_local_var);
+                //                             let vec_to_change =
+                //                                 current_local_var.as_mut_vec().unwrap();
+                //                             vec_to_change.get_mut(index as usize)
+                //                                          .map(|hole| *hole = value);
+                //                             current_local_var
+                //                         }));
+                //
+                // Box::pin(async move {
+                //     println!("set index2 starting");
+                //     let index = resolve_all_futures(index_fut2).await.as_i128().unwrap();
+                //     println!("set index2 ended");
+                //     let current_local_var = resolve_all_futures(current_local_var2).await;
+                //     let vec = current_local_var.as_vec().unwrap();
+                //     if vec.len() < index as usize + 1 {
+                //         return err_result_value(lang::Value::Number(index));
+                //     }
+                //     ok_result_value(lang::Value::Null)
             }
             CodeNode::EnumVariantLiteral(evl) => {
                 let value_fut = self.evaluate(&evl.variant_value_expr);
@@ -291,7 +293,6 @@ impl Interpreter {
             }
             CodeNode::EarlyReturn(early_return) => {
                 let expr_fut = self.evaluate(&early_return.code);
-                println!("there is an early return happening");
                 Box::pin(async move { lang::Value::EarlyReturn(Box::new(await_eval_result!(expr_fut))) })
             }
             CodeNode::Try(trai) => {
@@ -317,14 +318,12 @@ impl Interpreter {
                     match opt {
                         Some(ok_value) => ok_value,
                         None => {
-                            println!("early return happened {:?}", trai.id);
                             lang::Value::EarlyReturn(Box::new(await_eval_result!(interp.evaluate(&trai.or_else_return_expr))))
                         }
                     }
                 })
             }
         };
-        println!("we have finished evaluating {:?}", cwode_node.description());
         let env = Rc::clone(&self.env);
         async move {
             let result = await_eval_result!(result);
