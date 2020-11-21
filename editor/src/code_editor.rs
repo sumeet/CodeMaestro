@@ -888,12 +888,16 @@ impl CodeGenie {
                 let maybe_error_typ =
                     self.guess_type_without_resolving_generics(trai.maybe_error_expr.as_ref(),
                                                                env_genie)?;
+                println!("trai part 1");
                 if let Ok(result_ok_typ) = get_ok_type_from_result_type(&maybe_error_typ) {
+                    println!("trai part 2");
                     Ok(result_ok_typ.clone())
                 } else if let Ok(option_some_typ) = get_some_type_from_option_type(&maybe_error_typ)
                 {
+                    println!("trai part 3");
                     Ok(option_some_typ.clone())
                 } else {
+                    println!("trai part 4");
                     Err("invalid node inside of try")
                 }
             }

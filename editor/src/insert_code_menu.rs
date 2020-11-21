@@ -452,7 +452,7 @@ enum VariableType {
 pub struct Variable {
     variable_type: VariableType,
     pub locals_id: lang::ID,
-    typ: lang::Type,
+    typ: Result<lang::Type, &'static str>,
     name: String,
 }
 
@@ -495,7 +495,10 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
                                                                                .into(),
                                                                   code_genie,
                                                                   env_genie).map(|variable| {
-                                                                                (variable.typ.id(),
+                                                                                (variable.typ
+                                                                                         .as_ref()
+                                                                                         .unwrap()
+                                                                                         .id(),
                                                                                  variable)
                                                                             })
                                                                             .into_group_map();
@@ -534,7 +537,7 @@ fn find_anon_func_args_for<'a>(search_position: SearchPosition,
                   let arg = &anon_func.takes_arg;
                   Variable { variable_type: VariableType::Argument,
                              locals_id: arg.id,
-                             typ: arg.arg_type.clone(),
+                             typ: Ok(arg.arg_type.clone()),
                              name: arg.short_name.clone() }
               })
 }
@@ -572,12 +575,13 @@ pub fn find_assignments_preceding<'a>(search_position: SearchPosition,
               .into_iter()
               .map(move |assignment| {
                   let assignment_clone: lang::Assignment = (*assignment).clone();
+                  println!("assignment: {:?}", assignment_clone);
                   let guessed_type =
                       code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone),
                                             env_genie);
                   Variable { locals_id: assignment.id,
                              variable_type: VariableType::Assignment,
-                             typ: guessed_type.unwrap(),
+                             typ: guessed_type,
                              name: assignment.name.clone() }
               })
 }
@@ -590,7 +594,7 @@ pub fn find_assignments_and_function_args_preceding<'a>(search_position: SearchP
               .chain(env_genie.code_takes_args(code_genie.root().id())
                               .map(|arg| Variable { locals_id: arg.id,
                                                     variable_type: VariableType::Argument,
-                                                    typ: arg.arg_type,
+                                                    typ: Ok(arg.arg_type),
                                                     name: arg.short_name }))
 }
 
@@ -601,7 +605,7 @@ fn find_enum_variants_preceding<'a>(search_position: SearchPosition,
     code_genie.find_enum_variants_preceding_iter(search_position.before_code_id, env_genie)
               .map(|match_variant| Variable { locals_id: match_variant.assignment_id(),
                                               variable_type: VariableType::MatchVariant,
-                                              typ: match_variant.typ,
+                                              typ: Ok(match_variant.typ),
                                               name: match_variant.enum_variant.name })
 }
 
@@ -921,7 +925,7 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         find_all_locals_preceding(search_params.insertion_point.into(),
                                                         code_genie,
                                                         env_genie).filter_map(|variable| {
-                                  self.new_option_if_enum(env_genie, &variable.typ, || {
+                                  self.new_option_if_enum(env_genie, variable.typ.as_ref().unwrap(), || {
                                       code_generation::new_variable_reference(variable.locals_id)
                                   })
                               })
@@ -1032,7 +1036,7 @@ impl InsertCodeMenuOptionGenerator for InsertReassignmentOptionGenerator {
                 InsertCodeMenuOption {
                     sort_key: format!("{}changevariable{}", sort_key_prefix, var.name),
                     new_node: code_generation::new_reassignment(var.locals_id,
-                                                                code_generation::new_placeholder(var.name, var.typ)).into(),
+                                                                code_generation::new_placeholder(var.name, var.typ.unwrap())).into(),
                     is_selected: false,
                     group_name: LOCALS_GROUP,
                 }
@@ -1058,7 +1062,8 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
         let optionss = find_all_locals_preceding(search_params.insertion_point.into(),
                                                  code_genie,
                                                  env_genie).filter_map(|variable| {
-                           let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
+                           let strukt =
+                               env_genie.find_struct(variable.typ.as_ref().unwrap().typespec_id)?;
 
                            Some(strukt.fields.iter().filter_map(move |struct_field| {
                     let dotted_name = format!("{}.{}", variable.name, struct_field.name);
@@ -1100,7 +1105,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
         find_all_locals_preceding(
             search_params.insertion_point.into(), code_genie, env_genie)
             .filter_map(|variable| {
-                let list_elem_result_typ = get_result_type_from_indexing_into_list(variable.typ.clone())?;
+                let list_elem_result_typ = get_result_type_from_indexing_into_list(variable.typ.clone().unwrap())?;
                 // if let Some(search_type) = &search_params.return_type {
                 //     if !search_type.matches(&list_elem_result_typ) {
                 //         return None
@@ -1117,7 +1122,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                 } else {
                     // also
 
-                    let list_elem_result_typ = get_type_from_list(variable.typ)?;
+                    let list_elem_result_typ = get_type_from_list(variable.typ.clone().unwrap())?;
                     if let Some(search_type) = &search_params.return_type {
                         if !search_type.matches(&list_elem_result_typ) {
                             return None
@@ -1160,7 +1165,7 @@ impl InsertCodeMenuOptionGenerator for InsertReassignListIndexOfLocalVariable {
                     return None
                 }
 
-                let list_typ = get_type_from_list(variable.typ)?;
+                let list_typ = get_type_from_list(variable.typ.unwrap())?;
 
                 Some(InsertCodeMenuOption {
                         group_name: LOCALS_GROUP,
