@@ -9,7 +9,6 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
-use crate::code_editor::get_code_from_clipboard;
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
@@ -26,7 +25,6 @@ use crate::ui_toolkit::{
     ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionTopPadding,
     ChildRegionWidth, DrawFnRef,
 };
-use clipboard::{ClipboardContext, ClipboardProvider};
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{AnonymousFunction, CodeNode, FunctionRenderingStyle};

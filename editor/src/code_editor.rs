@@ -24,6 +24,7 @@ use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{is_generic, CodeNode, Function};
 use druid_shell::clipboard::platform::Clipboard;
+use druid_shell::ClipboardFormat;
 use gtk;
 use lazy_static::lazy_static;
 use objekt::private::collections::HashSet;
@@ -38,29 +39,18 @@ lazy_static! {
     };
 }
 
+const OUR_CLIPBOARD_FORMAT: &str = "application/cs-lang";
+
 pub fn add_code_to_clipboard(codes: &[&CodeNode]) {
-    println!("rofl using that");
-    let contents = serde_json::to_string(&codes).unwrap();
-    DRUID_CLIPBOARD.lock().unwrap().put_string(contents);
-    // let mut clipboard_context = CLIPBOARD_CONTEXT.lock().unwrap();
-    // clipboard_context.set_contents(serde_json::to_string(&codes).unwrap())
-    //                  .unwrap();
+    let mut clipboard = DRUID_CLIPBOARD.lock().unwrap();
+    let contents = serde_json::to_vec(&codes).unwrap();
+    clipboard.put_formats(&[ClipboardFormat::new(OUR_CLIPBOARD_FORMAT, contents)])
 }
 
 pub fn get_code_from_clipboard() -> Option<Vec<CodeNode>> {
-    println!("rofl using this");
-    let clipboard_str = DRUID_CLIPBOARD.lock().unwrap().get_string()?;
-
-    // let clipboard_str = CLIPBOARD_CONTEXT.lock().unwrap().get_contents();
-    // if clipboard_str.is_err() {
-    //     return None;
-    // }
-    // let clipboard_str = clipboard_str.unwrap();
-    let codes = serde_json::from_str::<Vec<CodeNode>>(&clipboard_str);
-    if codes.is_err() {
-        return None;
-    }
-    Some(codes.unwrap())
+    let clipboard = DRUID_CLIPBOARD.lock().unwrap();
+    let clipboard_data = clipboard.get_format(OUR_CLIPBOARD_FORMAT)?;
+    serde_json::from_slice::<Vec<CodeNode>>(&clipboard_data).ok()
 }
 
 #[derive(Clone)]
