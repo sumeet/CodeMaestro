@@ -57,7 +57,6 @@ pub fn get_code_from_clipboard() -> Option<Vec<CodeNode>> {
 pub struct CodeEditor {
     pub code_genie: CodeGenie,
     pub editing: bool,
-    // selected_node_id: Option<lang::ID>,
     pub selected_node_ids: Vec<lang::ID>,
     pub insert_code_menu: Option<InsertCodeMenu>,
     mutation_master: MutationMaster,
