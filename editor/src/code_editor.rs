@@ -62,6 +62,7 @@ pub struct CodeEditor {
     mutation_master: MutationMaster,
     // HACK: None when used to display code in Insert Code Menu
     pub location: Option<CodeLocation>,
+    pub show_output: bool,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug)]
@@ -86,7 +87,8 @@ impl CodeEditor {
                                     selected_node_ids: vec![],
                                     insert_code_menu: None,
                                     mutation_master: MutationMaster::new(),
-                                    location: None };
+                                    location: None,
+                                    show_output: false };
         new_editor.insert_code(std::iter::once(new_node), insertion_point);
         new_editor
     }
@@ -97,7 +99,8 @@ impl CodeEditor {
                selected_node_ids: vec![],
                insert_code_menu: None,
                mutation_master: MutationMaster::new(),
-               location: Some(location) }
+               location: Some(location),
+               show_output: true }
     }
 
     pub fn id(&self) -> lang::ID {

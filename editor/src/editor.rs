@@ -1072,20 +1072,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                      self.ui_toolkit
                     .draw_layout_with_bottom_bar(&|| {
                         self.ui_toolkit.draw_all(&[
-                            &|| {
-                                let cmd_buffer = Rc::clone(&self.command_buffer);
-                                let script_id = script.id();
-                                self.ui_toolkit.draw_text_input_with_label("Script name",
-                                                                           &script.name,
-                                                                           move |newvalue| {
-                                                                                   let new_script_name = newvalue.to_owned();
-                                                                               cmd_buffer.borrow_mut()
-                                                                                   .change_script(script_id, |script| {
-                                                                                       script.name = new_script_name;
-                                                                                   })
-                                                                           },
-                                                                           || {})
-                            },
+                            &|| self.render_script_header(script),
                             &|| self.render_code(script.id())
                         ])
                     }, &|| {
@@ -1100,13 +1087,47 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                 ctrl: true,
                                                 shift: true, } if !has_problems => {
                                          let mut cmd_buffer = cmd_buffer.borrow_mut();
-                                         cmd_buffer.run(&script_code, |_| {
-                                             println!("doine running future");
-                                         });
+                                         cmd_buffer.run(&script_code, |_| ());
                                      }
                                      _ => (),
                                  }),
         )
+    }
+
+    fn render_script_header(&self, script: &scripts::Script) -> T::DrawResult {
+        let script_id = script.id();
+        let draw_script_name_section = || {
+            let cmd_buffer = Rc::clone(&self.command_buffer);
+            self.ui_toolkit.draw_text_input_with_label("Script name",
+                                                       &script.name,
+                                                       move |newvalue| {
+                                                           let new_script_name =
+                                                               newvalue.to_owned();
+                                                           cmd_buffer.borrow_mut()
+                                                               .change_script(script_id, |script| {
+                                                                   script.name = new_script_name;
+                                                               })
+                                                       },
+                                                       || {})
+        };
+        if self.env_genie.has_any_eval_results() {
+            self.ui_toolkit
+                .draw_all_on_same_line(&[&draw_script_name_section,
+                                         &|| self.ui_toolkit.draw_text(""),
+                                         &|| {
+                                             let editor = self.controller.code_editor_by_id.get(&script_id).unwrap();
+                                             let cmd_buffer = Rc::clone(&self.command_buffer);
+                                             self.ui_toolkit.draw_checkbox_with_label("Show output",
+                                                                                      editor.show_output,
+                                                                                      move |val| {
+                                                                                          cmd_buffer.borrow_mut().add_editor_command(script_id, move |editor| {
+                                                                                              editor.show_output = val
+                                                                                          })
+                                                                                      })
+                                         }])
+        } else {
+            draw_script_name_section()
+        }
     }
 
     fn render_warnings_section_in_script_window(&self,

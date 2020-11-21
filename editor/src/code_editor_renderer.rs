@@ -1262,6 +1262,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                              draw_code_fn: DrawFnRef<T>,
                              value: &lang::Value)
                              -> T::DrawResult {
+        // XXX: really messy :(((( fix this
+        // the problem is that we're doing an if check here to see if we should show output, but
+        // the places that are calling this are also doing their own if lets to see if there's any
+        // output, this should be consolidated, but i'm in a rush right now
+        if !self.code_editor.show_output {
+            return draw_code_fn();
+        }
+
         let style = ChildRegionStyle { height: ChildRegionHeight::Max(50),
                                        width: ChildRegionWidth::FitContent,
                                        frame_style: ChildRegionFrameStyle::NoFrame,

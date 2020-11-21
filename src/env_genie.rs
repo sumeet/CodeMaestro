@@ -32,6 +32,10 @@ impl<'a> EnvGenie<'a> {
         self.env.prev_eval_result_by_code_id.get(&code_node_id)
     }
 
+    pub fn has_any_eval_results(&self) -> bool {
+        !self.env.prev_eval_result_by_code_id.is_empty()
+    }
+
     pub fn guess_type_of_value(&self, value: &lang::Value) -> lang::Type {
         match value {
             Value::Null => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
