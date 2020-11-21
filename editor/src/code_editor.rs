@@ -454,12 +454,12 @@ impl CodeEditor {
         }
     }
 
-    pub fn replace_codes(&mut self,
-                         nodes_to_insert: impl Iterator<Item = CodeNode>,
-                         nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>) {
+    pub fn paste_over_code(&mut self,
+                           nodes_to_insert: impl Iterator<Item = CodeNode>,
+                           nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>) {
         let new_root = self.mutation_master
-                           .replace_codes(nodes_to_insert, nodes_to_replace, &self.code_genie);
-        self.replace_code(new_root);
+                           .paste_over_code(nodes_to_insert, nodes_to_replace, &self.code_genie);
+        self.apply_mutation_result(new_root);
     }
 
     pub fn insert_code(&mut self,
@@ -584,8 +584,8 @@ impl CodeEditor {
         if self.selected_node_ids.is_empty() {
             return;
         }
-        self.replace_codes(codes.into_iter(),
-                           self.selected_node_ids.clone().into_iter())
+        self.paste_over_code(codes.into_iter(),
+                             self.selected_node_ids.clone().into_iter())
     }
 }
 
@@ -1223,16 +1223,20 @@ impl MutationMaster {
         MutationMaster { history: RefCell::new(undo::UndoHistory::new()) }
     }
 
-    fn replace_codes(&self,
-                     nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
-                     nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>,
-                     genie: &CodeGenie)
-                     -> lang::CodeNode {
+    fn paste_over_code(&self,
+                       nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
+                       nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>,
+                       genie: &CodeGenie)
+                       -> MutationResult {
         let result = self.delete_code(nodes_to_replace, genie.clone(), None)
                          .unwrap();
         let new_genie = CodeGenie::new(result.new_root);
-        let insertion_point = InsertionPoint::Before(result.new_cursor_position.unwrap());
-        self.insert_code(nodes_to_insert, insertion_point, &new_genie)
+        let insertion_point =
+            result.new_cursor_position
+                  .map(|new_cursor_pos| InsertionPoint::Before(new_cursor_pos))
+                  .unwrap_or_else(|| InsertionPoint::BeginningOfBlock(new_genie.root().id()));
+        let new_root = self.insert_code(nodes_to_insert, insertion_point, &new_genie);
+        MutationResult::new(new_root, None, false)
     }
 
     fn insert_code(&self,
