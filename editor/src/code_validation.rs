@@ -196,9 +196,9 @@ impl<'a> FixableProblemFinder<'a> {
             for prob in self.find_variable_reference_problem(location, block) {
                 yield prob;
             }
-            // if let Some(prob) = self.find_return_type_problem(location, block) {
-            //     yield prob;
-            // }
+            if let Some(prob) = self.find_return_type_problem(location, block) {
+                yield prob;
+            }
         })
     }
 
@@ -241,9 +241,7 @@ impl<'a> FixableProblemFinder<'a> {
                     location,
                     block: block.clone(),
                     variable_reference_id: var_ref.id,
-                    typ: code_genie.guess_type(&code_node, self.env_genie).unwrap_or_else(|_| {
-                        lang::Type::from_spec(&*lang::NULL_TYPESPEC)
-                    }),
+                    typ: code_genie.guess_type(&code_node, self.env_genie).unwrap(),
                 })
             } else {
                 None
