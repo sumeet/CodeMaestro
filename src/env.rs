@@ -152,12 +152,9 @@ impl Interpreter {
             CodeNode::WhileLoop(while_loop) => {
                 let mut interp = self.clone();
                 Box::pin(async move {
-                    while {
-                        println!("evaluyating condition in while loop");
-                        await_eval_result!(interp.evaluate(&while_loop.condition)).as_boolean()
-                                                                                  .unwrap()
-                    } {
-                        println!("looping single iteratrion");
+                    while await_eval_result!(interp.evaluate(&while_loop.condition)).as_boolean()
+                                                                                    .unwrap()
+                    {
                         await_eval_result!(interp.evaluate(&while_loop.body));
                     }
                     lang::Value::Null
