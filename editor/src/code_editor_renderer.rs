@@ -9,6 +9,7 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
+use crate::code_editor::get_code_from_clipboard;
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
@@ -25,6 +26,7 @@ use crate::ui_toolkit::{
     ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionTopPadding,
     ChildRegionWidth, DrawFnRef,
 };
+use clipboard::{ClipboardContext, ClipboardProvider};
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{AnonymousFunction, CodeNode, FunctionRenderingStyle};
@@ -126,11 +128,30 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                    })
                                })
             },
+            // &|| {
+            //     let codes = get_code_from_clipboard();
+            //     if codes.is_none() {
+            //         return self.ui_toolkit.draw_all(&[]);
+            //     }
+            //     let codes = codes.unwrap();
+            //     let cmd_buffer1 = Rc::clone(&self.command_buffer);
+            //     self.ui_toolkit.draw_menu_item("Paste code", move || {
+            //                        let cmd_buffer1 = Rc::clone(&cmd_buffer1);
+            //                        let mut cmd_buffer1 = cmd_buffer1.borrow_mut();
+            //         let codes = codes.clone();
+            //                        cmd_buffer1.add_editor_command(move |code_editor| {
+            //                                       code_editor.insert_code(codes.clone().into_iter(),
+            //                                       code_editor.insertion_point_for_menu()
+            //                                           .unwrap_or_else(|| InsertionPoint::BeginningOfBlock(todo!()))
+            //                                       );
+            //                                   })
+            //                    })
+            // },
         ])
     }
 
     fn is_insertion_pointer_immediately_before(&self, id: lang::ID) -> bool {
-        let insertion_point = self.code_editor.insertion_point();
+        let insertion_point = self.code_editor.insertion_point_for_menu();
         match insertion_point {
             Some(InsertionPoint::Before(code_node_id)) if code_node_id == id => true,
             _ => false,
@@ -161,7 +182,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn is_insertion_pointer_immediately_after(&self, id: lang::ID) -> bool {
-        match self.code_editor.insertion_point() {
+        match self.code_editor.insertion_point_for_menu() {
             Some(InsertionPoint::After(code_node_id)) if code_node_id == id => true,
             _ => false,
         }
@@ -1161,7 +1182,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let not_inserting_code = self.insertion_point().is_none();
 
         self.ui_toolkit.draw_all(&[
-            &|| match self.code_editor.insertion_point() {
+            &|| match self.code_editor.insertion_point_for_menu() {
                 Some(InsertionPoint::BeginningOfBlock(block_id)) if block.id == block_id => {
                     self.render_insert_code_node()
                 }

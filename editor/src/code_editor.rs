@@ -11,6 +11,7 @@ use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_generation;
 use crate::editor::Controller;
+use clipboard::{ClipboardContext, ClipboardProvider};
 use cs::builtins;
 use cs::builtins::{
     get_ok_type_from_result_type, get_some_type_from_option_type, new_result,
@@ -24,6 +25,25 @@ use cs::lang;
 use cs::lang::{is_generic, CodeNode, Function};
 use lazy_static::lazy_static;
 use objekt::private::collections::HashSet;
+use std::sync::Mutex;
+
+lazy_static! {
+    static ref CLIPBOARD_CONTEXT: Mutex<ClipboardContext> =
+        Mutex::new(ClipboardContext::new().unwrap());
+}
+
+pub fn get_code_from_clipboard() -> Option<Vec<CodeNode>> {
+    let clipboard_str = CLIPBOARD_CONTEXT.lock().unwrap().get_contents();
+    if clipboard_str.is_err() {
+        return None;
+    }
+    let clipboard_str = clipboard_str.unwrap();
+    let codes = serde_json::from_str::<Vec<CodeNode>>(&clipboard_str);
+    if codes.is_err() {
+        return None;
+    }
+    Some(codes.unwrap())
+}
 
 #[derive(Clone)]
 pub struct CodeEditor {
@@ -86,6 +106,12 @@ impl CodeEditor {
 
         // don't perform any commands when in edit mode
         match (self.editing, &keypress.key, &keypress.shift, &keypress.ctrl) {
+            (_, Key::C, false, true) => {
+                self.copy_selection();
+            }
+            (_, Key::V, false, true) => {
+                self.paste_selection();
+            }
             (true, Key::Escape, _, _) => {
                 self.escape_out_of_autocomplete_and_undo();
             }
@@ -414,11 +440,19 @@ impl CodeEditor {
             .find_expression_inside_block_that_contains(self.get_last_selected_node_id()?)
     }
 
-    pub fn insertion_point(&self) -> Option<InsertionPoint> {
+    pub fn insertion_point_for_menu(&self) -> Option<InsertionPoint> {
         match self.insert_code_menu.as_ref() {
             None => None,
             Some(menu) => Some(menu.insertion_point),
         }
+    }
+
+    pub fn replace_codes(&mut self,
+                         nodes_to_insert: impl Iterator<Item = CodeNode>,
+                         nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>) {
+        let new_root = self.mutation_master
+                           .replace_codes(nodes_to_insert, nodes_to_replace, &self.code_genie);
+        self.replace_code(new_root);
     }
 
     pub fn insert_code(&mut self,
@@ -522,6 +556,31 @@ impl CodeEditor {
     pub fn save_current_state_to_undo_history(&mut self) {
         self.mutation_master
             .log_new_mutation(self.get_code(), self.selected_node_ids.clone())
+    }
+
+    fn copy_selection(&self) {
+        let selected_nodes = self.selected_node_ids
+                                 .iter()
+                                 .map(|id| self.code_genie.find_node(*id).unwrap())
+                                 .collect::<Vec<_>>();
+        if !selected_nodes.is_empty() {
+            let mut clipboard_context = ClipboardContext::new().unwrap();
+            clipboard_context.set_contents(serde_json::to_string(&selected_nodes).unwrap())
+                             .unwrap();
+        }
+    }
+
+    fn paste_selection(&mut self) {
+        let codes = get_code_from_clipboard();
+        if codes.is_none() {
+            return;
+        }
+        let codes = codes.unwrap();
+        if self.selected_node_ids.is_empty() {
+            return;
+        }
+        self.replace_codes(codes.into_iter(),
+                           self.selected_node_ids.clone().into_iter())
     }
 }
 
@@ -1157,6 +1216,18 @@ struct MutationMaster {
 impl MutationMaster {
     fn new() -> Self {
         MutationMaster { history: RefCell::new(undo::UndoHistory::new()) }
+    }
+
+    fn replace_codes(&self,
+                     nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
+                     nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>,
+                     genie: &CodeGenie)
+                     -> lang::CodeNode {
+        let result = self.delete_code(nodes_to_replace, genie.clone(), None)
+                         .unwrap();
+        let new_genie = CodeGenie::new(result.new_root);
+        let insertion_point = InsertionPoint::Before(result.new_cursor_position.unwrap());
+        self.insert_code(nodes_to_insert, insertion_point, &new_genie)
     }
 
     fn insert_code(&self,
