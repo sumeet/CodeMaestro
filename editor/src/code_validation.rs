@@ -9,6 +9,7 @@ use cs::lang::Function;
 use crate::code_editor::{required_return_type, CodeLocation};
 use crate::insert_code_menu::{find_all_locals_preceding, SearchPosition};
 use cs::env_genie::EnvGenie;
+use gen_iter::GenIter;
 use std::iter::once;
 
 // TODO: instead of applying fixes right away, show them in a popup modal and ask the user to either
@@ -187,13 +188,18 @@ impl<'a> FixableProblemFinder<'a> {
         Self { env_genie }
     }
 
-    fn find_problems(&self,
+    fn find_problems(&'a self,
                      location: CodeLocation,
-                     block: &lang::Block)
-                     -> impl Iterator<Item = FixableProblem> + '_ {
-        self.find_return_type_problem(location, block)
-            .into_iter()
-            .chain(self.find_variable_reference_problem(location, block))
+                     block: &'a lang::Block)
+                     -> impl Iterator<Item = FixableProblem> + 'a {
+        GenIter(move || {
+            for prob in self.find_variable_reference_problem(location, block) {
+                yield prob;
+            }
+            if let Some(prob) = self.find_return_type_problem(location, block) {
+                yield prob;
+            }
+        })
     }
 
     fn find_return_type_problem(&self,
