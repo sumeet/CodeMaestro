@@ -23,6 +23,8 @@ use cs::env::ExecutionEnvironment;
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{is_generic, CodeNode, Function};
+use druid_shell::clipboard::platform::Clipboard;
+use gtk;
 use lazy_static::lazy_static;
 use objekt::private::collections::HashSet;
 use std::sync::Mutex;
@@ -30,14 +32,30 @@ use std::sync::Mutex;
 lazy_static! {
     static ref CLIPBOARD_CONTEXT: Mutex<ClipboardContext> =
         Mutex::new(ClipboardContext::new().unwrap());
+    static ref DRUID_CLIPBOARD: Mutex<Clipboard> = {
+        gtk::init().unwrap();
+        Mutex::new(Clipboard {})
+    };
+}
+
+pub fn add_code_to_clipboard(codes: &[&CodeNode]) {
+    println!("rofl using that");
+    let contents = serde_json::to_string(&codes).unwrap();
+    DRUID_CLIPBOARD.lock().unwrap().put_string(contents);
+    // let mut clipboard_context = CLIPBOARD_CONTEXT.lock().unwrap();
+    // clipboard_context.set_contents(serde_json::to_string(&codes).unwrap())
+    //                  .unwrap();
 }
 
 pub fn get_code_from_clipboard() -> Option<Vec<CodeNode>> {
-    let clipboard_str = CLIPBOARD_CONTEXT.lock().unwrap().get_contents();
-    if clipboard_str.is_err() {
-        return None;
-    }
-    let clipboard_str = clipboard_str.unwrap();
+    println!("rofl using this");
+    let clipboard_str = DRUID_CLIPBOARD.lock().unwrap().get_string()?;
+
+    // let clipboard_str = CLIPBOARD_CONTEXT.lock().unwrap().get_contents();
+    // if clipboard_str.is_err() {
+    //     return None;
+    // }
+    // let clipboard_str = clipboard_str.unwrap();
     let codes = serde_json::from_str::<Vec<CodeNode>>(&clipboard_str);
     if codes.is_err() {
         return None;
@@ -564,9 +582,7 @@ impl CodeEditor {
                                  .map(|id| self.code_genie.find_node(*id).unwrap())
                                  .collect::<Vec<_>>();
         if !selected_nodes.is_empty() {
-            let mut clipboard_context = ClipboardContext::new().unwrap();
-            clipboard_context.set_contents(serde_json::to_string(&selected_nodes).unwrap())
-                             .unwrap();
+            add_code_to_clipboard(selected_nodes.as_ref())
         }
     }
 

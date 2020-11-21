@@ -1179,7 +1179,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             }
         }
 
-        builder.build(self.ui, &mut || {
+        builder.build(self.ui, || {
                    match style.top_padding {
                        ChildRegionTopPadding::Default => (),
                        ChildRegionTopPadding::None => {
