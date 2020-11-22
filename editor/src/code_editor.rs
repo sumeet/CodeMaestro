@@ -626,10 +626,11 @@ impl CodeGenie {
                     let arg_def_id = arg.argument_definition_id;
                     let typ = env_genie.get_type_for_arg(arg_def_id).unwrap();
                     if typ.typespec_id == generic_typespec_id {
-                        let guessed_type = self.guess_type_without_resolving_generics(arg.expr
-                                                                                         .as_ref(),
-                                                                                      env_genie)
-                                               .unwrap();
+                        let guessed_type =
+                            self.guess_type_without_resolving_generics(arg.expr.as_ref(),
+                                                                       env_genie)
+                                .map_err(|e| format!("can't guess type for {:?}: {}", arg.expr, e))
+                                .unwrap();
                         if guessed_type.typespec_id != generic_typespec_id {
                             return guessed_type;
                         }
@@ -1231,14 +1232,55 @@ impl MutationMaster {
                        nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>,
                        genie: &CodeGenie)
                        -> MutationResult {
-        let result = self.delete_code(nodes_to_replace, genie.clone(), None)
+        let nodes_to_insert = nodes_to_insert.collect::<Vec<_>>();
+        let nodes_to_replace = nodes_to_replace.collect::<Vec<_>>();
+
+        let referenced_assignment_ids = nodes_to_insert.iter()
+                                                       .map(find_assignments_being_referenced)
+                                                       .flatten()
+                                                       .sorted()
+                                                       .dedup()
+                                                       .collect::<HashSet<_>>();
+
+        let found_assignment_ids =
+            genie.find_assignments_that_come_before_code(*nodes_to_replace.first().unwrap(), true)
+                 .map(|assignment| assignment.id)
+                 .collect::<HashSet<_>>();
+
+        let missing_assignment_ids = &referenced_assignment_ids - &found_assignment_ids;
+
+        println!("referenced assignment ids: {:?}", referenced_assignment_ids);
+        println!("found assignment ids: {:?}", found_assignment_ids);
+        println!("missing assignment ids: {:?}", missing_assignment_ids);
+
+        let result = self.delete_code(nodes_to_replace.into_iter(), genie.clone(), None)
                          .unwrap();
         let new_genie = CodeGenie::new(result.new_root);
         let insertion_point =
             result.new_cursor_position
                   .map(|new_cursor_pos| InsertionPoint::Before(new_cursor_pos))
                   .unwrap_or_else(|| InsertionPoint::BeginningOfBlock(new_genie.root().id()));
-        let new_root = self.insert_code(nodes_to_insert, insertion_point, &new_genie);
+
+        let mut new_root =
+            self.insert_code(nodes_to_insert.into_iter(), insertion_point, &new_genie);
+
+        for missing_assignment_id in missing_assignment_ids {
+            println!("inserting missing assignment");
+            new_root = self.insert_code(
+                std::iter::once(lang::CodeNode::Assignment(lang::Assignment {
+                    name: "This was a missing assignment".to_string(),
+                    expression: Box::new(lang::CodeNode::Placeholder(lang::Placeholder {
+                        id: lang::new_id(),
+                        description: "Placeholder".to_string(),
+                        typ: lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                    })),
+                    id: missing_assignment_id,
+                })),
+                InsertionPoint::BeginningOfBlock(new_root.id()),
+                                        &CodeGenie::new(new_root.clone()))
+        }
+
+        println!("new root: {:?}", new_root);
         MutationResult::new(new_root, None, false)
     }
 
@@ -1779,4 +1821,17 @@ pub fn required_return_type(location: CodeLocation, env_genie: &EnvGenie) -> Opt
         | CodeLocation::Test(_)
         | CodeLocation::JSONHTTPClientTestSection(_) => None,
     }
+}
+
+fn find_assignments_being_referenced(code_node: &lang::CodeNode)
+                                     -> impl Iterator<Item = lang::ID> + '_ {
+    code_node.self_with_all_children_dfs().filter_map(|code| {
+                                              code.as_variable_reference()
+                                                  .map(|var_ref| var_ref.assignment_id)
+                                                  .or_else(|| {
+                                                      code.as_reassign_list_index()
+                                                          .ok()
+                                                          .map(|rli| rli.assignment_id)
+                                                  })
+                                          })
 }

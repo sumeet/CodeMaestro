@@ -192,14 +192,15 @@ impl<'a> FixableProblemFinder<'a> {
                      location: CodeLocation,
                      block: &'a lang::Block)
                      -> impl Iterator<Item = FixableProblem> + 'a {
-        GenIter(move || {
-            for prob in self.find_variable_reference_problem(location, block) {
-                yield prob;
-            }
-            if let Some(prob) = self.find_return_type_problem(location, block) {
-                yield prob;
-            }
-        })
+        return std::iter::empty();
+        // GenIter(move || {
+        //     for prob in self.find_variable_reference_problem(location, block) {
+        //         yield prob;
+        //     }
+        //     if let Some(prob) = self.find_return_type_problem(location, block) {
+        //         yield prob;
+        //     }
+        // })
     }
 
     fn find_return_type_problem(&self,
@@ -230,7 +231,7 @@ impl<'a> FixableProblemFinder<'a> {
                                             }
                                             _ => None,
                                         });
-        var_refs.filter_map(move |var_ref| {
+        var_refs.enumerate().filter_map(move |(i,var_ref)| {
             let search_position = SearchPosition { before_code_id: var_ref.id,
                 is_search_inclusive: false };
             if find_all_locals_preceding(search_position, &code_genie, self.env_genie).find(|variable| {
@@ -241,7 +242,9 @@ impl<'a> FixableProblemFinder<'a> {
                     location,
                     block: block.clone(),
                     variable_reference_id: var_ref.id,
-                    typ: code_genie.guess_type(&code_node, self.env_genie).unwrap(),
+                    typ: code_genie.guess_type(&code_node, self.env_genie).unwrap_or_else(|_| {
+                        lang::Type::from_spec(&*lang::NULL_TYPESPEC)
+                    }),
                 })
             } else {
                 None
