@@ -504,13 +504,6 @@ impl Type {
 }
 
 impl CodeNode {
-    pub fn as_reassign_list_index(&self) -> Result<&ReassignListIndex, Box<dyn std::error::Error>> {
-        match self {
-            Self::ReassignListIndex(rli) => Ok(rli),
-            _ => Err(format!("expected rli , got {:?} instead", self).into()),
-        }
-    }
-
     pub fn as_anon_func(&self) -> Result<&AnonymousFunction, Box<dyn std::error::Error>> {
         match self {
             CodeNode::AnonymousFunction(ref af) => Ok(af),

@@ -577,11 +577,7 @@ pub fn find_assignments_preceding<'a>(search_position: SearchPosition,
                                             env_genie);
                   Variable { locals_id: assignment.id,
                              variable_type: VariableType::Assignment,
-                             typ: guessed_type.map_err(|e| {
-                                      format!("failed guessing type for assignment {:?}: {}",
-                                              assignment, e)
-                                  })
-                                  .unwrap(),
+                             typ: guessed_type.unwrap(),
                              name: assignment.name.clone() }
               })
 }
