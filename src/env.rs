@@ -153,7 +153,10 @@ impl Interpreter {
                     while await_eval_result!(interp.evaluate(&while_loop.condition)).as_boolean()
                                                                                     .unwrap()
                     {
-                        await_eval_result!(interp.evaluate(&while_loop.body));
+                        let val = await_eval_result!(interp.evaluate(&while_loop.body));
+                        if val.is_early_return() {
+                            return val;
+                        }
                     }
                     lang::Value::Null
                 })
