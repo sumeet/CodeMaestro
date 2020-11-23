@@ -26,9 +26,9 @@ use crate::ui_toolkit::{
     ChildRegionWidth, DrawFnRef,
 };
 use cs::env_genie::EnvGenie;
-use cs::lang;
 use cs::lang::{AnonymousFunction, CodeNode, FunctionRenderingStyle};
 use cs::structs;
+use cs::{env, lang};
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 const EARLY_RETURN_ICON: &str = "\u{f2f5}";
@@ -91,8 +91,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                Some(&move || self.draw_right_click_menu()),
                                Some(move |keypress| {
                                    cmd_buffer.borrow_mut()
-                                             .add_editor_command(move |code_editor| {
-                                                 code_editor.handle_keypress(keypress)
+                                             .add_editor_and_interp_command(move |code_editor, interp| {
+                                                 code_editor.handle_keypress(keypress, interp)
                                              })
                                }),
                                move || {
@@ -2042,7 +2042,7 @@ impl PerEditorCommandBuffer {
         let overlapped_code_node_ids = self.overlapped_code_node_ids.clone();
         self.add_editor_command(move |editor| {
                 let ids = editor.code_genie
-                                .dedup_children(overlapped_code_node_ids.iter().cloned());
+                                .dedup_and_sort_children(overlapped_code_node_ids.iter().cloned());
                 editor.selected_node_ids = ids;
             });
     }
@@ -2058,19 +2058,29 @@ impl PerEditorCommandBuffer {
         // delete code from source
         self.actual_command_buffer
             .borrow_mut()
-            .add_editor_command(payload.from_code_editor_id, move |editor| {
+            .add_editor_command(payload.from_code_editor_id, move |editor, _| {
                 editor.delete_node_ids(node_ids.into_iter());
             });
 
         // insert into target
         self.actual_command_buffer
             .borrow_mut()
-            .add_editor_command(target_editor_id, move |editor| {
+            .add_editor_command(target_editor_id, move |editor, _| {
                 editor.insert_code_and_set_where_cursor_ends_up_next(payload.code_nodes, to);
             });
     }
 
     pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self, f: F) {
+        self.actual_command_buffer
+            .borrow_mut()
+            .add_editor_command(self.editor_id, |editor, _| f(editor));
+    }
+
+    pub fn add_editor_and_interp_command<F: FnOnce(&mut code_editor::CodeEditor,
+                                                        &mut env::Interpreter)
+                                                 + 'static>(
+        &mut self,
+        f: F) {
         self.actual_command_buffer
             .borrow_mut()
             .add_editor_command(self.editor_id, f);

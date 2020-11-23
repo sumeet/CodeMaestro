@@ -7,6 +7,7 @@
 #![feature(unsized_locals)]
 #![allow(incomplete_features)]
 #![feature(const_generics)]
+#![feature(trait_alias)]
 #![recursion_limit = "1024"]
 
 // crates

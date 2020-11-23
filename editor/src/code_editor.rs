@@ -13,7 +13,7 @@ use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
 use crate::code_generation;
 use crate::editor::Controller;
-use cs::builtins;
+use crate::insert_code_menu::{find_all_locals_preceding, SearchPosition};
 use cs::builtins::{
     get_ok_type_from_result_type, get_some_type_from_option_type, new_result,
     new_result_with_null_error,
@@ -24,6 +24,7 @@ use cs::env::ExecutionEnvironment;
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{is_generic, CodeNode, Function};
+use cs::{builtins, env};
 use lazy_static::lazy_static;
 use objekt::private::collections::HashSet;
 
@@ -87,13 +88,13 @@ impl CodeEditor {
         self.code_genie.root()
     }
 
-    pub fn handle_keypress(&mut self, keypress: editor::Keypress) {
+    pub fn handle_keypress(&mut self, keypress: editor::Keypress, interp: &mut env::Interpreter) {
         use super::editor::Key;
 
         // don't perform any commands when in edit mode
         match (self.editing, &keypress.key, &keypress.shift, &keypress.ctrl) {
             (_, Key::C, false, true) => {
-                self.copy_selection();
+                self.copy_selection(&interp);
             }
             (_, Key::V, false, true) => {
                 self.paste_selection();
@@ -544,12 +545,25 @@ impl CodeEditor {
             .log_new_mutation(self.get_code(), self.selected_node_ids.clone())
     }
 
-    fn copy_selection(&self) {
+    fn copy_selection(&self, interp: &env::Interpreter) {
         if self.selected_node_ids.is_empty() {
             return;
         }
-        let contents =
-            ClipboardContents::new(self.code_genie.code.clone(), self.selected_node_ids.clone());
+        let env = interp.env.borrow();
+
+        let search_position =
+            SearchPosition { before_code_id: *self.selected_node_ids.first().unwrap(),
+                             is_search_inclusive: false };
+        // TODO: this could be pruned down to locals that are referenced in the code
+        let env_genie = EnvGenie::new(&env);
+        let preceding_locals =
+            find_all_locals_preceding(search_position, &self.code_genie, &env_genie);
+        let copied_codes = self.selected_node_ids
+                               .iter()
+                               .map(|node_id| self.code_genie.find_node(*node_id).unwrap())
+                               .cloned();
+
+        let contents = ClipboardContents::new(copied_codes.collect(), preceding_locals);
         add_code_to_clipboard(&contents)
     }
 
@@ -664,7 +678,7 @@ impl CodeGenie {
         }
     }
 
-    pub fn dedup_children(&self, ids: impl Iterator<Item = lang::ID>) -> Vec<lang::ID> {
+    pub fn dedup_and_sort_children(&self, ids: impl Iterator<Item = lang::ID>) -> Vec<lang::ID> {
         let ids_set = ids.collect::<HashSet<_>>();
         let mut result = Vec::new();
         let mut q = vec![&self.code];
@@ -1205,14 +1219,33 @@ impl MutationMaster {
                        nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>,
                        genie: &CodeGenie)
                        -> MutationResult {
+        let beginning = InsertionPoint::BeginningOfBlock(genie.root().id());
+
         let result = self.delete_code(nodes_to_replace, genie.clone(), None)
                          .unwrap();
         let new_genie = CodeGenie::new(result.new_root);
-        let insertion_point =
-            result.new_cursor_position
-                  .map(|new_cursor_pos| InsertionPoint::Before(new_cursor_pos))
-                  .unwrap_or_else(|| InsertionPoint::BeginningOfBlock(new_genie.root().id()));
-        let new_root = self.insert_code(nodes_to_insert, insertion_point, &new_genie);
+        let insertion_point = result.new_cursor_position
+                                    .map(|new_cursor_pos| InsertionPoint::Before(new_cursor_pos))
+                                    .unwrap_or(beginning);
+        let new_root = self.insert_code(clipboard_contents.copied_code.clone().into_iter(),
+                                        insertion_point,
+                                        &new_genie);
+
+        // time for the magic
+        let needed_variables = clipboard_contents.variables_referenced_in_code()
+                                                 .map(|var| {
+                                                     let placeholder =
+                                      code_generation::new_placeholder(var.name.to_string(),
+                                                                       var.typ.clone());
+                                                     lang::CodeNode::Assignment(lang::Assignment {
+                                      name: var.name.to_string(),
+                                      expression: Box::new(placeholder),
+                                      id: var.locals_id,
+                                  })
+                                                 });
+
+        let new_root = self.insert_code(needed_variables, beginning, &CodeGenie::new(new_root));
+
         MutationResult::new(new_root, None, false)
     }
 
@@ -1753,4 +1786,24 @@ pub fn required_return_type(location: CodeLocation, env_genie: &EnvGenie) -> Opt
         | CodeLocation::Test(_)
         | CodeLocation::JSONHTTPClientTestSection(_) => None,
     }
+}
+
+pub fn find_assignment_ids_referenced_in_codes<'a>(codes: impl Iterator<Item = &'a lang::CodeNode>)
+                                                   -> impl Iterator<Item = lang::ID> + 'a {
+    codes.flat_map(find_assignment_ids_referenced_in_code)
+         .sorted()
+         .dedup()
+}
+
+pub fn find_assignment_ids_referenced_in_code(code: &lang::CodeNode)
+                                              -> impl Iterator<Item = lang::ID> + '_ {
+    code.self_with_all_children_dfs()
+        .filter_map(|code| match code {
+            lang::CodeNode::Reassignment(reassignment) => Some(reassignment.assignment_id),
+            lang::CodeNode::VariableReference(var_ref) => Some(var_ref.assignment_id),
+            lang::CodeNode::ReassignListIndex(rli) => Some(rli.assignment_id),
+            _ => None,
+        })
+        .sorted()
+        .dedup()
 }

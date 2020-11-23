@@ -8,6 +8,7 @@ use cs::{enums, lang};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
+use serde_derive::{Deserialize, Serialize};
 
 use crate::code_editor::{
     get_result_type_from_indexing_into_list, get_type_from_list, required_return_type, CodeLocation,
@@ -441,19 +442,19 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
 }
 
 // just need this for debugging, tho maybe i'll keep it around, it's probably good to have
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 enum VariableType {
     Assignment,
     Argument,
     MatchVariant,
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Variable {
     variable_type: VariableType,
     pub locals_id: lang::ID,
-    typ: lang::Type,
-    name: String,
+    pub(crate) typ: lang::Type,
+    pub(crate) name: String,
 }
 
 // this is used to see which assignments appear before a particular InsertionPoint.

@@ -6,6 +6,9 @@ use gtk;
 use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
+use crate::code_editor::find_assignment_ids_referenced_in_codes;
+use crate::insert_code_menu::Variable;
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 lazy_static! {
@@ -15,24 +18,35 @@ lazy_static! {
     };
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ClipboardContents {
-    source_root: lang::CodeNode,
-    copied_ids: Vec<lang::ID>,
+    referenced_variable_by_locals_id: HashMap<lang::ID, Variable>,
+    pub copied_code: Vec<lang::CodeNode>,
 }
 
 impl ClipboardContents {
-    pub fn new(source_root: lang::CodeNode, copied_ids: Vec<lang::ID>) -> Self {
-        Self { source_root,
-               copied_ids }
+    pub fn new(copied_code: Vec<lang::CodeNode>,
+               referenced_variables: impl Iterator<Item = Variable>)
+               -> Self {
+        Self { copied_code,
+               referenced_variable_by_locals_id: referenced_variables.map(|var| {
+                                                                         (var.locals_id, var)
+                                                                     })
+                                                                     .collect() }
+    }
+
+    pub fn variables_referenced_in_code(&self) -> impl Iterator<Item = &Variable> + '_ {
+        find_assignment_ids_referenced_in_codes(self.copied_code.iter()).filter_map(move |assignment_id| {
+            self.referenced_variable_by_locals_id.get(&assignment_id)
+        })
     }
 }
 
 const OUR_CLIPBOARD_FORMAT: &str = "application/cs-lang";
 
-pub fn add_code_to_clipboard(codes: &ClipboardContents) {
+pub fn add_code_to_clipboard(clipboard_contents: &ClipboardContents) {
     let mut clipboard = DRUID_CLIPBOARD.lock().unwrap();
-    let contents = serde_json::to_vec(&codes).unwrap();
+    let contents = serde_json::to_vec(&clipboard_contents).unwrap();
     clipboard.put_formats(&[ClipboardFormat::new(OUR_CLIPBOARD_FORMAT, contents)])
 }
 

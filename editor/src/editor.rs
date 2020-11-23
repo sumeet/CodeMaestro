@@ -539,11 +539,13 @@ impl CommandBuffer {
         self.controller_commands.push(Box::new(f));
     }
 
-    pub fn add_editor_command<F: FnOnce(&mut code_editor::CodeEditor) + 'static>(&mut self,
-                                                                                 editor_id: lang::ID,
-                                                                                 f: F) {
-        self.add_controller_command(move |controller| {
-                controller.get_editor_mut(editor_id).map(f);
+    pub fn add_editor_command(&mut self,
+                              editor_id: lang::ID,
+                              f: impl FnOnce(&mut code_editor::CodeEditor, &mut env::Interpreter)
+                                  + 'static) {
+        self.add_integrating_command(move |cont, interp, _, _| {
+                cont.get_editor_mut(editor_id)
+                    .map(|code_editor| f(code_editor, interp));
             });
 
         // update the function that the code being edited belongs to
@@ -1120,7 +1122,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                              self.ui_toolkit.draw_checkbox_with_label("Show output",
                                                                                       editor.show_output,
                                                                                       move |val| {
-                                                                                          cmd_buffer.borrow_mut().add_editor_command(script_id, move |editor| {
+                                                                                          cmd_buffer.borrow_mut().add_editor_command(script_id, move |editor, _| {
                                                                                               editor.show_output = val
                                                                                           })
                                                                                       })
