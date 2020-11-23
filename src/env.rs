@@ -59,8 +59,8 @@ impl Interpreter {
 
     // TODO: this is insane that we have to clone the code just to evaluate it. this is gonna slow
     // down evaluation so much
-    pub fn evaluate(&mut self, cwode_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
-        let code_node = cwode_node.clone();
+    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
+        let code_node = code_node.clone();
         let code_node_id = code_node.id();
         let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
@@ -100,9 +100,11 @@ impl Interpreter {
                 })
             }
             lang::CodeNode::VariableReference(variable_reference) => {
-                let var = self.get_local_variable(variable_reference.assignment_id)
-                              .unwrap();
-                Box::pin(async move { var })
+                let interp = self.clone();
+                Box::pin(async move {
+                    interp.get_local_variable(variable_reference.assignment_id)
+                          .unwrap()
+                })
             }
             lang::CodeNode::FunctionReference(_) => Box::pin(async { lang::Value::Null }),
             // TODO: trying to evaluate a placeholder should probably panic... but we don't have a
@@ -133,19 +135,15 @@ impl Interpreter {
                 panic!("struct literal fields are never evaluated")
             }
             lang::CodeNode::Conditional(conditional) => {
-                let condition_fut = self.evaluate(conditional.condition.as_ref());
-                let true_branch_fut = self.evaluate(conditional.true_branch.as_ref());
-                // TODO: does the else branch get evaluated just by nature of creating the future,
-                // even if we never await it?
-                let else_branch_fut = match conditional.else_branch.as_ref() {
-                    Some(else_branch) => self.evaluate(else_branch.as_ref()).boxed_local(),
-                    None => Box::pin(async { lang::Value::Null }),
-                };
+                let mut interp = self.clone();
                 Box::pin(async move {
-                    if await_eval_result!(condition_fut).as_boolean().unwrap() {
-                        await_eval_result!(true_branch_fut)
+                    if await_eval_result!(interp.evaluate(conditional.condition.as_ref())).as_boolean().unwrap() {
+                        await_eval_result!(interp.evaluate(conditional.true_branch.as_ref()))
                     } else {
-                        await_eval_result!(else_branch_fut)
+                        match conditional.else_branch.as_ref() {
+                            Some(else_branch) => await_eval_result!(interp.evaluate(else_branch.as_ref())),
+                            None => lang::Value::Null,
+                        }
                     }
                 })
             }
@@ -196,9 +194,11 @@ impl Interpreter {
                 })
             }
             lang::CodeNode::ListIndex(list_index) => {
-                let list_fut = self.evaluate(list_index.list_expr.as_ref());
-                let index_fut = self.evaluate(list_index.index_expr.as_ref());
+                let mut interp = self.clone();
                 Box::pin(async move {
+                    let list_fut = interp.evaluate(list_index.list_expr.as_ref());
+                    let index_fut = interp.evaluate(list_index.index_expr.as_ref());
+
                     let index = await_eval_result!(index_fut).as_i128().unwrap();
                     if index.is_negative() {
                         return err_result_string(format!("can't index into a list with a negative index: {}", index));
@@ -243,43 +243,6 @@ impl Interpreter {
                         err_result_value(lang::Value::Number(index))
                     }
                 })
-                // let mut current_local_var = self.get_local_variable(rli.assignment_id).unwrap();
-                // let current_local_var2 = current_local_var.clone();
-                //
-                // let index_fut = lang::Value::new_future(index_fut).clone();
-                // let index_fut2 = index_fut.clone();
-                // self.set_local_variable(rli.assignment_id,
-                //                         lang::Value::new_future(async move {
-                //                             println!("set index starting");
-                //                             let index = resolve_all_futures(index_fut).await
-                //                                                                       .as_i128()
-                //                                                                       .unwrap();
-                //                             println!("set index ended");
-                //                             println!("about to await set to val fut");
-                //                             let value = await_eval_result!(set_to_val_fut);
-                //                             println!("awaited set to val fut: {:?}", value);
-                //                             println!("about to await current_local_var");
-                //                             current_local_var =
-                //                                 resolve_all_futures(current_local_var).await;
-                //                             println!("resolved current local var");
-                //                             println!("current local var: {:?}", current_local_var);
-                //                             let vec_to_change =
-                //                                 current_local_var.as_mut_vec().unwrap();
-                //                             vec_to_change.get_mut(index as usize)
-                //                                          .map(|hole| *hole = value);
-                //                             current_local_var
-                //                         }));
-                //
-                // Box::pin(async move {
-                //     println!("set index2 starting");
-                //     let index = resolve_all_futures(index_fut2).await.as_i128().unwrap();
-                //     println!("set index2 ended");
-                //     let current_local_var = resolve_all_futures(current_local_var2).await;
-                //     let vec = current_local_var.as_vec().unwrap();
-                //     if vec.len() < index as usize + 1 {
-                //         return err_result_value(lang::Value::Number(index));
-                //     }
-                //     ok_result_value(lang::Value::Null)
             }
             CodeNode::EnumVariantLiteral(evl) => {
                 let value_fut = self.evaluate(&evl.variant_value_expr);
@@ -334,21 +297,27 @@ impl Interpreter {
     fn evaluate_assignment(&mut self,
                            assignment: &lang::Assignment)
                            -> impl Future<Output = lang::Value> {
-        let value_future = self.evaluate(&assignment.expression);
-        let assignment_id = assignment.id;
-        let value = lang::Value::new_future(value_future);
-        self.set_local_variable(assignment_id, value.clone());
-        async move { value }
+        let mut interp = self.clone();
+        let assignment = assignment.clone();
+        async move {
+            let value = await_eval_result!(interp.evaluate(&assignment.expression));
+            let assignment_id = assignment.id;
+            interp.set_local_variable(assignment_id, value.clone());
+            value
+        }
     }
 
     fn evaluate_reassignment(&mut self,
                              reassignment: &lang::Reassignment)
                              -> impl Future<Output = lang::Value> {
-        let value_future = self.evaluate(&reassignment.expression);
-        let assignment_id = reassignment.assignment_id;
-        let value = lang::Value::new_future(value_future);
-        self.set_local_variable(assignment_id, value.clone());
-        async move { value }
+        let mut interp = self.clone();
+        let reassignment = reassignment.clone();
+        async move {
+            let value = await_eval_result!(interp.evaluate(&reassignment.expression));
+            let assignment_id = reassignment.assignment_id;
+            interp.set_local_variable(assignment_id, value.clone());
+            value
+        }
     }
 
     fn evaluate_function_call(&mut self,
