@@ -492,14 +492,14 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             return vec![];
         }
 
-        let mut variables_by_type_id = find_assignments_preceding(search_params.insertion_point
-                                                                               .into(),
-                                                                  code_genie,
-                                                                  env_genie).map(|variable| {
-                                                                                (variable.typ.id(),
-                                                                                 variable)
-                                                                            })
-                                                                            .into_group_map();
+        let mut variables_by_type_id = find_all_locals_preceding(search_params.insertion_point
+                                                                              .into(),
+                                                                 code_genie,
+                                                                 env_genie).map(|variable| {
+                                                                               (variable.typ.id(),
+                                                                                variable)
+                                                                           })
+                                                                           .into_group_map();
 
         let mut variables = match &search_params.return_type {
             Some(search_type) if search_type.typespec_id != lang::ANY_TYPESPEC.id() => {
@@ -840,6 +840,10 @@ impl InsertCodeMenuOptionGenerator for InsertEarlyReturnOptionGenerator {
         if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
             return vec![];
         }
+        // early return when wrapping doesn't make any sense
+        if let Some(_) = search_params.wraps_type {
+            return vec![];
+        }
         vec![InsertCodeMenuOption { sort_key: "earlyreturn".to_string(),
                                     new_node: code_generation::new_early_return(),
                                     is_selected: false,
@@ -871,12 +875,12 @@ impl InsertCodeMenuOptionGenerator for InsertWhileOptionGenerator {
 
         if let Some(wraps_type) = search_params.wraps_type.as_ref() {
             // if wrapping a boolean, then we should suggest creating a conditional.
-            if wraps_type.matches_spec(&*lang::BOOLEAN_TYPESPEC) {
-                return vec![Self::generate_option()];
+            return if wraps_type.matches_spec(&*lang::BOOLEAN_TYPESPEC) {
+                vec![Self::generate_option()]
             // otherwise we shouldn't pop up in the suggestions
             } else {
-                return vec![];
-            }
+                vec![]
+            };
         }
 
         let mut options = vec![];
