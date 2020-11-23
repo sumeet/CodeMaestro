@@ -6,12 +6,13 @@ use gen_iter::GenIter;
 use itertools::Itertools;
 use serde_derive::{Deserialize, Serialize};
 
+use self::clipboard::{add_code_to_clipboard, get_code_from_clipboard};
 use super::editor;
 use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
+use crate::code_editor::clipboard::ClipboardContents;
 use crate::code_generation;
 use crate::editor::Controller;
-use clipboard::{ClipboardContext, ClipboardProvider};
 use cs::builtins;
 use cs::builtins::{
     get_ok_type_from_result_type, get_some_type_from_option_type, new_result,
@@ -23,35 +24,10 @@ use cs::env::ExecutionEnvironment;
 use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{is_generic, CodeNode, Function};
-use druid_shell::clipboard::platform::Clipboard;
-use druid_shell::ClipboardFormat;
-use gtk;
 use lazy_static::lazy_static;
 use objekt::private::collections::HashSet;
-use std::sync::Mutex;
 
-lazy_static! {
-    static ref CLIPBOARD_CONTEXT: Mutex<ClipboardContext> =
-        Mutex::new(ClipboardContext::new().unwrap());
-    static ref DRUID_CLIPBOARD: Mutex<Clipboard> = {
-        gtk::init().unwrap();
-        Mutex::new(Clipboard {})
-    };
-}
-
-const OUR_CLIPBOARD_FORMAT: &str = "application/cs-lang";
-
-pub fn add_code_to_clipboard(codes: &[&CodeNode]) {
-    let mut clipboard = DRUID_CLIPBOARD.lock().unwrap();
-    let contents = serde_json::to_vec(&codes).unwrap();
-    clipboard.put_formats(&[ClipboardFormat::new(OUR_CLIPBOARD_FORMAT, contents)])
-}
-
-pub fn get_code_from_clipboard() -> Option<Vec<CodeNode>> {
-    let clipboard = DRUID_CLIPBOARD.lock().unwrap();
-    let clipboard_data = clipboard.get_format(OUR_CLIPBOARD_FORMAT)?;
-    serde_json::from_slice::<Vec<CodeNode>>(&clipboard_data).ok()
-}
+mod clipboard;
 
 #[derive(Clone)]
 pub struct CodeEditor {
@@ -458,10 +434,10 @@ impl CodeEditor {
     }
 
     pub fn paste_over_code(&mut self,
-                           nodes_to_insert: impl Iterator<Item = CodeNode>,
+                           clipboard_contents: ClipboardContents,
                            nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>) {
         let new_root = self.mutation_master
-                           .paste_over_code(nodes_to_insert, nodes_to_replace, &self.code_genie);
+                           .paste_over_code(clipboard_contents, nodes_to_replace, &self.code_genie);
         self.apply_mutation_result(new_root);
     }
 
@@ -569,13 +545,12 @@ impl CodeEditor {
     }
 
     fn copy_selection(&self) {
-        let selected_nodes = self.selected_node_ids
-                                 .iter()
-                                 .map(|id| self.code_genie.find_node(*id).unwrap())
-                                 .collect::<Vec<_>>();
-        if !selected_nodes.is_empty() {
-            add_code_to_clipboard(selected_nodes.as_ref())
+        if self.selected_node_ids.is_empty() {
+            return;
         }
+        let contents =
+            ClipboardContents::new(self.code_genie.code.clone(), self.selected_node_ids.clone());
+        add_code_to_clipboard(&contents)
     }
 
     fn paste_selection(&mut self) {
@@ -583,12 +558,11 @@ impl CodeEditor {
         if codes.is_none() {
             return;
         }
-        let codes = codes.unwrap();
+        let contents = codes.unwrap();
         if self.selected_node_ids.is_empty() {
             return;
         }
-        self.paste_over_code(codes.into_iter(),
-                             self.selected_node_ids.clone().into_iter())
+        self.paste_over_code(contents, self.selected_node_ids.clone().into_iter())
     }
 }
 
@@ -1227,7 +1201,7 @@ impl MutationMaster {
     }
 
     fn paste_over_code(&self,
-                       nodes_to_insert: impl Iterator<Item = lang::CodeNode>,
+                       clipboard_contents: ClipboardContents,
                        nodes_to_replace: impl ExactSizeIterator<Item = lang::ID>,
                        genie: &CodeGenie)
                        -> MutationResult {
