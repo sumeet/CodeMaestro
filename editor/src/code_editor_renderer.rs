@@ -217,15 +217,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                      .code_genie
                                      .guess_type(reassignment.expression.as_ref(), self.env_genie)
                                      .unwrap();
-        let assignment = self.code_editor
-                             .code_genie
-                             .find_node(reassignment.assignment_id)
-                             .unwrap()
-                             .as_assignment()
-                             .unwrap();
+        let assignment_name = self.code_editor
+                                  .code_genie
+                                  .find_node(reassignment.assignment_id)
+                                  .and_then(|code_node| code_node.as_assignment().ok())
+                                  .map(|assignment| assignment.name.clone())
+                                  .unwrap_or_else(|| "couldn't find it".into());
         let render_reassignment_name = &|| {
             self.code_handle(&|| {
-                                 self.render_name_with_type_definition(&assignment.name,
+                                 self.render_name_with_type_definition(&assignment_name,
                                                                        colorscheme!(variable_color),
                                                                        &type_of_assignment)
                              },
@@ -2055,18 +2055,22 @@ impl PerEditorCommandBuffer {
                               .iter()
                               .map(|code| code.id())
                               .collect_vec();
-        // delete code from source
-        self.actual_command_buffer
-            .borrow_mut()
-            .add_editor_command(payload.from_code_editor_id, move |editor, _| {
-                editor.delete_node_ids(node_ids.into_iter());
-            });
+        let from_editor_id = payload.from_code_editor_id;
+        // XXX: i don't understand this well, but for some reason the insert needs to happen before
+        // the delete... seems like it should be the other way around
 
         // insert into target
         self.actual_command_buffer
             .borrow_mut()
             .add_editor_command(target_editor_id, move |editor, _| {
                 editor.insert_code_and_set_where_cursor_ends_up_next(payload.code_nodes, to);
+            });
+
+        // delete code from source
+        self.actual_command_buffer
+            .borrow_mut()
+            .add_editor_command(from_editor_id, move |editor, _| {
+                editor.delete_node_ids(node_ids.into_iter());
             });
     }
 
