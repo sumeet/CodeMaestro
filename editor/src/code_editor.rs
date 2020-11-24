@@ -335,6 +335,7 @@ impl CodeEditor {
             }
             lang::CodeNode::Argument(_)
             | lang::CodeNode::Assignment(_)
+            | lang::CodeNode::Reassignment(_)
             | lang::CodeNode::Block(_)
             | lang::CodeNode::ListLiteral(_)
             | lang::CodeNode::ListIndex(_)

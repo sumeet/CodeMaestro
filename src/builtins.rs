@@ -620,6 +620,9 @@ lazy_static! {
     static ref EQUALS_RENDERING_STYLE: lang::FunctionRenderingStyle =
         // this is a special unicode symbol
         lang::FunctionRenderingStyle::Infix(vec![], "⩵".to_string());
+    static ref NOT_EQUALS_RENDERING_STYLE: lang::FunctionRenderingStyle =
+        // this is a special unicode symbol
+        lang::FunctionRenderingStyle::Infix(vec![], "\u{f53e}".to_string());
     static ref LESS_THAN_RENDERING_STYLE: lang::FunctionRenderingStyle =
         FunctionRenderingStyle::Infix(vec![], "\u{f536}".to_string());
 }
@@ -872,6 +875,62 @@ impl lang::Function for Equals {
                                                    lang::Type::with_params(&generic, vec![]),
                                                    "LHS".into()),
              lang::ArgumentDefinition::new_with_id(EQUALS_ARGS[1],
+                                                   lang::Type::with_params(&generic, vec![]),
+                                                   "RHS".into())]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC)
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct NotEquals {}
+
+lazy_static! {
+    static ref NOT_EQUALS_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("bfbdc6ce-8391-4cc5-a54b-39e80c19daf0").unwrap(),
+         uuid::Uuid::parse_str("bab97245-01e9-42fd-a2a4-19e29df865c8").unwrap(),];
+}
+
+#[typetag::serde]
+impl lang::Function for NotEquals {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let lhs = args.remove(&EQUALS_ARGS[0]);
+        let rhs = args.remove(&EQUALS_ARGS[1]);
+        lang::Value::Boolean(lhs != rhs)
+    }
+
+    fn style(&self) -> &lang::FunctionRenderingStyle {
+        &NOT_EQUALS_RENDERING_STYLE
+    }
+
+    fn name(&self) -> &str {
+        "NotEquals"
+    }
+
+    fn description(&self) -> &str {
+        "Test if both sides have different values"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("6ef7f8e9-a4c3-49d0-be0c-eefe0ff852c7").unwrap()
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("35f8392d-10f0-4ddf-ab6d-d5c144283e79").unwrap())]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let generic = self.defines_generics().pop().unwrap();
+
+        vec![lang::ArgumentDefinition::new_with_id(NOT_EQUALS_ARGS[0],
+                                                   lang::Type::with_params(&generic, vec![]),
+                                                   "LHS".into()),
+             lang::ArgumentDefinition::new_with_id(NOT_EQUALS_ARGS[1],
                                                    lang::Type::with_params(&generic, vec![]),
                                                    "RHS".into())]
     }

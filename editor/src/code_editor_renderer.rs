@@ -278,7 +278,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                      draw_lhs_func: DrawFnRef<T>)
                                      -> T::DrawResult {
         self.ui_toolkit.draw_all_on_same_line(&[draw_lhs_func,
-                                                &|| self.draw_text("   ≔    "),
+                                                &|| self.draw_text("   \u{f52c}   "),
                                                 &|| {
                                                     self.render_code(assignment.expression.as_ref())
                                                 }])
@@ -1346,14 +1346,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             FunctionRenderingStyle::Default => {
                 self.render_default_function_call_style(&function_call)
             }
-            FunctionRenderingStyle::Infix(_, infix) => {
-                self.render_infix_function_call_style(infix, &function_call)
+            FunctionRenderingStyle::Infix(_, _) => {
+                self.render_infix_function_call_style(&function_call)
             }
         }
     }
 
     fn render_infix_function_call_style(&self,
-                                        infix_symbol: &str,
                                         function_call: &lang::FunctionCall)
                                         -> T::DrawResult {
         self.render_nested(&|| {
