@@ -602,6 +602,17 @@ impl lang::Function for ParseNumber {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct DivideTemp {}
 
+lazy_static! {
+    static ref DIVIDE_RENDERING_STYLE: lang::FunctionRenderingStyle =
+        lang::FunctionRenderingStyle::Infix(vec![], "÷".to_string());
+    static ref SUBTRACT_RENDERING_STYLE: lang::FunctionRenderingStyle =
+        lang::FunctionRenderingStyle::Infix(vec![], "-".to_string());
+    static ref MULTIPLY_RENDERING_STYLE: lang::FunctionRenderingStyle =
+        lang::FunctionRenderingStyle::Infix(vec![], "×".to_string());
+    static ref EQUALS_RENDERING_STYLE: lang::FunctionRenderingStyle =
+        lang::FunctionRenderingStyle::Infix(vec![], "⩵".to_string());
+}
+
 #[typetag::serde]
 impl lang::Function for DivideTemp {
     fn call(&self,
@@ -619,8 +630,8 @@ impl lang::Function for DivideTemp {
         lang::Value::Number(dividend / divisor)
     }
 
-    fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Infix(vec![], "÷")
+    fn style(&self) -> &lang::FunctionRenderingStyle {
+        &DIVIDE_RENDERING_STYLE
     }
 
     fn name(&self) -> &str {
@@ -654,8 +665,8 @@ pub struct Subtract {}
 
 #[typetag::serde]
 impl lang::Function for Subtract {
-    fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Infix(vec![], "-")
+    fn style(&self) -> &lang::FunctionRenderingStyle {
+        &SUBTRACT_RENDERING_STYLE
     }
 
     fn call(&self,
@@ -705,8 +716,8 @@ pub struct Multiply {}
 
 #[typetag::serde]
 impl lang::Function for Multiply {
-    fn style(&self) -> lang::FunctionRenderingStyle {
-        lang::FunctionRenderingStyle::Infix(vec![], "*")
+    fn style(&self) -> &lang::FunctionRenderingStyle {
+        &MULTIPLY_RENDERING_STYLE
     }
 
     fn call(&self,
@@ -806,6 +817,10 @@ impl lang::Function for Equals {
         let lhs = args.remove(&self.takes_args()[0].id);
         let rhs = args.remove(&self.takes_args()[1].id);
         lang::Value::Boolean(lhs == rhs)
+    }
+
+    fn style(&self) -> &lang::FunctionRenderingStyle {
+        &EQUALS_RENDERING_STYLE
     }
 
     fn name(&self) -> &str {

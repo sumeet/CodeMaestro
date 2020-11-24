@@ -156,8 +156,8 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn id(&self) -> ID;
     fn takes_args(&self) -> Vec<ArgumentDefinition>;
     fn returns(&self) -> Type;
-    fn style(&self) -> FunctionRenderingStyle {
-        FunctionRenderingStyle::Default
+    fn style(&self) -> &FunctionRenderingStyle {
+        &FunctionRenderingStyle::Default
     }
     fn cs_code(&self) -> Box<dyn Iterator<Item = &Block> + '_> {
         Box::new(std::iter::empty())
@@ -167,9 +167,10 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub enum FunctionRenderingStyle {
     Default,
-    Infix(Vec<ID>, &'static str),
+    Infix(Vec<ID>, String),
 }
 
 impl fmt::Debug for dyn Function {

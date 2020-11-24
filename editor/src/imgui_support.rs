@@ -73,11 +73,26 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                                          // The "Miscellaneous Technical" range:
                                                          // https://www.compart.com/en/unicode/block/U+2300
                                                              FontGlyphRanges::from_slice(&[0x2300,
-                                                                                           0x23ff, // the range for custom fonts, small because it's only the ones we use
+                                                                                           0x23ff,
                                                                                            0]),
                                                          pixel_snap_h: true,
                                                          oversample_h: 1,
                                                          ..FontConfig::default() }) },
+         FontSource::TtfData { data: include_bytes!("../../fonts/NotoSansMath-Regular.ttf"),
+                               size_pixels: noto_sans_font_size,
+                               config: Some(
+                                            FontConfig { glyph_offset: [0.0, noto_sans_y_offset],
+                    rasterizer_multiply: 1.75,
+                    glyph_ranges:
+                    // The "Supplemental Mathematical Operators block" range:
+                    // https://en.wikipedia.org/wiki/Supplemental_Mathematical_Operators
+                    FontGlyphRanges::from_slice(&[0x2A00,
+                        0x2AFF, // the range for custom fonts, small because it's only the ones we use
+                        0]),
+                    pixel_snap_h: true,
+                    oversample_h: 1,
+                    ..FontConfig::default() },
+        ) },
          FontSource::TtfData { data: include_bytes!("../../fonts/fontcustom.ttf"),
                                size_pixels: font_size,
                                config: Some(FontConfig { glyph_offset:
