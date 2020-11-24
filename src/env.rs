@@ -44,6 +44,14 @@ impl Interpreter {
         self.locals.borrow_mut().insert(id, value);
     }
 
+    pub fn modify_local_variable<T>(&self,
+                                    id: lang::ID,
+                                    change_fn: impl FnOnce(&mut lang::Value) -> T)
+                                    -> Option<T> {
+        let mut locals = self.locals.borrow_mut();
+        locals.get_mut(&id).map(change_fn)
+    }
+
     pub fn get_local_variable(&self, id: lang::ID) -> Option<lang::Value> {
         self.locals.borrow().get(&id).cloned()
     }
@@ -234,13 +242,19 @@ impl Interpreter {
                                                                                     .unwrap();
                     let set_to_val = await_eval_result!(interp.evaluate(rli.set_to_expr.as_ref()));
 
-                    let mut current_local_var = resolve_all_futures(interp.get_local_variable(rli.assignment_id).unwrap()).await;
-                    let vec_to_change = current_local_var.as_mut_vec().unwrap();
-                    let index_exists = vec_to_change.get_mut(index as usize)
-                                                    .map(|hole| *hole = set_to_val)
-                                                    .is_some();
-                    interp.set_local_variable(rli.assignment_id, current_local_var);
-                    if index_exists {
+                    let index_exists = interp.modify_local_variable(rli.assignment_id, |val| {
+                                                 let vec_to_change = val.as_mut_vec().unwrap();
+                                                 vec_to_change.get_mut(index as usize)
+                                                              .map(|hole| *hole = set_to_val)
+                                                              .is_some()
+                                             });
+                    // let mut current_local_var = resolve_all_futures(interp.get_local_variable(rli.assignment_id).unwrap()).await;
+                    // let vec_to_change = current_local_var.as_mut_vec().unwrap();
+                    // let index_exists = vec_to_change.get_mut(index as usize)
+                    //                                 .map(|hole| *hole = set_to_val)
+                    //                                 .is_some();
+                    // interp.set_local_variable(rli.assignment_id, current_local_var);
+                    if index_exists == Some(true) {
                         ok_result_value(lang::Value::Null)
                     } else {
                         err_result_value(lang::Value::Number(index))
