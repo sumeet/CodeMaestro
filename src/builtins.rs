@@ -355,16 +355,13 @@ impl ChatReply {
 impl lang::Function for ChatReply {
     fn call(&self,
             _interpreter: env::Interpreter,
-            args: HashMap<lang::ID, lang::Value>)
+            mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let text_to_send = args.get(&self.takes_args()[0].id)
+        let text_to_send = args.remove(&CHAT_REPLY_MESSAGE_ARG_ID)
                                .unwrap()
-                               .as_str()
+                               .into_string()
                                .unwrap();
-        self.output_buffer
-            .lock()
-            .unwrap()
-            .push(text_to_send.to_string());
+        self.output_buffer.lock().unwrap().push(text_to_send);
         lang::Value::Null
     }
 
@@ -394,13 +391,18 @@ impl lang::Function for ChatReply {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JoinString {}
 
+lazy_static! {
+    static ref JOIN_STRING_ARG_IDS: [lang::ID; 1] =
+        [uuid::Uuid::parse_str("78cf269a-2a29-4325-9a18-8d84132485ed").unwrap()];
+}
+
 #[typetag::serde]
 impl lang::Function for JoinString {
     fn call(&self,
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let joined = args.get(&self.takes_args()[0].id)
+        let joined = args.get(&JOIN_STRING_ARG_IDS[0])
                          .unwrap()
                          .as_vec()
                          .unwrap()
@@ -425,7 +427,7 @@ impl lang::Function for JoinString {
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
         vec![
             lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("78cf269a-2a29-4325-9a18-8d84132485ed").unwrap(),
+                JOIN_STRING_ARG_IDS[0],
                 lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)]),
                 "Strings".to_string()),
         ]
@@ -439,17 +441,23 @@ impl lang::Function for JoinString {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct SplitString {}
 
+lazy_static! {
+    static ref SPLIT_STRING_ARG_IDS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("401e29a6-afd6-4868-913c-83bef61e9783").unwrap(),
+         uuid::Uuid::parse_str("ad4e23c5-233b-466c-b0f5-7662e832adf1").unwrap(),];
+}
+
 #[typetag::serde]
 impl lang::Function for SplitString {
     fn call(&self,
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let str = args.get(&self.takes_args()[0].id)
+        let str = args.get(&SPLIT_STRING_ARG_IDS[0])
                       .unwrap()
                       .as_str()
                       .unwrap();
-        let delimiter = args.get(&self.takes_args()[1].id)
+        let delimiter = args.get(&SPLIT_STRING_ARG_IDS[1])
                             .unwrap()
                             .as_str()
                             .unwrap();
@@ -472,16 +480,12 @@ impl lang::Function for SplitString {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("401e29a6-afd6-4868-913c-83bef61e9783").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "String to split".to_string()),
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("ad4e23c5-233b-466c-b0f5-7662e832adf1").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                "Delimiter".to_string()),
-        ]
+        vec![lang::ArgumentDefinition::new_with_id(SPLIT_STRING_ARG_IDS[0],
+                                                   lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                                                   "String to split".to_string()),
+             lang::ArgumentDefinition::new_with_id(SPLIT_STRING_ARG_IDS[1],
+                                                   lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                                                   "Delimiter".to_string()),]
     }
 
     fn returns(&self) -> lang::Type {
@@ -493,17 +497,20 @@ impl lang::Function for SplitString {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Map {}
 
+lazy_static! {
+    static ref MAP_ARG_IDS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("75ac0660-6814-4d17-8444-481237581f16").unwrap(),
+         uuid::Uuid::parse_str("1ae3bf22-a2ab-4bd0-af5f-193385284b7d").unwrap(),];
+}
+
 #[typetag::serde]
 impl lang::Function for Map {
     fn call(&self,
             interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let what_to_map_over = args.remove(&self.takes_args()[0].id)
-                                   .unwrap()
-                                   .into_vec()
-                                   .unwrap();
-        let map_fn = args.remove(&self.takes_args()[1].id)
+        let what_to_map_over = args.remove(&MAP_ARG_IDS[0]).unwrap().into_vec().unwrap();
+        let map_fn = args.remove(&MAP_ARG_IDS[1])
                          .unwrap()
                          .into_anon_func()
                          .unwrap();
@@ -540,12 +547,12 @@ impl lang::Function for Map {
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
         vec![
             lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("75ac0660-6814-4d17-8444-481237581f16").unwrap(),
+                MAP_ARG_IDS[0],
                 lang::Type::with_params(&*lang::LIST_TYPESPEC,
                                     vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)]),
                 "Collection".to_string()),
             lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("1ae3bf22-a2ab-4bd0-af5f-193385284b7d").unwrap(),
+                MAP_ARG_IDS[1],
                 lang::Type::with_params(&*lang::ANON_FUNC_TYPESPEC,
                                     vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC),
                                         lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
@@ -563,13 +570,18 @@ impl lang::Function for Map {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ParseNumber {}
 
+lazy_static! {
+    static ref PARSE_NUMBER_ARGS: [lang::ID; 1] =
+        [uuid::Uuid::parse_str("f99f9d51-2ec7-4fce-9471-14b4c800110b").unwrap(),];
+}
+
 #[typetag::serde]
 impl lang::Function for ParseNumber {
     fn call(&self,
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let val = args.get(&self.takes_args()[0].id).unwrap();
+        let val = args.get(&PARSE_NUMBER_ARGS[0]).unwrap();
         let num = val.as_str().unwrap().parse().unwrap_or(0);
         lang::Value::Number(num)
     }
@@ -587,20 +599,15 @@ impl lang::Function for ParseNumber {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(
-                uuid::Uuid::parse_str("f99f9d51-2ec7-4fce-9471-14b4c800110b").unwrap(),
-                lang::Type::from_spec(&*lang::STRING_TYPESPEC), "String to convert".into())
-        ]
+        vec![lang::ArgumentDefinition::new_with_id(PARSE_NUMBER_ARGS[0],
+                                                   lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                                                   "String to convert".into())]
     }
 
     fn returns(&self) -> lang::Type {
         lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
     }
 }
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct DivideTemp {}
 
 lazy_static! {
     static ref DIVIDE_RENDERING_STYLE: lang::FunctionRenderingStyle =
@@ -613,20 +620,23 @@ lazy_static! {
         lang::FunctionRenderingStyle::Infix(vec![], "==".to_string());
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct DivideTemp {}
+
+lazy_static! {
+    static ref DIVIDE_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("fea14b3b-71dd-4907-88b9-ee1a857937ef").unwrap(),
+         uuid::Uuid::parse_str("88afb818-e741-48e4-8550-7a29aaf4b500").unwrap(),];
+}
+
 #[typetag::serde]
 impl lang::Function for DivideTemp {
     fn call(&self,
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let dividend = args.get(&self.takes_args()[0].id)
-                           .unwrap()
-                           .as_i128()
-                           .unwrap();
-        let divisor = args.get(&self.takes_args()[1].id)
-                          .unwrap()
-                          .as_i128()
-                          .unwrap();
+        let dividend = args.get(&DIVIDE_ARGS[0]).unwrap().as_i128().unwrap();
+        let divisor = args.get(&DIVIDE_ARGS[1]).unwrap().as_i128().unwrap();
         lang::Value::Number(dividend / divisor)
     }
 
@@ -647,10 +657,10 @@ impl lang::Function for DivideTemp {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("fea14b3b-71dd-4907-88b9-ee1a857937ef").unwrap(),
+        vec![lang::ArgumentDefinition::new_with_id(DIVIDE_ARGS[0],
                                                    lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
                                                    "Dividend".into()),
-        lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("88afb818-e741-48e4-8550-7a29aaf4b500").unwrap(),
+             lang::ArgumentDefinition::new_with_id(DIVIDE_ARGS[1],
                                                    lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
                                                    "Divisor".into())]
     }
@@ -663,6 +673,12 @@ impl lang::Function for DivideTemp {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Subtract {}
 
+lazy_static! {
+    static ref SUBTRACT_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("2563941c-b8aa-4e22-9081-d7507d01f575").unwrap(),
+         uuid::Uuid::parse_str("1b5a2487-0cb8-4101-b184-a9b61d154e2a").unwrap(),];
+}
+
 #[typetag::serde]
 impl lang::Function for Subtract {
     fn style(&self) -> &lang::FunctionRenderingStyle {
@@ -674,14 +690,8 @@ impl lang::Function for Subtract {
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
         // TODO: fix the names
-        let dividend = args.get(&self.takes_args()[0].id)
-                           .unwrap()
-                           .as_i128()
-                           .unwrap();
-        let divisor = args.get(&self.takes_args()[1].id)
-                          .unwrap()
-                          .as_i128()
-                          .unwrap();
+        let dividend = args.get(&SUBTRACT_ARGS[0]).unwrap().as_i128().unwrap();
+        let divisor = args.get(&SUBTRACT_ARGS[1]).unwrap().as_i128().unwrap();
         lang::Value::Number(dividend - divisor)
     }
 
@@ -698,10 +708,10 @@ impl lang::Function for Subtract {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("2563941c-b8aa-4e22-9081-d7507d01f575").unwrap(),
+        vec![lang::ArgumentDefinition::new_with_id(SUBTRACT_ARGS[0],
                                                    lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
                                                    "Minuend".into()),
-             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("1b5a2487-0cb8-4101-b184-a9b61d154e2a").unwrap(),
+             lang::ArgumentDefinition::new_with_id(SUBTRACT_ARGS[1],
                                                    lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
                                                    "Subtrahen".into())]
     }
@@ -714,6 +724,13 @@ impl lang::Function for Subtract {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Multiply {}
 
+// TODO: see if this actually improvse the execution time after applying it all over
+lazy_static! {
+    static ref MULTIPLY_ARG_IDS: [uuid::Uuid; 2] =
+        [uuid::Uuid::parse_str("83aa68ce-910a-40f5-87ee-73689b0f3287").unwrap(),
+         uuid::Uuid::parse_str("7d3918e6-f3f2-4b80-b449-7b6f35e067fc").unwrap()];
+}
+
 #[typetag::serde]
 impl lang::Function for Multiply {
     fn style(&self) -> &lang::FunctionRenderingStyle {
@@ -725,14 +742,8 @@ impl lang::Function for Multiply {
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
         // TODO: fix the names
-        let dividend = args.get(&self.takes_args()[0].id)
-                           .unwrap()
-                           .as_i128()
-                           .unwrap();
-        let divisor = args.get(&self.takes_args()[1].id)
-                          .unwrap()
-                          .as_i128()
-                          .unwrap();
+        let dividend = args.get(&MULTIPLY_ARG_IDS[0]).unwrap().as_i128().unwrap();
+        let divisor = args.get(&MULTIPLY_ARG_IDS[1]).unwrap().as_i128().unwrap();
         lang::Value::Number(dividend * divisor)
     }
 
@@ -749,10 +760,10 @@ impl lang::Function for Multiply {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("83aa68ce-910a-40f5-87ee-73689b0f3287").unwrap(),
+        vec![lang::ArgumentDefinition::new_with_id(MULTIPLY_ARG_IDS[0],
                                                    lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
                                                    "Multiplier".into()),
-             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("7d3918e6-f3f2-4b80-b449-7b6f35e067fc").unwrap(),
+             lang::ArgumentDefinition::new_with_id(MULTIPLY_ARG_IDS[1],
                                                    lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
                                                    "Multiplicand".into())]
     }
@@ -765,13 +776,18 @@ impl lang::Function for Multiply {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Sum {}
 
+lazy_static! {
+    static ref SUM_ARGS: [lang::ID; 1] =
+        [uuid::Uuid::parse_str("c68fa262-5ea7-4f2f-8c2c-4838cf0959b1").unwrap(),];
+}
+
 #[typetag::serde]
 impl lang::Function for Sum {
     fn call(&self,
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let what_to_map_over = args.remove(&self.takes_args()[0].id)
+        let what_to_map_over = args.remove(&SUM_ARGS[0])
                                    .unwrap()
                                    .into_vec()
                                    .unwrap()
@@ -794,7 +810,7 @@ impl lang::Function for Sum {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("c68fa262-5ea7-4f2f-8c2c-4838cf0959b1").unwrap(),
+        vec![lang::ArgumentDefinition::new_with_id(SUM_ARGS[0],
                                                    lang::Type::with_params(&*lang::LIST_TYPESPEC,
                                                                            vec![lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)]),
                                                    "Numbers".into())]
@@ -808,14 +824,20 @@ impl lang::Function for Sum {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Equals {}
 
+lazy_static! {
+    static ref EQUALS_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("c5effe9a-e4e9-4c58-ba35-73b59e8b3368").unwrap(),
+         uuid::Uuid::parse_str("fe065a78-e84f-4365-8e3f-06331f8f2241").unwrap(),];
+}
+
 #[typetag::serde]
 impl lang::Function for Equals {
     fn call(&self,
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let lhs = args.remove(&self.takes_args()[0].id);
-        let rhs = args.remove(&self.takes_args()[1].id);
+        let lhs = args.remove(&EQUALS_ARGS[0]);
+        let rhs = args.remove(&EQUALS_ARGS[1]);
         lang::Value::Boolean(lhs == rhs)
     }
 
@@ -842,15 +864,12 @@ impl lang::Function for Equals {
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
         let generic = self.defines_generics().pop().unwrap();
 
-        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("c5effe9a-e4e9-4c58-ba35-73b59e8b3368").unwrap(),
-                                                   lang::Type::with_params(&generic,
-                                                                           vec![]),
+        vec![lang::ArgumentDefinition::new_with_id(EQUALS_ARGS[0],
+                                                   lang::Type::with_params(&generic, vec![]),
                                                    "LHS".into()),
-             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("fe065a78-e84f-4365-8e3f-06331f8f2241").unwrap(),
-                                                   lang::Type::with_params(&generic,
-                                                                           vec![]),
-                                                   "RHS".into())
-        ]
+             lang::ArgumentDefinition::new_with_id(EQUALS_ARGS[1],
+                                                   lang::Type::with_params(&generic, vec![]),
+                                                   "RHS".into())]
     }
 
     fn returns(&self) -> lang::Type {
@@ -861,20 +880,20 @@ impl lang::Function for Equals {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct LessThan {}
 
+lazy_static! {
+    static ref LESS_THAN_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("47f4813c-9549-4e7e-98d5-a2eeeca5bfa3").unwrap(),
+         uuid::Uuid::parse_str("e4a7afad-2f81-4d21-a17c-0e0cd38d1c19").unwrap(),];
+}
+
 #[typetag::serde]
 impl lang::Function for LessThan {
     fn call(&self,
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let lhs = args.remove(&self.takes_args()[0].id)
-                      .unwrap()
-                      .as_i128()
-                      .unwrap();
-        let rhs = args.remove(&self.takes_args()[1].id)
-                      .unwrap()
-                      .as_i128()
-                      .unwrap();
+        let lhs = args.remove(&LESS_THAN_ARGS[0]).unwrap().as_i128().unwrap();
+        let rhs = args.remove(&LESS_THAN_ARGS[1]).unwrap().as_i128().unwrap();
         lang::Value::Boolean(lhs < rhs)
     }
 
@@ -891,11 +910,11 @@ impl lang::Function for LessThan {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("47f4813c-9549-4e7e-98d5-a2eeeca5bfa3").unwrap(),
+        vec![lang::ArgumentDefinition::new_with_id(LESS_THAN_ARGS[0],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
                                                    "Left".into()),
-             lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("e4a7afad-2f81-4d21-a17c-0e0cd38d1c19").unwrap(),
+             lang::ArgumentDefinition::new_with_id(LESS_THAN_ARGS[1],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
                                                    "Right".into())
@@ -904,67 +923,5 @@ impl lang::Function for LessThan {
 
     fn returns(&self) -> lang::Type {
         lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC)
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct UpdateIndex {}
-
-#[typetag::serde]
-impl lang::Function for UpdateIndex {
-    fn call(&self,
-            _interpreter: env::Interpreter,
-            mut args: HashMap<lang::ID, lang::Value>)
-            -> lang::Value {
-        let intermediate = args.remove(&self.takes_args()[0].id).unwrap();
-        let (typ, list_to_update) = intermediate
-                                                // this should be into because we're already consuming the value, wouldn't need to clone it
-                                                .as_vec_with_type()
-                                                .unwrap();
-        let index = args.remove(&self.takes_args()[1].id)
-                        .unwrap()
-                        .as_i128()
-                        .unwrap();
-        let value = args.remove(&self.takes_args()[2].id).unwrap();
-        let mut new_list = list_to_update.clone();
-        new_list.insert(index as _, value);
-        lang::Value::List(typ.clone(), new_list)
-    }
-
-    fn name(&self) -> &str {
-        "UpdateListIndex"
-    }
-
-    fn description(&self) -> &str {
-        "Makes a new list with item changed"
-    }
-
-    fn id(&self) -> lang::ID {
-        uuid::Uuid::parse_str("10e4ce44-fe9d-476f-9e2f-848e14c1ad1d").unwrap()
-    }
-
-    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        vec![
-            lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("783ab1ae-a9f9-46fa-99a6-205fceadbea1").unwrap(),
-                                                   lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                                                           vec![lang::Type::with_params(&*lang::ANY_TYPESPEC,
-                                                                                                        vec![])]),
-                                                   "List to update".into()),
-            lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("26a931cf-3227-419b-8cd9-8a2531b822f7").unwrap(),
-                                                  lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
-                                                                          vec![]),
-                                                  "Index".into()),
-            lang::ArgumentDefinition::new_with_id(uuid::Uuid::parse_str("78686b46-774a-45ae-a69e-bd326b57eb2d").unwrap(),
-                                                  // NOT a number, but the same param as above
-                                                  lang::Type::with_params(&*lang::ANY_TYPESPEC,
-                                                                          vec![]),
-                                                   "Value".into())
-        ]
-    }
-
-    // TODO: returns a result
-    fn returns(&self) -> lang::Type {
-        lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                vec![lang::Type::with_params(&*lang::ANY_TYPESPEC, vec![])])
     }
 }
