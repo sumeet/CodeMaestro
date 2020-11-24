@@ -1068,8 +1068,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             FunctionRenderingStyle::Default => {
                 self.render_function_name(&func.name(), colorscheme!(action_color), &func.returns())
             }
-            FunctionRenderingStyle::Infix(_, _) => {
-                self.ui_toolkit.draw_all(&[])
+            FunctionRenderingStyle::Infix(_, infix_symbol) => {
+                self.ui_toolkit.draw_text(infix_symbol)
                 // self.render_function_name("", colorscheme!(action_color), &func.returns())
             }
         }
@@ -1361,8 +1361,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         self.ui_toolkit.draw_all_on_same_line(&[
                     &|| self.render_without_nesting(&|| self.render_code(&function_call.args[0])),
                     &|| {
-                        self.code_handle(&|| self.ui_toolkit.draw_text(infix_symbol),
+                        self.code_handle(&|| {
+                                             self.render_code(function_call.function_reference
+                                                                           .as_ref())
+                                         },
                                          function_call.id)
+
+                        // self.code_handle(&|| self.ui_toolkit.draw_text(infix_symbol),
+                        //                  function_call.id)
                     },
                     &|| self.render_without_nesting(&|| self.render_code(&function_call.args[1])),
                 ])
