@@ -1356,16 +1356,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                         infix_symbol: &str,
                                         function_call: &lang::FunctionCall)
                                         -> T::DrawResult {
-        self.ui_toolkit
-            .draw_all_on_same_line(&[
-                &|| self.render_code(&function_call.function_reference),
-                &|| self.render_code(&function_call.args[0]),
-                                     &|| {
-                                         self.code_handle(&|| {
-                                             self.ui_toolkit.draw_text(infix_symbol)
-                                         }, function_call.id)
-                                     },
-                                     &|| self.render_code(&function_call.args[1])])
+        self.render_nested(&|| {
+                self.draw_nested_borders_around(&|| {
+                        self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| self.render_without_nesting(&|| self.render_code(&function_call.args[0])),
+                    &|| {
+                        self.code_handle(&|| self.ui_toolkit.draw_text(infix_symbol),
+                                         function_call.id)
+                    },
+                    &|| self.render_without_nesting(&|| self.render_code(&function_call.args[1])),
+                ])
+                    })
+            })
     }
 
     fn render_default_function_call_style(&self,
@@ -1425,7 +1427,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     ])
                     })
             }
-            FunctionRenderingStyle::Infix(_, _) => self.render_nested(&|| render_inner_code()),
+            FunctionRenderingStyle::Infix(_, _) => render_inner_code(),
         }
     }
 

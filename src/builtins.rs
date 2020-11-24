@@ -526,7 +526,7 @@ impl lang::Function for Map {
     }
 
     fn name(&self) -> &str {
-        "Transform (Map)"
+        "Transform"
     }
 
     fn description(&self) -> &str {
@@ -610,7 +610,7 @@ lazy_static! {
     static ref MULTIPLY_RENDERING_STYLE: lang::FunctionRenderingStyle =
         lang::FunctionRenderingStyle::Infix(vec![], "×".to_string());
     static ref EQUALS_RENDERING_STYLE: lang::FunctionRenderingStyle =
-        lang::FunctionRenderingStyle::Infix(vec![], "⩵".to_string());
+        lang::FunctionRenderingStyle::Infix(vec![], "==".to_string());
 }
 
 #[typetag::serde]
