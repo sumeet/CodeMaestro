@@ -898,13 +898,17 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     pub fn render_anonymous_function(&self, anon_func: &AnonymousFunction) -> T::DrawResult {
+        self.render_block_inside_child_region(&anon_func.block.as_ref().as_block().unwrap())
+    }
+
+    fn render_block_inside_child_region(&self, block: &lang::Block) -> T::DrawResult {
         let style = ChildRegionStyle { height: ChildRegionHeight::FitContent,
                                        width: ChildRegionWidth::All,
                                        frame_style: ChildRegionFrameStyle::Framed,
                                        top_padding: ChildRegionTopPadding::None };
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
-                               &|| self.render_block(&anon_func.block.as_ref().as_block().unwrap()),
+                               &|| self.render_block(&block),
                                style,
                                Some(&|| self.draw_right_click_menu()),
                                None::<fn(Keypress)>,
@@ -1626,7 +1630,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     &|| self.render_code(&conditional.condition),
                 ])
             },
-            &|| self.render_indented(&|| self.render_code(&conditional.true_branch)),
+            &|| {
+                self.render_indented(&|| {
+                        self.render_block_inside_child_region(&conditional.true_branch
+                                                                          .as_ref()
+                                                                          .as_block()
+                                                                          .unwrap())
+                        // self.render_code(&conditional.true_branch)
+                    })
+            },
             &|| self.code_handle(&|| self.draw_text("Else"), conditional.id),
             &|| {
                 if let Some(else_branch) = &conditional.else_branch {
@@ -1653,7 +1665,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     &|| self.render_code(&while_loop.condition),
                 ])
             },
-            &|| self.render_indented(&|| self.render_code(&while_loop.body)),
+            &|| {
+                self.render_indented(&|| {
+                        self.render_block_inside_child_region(&while_loop.body
+                                                                         .as_ref()
+                                                                         .as_block()
+                                                                         .unwrap())
+                    })
+            },
         ])
     }
 
