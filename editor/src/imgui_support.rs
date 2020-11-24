@@ -40,7 +40,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     let fontawesome_icon_y_offset = (-2.0 * hidpi_factor) as f32;
     let custom_icon_y_offset = 1.; //(-0.25 * hidpi_factor) as f32;
     let noto_sans_font_size = font_size * 1.75;
-    let noto_sans_y_offset = -0.4;
+    let noto_sans_y_offset = 2.;
 
     unsafe {
         imgui_sys::igStyleColorsClassic(imgui_sys::igGetStyle());
@@ -86,8 +86,11 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                     glyph_ranges:
                     // The "Supplemental Mathematical Operators block" range:
                     // https://en.wikipedia.org/wiki/Supplemental_Mathematical_Operators
-                    FontGlyphRanges::from_slice(&[0x2A00,
-                        0x2AFF, // the range for custom fonts, small because it's only the ones we use
+                    // and
+                    // The "Mathematical Operators block" range:
+                    // https://en.wikipedia.org/wiki/Mathematical_Operators_(Unicode_block)
+                    FontGlyphRanges::from_slice(&[0x2A00, 0x2AFF, // "supplemental"
+                        0x2200, 0x22FF, // mathematical operators
                         0]),
                     pixel_snap_h: true,
                     oversample_h: 1,

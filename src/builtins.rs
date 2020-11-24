@@ -19,6 +19,7 @@ use std::sync::{Arc, Mutex};
 mod http_request;
 
 use crate::env::ExecutionError;
+use crate::lang::FunctionRenderingStyle;
 pub use http_request::HTTPRequest;
 pub use http_request::HTTP_RESPONSE_STRUCT_ID;
 
@@ -617,7 +618,10 @@ lazy_static! {
     static ref MULTIPLY_RENDERING_STYLE: lang::FunctionRenderingStyle =
         lang::FunctionRenderingStyle::Infix(vec![], "×".to_string());
     static ref EQUALS_RENDERING_STYLE: lang::FunctionRenderingStyle =
-        lang::FunctionRenderingStyle::Infix(vec![], "==".to_string());
+        // this is a special unicode symbol
+        lang::FunctionRenderingStyle::Infix(vec![], "⩵".to_string());
+    static ref LESS_THAN_RENDERING_STYLE: lang::FunctionRenderingStyle =
+        FunctionRenderingStyle::Infix(vec![], "\u{f536}".to_string());
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -895,6 +899,10 @@ impl lang::Function for LessThan {
         let lhs = args.remove(&LESS_THAN_ARGS[0]).unwrap().as_i128().unwrap();
         let rhs = args.remove(&LESS_THAN_ARGS[1]).unwrap().as_i128().unwrap();
         lang::Value::Boolean(lhs < rhs)
+    }
+
+    fn style(&self) -> &lang::FunctionRenderingStyle {
+        &LESS_THAN_RENDERING_STYLE
     }
 
     fn name(&self) -> &str {

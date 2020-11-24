@@ -278,7 +278,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                      draw_lhs_func: DrawFnRef<T>)
                                      -> T::DrawResult {
         self.ui_toolkit.draw_all_on_same_line(&[draw_lhs_func,
-                                                &|| self.draw_text("   \u{f52c}   "),
+                                                &|| self.draw_text("   ≔    "),
                                                 &|| {
                                                     self.render_code(assignment.expression.as_ref())
                                                 }])
