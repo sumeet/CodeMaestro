@@ -119,7 +119,6 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
     };
     lang::CodeNode::Conditional(lang::Conditional {
         id: lang::new_id(),
-        // TODO: change to boolean type once we add it
         condition: Box::new(new_placeholder(
             "Condition".to_string(),
             lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC),
