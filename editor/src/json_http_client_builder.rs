@@ -319,7 +319,7 @@ lazy_static! {
 
 fn normalize_struct_fields(fields: &[structs::StructField]) -> BTreeMap<String, lang::ID> {
     fields.iter()
-          .map(|field| (field.name.clone(), field.field_type.id()))
+          .map(|field| (field.name.clone(), field.field_type.hash()))
           .collect()
 }
 

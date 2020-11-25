@@ -480,9 +480,9 @@ impl Type {
     }
 
     // TODO: i forget why we need this
-    pub fn id(&self) -> ID {
+    pub fn hash(&self) -> ID {
         let mut mashed_hashes = vec![self.typespec_id.to_string()];
-        mashed_hashes.extend(self.params.iter().map(|t| t.id().to_string()));
+        mashed_hashes.extend(self.params.iter().map(|t| t.hash().to_string()));
         // v5 uuids aren't random, they are hashes
         uuid::Uuid::new_v5(&uuid::Uuid::NAMESPACE_OID,
                            mashed_hashes.join(":").as_bytes())
@@ -493,7 +493,7 @@ impl Type {
         if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
             return true;
         }
-        self.id() == other.id()
+        self.hash() == other.hash()
         // self.matches_spec_id(other.id())
     }
 

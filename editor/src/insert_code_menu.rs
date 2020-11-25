@@ -492,30 +492,14 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             return vec![];
         }
 
-        let mut variables_by_type_id = find_all_locals_preceding(search_params.insertion_point
-                                                                              .into(),
-                                                                 code_genie,
-                                                                 env_genie).map(|variable| {
-                                                                               (variable.typ.id(),
-                                                                                variable)
-                                                                           })
-                                                                           .into_group_map();
+        let variables = find_all_locals_preceding(search_params.insertion_point.into(),
+                                                  code_genie,
+                                                  env_genie).filter(|variable| {
+                            search_params.search_matches_type(&variable.typ)
+                            && search_params.search_matches_identifier(&variable.name)
+                        });
 
-        let mut variables = match &search_params.return_type {
-            Some(search_type) if search_type.typespec_id != lang::ANY_TYPESPEC.id() => {
-                variables_by_type_id.remove(&search_type.id())
-                                    .unwrap_or_else(|| vec![])
-            }
-            _ => Iterator::flatten(variables_by_type_id.drain().map(|(_, v)| v)).collect(),
-        };
-
-        variables =
-            variables.into_iter()
-                     .filter(|variable| search_params.search_matches_identifier(&variable.name))
-                     .collect();
-
-        variables.into_iter()
-                 .map(|variable| {
+        variables.map(|variable| {
                      let id = variable.locals_id;
                      InsertCodeMenuOption { new_node: code_generation::new_variable_reference(id),
                                             sort_key: id.to_string(),
@@ -678,7 +662,7 @@ impl InsertLiteralOptionGenerator {
         InsertCodeMenuOption {
             group_name: LITERALS_GROUP,
             is_selected: false,
-            sort_key: format!("listliteral{}", element_type.id()),
+            sort_key: format!("listliteral{}", element_type.hash()),
             new_node: lang::CodeNode::ListLiteral(lang::ListLiteral {
                 id: lang::new_id(),
                 element_type: element_type.clone(),
