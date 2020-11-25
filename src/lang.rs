@@ -93,11 +93,11 @@ impl GenericParamTypeSpec {
 #[typetag::serde()]
 impl TypeSpec for GenericParamTypeSpec {
     fn readable_name(&self) -> &str {
-        "Any Type 2"
+        "Any Type"
     }
 
     fn description(&self) -> &str {
-        "Any type can be used here 2"
+        "Any type can be used here"
     }
 
     fn id(&self) -> ID {
@@ -490,11 +490,18 @@ impl Type {
 
     pub fn matches(&self, other: &Self) -> bool {
         // // TODO: duplication, search for ANY_TYPESPEC
-        if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
-            return true;
+        // if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
+        //     return true;
+        // }
+        if !self.matches_spec_id(other.typespec_id) {
+            return false;
         }
-        self.hash() == other.hash()
-        // self.matches_spec_id(other.id())
+        for (our_param, their_param) in self.params.iter().zip(other.params.iter()) {
+            if !our_param.matches(their_param) {
+                return false;
+            }
+        }
+        true
     }
 
     // XXX: idk if this is right but it'll at least get me farther i think
