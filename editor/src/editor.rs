@@ -1142,7 +1142,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.ui_toolkit.draw_with_margin((20., 0.), &|| {
             let cmd_buffer = Rc::clone(&self.command_buffer);
                            self.ui_toolkit
-                               .draw_button(&format!("{} Warnings", problems.len()),
+                               .draw_button(&format!("\u{f321}  {} Warnings", problems.len()),
                                             colorscheme!(warning_color),
                                             move || {
                                                 cmd_buffer.borrow_mut().add_controller_command(move |cont| {

@@ -992,3 +992,80 @@ impl lang::Function for LessThan {
         lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC)
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Range {}
+
+lazy_static! {
+    static ref RANGE_ARGS: [lang::ID; 3] =
+        [uuid::Uuid::parse_str("55e37864-34d7-4792-97d9-09ec14340528").unwrap(),
+         uuid::Uuid::parse_str("8760d197-4570-439b-bfad-622913fb7d59").unwrap(),
+         uuid::Uuid::parse_str("e41d4ebd-f3c3-4924-81fc-f83c4fd06229").unwrap(),];
+}
+
+#[typetag::serde]
+impl lang::Function for Range {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let (typ, vec) = args.remove(&RANGE_ARGS[0])
+                             .unwrap()
+                             .into_vec_with_type()
+                             .unwrap();
+        let mut range_lo = args.remove(&RANGE_ARGS[1]).unwrap().as_i128().unwrap();
+        let mut range_hi = args.remove(&RANGE_ARGS[2]).unwrap().as_i128().unwrap();
+
+        let len = vec.len();
+        if range_lo < 0 {
+            range_lo = len as i128 - range_lo
+        }
+        if range_hi < 0 {
+            range_hi = len as i128 - range_hi
+        }
+
+        lang::Value::List(typ,
+                          vec.get(range_lo as usize..=range_hi as usize)
+                             .unwrap_or(&[])
+                             .to_vec())
+    }
+
+    fn name(&self) -> &str {
+        "Range"
+    }
+
+    fn description(&self) -> &str {
+        "Select an inclusive range from a List. 0 is the first element, 1 is the second, -1 is the last, -2 is the second last, etc."
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("6233cd92-b16c-488c-8a6b-4679a2d38633").unwrap()
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("c42cd06f-69b4-40f6-8e8c-4af2526b19c3").unwrap())]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let generic = self.defines_generics().pop().unwrap();
+
+        vec![lang::ArgumentDefinition::new_with_id(RANGE_ARGS[0],
+                                                   lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                                                           vec![lang::Type::from_spec(&generic)]),
+                                                   "Collection".into()),
+             lang::ArgumentDefinition::new_with_id(RANGE_ARGS[1],
+                                                   lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
+                                                                           vec![]),
+                                                   "Low".into()),
+             lang::ArgumentDefinition::new_with_id(RANGE_ARGS[2],
+                                                   lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
+                                                                           vec![]),
+                                                   "High".into())
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        let generic = self.defines_generics().pop().unwrap();
+        lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![lang::Type::from_spec(&generic)])
+    }
+}

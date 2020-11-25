@@ -345,6 +345,13 @@ impl Value {
         }
     }
 
+    pub fn into_vec_with_type(self) -> Option<(Type, Vec<Value>)> {
+        match self {
+            Value::List(typ, v) => Some((typ, v)),
+            _ => None,
+        }
+    }
+
     pub fn as_i128(&self) -> Option<i128> {
         match self {
             Value::Number(i) => Some(*i),
