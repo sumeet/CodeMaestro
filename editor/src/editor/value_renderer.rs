@@ -146,7 +146,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
     }
 
     fn render_string(&self, value: &str) -> T::DrawResult {
-        self.draw_buttony_text(&format!("\u{F10D} {} \u{F10E}", value),
+        self.draw_buttony_text(&format!("\u{F10D}{}\u{F10E}", value),
                                colorscheme!(literal_bg_color))
     }
 

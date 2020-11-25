@@ -1743,17 +1743,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                    typ: &lang::Type)
                                    -> T::DrawResult {
         let (_, enum_variant) = self.env_genie.find_enum_variant(evl.variant_id).unwrap();
-        self.ui_toolkit.draw_all_on_same_line(&[&|| {
-                                                    render_enum_variant_identifier(self.ui_toolkit,
-                                                                                   self.env_genie,
-                                                                                   enum_variant,
-                                                                                   &typ)
-                                                },
-                                                &|| {
-                                                    self.render_nested(&|| {
-                                                        self.render_code(&evl.variant_value_expr)
-                                                    })
-                                                }])
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &|| {
+                self.code_handle(&|| {
+                                     render_enum_variant_identifier(self.ui_toolkit,
+                                                                    self.env_genie,
+                                                                    enum_variant,
+                                                                    &typ)
+                                 },
+                                 evl.id)
+            },
+            &|| self.render_nested(&|| self.render_code(&evl.variant_value_expr)),
+        ])
     }
 
     fn render_indented(&self, draw_fn: &dyn Fn() -> T::DrawResult) -> T::DrawResult {
@@ -1780,7 +1781,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         } else {
             value.to_string()
         };
-        format!("\u{F10D} {} \u{F10E}", inner_value)
+        format!("\u{F10D}{}\u{F10E}", inner_value)
     }
 
     fn render_number_literal(&self, number_literal: &lang::NumberLiteral) -> T::DrawResult {
