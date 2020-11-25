@@ -64,8 +64,7 @@ lazy_static! {
         readable_name: "Executable code".to_string(),
         description: "Callback code that can be run".into(),
         id: uuid::Uuid::parse_str("92fe8555-2f8c-4ae5-aca6-42353f6dc888").unwrap(),
-        // TODO: put in font awesome (f) symbol in here
-        symbol: "ｆ".to_string(),
+        symbol: "\u{f661}".to_string(),
         num_params: 2,
     };
     pub static ref ANY_TYPESPEC: AnyTypeSpec = AnyTypeSpec { };

@@ -13,7 +13,7 @@ use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
     render_null, render_struct_field, render_struct_field_label, render_struct_identifier,
-    render_type_symbol,
+    render_type_symbol, CONTROL_FLOW_GREY_COLOR,
 };
 use crate::colorscheme;
 use crate::draw_all_iter;
@@ -1622,14 +1622,25 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         })
     }
 
+    fn render_control_flow_label(&self, symbol: &str, label: &str) -> T::DrawResult {
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &|| {
+                self.ui_toolkit
+                    .draw_buttony_text(symbol, darken(darken(CONTROL_FLOW_GREY_COLOR)))
+            },
+            &|| {
+                self.ui_toolkit
+                    .draw_buttony_text(label, CONTROL_FLOW_GREY_COLOR)
+            },
+        ])
+    }
+
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
         self.ui_toolkit.draw_all(&[
             &|| {
                 self.ui_toolkit.align(&|| {
                                           self.code_handle(&|| {
-                                                               self.draw_button("\u{f2fd}   If   ",
-                                                                      colorscheme!(action_color),
-                                                                      &|| {})
+                                              self.render_control_flow_label("\u{f2fd}", "   If  ")
                                                            },
                                                            conditional.id)
                                       },
@@ -1645,9 +1656,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             &|| {
                 self.ui_toolkit.align(&|| {
                     self.code_handle(&|| {
-                        self.draw_button("\u{f352} Else",
-                                         colorscheme!(action_color),
-                                         &|| {})
+                        self.render_control_flow_label("\u{f352}", "Else")
                     },
                                      conditional.id)
                 },
@@ -1664,28 +1673,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                           },
                                       ])
             },
-            // &|| {
-            //     self.ui_toolkit.draw_all_on_same_line(&[
-            //         &|| {
-            //             self.code_handle(&|| {
-            //                                  self.draw_button("\u{f2fd} If",
-            //                                                   colorscheme!(action_color),
-            //                                                   &|| {})
-            //                              },
-            //                              conditional.id)
-            //         },
-            //         &|| self.render_code(&conditional.condition),
-            //     ])
-            // },
         ])
     }
 
     fn render_while_loop(&self, while_loop: &lang::WhileLoop) -> T::DrawResult {
         self.ui_toolkit.align(&|| {
                                   self.code_handle(&|| {
-                                                       self.draw_button("\u{f2f9} While",
-                                                                        colorscheme!(action_color),
-                                                                        &|| {})
+                                                       self.render_control_flow_label("\u{f2f9}",
+                                                                                      "While")
                                                    },
                                                    while_loop.id)
                               },
@@ -1695,29 +1690,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                                    .as_block()
                                                                                    .unwrap())
                               }])
-        // self.ui_toolkit.draw_all(&[
-        //     &|| {
-        //         self.ui_toolkit.draw_all_on_same_line(&[
-        //             &|| {
-        //                 self.code_handle(&|| {
-        //                                      self.draw_button("While",
-        //                                                       colorscheme!(action_color),
-        //                                                       &|| {})
-        //                                  },
-        //                                  while_loop.id)
-        //             },
-        //             &|| self.render_code(&while_loop.condition),
-        //         ])
-        //     },
-        //     &|| {
-        //         self.render_indented(&|| {
-        //                 self.render_block_inside_child_region(&while_loop.body
-        //                                                                  .as_ref()
-        //                                                                  .as_block()
-        //                                                                  .unwrap())
-        //             })
-        //     },
-        // ])
     }
 
     fn render_match(&self, mach: &lang::Match) -> T::DrawResult {

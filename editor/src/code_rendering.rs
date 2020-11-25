@@ -8,8 +8,8 @@ use std::cell::RefCell;
 lazy_static! {
     static ref NULL_TEXT: String = format!(" {} ", lang::NULL_TYPESPEC.symbol);
 }
-// const ARGUMENT_GREY_COLOR: Color = [0.411, 0.411, 0.411, 1.];
-const ARGUMENT_GREY_COLOR: Color = [0., 0., 0., 1.];
+pub const CONTROL_FLOW_GREY_COLOR: Color = [0.411, 0.411, 0.411, 1.];
+const ARGUMENT_BLACK_COLOR: Color = [0., 0., 0., 1.];
 
 pub fn render_enum_variant_identifier<T: UiToolkit>(ui_toolkit: &T,
                                                     env_genie: &EnvGenie,
@@ -188,5 +188,5 @@ pub fn darken(mut color: Color) -> Color {
 }
 
 fn render_argument_label<T: UiToolkit>(ui_toolkit: &T, label: &str) -> T::DrawResult {
-    ui_toolkit.draw_buttony_text(label, ARGUMENT_GREY_COLOR)
+    ui_toolkit.draw_buttony_text(label, ARGUMENT_BLACK_COLOR)
 }
