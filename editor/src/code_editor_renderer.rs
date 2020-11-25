@@ -1625,55 +1625,99 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
         self.ui_toolkit.draw_all(&[
             &|| {
-                self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| self.code_handle(&|| self.draw_text("If "), conditional.id),
-                    &|| self.render_code(&conditional.condition),
-                ])
+                self.ui_toolkit.align(&|| {
+                                          self.code_handle(&|| {
+                                                               self.draw_button("\u{f2fd}   If   ",
+                                                                      colorscheme!(action_color),
+                                                                      &|| {})
+                                                           },
+                                                           conditional.id)
+                                      },
+                                      &[&|| self.render_code(&conditional.condition),
+                                          &|| {
+                                                  self.render_block_inside_child_region(&conditional.true_branch
+                                                      .as_ref()
+                                                      .as_block()
+                                                      .unwrap())
+                                          },
+                                      ])
             },
             &|| {
-                self.render_indented(&|| {
-                        self.render_block_inside_child_region(&conditional.true_branch
-                                                                          .as_ref()
-                                                                          .as_block()
-                                                                          .unwrap())
-                        // self.render_code(&conditional.true_branch)
-                    })
+                self.ui_toolkit.align(&|| {
+                    self.code_handle(&|| {
+                        self.draw_button("\u{f352} Else",
+                                         colorscheme!(action_color),
+                                         &|| {})
+                    },
+                                     conditional.id)
+                },
+                                      &[&|| self.ui_toolkit.draw_text(""),
+                                          &|| {
+                                              if let Some(else_branch) = &conditional.else_branch {
+                                                  self.render_block_inside_child_region(&else_branch
+                                                      .as_ref()
+                                                      .as_block()
+                                                      .unwrap())
+                                              } else {
+                                                  self.ui_toolkit.draw_all(&[])
+                                              }
+                                          },
+                                      ])
             },
-            &|| self.code_handle(&|| self.draw_text("Else"), conditional.id),
-            &|| {
-                if let Some(else_branch) = &conditional.else_branch {
-                    self.render_indented(&|| self.render_code(else_branch))
-                } else {
-                    self.ui_toolkit.draw_all(&[])
-                }
-            },
+            // &|| {
+            //     self.ui_toolkit.draw_all_on_same_line(&[
+            //         &|| {
+            //             self.code_handle(&|| {
+            //                                  self.draw_button("\u{f2fd} If",
+            //                                                   colorscheme!(action_color),
+            //                                                   &|| {})
+            //                              },
+            //                              conditional.id)
+            //         },
+            //         &|| self.render_code(&conditional.condition),
+            //     ])
+            // },
         ])
     }
 
     fn render_while_loop(&self, while_loop: &lang::WhileLoop) -> T::DrawResult {
-        self.ui_toolkit.draw_all(&[
-            &|| {
-                self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| {
-                        self.code_handle(&|| {
-                                             self.draw_button("While",
-                                                              colorscheme!(action_color),
-                                                              &|| {})
-                                         },
-                                         while_loop.id)
-                    },
-                    &|| self.render_code(&while_loop.condition),
-                ])
-            },
-            &|| {
-                self.render_indented(&|| {
-                        self.render_block_inside_child_region(&while_loop.body
-                                                                         .as_ref()
-                                                                         .as_block()
-                                                                         .unwrap())
-                    })
-            },
-        ])
+        self.ui_toolkit.align(&|| {
+                                  self.code_handle(&|| {
+                                                       self.draw_button("\u{f2f9} While",
+                                                                        colorscheme!(action_color),
+                                                                        &|| {})
+                                                   },
+                                                   while_loop.id)
+                              },
+                              &[&|| self.render_code(&while_loop.condition), &|| {
+                                  self.render_block_inside_child_region(&while_loop.body
+                                                                                   .as_ref()
+                                                                                   .as_block()
+                                                                                   .unwrap())
+                              }])
+        // self.ui_toolkit.draw_all(&[
+        //     &|| {
+        //         self.ui_toolkit.draw_all_on_same_line(&[
+        //             &|| {
+        //                 self.code_handle(&|| {
+        //                                      self.draw_button("While",
+        //                                                       colorscheme!(action_color),
+        //                                                       &|| {})
+        //                                  },
+        //                                  while_loop.id)
+        //             },
+        //             &|| self.render_code(&while_loop.condition),
+        //         ])
+        //     },
+        //     &|| {
+        //         self.render_indented(&|| {
+        //                 self.render_block_inside_child_region(&while_loop.body
+        //                                                                  .as_ref()
+        //                                                                  .as_block()
+        //                                                                  .unwrap())
+        //             })
+        //     },
+        // ])
     }
 
     fn render_match(&self, mach: &lang::Match) -> T::DrawResult {

@@ -136,7 +136,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                                          pixel_snap_h: true,
                                                          oversample_h: 1,
                                                          ..FontConfig::default() }) },
-         FontSource::TtfData { data: include_bytes!("../../fonts/fa-solid-900.ttf"),
+         FontSource::TtfData { data: include_bytes!("../../fonts/fa-solid-pro-900.ttf"),
                                size_pixels: icon_font_size,
                                config: Some(FontConfig { glyph_offset:
                                                              [0.0, fontawesome_icon_y_offset],

@@ -1162,6 +1162,15 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             default_bg
         };
 
+        // TODO: more hax, but if we're nested inside of a child region, then change up the margins
+        // a bit... this just looks better when it's intermixed with other stuff... might need to make
+        // this a config setting, but probably not... seems more like an issue/bug with imgui
+        if self.is_in_child_window() {
+            let current_pos = self.ui.cursor_pos();
+            self.ui
+                .set_cursor_pos([current_pos[0] - 1., current_pos[1] + 1.]);
+        }
+
         let token = self.ui
                         .push_style_colors(&[(StyleColor::Border, color),
                                              (StyleColor::ChildBg, [bg[0], bg[1], bg[2], bg[3]])]);
