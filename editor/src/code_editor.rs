@@ -606,7 +606,9 @@ impl CodeGenie {
                               path_to_generic: &[usize],
                               env_genie: &EnvGenie)
                               -> lang::Type {
-        for parent in self.all_parents_including_node(code_node.id()) {
+        for parent in self.all_parents_including_node(code_node.id())
+                          .chain(code_node.children_iter())
+        {
             if let CodeNode::Argument(arg) = parent {
                 let func_call = self.find_parent(arg.id)
                                     .unwrap()
@@ -622,15 +624,12 @@ impl CodeGenie {
                         let param_of_guessed_type =
                             guessed_type.get_param_using_path(path_to_generic);
                         if !env_genie.is_generic(param_of_guessed_type.typespec_id) {
-                            println!("returned resolved  generic: {:?}", param_of_guessed_type);
                             return param_of_guessed_type.clone();
                         }
                     }
                 }
             }
         }
-        // let outer_typ = outer_type.clone();
-        // println!("returned outer typ: {:?}", outer_typ);
         outer_type.get_param_using_path(path_to_generic).clone()
     }
 
@@ -755,17 +754,6 @@ impl CodeGenie {
                       env_genie: &EnvGenie)
                       -> Result<lang::Type, &'static str> {
         let typ = self.guess_type_without_resolving_generics(code_node, env_genie);
-        // let typ = match self.guess_type_without_resolving_generics(code_node, env_genie) {
-        //     Ok(typ)
-        //         if env_genie.find_typespec(typ.typespec_id)
-        //                     .map(|ts| is_generic(ts.as_ref()))
-        //            == Some(true) =>
-        //     {
-        //         Ok(self.try_to_resolve_generic(code_node, typ.typespec_id, env_genie))
-        //     }
-        //     otherwise => otherwise,
-        // };
-        //
         if typ.is_err() {
             return typ;
         }
