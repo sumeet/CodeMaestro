@@ -23,16 +23,6 @@ pub struct EnvGenie<'a> {
     pub env: &'a env::ExecutionEnvironment,
 }
 
-pub fn find_generics_mut<'a>(typ: &'a mut lang::Type,
-                             env_genie: &EnvGenie,
-                             func: &mut dyn FnMut(&mut lang::Type, &[usize])) {
-    typ.params_iter_mut_containing_self(&mut |typ, path| {
-           if env_genie.is_generic(typ.typespec_id) {
-               func(typ, &path[0..1])
-           }
-       });
-}
-
 impl<'a> EnvGenie<'a> {
     pub fn new(env: &'a env::ExecutionEnvironment) -> Self {
         Self { env }
@@ -320,14 +310,12 @@ impl<'a> EnvGenie<'a> {
         if typespec_id_a == lang::ANY_TYPESPEC.id() || typespec_id_b == lang::ANY_TYPESPEC.id() {
             return true;
         }
-        if self.is_generic(typespec_id_a) || self.is_generic(typespec_id_b) {
+        if is_generic(self.find_typespec(typespec_id_a).unwrap().as_ref())
+           || is_generic(self.find_typespec(typespec_id_b).unwrap().as_ref())
+        {
             return true;
         }
         typespec_id_a == typespec_id_b
-    }
-
-    pub fn is_generic(&self, typespec_id: lang::ID) -> bool {
-        is_generic(self.find_typespec(typespec_id).unwrap().as_ref())
     }
 
     // TODO: save this cache somewhere, it's probably expensive to compute this on every frame

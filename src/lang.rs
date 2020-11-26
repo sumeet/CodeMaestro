@@ -461,15 +461,6 @@ impl Type {
         Self::with_params(&*LIST_TYPESPEC, vec![typ])
     }
 
-    pub fn get_param_using_path(&self, param_path: &[usize]) -> &Self {
-        println!("{:?}, {:?}", self, param_path);
-        let mut param = self;
-        for i in param_path {
-            param = &param.params[*i]
-        }
-        param
-    }
-
     // for types with no params
     pub fn from_spec<T: TypeSpec>(spec: &T) -> Self {
         Self::with_params(spec, vec![])
@@ -523,22 +514,6 @@ impl Type {
             return true;
         }
         self.typespec_id == spec_id
-    }
-
-    pub fn params_iter_mut_containing_self(&mut self, func: &mut dyn FnMut(&mut Self, &[usize])) {
-        let mut v = vec![];
-        self.params_iter_mut_containing_self_rec(&mut v, func)
-    }
-
-    pub fn params_iter_mut_containing_self_rec(&mut self,
-                                               path_before: &mut Vec<usize>,
-                                               func: &mut dyn FnMut(&mut Self, &[usize])) {
-        func(self, &path_before);
-        for (i, param) in self.params.iter_mut().enumerate() {
-            path_before.push(i);
-            param.params_iter_mut_containing_self_rec(path_before, func);
-            path_before.pop();
-        }
     }
 }
 

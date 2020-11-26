@@ -21,9 +21,9 @@ use cs::builtins::{
 use cs::code_function;
 use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
-use cs::env_genie::{find_generics_mut, EnvGenie};
+use cs::env_genie::EnvGenie;
 use cs::lang;
-use cs::lang::{CodeNode, Function};
+use cs::lang::{is_generic, CodeNode, Function};
 use cs::{builtins, env};
 use lazy_static::lazy_static;
 use objekt::private::collections::HashSet;
@@ -602,8 +602,7 @@ impl CodeGenie {
 
     fn try_to_resolve_generic(&self,
                               code_node: &lang::CodeNode,
-                              outer_type: &lang::Type,
-                              path_to_generic: &[usize],
+                              generic_typespec_id: lang::ID,
                               env_genie: &EnvGenie)
                               -> lang::Type {
         for parent in self.all_parents_including_node(code_node.id()) {
@@ -614,21 +613,20 @@ impl CodeGenie {
                                     .unwrap();
                 for arg in func_call.args() {
                     let arg_def_id = arg.argument_definition_id;
-                    if outer_type == &env_genie.get_type_for_arg(arg_def_id).unwrap() {
+                    let typ = env_genie.get_type_for_arg(arg_def_id).unwrap();
+                    if typ.typespec_id == generic_typespec_id {
                         let guessed_type = self.guess_type_without_resolving_generics(arg.expr
                                                                                          .as_ref(),
                                                                                       env_genie)
                                                .unwrap();
-                        let param_of_guessed_type =
-                            guessed_type.get_param_using_path(path_to_generic);
-                        if !env_genie.is_generic(param_of_guessed_type.typespec_id) {
-                            return param_of_guessed_type.clone();
+                        if guessed_type.typespec_id != generic_typespec_id {
+                            return guessed_type;
                         }
                     }
                 }
             }
         }
-        outer_type.clone()
+        lang::Type::from_spec_id(generic_typespec_id, vec![])
     }
 
     // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made
@@ -751,28 +749,16 @@ impl CodeGenie {
                       code_node: &lang::CodeNode,
                       env_genie: &EnvGenie)
                       -> Result<lang::Type, &'static str> {
-        let typ = self.guess_type_without_resolving_generics(code_node, env_genie);
-        // let typ = match self.guess_type_without_resolving_generics(code_node, env_genie) {
-        //     Ok(typ)
-        //         if env_genie.find_typespec(typ.typespec_id)
-        //                     .map(|ts| is_generic(ts.as_ref()))
-        //            == Some(true) =>
-        //     {
-        //         Ok(self.try_to_resolve_generic(code_node, typ.typespec_id, env_genie))
-        //     }
-        //     otherwise => otherwise,
-        // };
-        //
-        if typ.is_err() {
-            return typ;
+        match self.guess_type_without_resolving_generics(code_node, env_genie) {
+            Ok(typ)
+                if env_genie.find_typespec(typ.typespec_id)
+                            .map(|ts| is_generic(ts.as_ref()))
+                   == Some(true) =>
+            {
+                Ok(self.try_to_resolve_generic(code_node, typ.typespec_id, env_genie))
+            }
+            otherwise => otherwise,
         }
-
-        let mut typ = typ.unwrap();
-        let typ2 = typ.clone();
-        find_generics_mut(&mut typ, env_genie, &mut |generic_typ, path| {
-            *generic_typ = self.try_to_resolve_generic(code_node, &typ2, path, env_genie);
-        });
-        Ok(typ)
     }
 
     fn guess_type_without_resolving_generics(&self,
@@ -790,23 +776,21 @@ impl CodeGenie {
             }
             CodeNode::StringLiteral(_) => Ok(lang::Type::from_spec(&*lang::STRING_TYPESPEC)),
             CodeNode::NumberLiteral(_) => Ok(lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)),
-            CodeNode::Assignment(assignment) => {
-                self.guess_type_without_resolving_generics(&*assignment.expression, env_genie)
-            }
+            CodeNode::Assignment(assignment) => self.guess_type(&*assignment.expression, env_genie),
             CodeNode::Reassignment(reassignment) => {
-                self.guess_type_without_resolving_generics(&*reassignment.expression, env_genie)
+                self.guess_type(&*reassignment.expression, env_genie)
             }
             CodeNode::Block(block) => {
                 if block.expressions.len() > 0 {
                     let last_expression_in_block = &block.expressions[block.expressions.len() - 1];
-                    self.guess_type_without_resolving_generics(last_expression_in_block, env_genie)
+                    self.guess_type(last_expression_in_block, env_genie)
                 } else {
                     Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC))
                 }
             }
             CodeNode::VariableReference(vr) => {
                 if let Some(assignment) = self.find_node(vr.assignment_id) {
-                    self.guess_type_without_resolving_generics(assignment, env_genie)
+                    self.guess_type(assignment, env_genie)
                 } else {
                     // couldn't find assignment with that variable name, looking for function args
                     let typ = env_genie.get_type_for_arg(vr.assignment_id);
@@ -851,7 +835,7 @@ impl CodeGenie {
             // this means that both branches of a conditional must be of the same type.we need to
             // add a validation for that
             CodeNode::Conditional(conditional) => {
-                self.guess_type_without_resolving_generics(&conditional.true_branch, env_genie)
+                self.guess_type(&conditional.true_branch, env_genie)
             }
             // need the same validation for match ^
             CodeNode::Match(mach) => {
@@ -860,7 +844,7 @@ impl CodeGenie {
                         .values()
                         .next()
                         .expect("match statement must contain at least one variant");
-                self.guess_type_without_resolving_generics(first_variant, env_genie)
+                self.guess_type(first_variant, env_genie)
             }
             CodeNode::StructFieldGet(sfg) => {
                 env_genie.find_struct_field(sfg.struct_field_id)
@@ -868,9 +852,7 @@ impl CodeGenie {
                          .map(|struct_field| struct_field.field_type.clone())
             }
             CodeNode::ListIndex(list_index) => {
-                let list_typ = self.guess_type_without_resolving_generics(list_index.list_expr
-                                                                                    .as_ref(),
-                                                                          env_genie)?;
+                let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie)?;
                 Ok(get_result_type_from_indexing_into_list(list_typ).ok_or("unable to guess type")?)
                 // debug info that i deleted from the old implementation but might still need later:
                 //                let list_typ =
