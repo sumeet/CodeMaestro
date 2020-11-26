@@ -898,14 +898,22 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     pub fn render_anonymous_function(&self, anon_func: &AnonymousFunction) -> T::DrawResult {
-        self.render_block_inside_child_region(&anon_func.block.as_ref().as_block().unwrap())
+        self.render_block_inside_child_region(&anon_func.block.as_ref().as_block().unwrap(),
+                                              ChildRegionFrameStyle::Framed)
     }
 
-    fn render_block_inside_child_region(&self, block: &lang::Block) -> T::DrawResult {
+    fn render_block_inside_child_region(&self,
+                                        block: &lang::Block,
+                                        frame_style: ChildRegionFrameStyle)
+                                        -> T::DrawResult {
+        let top_padding = match frame_style {
+            ChildRegionFrameStyle::Framed => ChildRegionTopPadding::None,
+            ChildRegionFrameStyle::NoFrame => ChildRegionTopPadding::Default,
+        };
         let style = ChildRegionStyle { height: ChildRegionHeight::FitContent,
                                        width: ChildRegionWidth::All,
-                                       frame_style: ChildRegionFrameStyle::Framed,
-                                       top_padding: ChildRegionTopPadding::None };
+                                       frame_style,
+                                       top_padding };
         self.ui_toolkit
             .draw_child_region(colorscheme!(child_region_bg_color),
                                &|| self.render_block(&block),
@@ -1644,34 +1652,32 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                            },
                                                            conditional.id)
                                       },
-                                      &[&|| self.render_code(&conditional.condition),
-                                          &|| {
-                                                  self.render_block_inside_child_region(&conditional.true_branch
-                                                      .as_ref()
-                                                      .as_block()
-                                                      .unwrap())
-                                          },
-                                      ])
+                                      &[&|| self.render_code(&conditional.condition), &|| {
+                                          self.render_block_inside_child_region(&conditional.true_branch
+                                              .as_ref()
+                                              .as_block()
+                                              .unwrap(), ChildRegionFrameStyle::NoFrame)
+                                      }])
             },
             &|| {
-                self.ui_toolkit.align(&|| {
-                    self.code_handle(&|| {
+                self.ui_toolkit.align(
+                                      &|| {
+                                          self.code_handle(&|| {
                         self.render_control_flow_label("\u{f352}", "Else")
                     },
                                      conditional.id)
-                },
-                                      &[&|| self.ui_toolkit.draw_text(""),
-                                          &|| {
-                                              if let Some(else_branch) = &conditional.else_branch {
-                                                  self.render_block_inside_child_region(&else_branch
+                                      },
+                                      &[&|| self.ui_toolkit.draw_text(""), &|| {
+                                          if let Some(else_branch) = &conditional.else_branch {
+                                              self.render_block_inside_child_region(&else_branch
                                                       .as_ref()
                                                       .as_block()
-                                                      .unwrap())
-                                              } else {
-                                                  self.ui_toolkit.draw_all(&[])
-                                              }
-                                          },
-                                      ])
+                                                      .unwrap(), ChildRegionFrameStyle::NoFrame)
+                                          } else {
+                                              self.ui_toolkit.draw_all(&[])
+                                          }
+                                      }],
+                )
             },
         ])
     }
@@ -1688,7 +1694,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                   self.render_block_inside_child_region(&while_loop.body
                                                                                    .as_ref()
                                                                                    .as_block()
-                                                                                   .unwrap())
+                                                                                   .unwrap(), ChildRegionFrameStyle::NoFrame)
                               }])
     }
 

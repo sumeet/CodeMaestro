@@ -1078,7 +1078,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             match (frame_style, style.top_padding) {
                 (ChildRegionFrameStyle::Framed, ChildRegionTopPadding::Default) => 16.,
                 (ChildRegionFrameStyle::Framed, ChildRegionTopPadding::None) => 8.,
-                (ChildRegionFrameStyle::NoFrame, _) => 0.,
+                (ChildRegionFrameStyle::NoFrame, ChildRegionTopPadding::Default) => 8.,
+                (ChildRegionFrameStyle::NoFrame, ChildRegionTopPadding::None) => 0.,
             }
         };
 

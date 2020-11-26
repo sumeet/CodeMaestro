@@ -65,6 +65,19 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                                          pixel_snap_h: true,
                                                          oversample_h: 1,
                                                          ..FontConfig::default() }) },
+         // same as above but increased range
+         FontSource::TtfData { data: include_bytes!("../../fonts/calibri.ttf"),
+                               size_pixels: font_size,
+                               config: Some(FontConfig { rasterizer_multiply: 1.75,
+                                                         glyph_ranges:
+                                                         // The "General Punctuation" range:
+                                                         // https://en.wikipedia.org/wiki/General_Punctuation
+                                                             FontGlyphRanges::from_slice(&[
+                                                                 0x2000, 0x206F,
+                                                             0]),
+                                                         pixel_snap_h: true,
+                                                         oversample_h: 1,
+                                                         ..FontConfig::default() }) },
          FontSource::TtfData { data: include_bytes!("../../fonts/NotoSansSymbols-Black.ttf"),
                                size_pixels: noto_sans_font_size,
                                config: Some(FontConfig { glyph_offset: [0.0, noto_sans_y_offset],
