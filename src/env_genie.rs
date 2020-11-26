@@ -28,7 +28,7 @@ pub fn find_generics_mut<'a>(typ: &'a mut lang::Type,
                              func: &mut dyn FnMut(&mut lang::Type, &[usize])) {
     typ.params_iter_mut_containing_self(&mut |typ, path| {
            if env_genie.is_generic(typ.typespec_id) {
-               func(typ, &path[0..1])
+               func(typ, &path)
            }
        });
 }

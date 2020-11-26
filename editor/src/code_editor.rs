@@ -622,13 +622,16 @@ impl CodeGenie {
                         let param_of_guessed_type =
                             guessed_type.get_param_using_path(path_to_generic);
                         if !env_genie.is_generic(param_of_guessed_type.typespec_id) {
+                            println!("returned resolved  generic: {:?}", param_of_guessed_type);
                             return param_of_guessed_type.clone();
                         }
                     }
                 }
             }
         }
-        outer_type.clone()
+        // let outer_typ = outer_type.clone();
+        // println!("returned outer typ: {:?}", outer_typ);
+        outer_type.get_param_using_path(path_to_generic).clone()
     }
 
     // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made

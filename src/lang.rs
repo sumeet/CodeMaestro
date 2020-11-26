@@ -527,16 +527,25 @@ impl Type {
 
     pub fn params_iter_mut_containing_self(&mut self, func: &mut dyn FnMut(&mut Self, &[usize])) {
         let mut v = vec![];
-        self.params_iter_mut_containing_self_rec(&mut v, func)
+        self.params_iter_mut_containing_self_rec(self.clone(), &mut v, func)
     }
 
     pub fn params_iter_mut_containing_self_rec(&mut self,
+                                               initial_type: Self,
                                                path_before: &mut Vec<usize>,
                                                func: &mut dyn FnMut(&mut Self, &[usize])) {
         func(self, &path_before);
+        let s = self.clone();
         for (i, param) in self.params.iter_mut().enumerate() {
+            if path_before.len() > 0 {
+                println!("initial type: {:?}, path before: {:?}, self: {:?}",
+                         initial_type.clone(),
+                         path_before,
+                         s);
+            }
+
             path_before.push(i);
-            param.params_iter_mut_containing_self_rec(path_before, func);
+            param.params_iter_mut_containing_self_rec(initial_type.clone(), path_before, func);
             path_before.pop();
         }
     }
