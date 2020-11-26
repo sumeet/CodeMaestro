@@ -488,28 +488,28 @@ impl Type {
                            mashed_hashes.join(":").as_bytes())
     }
 
-    pub fn matches(&self, other: &Self) -> bool {
-        // // TODO: duplication, search for ANY_TYPESPEC
-        // if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
-        //     return true;
-        // }
-        if !self.matches_spec_id(other.typespec_id) {
-            return false;
-        }
-        for (our_param, their_param) in self.params.iter().zip(other.params.iter()) {
-            if !our_param.matches(their_param) {
-                return false;
-            }
-        }
-        true
-    }
+    // pub fn matches(&self, other: &Self) -> bool {
+    //     // // TODO: duplication, search for ANY_TYPESPEC
+    //     // if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
+    //     //     return true;
+    //     // }
+    //     if !self.matches_spec_id(other.typespec_id) {
+    //         return false;
+    //     }
+    //     for (our_param, their_param) in self.params.iter().zip(other.params.iter()) {
+    //         if !our_param.matches(their_param) {
+    //             return false;
+    //         }
+    //     }
+    //     true
+    // }
 
     // XXX: idk if this is right but it'll at least get me farther i think
     pub fn matches_spec(&self, spec: &BuiltInTypeSpec) -> bool {
         self.matches_spec_id(spec.id)
     }
 
-    fn matches_spec_id(&self, spec_id: ID) -> bool {
+    pub fn matches_spec_id(&self, spec_id: ID) -> bool {
         if self.typespec_id == ANY_TYPESPEC.id() || spec_id == ANY_TYPESPEC.id() {
             return true;
         }

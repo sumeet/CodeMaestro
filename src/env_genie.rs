@@ -11,7 +11,7 @@ use super::lang::Function;
 use super::pystuff;
 use super::structs;
 
-use crate::lang::Value;
+use crate::lang::{is_generic, TypeSpec, Value};
 use itertools::Itertools;
 
 pub struct TypeDisplayInfo {
@@ -285,6 +285,37 @@ impl<'a> EnvGenie<'a> {
                            -> impl Iterator<Item = lang::ArgumentDefinition> + 'a {
         self.all_functions()
             .flat_map(move |f| get_args_for_code_block(root_id, f.as_ref()))
+    }
+
+    pub fn types_match(&self, type_a: &lang::Type, type_b: &lang::Type) -> bool {
+        self.typespecs_match(type_a.typespec_id, type_b.typespec_id)
+        && type_a.params
+                 .iter()
+                 .zip(type_b.params.iter())
+                 .all(|(param_a, param_b)| self.types_match(param_a, param_b))
+
+        // if !type_a.matches_spec_id(type_b.typespec_id) {
+        //     return false;
+        // }
+        // for (type_a_param, type_b_param) in type_a.params.iter().zip(type_b.params.iter()) {
+        //     if !our_param.matches(their_param) {
+        //         return false;
+        //     }
+        // }
+        // true
+    }
+
+    // TODO: duped with Type.matches_spec_id, that should be deleted i think
+    pub fn typespecs_match(&self, typespec_id_a: lang::ID, typespec_id_b: lang::ID) -> bool {
+        if typespec_id_a == lang::ANY_TYPESPEC.id() || typespec_id_b == lang::ANY_TYPESPEC.id() {
+            return true;
+        }
+        if is_generic(self.find_typespec(typespec_id_a).unwrap().as_ref())
+           || is_generic(self.find_typespec(typespec_id_b).unwrap().as_ref())
+        {
+            return true;
+        }
+        typespec_id_a == typespec_id_b
     }
 
     // TODO: save this cache somewhere, it's probably expensive to compute this on every frame

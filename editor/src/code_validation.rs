@@ -207,7 +207,9 @@ impl<'a> FixableProblemFinder<'a> {
                                 block: &lang::Block)
                                 -> Option<FixableProblem> {
         let required_return_type = required_return_type(location, self.env_genie)?;
-        if !required_return_type.matches(&self.returned_type(block)) {
+        if !self.env_genie
+                .types_match(&required_return_type, &self.returned_type(block))
+        {
             Some(FixableProblem::InvalidReturnType { location,
                                                      block: block.clone(),
                                                      required_return_type })

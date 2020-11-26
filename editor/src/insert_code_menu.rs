@@ -263,9 +263,9 @@ pub struct CodeSearchParams {
 }
 
 impl CodeSearchParams {
-    pub fn search_matches_type(&self, typ: &lang::Type) -> bool {
+    pub fn search_matches_type(&self, typ: &lang::Type, env_genie: &EnvGenie) -> bool {
         if let Some(return_type) = &self.return_type {
-            return_type.matches(typ)
+            env_genie.types_match(return_type, typ)
         } else {
             // if there's no return type being searched for, then we match everything
             true
@@ -364,14 +364,15 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionWrappingOptionGenerator {
         }
         let wraps_type = wraps_type.unwrap();
         let found_functions = find_functions_ignoring_wraps_type(env_genie, search_params);
-        let found_functions =
-            found_functions.filter_map(move |f| {
-                               let takes_args = f.takes_args();
-                               let first_matching_arg =
+        let found_functions = found_functions.filter_map(move |f| {
+                                                 let takes_args = f.takes_args();
+                                                 let first_matching_arg =
                                    takes_args.iter()
-                                             .find(|arg| arg.arg_type.matches(wraps_type))?;
-                               Some((first_matching_arg.id, f))
-                           });
+                                             .find(|arg| {
+                                                 env_genie.types_match(&arg.arg_type, wraps_type)
+                                             })?;
+                                                 Some((first_matching_arg.id, f))
+                                             });
 
         let wrapped_node = find_wrapped_node(code_genie, search_params);
 
@@ -407,7 +408,7 @@ fn find_functions_ignoring_wraps_type<'a>(
                  if return_type.is_none() {
                      true
                  } else {
-                     func.returns().matches(return_type.unwrap())
+                     env_genie.types_match(&func.returns(), return_type.unwrap())
                  }
              })
              // filter out ChatPrograms... we don't want them to show up in autocomplete and possibly
@@ -495,7 +496,7 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
         let variables = find_all_locals_preceding(search_params.insertion_point.into(),
                                                   code_genie,
                                                   env_genie).filter(|variable| {
-                            search_params.search_matches_type(&variable.typ)
+                            search_params.search_matches_type(&variable.typ, env_genie)
                             && search_params.search_matches_identifier(&variable.name)
                         });
 
@@ -1058,7 +1059,7 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                         return None
                     }
                     if let Some(search_type) = &search_params.return_type {
-                        if !search_type.matches(&struct_field.field_type) {
+                        if env_genie.types_match(search_type, &struct_field.field_type) {
                             return None
                         }
                     }
@@ -1095,7 +1096,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                 //         return None
                 //     }
                 // }
-                if search_params.search_matches_type(&list_elem_result_typ) && search_params.search_matches_identifier(&variable.name) {
+                if search_params.search_matches_type(&list_elem_result_typ, env_genie) && search_params.search_matches_identifier(&variable.name) {
                     Some(InsertCodeMenuOption {
                         group_name: LOCALS_GROUP,
                         sort_key: format!("listindex{}", variable.locals_id),
@@ -1108,7 +1109,9 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
 
                     let list_elem_result_typ = get_type_from_list(variable.typ)?;
                     if let Some(search_type) = &search_params.return_type {
-                        if !search_type.matches(&list_elem_result_typ) {
+                        // TODO: this should probably call the search_params.matches_type func or whatever it's called
+                        // there's another place in this file that does the same thing, should replace that (lazy)
+                        if !env_genie.types_match(&search_type, &list_elem_result_typ) {
                             return None
                         }
                     }
