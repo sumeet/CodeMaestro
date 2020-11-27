@@ -1102,7 +1102,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 self.render_function_name(&func.name(), colorscheme!(action_color), &func.returns())
             }
             FunctionRenderingStyle::Infix(_, infix_symbol) => {
-                self.ui_toolkit.draw_text(infix_symbol)
+                self.ui_toolkit.draw_text(&format!(" {} ", infix_symbol))
                 // self.render_function_name("", colorscheme!(action_color), &func.returns())
             }
         }
@@ -1718,7 +1718,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 if let Some(condition_code) = condition_code {
                     self.render_code(condition_code)
                 } else {
-                    self.ui_toolkit.draw_text("")
+                    self.ui_toolkit.draw_all(&[])
                 }
             },
             &|| {
