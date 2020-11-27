@@ -462,8 +462,6 @@ impl Type {
     }
 
     pub fn get_param_using_path(&self, param_path: &[usize]) -> &Self {
-        println!("this type is {:?}, the path we're trying to find is {:?}",
-                 self, param_path);
         let mut param = self;
         for i in param_path {
             param = &param.params[*i]
@@ -534,9 +532,7 @@ impl Type {
     pub fn params_iter_mut_containing_self_rec(&mut self,
                                                path_before: &mut Vec<usize>,
                                                func: &mut dyn FnMut(&mut Self, &[usize])) {
-        println!("params before: {:?}", self.params);
         func(self, &path_before);
-        println!("params after: {:?}", self.params);
         for (i, param) in self.params.iter_mut().enumerate() {
             path_before.push(i);
             param.params_iter_mut_containing_self_rec(path_before, func);

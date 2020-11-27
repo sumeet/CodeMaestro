@@ -606,7 +606,6 @@ impl CodeGenie {
                               path_to_generic: &[usize],
                               env_genie: &EnvGenie)
                               -> lang::Type {
-        println!("try to resolve generic called again");
         for parent in self.all_parents_including_node(code_node.id()) {
             // if let CodeNode::Argument(arg) = parent {
             //     let func_call = self.find_parent(arg.id)
@@ -616,19 +615,14 @@ impl CodeGenie {
             if let CodeNode::FunctionCall(func_call) = parent {
                 for arg in func_call.args() {
                     let arg_def_id = arg.argument_definition_id;
-                    println!("outer type: {:?}", outer_type);
                     if outer_type == &env_genie.get_type_for_arg(arg_def_id).unwrap() {
-                        println!("code_node: {:?}", code_node);
-                        println!("arg.expr: {:?}", arg.expr);
                         let guessed_type = self.guess_type_without_resolving_generics(arg.expr
                                                                                          .as_ref(),
                                                                                       env_genie)
                                                .unwrap();
-                        println!("guessed type: {:?}", guessed_type);
                         let param_of_guessed_type =
                             guessed_type.get_param_using_path(path_to_generic);
                         if !env_genie.is_generic(param_of_guessed_type.typespec_id) {
-                            println!("returning {:?}", param_of_guessed_type);
                             return param_of_guessed_type.clone();
                         }
                     }
@@ -764,14 +758,11 @@ impl CodeGenie {
         }
 
         let mut typ = typ.unwrap();
-        // let typ2 = typ.clone();
-        // println!("typ2 is {:?}", typ2);
+        let typ2 = typ.clone();
         find_generics_mut(&mut typ, env_genie, &mut |generic_typ, path| {
-            *generic_typ = self.try_to_resolve_generic(code_node, &typ, path, env_genie);
+            *generic_typ = self.try_to_resolve_generic(code_node, &typ2, path, env_genie);
         });
-        let guessed = Ok(typ);
-        println!("{:?}", guessed);
-        guessed
+        Ok(typ)
     }
 
     fn guess_type_without_resolving_generics(&self,
