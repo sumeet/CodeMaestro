@@ -901,6 +901,54 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         last_rhs();
     }
 
+    // TODO: mostly copy and paste of align()
+    fn align_fill_lhs(&self,
+                      x_padding_left_block_hack: u8,
+                      lhs: &dyn Fn() -> Self::DrawResult,
+                      lhs_color: Color,
+                      rhss: &[&dyn Fn() -> Self::DrawResult])
+                      -> Self::DrawResult {
+        if rhss.is_empty() {
+            return lhs();
+        }
+        if rhss.len() == 1 {
+            return self.draw_all_on_same_line(&[lhs, rhss[0]]);
+        }
+
+        let (first_rhs, rest) = rhss.split_first().unwrap();
+        let (last_rhs, inner_rhs) = rest.split_last().unwrap();
+
+        let style_var = self.ui.push_style_var(StyleVar::ItemSpacing([0.0, -1.0]));
+        self.ui.group(|| lhs());
+
+        let (lhs_rect_min, lhs_rect_max) = self.get_item_rect();
+        let bottom_of_lhs = [lhs_rect_min.x, lhs_rect_max.y];
+        let right_of_lhs = lhs_rect_max.x - 1. + x_padding_left_block_hack as f32;
+
+        self.ui.same_line_with_spacing(0., 0.);
+        let cursor_pos = unsafe { imgui_sys::igGetCursorPosX() };
+
+        first_rhs();
+
+        for draw in inner_rhs {
+            unsafe { imgui_sys::igSetCursorPosX(cursor_pos) };
+            draw();
+        }
+        // this pops the style var
+        style_var.pop(self.ui);
+        unsafe { imgui_sys::igSetCursorPosX(cursor_pos) };
+        self.ui.group(|| last_rhs());
+
+        let bottom_of_last_item = self.ui.item_rect_max()[1];
+
+        let draw_list = self.ui.get_window_draw_list();
+        draw_list.add_rect(bottom_of_lhs,
+                           [right_of_lhs, bottom_of_last_item],
+                           lhs_color)
+                 .filled(true)
+                 .build();
+    }
+
     fn draw_centered_popup<F: Fn(Keypress) + 'static>(&self,
                                                       draw_fn: &dyn Fn(),
                                                       handle_keypress: Option<F>)

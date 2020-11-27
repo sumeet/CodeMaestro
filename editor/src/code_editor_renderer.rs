@@ -29,8 +29,13 @@ use cs::env_genie::EnvGenie;
 use cs::lang::{AnonymousFunction, CodeNode, FunctionRenderingStyle};
 use cs::structs;
 use cs::{env, lang};
+use lazy_static::lazy_static;
 
 pub const PLACEHOLDER_ICON: &str = "\u{F071}";
+lazy_static! {
+    // static ref TRY_ICON: String = format!("\u{f321}");
+    static ref TRY_ICON: String = format!("\u{f712}");
+}
 const EARLY_RETURN_ICON: &str = "\u{f2f5}";
 // TODO: move this into the color scheme, but we'll leave it in here for now -- lazy
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
@@ -865,15 +870,24 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let draw_fn = &|| {
             self.draw_nested_borders_around(&|| {
                     self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| self.render_code(&trai.maybe_error_expr),
                     &|| {
                         self.ui_toolkit
-                            .draw_buttony_text(&format!("\u{f059}{}", EARLY_RETURN_ICON),
-                                               colorscheme!(warning_color))
+                            .draw_buttony_text(&TRY_ICON, colorscheme!(warning_color))
+                    },
+                    &|| self.render_code(&trai.maybe_error_expr),
+                    &|| {
+                        // self.ui_toolkit.draw_with_margin((6., 0.), &|| {
+                        //                    self.ui_toolkit.draw_all_on_same_line(&[
+                        //         &|| {
+                        self.ui_toolkit
+                            .draw_buttony_text("\u{f352}", colorscheme!(warning_color))
                     },
                     &|| {
                         self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
                     },
+                    // ])
+                    //            })
+                    // },
                 ])
                 })
         };
@@ -889,11 +903,12 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     pub fn render_early_return(&self, early_return: &lang::EarlyReturn) -> T::DrawResult {
         self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                     self.code_handle(&|| {
-                                                                         self.ui_toolkit
-                                                                             .draw_text(&format!("{} ", EARLY_RETURN_ICON))
+                                                        self.ui_toolkit
+                                                            .draw_buttony_text(&EARLY_RETURN_ICON, colorscheme!(warning_color))
                                                                      },
                                                                      early_return.id)
                                                 },
+            &|| self.ui_toolkit.draw_text(" "),
                                                 &|| self.render_code(early_return.code.as_ref())])
     }
 
@@ -1120,7 +1135,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                 ])
                             } else {
                                 self.ui_toolkit.draw_all_on_same_line(&[
-                                    &|| self.ui_toolkit.draw_buttony_text(&format!(" {}", sym), darker_color),
+                                    &|| self.ui_toolkit.draw_buttony_text(&format!("\u{f152} {}", sym), darker_color),
                                     &|| self.ui_toolkit.draw_buttony_text(name, color),
 //                                        &|| self.ui_toolkit.draw_text("  "),
 //                                        &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),
@@ -1644,58 +1659,73 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
-        self.ui_toolkit.draw_all(&[
-            &|| {
-                self.ui_toolkit.align(&|| {
-                                          self.code_handle(&|| {
-                                              self.render_control_flow_label("\u{f2fd}", "   If  ")
-                                                           },
-                                                           conditional.id)
-                                      },
-                                      &[&|| self.render_code(&conditional.condition), &|| {
-                                          self.render_block_inside_child_region(&conditional.true_branch
-                                              .as_ref()
-                                              .as_block()
-                                              .unwrap(), ChildRegionFrameStyle::NoFrame)
-                                      }])
-            },
-            &|| {
-                self.ui_toolkit.align(
-                                      &|| {
-                                          self.code_handle(&|| {
-                        self.render_control_flow_label("\u{f352}", "Else")
-                    },
-                                     conditional.id)
-                                      },
-                                      &[&|| self.ui_toolkit.draw_text(""), &|| {
-                                          if let Some(else_branch) = &conditional.else_branch {
-                                              self.render_block_inside_child_region(&else_branch
-                                                      .as_ref()
-                                                      .as_block()
-                                                      .unwrap(), ChildRegionFrameStyle::NoFrame)
-                                          } else {
-                                              self.ui_toolkit.draw_all(&[])
-                                          }
-                                      }],
-                )
-            },
-        ])
+        self.ui_toolkit.draw_all(&[&|| {
+                                       println!("printing if");
+                                       self.render_control_flow("\u{f2fd}",
+                                                                "   If  ",
+                                                                conditional.id,
+                                                                Some(&conditional.condition),
+                                                                0,
+                                                                &conditional.true_branch)
+                                   },
+                                   &|| {
+                                       println!("printing else");
+                                       self.render_control_flow("\u{f352}",
+                                                                "Else",
+                                                                conditional.id,
+                                                                None,
+                                                                1,
+                                                                conditional.else_branch
+                                                                           .as_ref()
+                                                                           .unwrap())
+                                   }])
     }
 
     fn render_while_loop(&self, while_loop: &lang::WhileLoop) -> T::DrawResult {
-        self.ui_toolkit.align(&|| {
-                                  self.code_handle(&|| {
-                                                       self.render_control_flow_label("\u{f2f9}",
-                                                                                      "While")
-                                                   },
-                                                   while_loop.id)
-                              },
-                              &[&|| self.render_code(&while_loop.condition), &|| {
-                                  self.render_block_inside_child_region(&while_loop.body
-                                                                                   .as_ref()
-                                                                                   .as_block()
-                                                                                   .unwrap(), ChildRegionFrameStyle::NoFrame)
-                              }])
+        self.render_control_flow("\u{f2f9}",
+                                 "While",
+                                 while_loop.id,
+                                 Some(&while_loop.condition),
+                                 0,
+                                 &while_loop.body)
+    }
+
+    fn render_control_flow(&self,
+                           symbol: &str,
+                           label: &str,
+                           conditional_node_id: lang::ID,
+                           condition_code: Option<&lang::CodeNode>,
+                           x_padding_left_block_hack: u8,
+                           body_block: &lang::CodeNode)
+                           -> T::DrawResult {
+        let code_body_left_padding = 8;
+        self.ui_toolkit.align_fill_lhs(
+                                       x_padding_left_block_hack,
+                                       &|| {
+                                           self.code_handle(&|| {
+                                                            self.render_control_flow_label(symbol,
+                                                                                           label)
+                                                        },
+                                                        conditional_node_id)
+                                       },
+                                       CONTROL_FLOW_GREY_COLOR,
+                                       &[
+            &|| {
+                if let Some(condition_code) = condition_code {
+                    self.render_code(condition_code)
+                } else {
+                    self.ui_toolkit.draw_text("")
+                }
+            },
+            &|| {
+                self.ui_toolkit.indent(code_body_left_padding, &|| {
+                                   self.render_block_inside_child_region(body_block
+                        .as_block()
+                        .unwrap(), ChildRegionFrameStyle::NoFrame)
+                               })
+            },
+        ],
+        )
     }
 
     fn render_match(&self, mach: &lang::Match) -> T::DrawResult {
@@ -1703,8 +1733,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             &|| {
                 self.ui_toolkit.draw_all_on_same_line(&[&|| {
                     self.draw_button("Match",
-                                                                             colorscheme!(action_color),
-                                                                             &|| {})
+                                     colorscheme!(action_color),
+                                     &|| {})
                                                         },
                                                         &|| {
                                                             self.render_code(&mach.match_expression)

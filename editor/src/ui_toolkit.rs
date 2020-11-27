@@ -276,6 +276,12 @@ pub trait UiToolkit {
              lhs: &dyn Fn() -> Self::DrawResult,
              rhs: &[&dyn Fn() -> Self::DrawResult])
              -> Self::DrawResult;
+    fn align_fill_lhs(&self,
+                      x_padding_left_block_hack: u8,
+                      lhs: &dyn Fn() -> Self::DrawResult,
+                      lhs_color: Color,
+                      rhs: &[&dyn Fn() -> Self::DrawResult])
+                      -> Self::DrawResult;
     fn scrolled_to_y_if_not_visible(&self,
                                     scroll_hash: String,
                                     draw_fn: &dyn Fn() -> Self::DrawResult)

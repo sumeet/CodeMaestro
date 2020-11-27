@@ -29,7 +29,7 @@ lazy_static! {
         readable_name: "Boolean".to_string(),
         description: "Either true or false".into(),
         id: uuid::Uuid::parse_str(&"d00d688f-0c9e-43af-a19f-ab02e46b4c2c").unwrap(),
-        symbol: "\u{f6af}".to_string(),
+        symbol: "\u{f059}".to_string(),
         num_params: 0,
     };
     pub static ref STRING_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
