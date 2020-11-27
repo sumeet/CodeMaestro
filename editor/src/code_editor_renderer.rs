@@ -871,26 +871,30 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     pub fn render_try(&self, trai: &lang::Try) -> T::DrawResult {
         let draw_fn = &|| {
             self.draw_nested_borders_around(&|| {
-                    self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| self.render_control_flow_label(&TRY_ICON, "Try"),
-                    &|| self.render_code(&trai.maybe_error_expr),
+                self.ui_toolkit.draw_all(&[
+                    &|| self.ui_toolkit.draw_all_on_same_line(&[
+                            &|| self.render_control_flow_label(&TRY_ICON, "Try"),
+                            &|| self.render_code(&trai.maybe_error_expr),
+                        ]),
+                    &|| self.ui_toolkit.draw_all_on_same_line(&[
+                        &|| {
+                            self.render_control_flow_label(&OR_RETURN_ICON, "Return")
+                            // self.ui_toolkit.draw_with_margin((6., 0.), &|| {
+                            //                    self.ui_toolkit.draw_all_on_same_line(&[
+                            //         &|| {
+                            // self.ui_toolkit
+                            //     .draw_buttony_text("\u{f106}", CONTROL_FLOW_GREY_COLOR)
+                        },
+                        &|| {
+                            self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
+                        },
+                        ])
                     // &|| self.render_control_flow_label(&ELSE_ICON, "Or"),
-                    &|| {
-                        self.render_control_flow_label(&OR_RETURN_ICON, "Return")
-                        // self.ui_toolkit.draw_with_margin((6., 0.), &|| {
-                        //                    self.ui_toolkit.draw_all_on_same_line(&[
-                        //         &|| {
-                        // self.ui_toolkit
-                        //     .draw_buttony_text("\u{f106}", CONTROL_FLOW_GREY_COLOR)
-                    },
-                    &|| {
-                        self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
-                    },
                     // ])
                     //            })
                     // },
                 ])
-                })
+            })
         };
         if let Some(value) = self.env_genie
                                  .get_last_executed_result(trai.or_else_return_expr.id())
@@ -1662,7 +1666,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
         self.ui_toolkit.draw_all(&[&|| {
-                                       println!("printing if");
                                        self.render_control_flow("\u{f2fd}",
                                                                 "   If  ",
                                                                 conditional.id,
@@ -1671,7 +1674,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                 &conditional.true_branch)
                                    },
                                    &|| {
-                                       println!("printing else");
                                        self.render_control_flow(&ELSE_ICON,
                                                                 "Else",
                                                                 conditional.id,
