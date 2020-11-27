@@ -606,14 +606,13 @@ impl CodeGenie {
                               path_to_generic: &[usize],
                               env_genie: &EnvGenie)
                               -> lang::Type {
-        for parent in self.all_parents_including_node(code_node.id())
-                          .chain(code_node.children_iter())
-        {
-            if let CodeNode::Argument(arg) = parent {
-                let func_call = self.find_parent(arg.id)
-                                    .unwrap()
-                                    .as_function_call()
-                                    .unwrap();
+        for parent in self.all_parents_including_node(code_node.id()) {
+            // if let CodeNode::Argument(arg) = parent {
+            //     let func_call = self.find_parent(arg.id)
+            //                         .unwrap()
+            //                         .as_function_call()
+            //                         .unwrap();
+            if let CodeNode::FunctionCall(func_call) = parent {
                 for arg in func_call.args() {
                     let arg_def_id = arg.argument_definition_id;
                     if outer_type == &env_genie.get_type_for_arg(arg_def_id).unwrap() {

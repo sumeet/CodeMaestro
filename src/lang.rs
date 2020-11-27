@@ -105,7 +105,7 @@ impl TypeSpec for GenericParamTypeSpec {
     }
 
     fn symbol(&self) -> &str {
-        "\u{f12a}"
+        "\u{f0c8}"
     }
 
     fn num_params(&self) -> usize {

@@ -1079,6 +1079,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_function_reference(&self,
                                  function_reference: &lang::FunctionReference)
                                  -> T::DrawResult {
+        let function_call = self.code_editor
+                                .code_genie
+                                .find_parent(function_reference.id)
+                                .unwrap();
+
         let function_id = function_reference.function_id;
 
         // TODO: don't do validation in here. this is just so i can see what this error looks
@@ -1099,7 +1104,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // the actual parameters as parameters
         match func.style() {
             FunctionRenderingStyle::Default => {
-                self.render_function_name(&func.name(), colorscheme!(action_color), &func.returns())
+                let func_call_typ = self.code_editor
+                                        .code_genie
+                                        .guess_type(function_call, self.env_genie)
+                                        .unwrap();
+                self.render_function_name(&func.name(), colorscheme!(action_color), &func_call_typ)
             }
             FunctionRenderingStyle::Infix(_, infix_symbol) => {
                 self.ui_toolkit.draw_text(&format!(" {} ", infix_symbol))
