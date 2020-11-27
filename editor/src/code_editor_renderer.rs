@@ -35,9 +35,10 @@ pub const PLACEHOLDER_ICON: &str = "\u{F071}";
 lazy_static! {
     // static ref TRY_ICON: String = format!("\u{f321}");
     static ref TRY_ICON: String = format!("\u{f712}");
+    static ref OR_RETURN_ICON: String = format!("{}{}", ELSE_ICON, EARLY_RETURN_ICON);
 }
-// const EARLY_RETURN_ICON: &str = "\u{f2f5}";
 const EARLY_RETURN_ICON: &str = "\u{f151}";
+const ELSE_ICON: &str = "\u{f352}";
 // TODO: move this into the color scheme, but we'll leave it in here for now -- lazy
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
 
@@ -871,17 +872,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let draw_fn = &|| {
             self.draw_nested_borders_around(&|| {
                     self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| {
-                        self.ui_toolkit
-                            .draw_buttony_text(&TRY_ICON, CONTROL_FLOW_GREY_COLOR)
-                    },
+                    &|| self.render_control_flow_label(&TRY_ICON, "Try"),
                     &|| self.render_code(&trai.maybe_error_expr),
+                    // &|| self.render_control_flow_label(&ELSE_ICON, "Or"),
                     &|| {
+                        self.render_control_flow_label(&OR_RETURN_ICON, "Return")
                         // self.ui_toolkit.draw_with_margin((6., 0.), &|| {
                         //                    self.ui_toolkit.draw_all_on_same_line(&[
                         //         &|| {
-                        self.ui_toolkit
-                            .draw_buttony_text("\u{f106}", CONTROL_FLOW_GREY_COLOR)
+                        // self.ui_toolkit
+                        //     .draw_buttony_text("\u{f106}", CONTROL_FLOW_GREY_COLOR)
                     },
                     &|| {
                         self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
@@ -1672,7 +1672,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                    },
                                    &|| {
                                        println!("printing else");
-                                       self.render_control_flow("\u{f352}",
+                                       self.render_control_flow(&ELSE_ICON,
                                                                 "Else",
                                                                 conditional.id,
                                                                 None,
