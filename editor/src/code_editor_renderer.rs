@@ -36,7 +36,8 @@ lazy_static! {
     // static ref TRY_ICON: String = format!("\u{f321}");
     static ref TRY_ICON: String = format!("\u{f712}");
 }
-const EARLY_RETURN_ICON: &str = "\u{f2f5}";
+// const EARLY_RETURN_ICON: &str = "\u{f2f5}";
+const EARLY_RETURN_ICON: &str = "\u{f151}";
 // TODO: move this into the color scheme, but we'll leave it in here for now -- lazy
 pub const BLACK_COLOR: Color = [0.0, 0.0, 0.0, 1.0];
 
@@ -872,7 +873,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.ui_toolkit.draw_all_on_same_line(&[
                     &|| {
                         self.ui_toolkit
-                            .draw_buttony_text(&TRY_ICON, colorscheme!(warning_color))
+                            .draw_buttony_text(&TRY_ICON, CONTROL_FLOW_GREY_COLOR)
                     },
                     &|| self.render_code(&trai.maybe_error_expr),
                     &|| {
@@ -880,7 +881,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         //                    self.ui_toolkit.draw_all_on_same_line(&[
                         //         &|| {
                         self.ui_toolkit
-                            .draw_buttony_text("\u{f352}", colorscheme!(warning_color))
+                            .draw_buttony_text("\u{f106}", CONTROL_FLOW_GREY_COLOR)
                     },
                     &|| {
                         self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
@@ -903,12 +904,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     pub fn render_early_return(&self, early_return: &lang::EarlyReturn) -> T::DrawResult {
         self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                     self.code_handle(&|| {
-                                                        self.ui_toolkit
-                                                            .draw_buttony_text(&EARLY_RETURN_ICON, colorscheme!(warning_color))
+                                                        self.render_control_flow_label(EARLY_RETURN_ICON,
+                                                                                       "Return")
+                                                        // self.ui_toolkit
+                                                        //     .draw_buttony_text(&EARLY_RETURN_ICON, CONTROL_FLOW_GREY_COLOR)
                                                                      },
                                                                      early_return.id)
                                                 },
-            &|| self.ui_toolkit.draw_text(" "),
                                                 &|| self.render_code(early_return.code.as_ref())])
     }
 
