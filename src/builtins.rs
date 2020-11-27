@@ -1021,17 +1021,19 @@ impl lang::Function for Range {
             range_lo = len as i128 - range_lo
         }
         if range_hi < 0 {
-            range_hi = len as i128 - range_hi
+            range_hi = len as i128 - range_hi + 1
+        } else if range_hi > len as i128 {
+            range_hi = len as i128;
         }
 
         lang::Value::List(typ,
-                          vec.get(range_lo as usize..=range_hi as usize)
+                          vec.get(range_lo as usize..range_hi as usize)
                              .unwrap_or(&[])
                              .to_vec())
     }
 
     fn name(&self) -> &str {
-        "Range"
+        "Slice"
     }
 
     fn description(&self) -> &str {
@@ -1056,11 +1058,11 @@ impl lang::Function for Range {
              lang::ArgumentDefinition::new_with_id(RANGE_ARGS[1],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
-                                                   "Low".into()),
+                                                   "Low \u{f532}".into()),
              lang::ArgumentDefinition::new_with_id(RANGE_ARGS[2],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
-                                                   "High".into())
+                                                   "High \u{f536}".into())
         ]
     }
 
