@@ -193,6 +193,7 @@ impl InsertCodeMenu {
             }
             InsertionPoint::Replace(node_id_to_replace) => {
                 let node = code_genie.find_node(node_id_to_replace).unwrap();
+                println!("replacing a {:?}", node);
                 let exact_type = code_genie.guess_type(node, env_genie).unwrap();
                 let ts = env_genie.find_typespec(exact_type.typespec_id).unwrap();
                 if lang::is_generic(ts.as_ref()) {
