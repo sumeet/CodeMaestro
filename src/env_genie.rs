@@ -23,15 +23,25 @@ pub struct EnvGenie<'a> {
     pub env: &'a env::ExecutionEnvironment,
 }
 
-pub fn find_generics_mut<'a>(typ: &'a mut lang::Type,
-                             env_genie: &EnvGenie,
-                             func: &mut dyn FnMut(&mut lang::Type, &[usize])) {
-    typ.params_iter_mut_containing_self(&mut |typ, path| {
-           if env_genie.is_generic(typ.typespec_id) {
-               func(typ, &path)
-           }
-       });
+pub fn paths_to_generics(outer_typ: &lang::Type, env_genie: &EnvGenie) -> Vec<Vec<usize>> {
+    let all_paths = outer_typ.paths_to_params_containing_self();
+    all_paths.into_iter()
+             .filter(|path| {
+                 let typ = outer_typ.get_param_using_path(&path);
+                 env_genie.is_generic(typ.typespec_id)
+             })
+             .collect()
 }
+
+// pub fn find_generics_mut<'a>(typ: &'a mut lang::Type,
+//                              env_genie: &EnvGenie,
+//                              func: &mut dyn FnMut(&mut lang::Type, &[usize])) {
+//     typ.params_iter_mut_containing_self(&mut |typ, path| {
+//            if env_genie.is_generic(typ.typespec_id) {
+//                func(typ, &path)
+//            }
+//        });
+// }
 
 impl<'a> EnvGenie<'a> {
     pub fn new(env: &'a env::ExecutionEnvironment) -> Self {

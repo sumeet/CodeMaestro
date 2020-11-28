@@ -469,6 +469,14 @@ impl Type {
         param
     }
 
+    pub fn get_param_using_path_mut(&mut self, param_path: &[usize]) -> &mut Self {
+        let mut param = self;
+        for i in param_path {
+            param = &mut param.params[*i]
+        }
+        param
+    }
+
     // for types with no params
     pub fn from_spec<T: TypeSpec>(spec: &T) -> Self {
         Self::with_params(spec, vec![])
@@ -524,21 +532,38 @@ impl Type {
         self.typespec_id == spec_id
     }
 
-    pub fn params_iter_mut_containing_self(&mut self, func: &mut dyn FnMut(&mut Self, &[usize])) {
-        let mut v = vec![];
-        self.params_iter_mut_containing_self_rec(&mut v, func)
+    pub fn paths_to_params_containing_self(&self) -> Vec<Vec<usize>> {
+        self.paths_to_params_containing_self_rec(&mut vec![])
     }
 
-    pub fn params_iter_mut_containing_self_rec(&mut self,
-                                               path_before: &mut Vec<usize>,
-                                               func: &mut dyn FnMut(&mut Self, &[usize])) {
-        func(self, &path_before);
-        for (i, param) in self.params.iter_mut().enumerate() {
-            path_before.push(i);
-            param.params_iter_mut_containing_self_rec(path_before, func);
-            path_before.pop();
+    pub fn paths_to_params_containing_self_rec(&self,
+                                               previous_path: &mut Vec<usize>)
+                                               -> Vec<Vec<usize>> {
+        let mut ret = vec![];
+        ret.push(previous_path.clone());
+        for (i, param) in self.params.iter().enumerate() {
+            previous_path.push(i);
+            ret.extend_from_slice(&param.paths_to_params_containing_self_rec(previous_path));
+            previous_path.pop();
         }
+        ret
     }
+
+    // pub fn params_iter_mut_containing_self(&mut self, func: &mut dyn FnMut(&mut Self, &[usize])) {
+    //     let mut v = vec![];
+    //     self.params_iter_mut_containing_self_rec(&mut v, func)
+    // }
+    //
+    // pub fn params_iter_mut_containing_self_rec(&mut self,
+    //                                            path_before: &mut Vec<usize>,
+    //                                            func: &mut dyn FnMut(&mut Self, &[usize])) {
+    //     func(self, &path_before);
+    //     for (i, param) in self.params.iter_mut().enumerate() {
+    //         path_before.push(i);
+    //         param.params_iter_mut_containing_self_rec(path_before, func);
+    //         path_before.pop();
+    //     }
+    // }
 }
 
 impl CodeNode {

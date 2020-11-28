@@ -21,7 +21,7 @@ use cs::builtins::{
 use cs::code_function;
 use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
-use cs::env_genie::{find_generics_mut, EnvGenie};
+use cs::env_genie::{paths_to_generics, EnvGenie};
 use cs::lang;
 use cs::lang::{CodeNode, Function};
 use cs::{builtins, env};
@@ -758,10 +758,24 @@ impl CodeGenie {
         }
 
         let mut typ = typ.unwrap();
-        let typ2 = typ.clone();
-        find_generics_mut(&mut typ, env_genie, &mut |generic_typ, path| {
-            *generic_typ = self.try_to_resolve_generic(code_node, &typ2, path, env_genie);
-        });
+        let mut should_try_to_resolve_generics = true;
+        while should_try_to_resolve_generics {
+            'inner: for path in paths_to_generics(&typ, env_genie) {
+                let outer_typ = typ.clone();
+                {
+                    let generic_typ = typ.get_param_using_path_mut(&path);
+                    *generic_typ =
+                        self.try_to_resolve_generic(code_node, &outer_typ, &path, env_genie);
+                }
+                if outer_typ != typ {
+                    // if the type is changed, then let's start the search for generics again from the beginning
+                    break 'inner;
+                }
+            }
+            // if we got all the way here, then there's no way anything changed, let's stop looking
+            should_try_to_resolve_generics = false;
+        }
+
         Ok(typ)
     }
 
