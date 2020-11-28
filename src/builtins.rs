@@ -1001,27 +1001,27 @@ impl lang::Function for LessThan {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct Range {}
+pub struct Slice {}
 
 lazy_static! {
-    static ref RANGE_ARGS: [lang::ID; 3] =
+    static ref SLICE_ARGS: [lang::ID; 3] =
         [uuid::Uuid::parse_str("55e37864-34d7-4792-97d9-09ec14340528").unwrap(),
          uuid::Uuid::parse_str("8760d197-4570-439b-bfad-622913fb7d59").unwrap(),
          uuid::Uuid::parse_str("e41d4ebd-f3c3-4924-81fc-f83c4fd06229").unwrap(),];
 }
 
 #[typetag::serde]
-impl lang::Function for Range {
+impl lang::Function for Slice {
     fn call(&self,
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let (typ, vec) = args.remove(&RANGE_ARGS[0])
+        let (typ, vec) = args.remove(&SLICE_ARGS[0])
                              .unwrap()
                              .into_vec_with_type()
                              .unwrap();
-        let mut range_lo = args.remove(&RANGE_ARGS[1]).unwrap().as_i128().unwrap();
-        let mut range_hi = args.remove(&RANGE_ARGS[2]).unwrap().as_i128().unwrap();
+        let mut range_lo = args.remove(&SLICE_ARGS[1]).unwrap().as_i128().unwrap();
+        let mut range_hi = args.remove(&SLICE_ARGS[2]).unwrap().as_i128().unwrap();
 
         let len = vec.len();
         if range_lo < 0 {
@@ -1044,7 +1044,7 @@ impl lang::Function for Range {
     }
 
     fn description(&self) -> &str {
-        "Select an inclusive range from a List. 0 is the first element, 1 is the second, -1 is the last, -2 is the second last, etc."
+        "Select an inclusive slice from a List. 0 is the first element, 1 is the second, -1 is the last, -2 is the second last, etc."
     }
 
     fn id(&self) -> lang::ID {
@@ -1058,15 +1058,15 @@ impl lang::Function for Range {
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
         let generic = self.defines_generics().pop().unwrap();
 
-        vec![lang::ArgumentDefinition::new_with_id(RANGE_ARGS[0],
+        vec![lang::ArgumentDefinition::new_with_id(SLICE_ARGS[0],
                                                    lang::Type::with_params(&*lang::LIST_TYPESPEC,
                                                                            vec![lang::Type::from_spec(&generic)]),
                                                    "Collection".into()),
-             lang::ArgumentDefinition::new_with_id(RANGE_ARGS[1],
+             lang::ArgumentDefinition::new_with_id(SLICE_ARGS[1],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
                                                    "Low \u{f532}".into()),
-             lang::ArgumentDefinition::new_with_id(RANGE_ARGS[2],
+             lang::ArgumentDefinition::new_with_id(SLICE_ARGS[2],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
                                                    "High \u{f536}".into())
