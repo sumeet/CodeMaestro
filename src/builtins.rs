@@ -462,9 +462,16 @@ impl lang::Function for SplitString {
                             .unwrap()
                             .as_str()
                             .unwrap();
-        let strings = str.split(delimiter)
-                         .map(|str| lang::Value::String(str.to_string()))
-                         .collect();
+        let strings = if delimiter.is_empty() {
+            // when splitting on empty string, rust's split inserts [""]. we don't want that behavior
+            str.chars()
+               .map(|c| lang::Value::String(c.to_string()))
+               .collect()
+        } else {
+            str.split(delimiter)
+               .map(|str| lang::Value::String(str.to_string()))
+               .collect()
+        };
         lang::Value::List(lang::Type::from_spec(&*lang::STRING_TYPESPEC), strings)
     }
 
@@ -1021,7 +1028,7 @@ impl lang::Function for Range {
             range_lo = len as i128 - range_lo
         }
         if range_hi < 0 {
-            range_hi = len as i128 - range_hi + 1
+            range_hi = len as i128 + range_hi + 1;
         } else if range_hi > len as i128 {
             range_hi = len as i128;
         }
