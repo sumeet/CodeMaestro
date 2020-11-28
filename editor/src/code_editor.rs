@@ -799,8 +799,6 @@ impl CodeGenie {
                 let outer_typ = typ.clone();
                 {
                     let generic_typ = typ.get_param_using_path_mut(&path);
-                    println!("trying to resolve generic for {:?} with path {:?} inside of {:?}",
-                             outer_typ, path, generic_typ);
                     *generic_typ = self.try_to_resolve_generic(code_node, &generic_typ, env_genie);
                 }
                 if outer_typ != typ {
