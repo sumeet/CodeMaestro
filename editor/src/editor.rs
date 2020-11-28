@@ -725,14 +725,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                         self.ui_toolkit
                             .draw_buttony_text("CodeMaestro", colorscheme!(cool_color))
                     },
-                    &|| {
-                        self.ui_toolkit.draw_buttony_text(PLACEHOLDER_ICON,
-                                                          darken(colorscheme!(warning_color)))
-                    },
-                    &|| {
-                        self.ui_toolkit
-                            .draw_buttony_text("Heavy WIP", colorscheme!(warning_color))
-                    },
                 ])
             },
             &|| {
@@ -742,6 +734,19 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             &|| {
                 self.ui_toolkit
                     .draw_menu("View", &|| self.render_view_menu())
+            },
+            &|| {
+                self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| {
+                        self.ui_toolkit.draw_buttony_text(PLACEHOLDER_ICON,
+                                                          darken(colorscheme!(warning_color)))
+                    },
+                    &|| {
+                        self.ui_toolkit
+                            .draw_buttony_text("This software is under heavy WIP",
+                                               colorscheme!(warning_color))
+                    },
+                ])
             },
         ])
     }
