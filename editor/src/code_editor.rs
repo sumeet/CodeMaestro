@@ -622,8 +622,9 @@ impl CodeGenie {
 
     fn try_to_resolve_generic(&self,
                               code_node: &lang::CodeNode,
-                              outer_type: &lang::Type,
-                              path_to_generic: &[usize],
+                              typ_of_generic: &lang::Type,
+                              // outer_type: &lang::Type,
+                              // path_to_generic: &[usize],
                               env_genie: &EnvGenie)
                               -> lang::Type {
         for parent in self.all_parents_including_node(code_node.id()) {
@@ -635,21 +636,35 @@ impl CodeGenie {
             if let CodeNode::FunctionCall(func_call) = parent {
                 for arg in func_call.args() {
                     let arg_def_id = arg.argument_definition_id;
-                    if outer_type == &env_genie.get_type_for_arg(arg_def_id).unwrap() {
+                    let typ_for_arg = env_genie.get_type_for_arg(arg_def_id).unwrap();
+                    for (path, _) in
+                        typ_for_arg.find_typespec_id_in_params(typ_of_generic.typespec_id)
+                    {
+                        // TODO: move this outside of the for loop
                         let guessed_type = self.guess_type_without_resolving_generics(arg.expr
                                                                                          .as_ref(),
                                                                                       env_genie)
                                                .unwrap();
-                        let param_of_guessed_type =
-                            guessed_type.get_param_using_path(path_to_generic);
+                        let param_of_guessed_type = guessed_type.get_param_using_path(&path);
                         if !env_genie.is_generic(param_of_guessed_type.typespec_id) {
                             return param_of_guessed_type.clone();
                         }
                     }
+                    // if &env_genie.get_type_for_arg(arg_def_id).unwrap().contains {
+                    //     let guessed_type = self.guess_type_without_resolving_generics(arg.expr
+                    //                                                                      .as_ref(),
+                    //                                                                   env_genie)
+                    //                            .unwrap();
+                    //     let param_of_guessed_type =
+                    //         guessed_type.get_param_using_path(path_to_generic);
+                    //     if !env_genie.is_generic(param_of_guessed_type.typespec_id) {
+                    //         return param_of_guessed_type.clone();
+                    //     }
+                    // }
                 }
             }
         }
-        outer_type.get_param_using_path(path_to_generic).clone()
+        typ_of_generic.clone()
     }
 
     // TODO: bug??? for when we add conditionals, it's possible this won't detect assignments made
@@ -786,8 +801,7 @@ impl CodeGenie {
                     let generic_typ = typ.get_param_using_path_mut(&path);
                     println!("trying to resolve generic for {:?} with path {:?} inside of {:?}",
                              outer_typ, path, generic_typ);
-                    *generic_typ =
-                        self.try_to_resolve_generic(code_node, &outer_typ, &path, env_genie);
+                    *generic_typ = self.try_to_resolve_generic(code_node, &generic_typ, env_genie);
                 }
                 if outer_typ != typ {
                     // if the type is changed, then let's start the search for generics again from the beginning

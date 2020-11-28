@@ -508,22 +508,6 @@ impl Type {
                            mashed_hashes.join(":").as_bytes())
     }
 
-    // pub fn matches(&self, other: &Self) -> bool {
-    //     // // TODO: duplication, search for ANY_TYPESPEC
-    //     // if self.typespec_id == ANY_TYPESPEC.id() || other.typespec_id == ANY_TYPESPEC.id() {
-    //     //     return true;
-    //     // }
-    //     if !self.matches_spec_id(other.typespec_id) {
-    //         return false;
-    //     }
-    //     for (our_param, their_param) in self.params.iter().zip(other.params.iter()) {
-    //         if !our_param.matches(their_param) {
-    //             return false;
-    //         }
-    //     }
-    //     true
-    // }
-
     // XXX: idk if this is right but it'll at least get me farther i think
     pub fn matches_spec(&self, spec: &BuiltInTypeSpec) -> bool {
         self.matches_spec_id(spec.id)
@@ -534,6 +518,22 @@ impl Type {
             return true;
         }
         self.typespec_id == spec_id
+    }
+
+    pub fn find_typespec_id_in_params(&self,
+                                      typespec_id: ID)
+                                      -> impl Iterator<Item = (Vec<usize>, &Self)> + '_ {
+        self.paths_and_types_containing_self()
+            .filter(move |(_, typ)| typ.typespec_id == typespec_id)
+    }
+
+    pub fn paths_and_types_containing_self(&self)
+                                           -> impl Iterator<Item = (Vec<usize>, &Self)> + '_ {
+        let paths = self.paths_to_params_containing_self();
+        paths.into_iter().map(move |path| {
+                             let typ = self.get_param_using_path(&path);
+                             (path, typ)
+                         })
     }
 
     pub fn paths_to_params_containing_self(&self) -> Vec<Vec<usize>> {
