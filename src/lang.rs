@@ -987,7 +987,11 @@ impl FunctionCall {
     }
 
     pub fn args(&self) -> Vec<&Argument> {
-        self.args.iter().map(|arg| arg.into_argument()).collect()
+        self.iter_args().collect()
+    }
+
+    pub fn iter_args(&self) -> impl Iterator<Item = &Argument> + '_ {
+        self.args.iter().map(|arg| arg.into_argument())
     }
 }
 

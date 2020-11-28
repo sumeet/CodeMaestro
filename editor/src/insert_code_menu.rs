@@ -38,12 +38,17 @@ lazy_static! {
         Box::new(InsertEarlyReturnOptionGenerator {}),
         Box::new(InsertTryOptionGenerator {}),
     ];
+
+    static ref UNWRAP_OPTIONS_GENERATORS : Vec<Box<dyn InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
+        Box::new(InsertUnwrapFromFunctionCallOptionGenerator {}),
+    ];
 }
 
 const FUNCTION_CALL_GROUP: &str = "Functions";
 const LOCALS_GROUP: &str = "Local variables";
 const LITERALS_GROUP: &str = "Create new value";
 const CONTROL_FLOW_GROUP: &str = "Control flow";
+const ARGUMENTS_UNWRAP_GROUP: &str = "Arguments";
 
 #[derive(Clone)]
 pub struct InsertCodeMenu {
@@ -168,11 +173,22 @@ impl InsertCodeMenu {
                         location: CodeLocation)
                         -> Vec<InsertCodeMenuOption> {
         let search_params = self.search_params(code_genie, env_genie, location);
-        OPTIONS_GENERATORS.iter()
-                          .flat_map(|generator| {
-                              generator.options(&search_params, code_genie, env_genie)
-                          })
-                          .collect()
+        match self.insertion_point {
+            InsertionPoint::Unwrap(_) => {
+                UNWRAP_OPTIONS_GENERATORS.iter()
+                                         .flat_map(|generator| {
+                                             generator.options(&search_params,
+                                                               code_genie,
+                                                               env_genie)
+                                         })
+                                         .collect()
+            }
+            _ => OPTIONS_GENERATORS.iter()
+                                   .flat_map(|generator| {
+                                       generator.options(&search_params, code_genie, env_genie)
+                                   })
+                                   .collect(),
+        }
     }
 
     pub fn search_params(&self,
@@ -1265,5 +1281,42 @@ impl InsertCodeMenuOptionGenerator for InsertTryOptionGenerator {
             //     };
         }
         vec![]
+    }
+}
+
+#[derive(Clone)]
+struct InsertUnwrapFromFunctionCallOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertUnwrapFromFunctionCallOptionGenerator {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        let code = code_genie.find_node(search_params.unwraps_code_id.unwrap())
+                             .unwrap();
+        let function_call = match code {
+            lang::CodeNode::FunctionCall(func_call) => func_call,
+            _ => return vec![],
+        };
+        function_call.args
+                     .iter()
+                     .filter_map(|code_node| {
+                         let argument = code_node.into_argument();
+                         let guessed_typ_from_arg =
+                             code_genie.guess_type(code_node, env_genie).unwrap();
+                         if search_params.search_matches_type(&guessed_typ_from_arg, env_genie) {
+                             return Some(InsertCodeMenuOption { sort_key:
+                                                                    format!("unwrap{}",
+                                                                            argument.expr.id()),
+                                                                new_node:
+                                                                    (*argument.expr).clone(),
+                                                                is_selected: false,
+                                                                group_name:
+                                                                    ARGUMENTS_UNWRAP_GROUP });
+                         }
+                         None
+                     })
+                     .collect()
     }
 }

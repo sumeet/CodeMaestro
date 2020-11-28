@@ -363,7 +363,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
-        println!("rendering insertion menu");
         let transparent_black = self.transparent_black();
         self.ui_toolkit.draw_all(&[
             &|| {
