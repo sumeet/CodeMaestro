@@ -23,7 +23,7 @@ use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
 use cs::env_genie::{paths_to_generics, EnvGenie};
 use cs::lang;
-use cs::lang::{CodeNode, Function};
+use cs::lang::{typ_for_anonymous_function, CodeNode, Function};
 use cs::{builtins, env};
 use lazy_static::lazy_static;
 use objekt::private::collections::HashSet;
@@ -784,6 +784,8 @@ impl CodeGenie {
                 let outer_typ = typ.clone();
                 {
                     let generic_typ = typ.get_param_using_path_mut(&path);
+                    println!("trying to resolve generic for {:?} with path {:?} inside of {:?}",
+                             outer_typ, path, generic_typ);
                     *generic_typ =
                         self.try_to_resolve_generic(code_node, &outer_typ, &path, env_genie);
                 }
@@ -825,6 +827,8 @@ impl CodeGenie {
                     let last_expression_in_block = &block.expressions[block.expressions.len() - 1];
                     self.guess_type_without_resolving_generics(last_expression_in_block, env_genie)
                 } else {
+                    // TODO: this should probably be a generic, or ANY instead of Null... shoudl really
+                    // be using type inference here
                     Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC))
                 }
             }
@@ -902,9 +906,14 @@ impl CodeGenie {
                 //                panic!(format!("couldn't extract list element from {:?}", list_typ))
             }
             CodeNode::AnonymousFunction(anon_func) => {
-                // TODO: could possibly use type inference here w/ the last element of the block...
-                // or should this be definable some other way? or inferred another way?
-                Ok(anon_func.returns.clone())
+                let guessed_typ_from_anon_func_block =
+                    self.guess_type_without_resolving_generics(&anon_func.block, env_genie);
+                Ok(typ_for_anonymous_function(anon_func.takes_arg.arg_type.clone(),
+                                              guessed_typ_from_anon_func_block?))
+                // self.guess_type_without_resolving_generics(&anon_func.block, env_genie)
+                // // // TODO: could possibly use type inference here w/ the last element of the block...
+                // // // or should this be definable some other way? or inferred another way?
+                // // Ok(anon_func.returns.clone())
             }
             CodeNode::ReassignListIndex(_) => {
                 Ok(new_result(lang::Type::from_spec(&*lang::NULL_TYPESPEC),

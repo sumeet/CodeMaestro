@@ -34,7 +34,7 @@ lazy_static! {
         Box::new(InsertAssignmentOptionGenerator {}),
         Box::new(InsertReassignmentOptionGenerator {}),
         Box::new(InsertLiteralOptionGenerator {}),
-        Box::new(InsertBlockOptionGenerator {}),
+        Box::new(InsertAnonFuncOptionGenerator {}),
         Box::new(InsertEarlyReturnOptionGenerator {}),
         Box::new(InsertTryOptionGenerator {}),
         Box::new(InsertFunctionCallReplacementOptionGenerator {}),
@@ -1224,9 +1224,9 @@ impl InsertConditionalOptionGenerator {
 }
 
 #[derive(Clone)]
-struct InsertBlockOptionGenerator {}
+struct InsertAnonFuncOptionGenerator {}
 
-impl InsertCodeMenuOptionGenerator for InsertBlockOptionGenerator {
+impl InsertCodeMenuOptionGenerator for InsertAnonFuncOptionGenerator {
     fn options(&self,
                search_params: &CodeSearchParams,
                _code_genie: &CodeGenie,
@@ -1240,10 +1240,12 @@ impl InsertCodeMenuOptionGenerator for InsertBlockOptionGenerator {
             return vec![];
         }
 
+        // TODO: fix magic number
+        let anon_func_arg_type = &return_type.params[0];
+
         // TODO: takes_arg is hardcoded to string, how can this be a configurable type?
         // how to set the short_name?
-        let takes_arg =
-            ArgumentDefinition::new(lang::Type::from_spec(&*lang::STRING_TYPESPEC), "var".into());
+        let takes_arg = ArgumentDefinition::new(anon_func_arg_type.clone(), "var".into());
 
         // TODO: this could also return FunctionReferences (doesn't exist yet) in addition to
         // AnonymousFunction

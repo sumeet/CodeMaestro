@@ -258,6 +258,10 @@ impl AnonymousFunction {
     }
 }
 
+pub fn typ_for_anonymous_function(argument_typ: Type, return_typ: Type) -> Type {
+    Type::with_params(&*ANON_FUNC_TYPESPEC, vec![argument_typ, return_typ])
+}
+
 impl Value {
     pub fn unwrap_early_return(self) -> Self {
         match self {

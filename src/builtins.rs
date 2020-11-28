@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex};
 mod http_request;
 
 use crate::env::ExecutionError;
-use crate::lang::FunctionRenderingStyle;
+use crate::lang::{typ_for_anonymous_function, FunctionRenderingStyle};
 pub use http_request::HTTPRequest;
 pub use http_request::HTTP_RESPONSE_STRUCT_ID;
 
@@ -552,26 +552,34 @@ impl lang::Function for Map {
         uuid::Uuid::parse_str("7add6e8d-0f89-4958-a435-bad3c9066927").unwrap()
     }
 
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![
+            lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("e0341ade-2544-4eba-9420-fb3c8e1a71ff").unwrap()),
+            lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("6d2d377b-56c5-452a-b23d-bfdfa7dcf9d8").unwrap()),
+        ]
+    }
+
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let generics = self.defines_generics();
         vec![
             lang::ArgumentDefinition::new_with_id(
                 MAP_ARG_IDS[0],
                 lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                    vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)]),
+                                    // type of source is generic 0
+                                    vec![lang::Type::from_spec(&generics[0])]),
                 "Collection".to_string()),
             lang::ArgumentDefinition::new_with_id(
                 MAP_ARG_IDS[1],
-                lang::Type::with_params(&*lang::ANON_FUNC_TYPESPEC,
-                                    vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                                        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
-                                    ]),
+                typ_for_anonymous_function(lang::Type::from_spec(&generics[0]),
+                                        lang::Type::from_spec(&generics[1])),
                 "Transformation".to_string()),
         ]
     }
 
     fn returns(&self) -> lang::Type {
+        let generics = self.defines_generics();
         lang::Type::with_params(&*lang::LIST_TYPESPEC,
-                                vec![lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)])
+                                vec![lang::Type::from_spec(&generics[1])])
     }
 }
 
