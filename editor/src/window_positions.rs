@@ -20,7 +20,7 @@ const INITIAL_WINDOW_POSITION: (isize, isize) = (5, 30);
 const INITIAL_WINDOW_SIZE: (usize, usize) = (550, 650);
 
 const QUICK_START_WINDOW_SIZE: (usize, usize) = (300, 300);
-const CHAT_TEST_WINDOW_SIZE: (usize, usize) = (300, 300);
+const _CHAT_TEST_WINDOW_SIZE: (usize, usize) = (300, 300);
 
 #[derive(Deserialize, Serialize)]
 pub struct WindowPositions {
@@ -30,19 +30,19 @@ pub struct WindowPositions {
 
 impl Default for WindowPositions {
     fn default() -> Self {
-        let mut open_windows = HashMap::new();
-        open_windows.insert(*QUICK_START_GUIDE_WINDOW_ID,
-                            Window { id: *QUICK_START_GUIDE_WINDOW_ID,
-                                     size: QUICK_START_WINDOW_SIZE,
-                                     x: INITIAL_WINDOW_POSITION.0,
-                                     y: INITIAL_WINDOW_POSITION.1 });
-        open_windows.insert(*CHAT_TEST_WINDOW_ID,
-                            Window { id: *CHAT_TEST_WINDOW_ID,
-                                     size: CHAT_TEST_WINDOW_SIZE,
-                                     x: INITIAL_WINDOW_POSITION.0,
-                                     y: INITIAL_WINDOW_POSITION.1
-                                        + QUICK_START_WINDOW_SIZE.1 as isize
-                                        + 5 });
+        let open_windows = HashMap::new();
+        // open_windows.insert(*QUICK_START_GUIDE_WINDOW_ID,
+        //                     Window { id: *QUICK_START_GUIDE_WINDOW_ID,
+        //                              size: QUICK_START_WINDOW_SIZE,
+        //                              x: INITIAL_WINDOW_POSITION.0,
+        //                              y: INITIAL_WINDOW_POSITION.1 });
+        // open_windows.insert(*CHAT_TEST_WINDOW_ID,
+        //                     Window { id: *CHAT_TEST_WINDOW_ID,
+        //                              size: CHAT_TEST_WINDOW_SIZE,
+        //                              x: INITIAL_WINDOW_POSITION.0,
+        //                              y: INITIAL_WINDOW_POSITION.1
+        //                                 + QUICK_START_WINDOW_SIZE.1 as isize
+        //                                 + 5 });
         Self { size: (4000, 3000),
                open_windows }
     }

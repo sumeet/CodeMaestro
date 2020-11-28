@@ -644,7 +644,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                      })
                        });
         self.ui_toolkit.draw_all(&[&|| self.render_main_menu_bar(),
-                                   &|| self.render_quick_start_guide(),
+                                   // &|| self.render_quick_start_guide(),
                                    &|| self.render_colortheme_editor(),
                                    &|| self.render_chat_test_window(),
                                    &|| self.render_scripts(),
@@ -659,7 +659,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                    &|| self.render_chat_programs(),
                                    &|| self.render_status_bar(),
                                    &|| self.render_opener(),
-                                   &|| self.render_send_to_server_overlay()])
+                                   &|| self.render_send_to_server_overlay(false)])
     }
 
     fn render_colortheme_editor(&self) -> T::DrawResult {
@@ -676,7 +676,10 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                  None::<fn(Keypress)>)
     }
 
-    fn render_send_to_server_overlay(&self) -> T::DrawResult {
+    fn render_send_to_server_overlay(&self, enabled: bool) -> T::DrawResult {
+        if !enabled {
+            return self.ui_toolkit.draw_all(&[]);
+        }
         self.ui_toolkit.draw_top_right_overlay(&|| {
                            let cmd_buffer = Rc::clone(&self.command_buffer);
 
@@ -816,7 +819,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                        })
     }
 
-    fn render_quick_start_guide(&self) -> T::DrawResult {
+    fn _render_quick_start_guide(&self) -> T::DrawResult {
         let open_window = self.controller
                               .window_positions
                               .get_open_window(&*QUICK_START_GUIDE_WINDOW_ID);
@@ -2413,7 +2416,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     fn render_status_bar(&self) -> T::DrawResult {
         self.ui_toolkit.draw_statusbar(&|| {
                            self.ui_toolkit.draw_all_on_same_line(&[
-                &|| self.ui_toolkit.draw_text("Now working on "),
+                &|| self.ui_toolkit.draw_text("Working on "),
                 &|| {
                     self.ui_toolkit
                         .draw_buttony_text("\u{f7a7}", darken(colorscheme!(action_color)))
