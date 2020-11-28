@@ -1305,7 +1305,8 @@ impl MutationMaster {
                                                             genie)
             }
             InsertionPoint::Replace(node_id_to_replace)
-            | InsertionPoint::Wrap(node_id_to_replace) => {
+            | InsertionPoint::Wrap(node_id_to_replace)
+            | InsertionPoint::Unwrap(node_id_to_replace) => {
                 let mut all_nodes = nodes_to_insert.collect_vec();
                 if all_nodes.len() != 1 {
                     panic!("something weird is going on, trying to replace/wrap more than one node");
@@ -1619,6 +1620,8 @@ pub enum InsertionPoint {
     //       ListLiteralElement with Replace
     Replace(lang::ID),
     Wrap(lang::ID),
+    // experimental "unwrap":
+    Unwrap(lang::ID),
 }
 
 impl InsertionPoint {
@@ -1629,7 +1632,7 @@ impl InsertionPoint {
             InsertionPoint::Before(_) => None,
             InsertionPoint::After(_) => None,
             InsertionPoint::Replace(_) => None,
-            InsertionPoint::Wrap(_) => None,
+            InsertionPoint::Wrap(_) | InsertionPoint::Unwrap(_) => None,
             InsertionPoint::StructLiteralField(id) => Some(id),
             InsertionPoint::Editing(id) => Some(id),
             // not sure if this is right....

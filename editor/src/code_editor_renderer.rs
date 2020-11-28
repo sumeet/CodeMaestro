@@ -535,6 +535,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         &|| self.render_code(code_node_being_wrapped)
                     ])
             }
+            InsertionPoint::Unwrap(code_node_being_unwrapped_id) => {
+                let code_node_being_unwrapped = self.code_editor
+                                                    .code_genie
+                                                    .find_node(code_node_being_unwrapped_id)
+                                                    .unwrap();
+                self.ui_toolkit
+                    .draw_all_on_same_line(&[
+                        &|| self.draw_operation_label("Unwrap operation"),
+                        &|| self.ui_toolkit.draw_text("from"),
+                        &|| self.render_code(code_node_being_unwrapped)
+                    ])
+            }
         }
     }
 
