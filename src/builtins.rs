@@ -899,8 +899,8 @@ impl lang::Function for NotEquals {
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let lhs = args.remove(&EQUALS_ARGS[0]);
-        let rhs = args.remove(&EQUALS_ARGS[1]);
+        let lhs = args.remove(&NOT_EQUALS_ARGS[0]);
+        let rhs = args.remove(&NOT_EQUALS_ARGS[1]);
         lang::Value::Boolean(lhs != rhs)
     }
 

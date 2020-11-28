@@ -34,6 +34,22 @@ pub fn new_function_call(func_id: lang::ID, args: Vec<lang::CodeNode>) -> lang::
     })
 }
 
+pub fn new_function_call_with_arg_exprs(func: &dyn lang::Function,
+                                        arg_exprs: impl Iterator<Item = lang::CodeNode>)
+                                        -> lang::CodeNode {
+    let args = func.takes_args()
+                   .into_iter()
+                   .zip(arg_exprs)
+                   .map(|(arg_def, arg_expr)| {
+                       lang::CodeNode::Argument(lang::Argument { id: lang::new_id(),
+                                                                 argument_definition_id:
+                                                                     arg_def.id,
+                                                                 expr: Box::new(arg_expr) })
+                   })
+                   .collect();
+    new_function_call(func.id(), args)
+}
+
 pub fn new_function_call_with_placeholder_args(func: &dyn lang::Function) -> lang::CodeNode {
     let args = func.takes_args()
                    .into_iter()

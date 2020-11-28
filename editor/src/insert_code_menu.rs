@@ -37,6 +37,7 @@ lazy_static! {
         Box::new(InsertBlockOptionGenerator {}),
         Box::new(InsertEarlyReturnOptionGenerator {}),
         Box::new(InsertTryOptionGenerator {}),
+        Box::new(InsertFunctionCallReplacementOptionGenerator {}),
     ];
 
     static ref UNWRAP_OPTIONS_GENERATORS : Vec<Box<dyn InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
@@ -1318,5 +1319,57 @@ impl InsertCodeMenuOptionGenerator for InsertUnwrapFromFunctionCallOptionGenerat
                          None
                      })
                      .collect()
+    }
+}
+
+#[derive(Clone)]
+struct InsertFunctionCallReplacementOptionGenerator {}
+
+impl InsertCodeMenuOptionGenerator for InsertFunctionCallReplacementOptionGenerator {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        let code_node_being_replaced = match search_params.insertion_point {
+            InsertionPoint::Replace(id) => code_genie.find_node(id).unwrap(),
+            _ => return vec![],
+        };
+        let function_call = code_node_being_replaced.as_function_call();
+        if function_call.is_err() {
+            return vec![];
+        }
+        let function_call_being_replaced = function_call.unwrap();
+        let guessed_types_from_func_call_being_replaced =
+            function_call_being_replaced.iter_args()
+                                        .map(|arg| {
+                                            code_genie.guess_type(&arg.expr, env_genie).unwrap()
+                                        })
+                                        .collect::<Vec<_>>();
+
+        // if we find any functions that have exactly the same arg types as the function call we're replacing,
+        // defined in the same order, then we'll yield them from here
+        find_functions_ignoring_wraps_type(env_genie, search_params).filter_map(|found_func| {
+            let found_func_takes_args = found_func.takes_args();
+            if found_func_takes_args.len() != function_call_being_replaced.args.len() {
+                return None;
+            }
+            let arg_types_of_found_func = found_func_takes_args.iter().map(|arg_def| {
+                &arg_def.arg_type
+            });
+            if guessed_types_from_func_call_being_replaced.iter().zip(arg_types_of_found_func).all(|(replaced_func_typ, func_arg_typ)| {
+                env_genie.types_match(replaced_func_typ, func_arg_typ)
+            }) {
+               return Some(InsertCodeMenuOption {
+                   sort_key: format!("000replacefunccall{}", found_func.id()),
+                   new_node: code_generation::new_function_call_with_arg_exprs(found_func, function_call_being_replaced.iter_args().map(|arg| {
+                       (*arg.expr).clone()
+                   })),
+                   is_selected: false,
+                   group_name: FUNCTION_CALL_GROUP,
+               })
+            }
+            None
+        }).collect()
     }
 }
