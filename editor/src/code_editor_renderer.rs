@@ -31,7 +31,7 @@ use cs::structs;
 use cs::{env, lang};
 use lazy_static::lazy_static;
 
-pub const PLACEHOLDER_ICON: &str = "\u{F071}";
+pub const PLACEHOLDER_ICON: &str = "\u{f85d}";
 lazy_static! {
     // static ref TRY_ICON: String = format!("\u{f321}");
     static ref TRY_ICON: String = format!("\u{f712}");
@@ -363,6 +363,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_insertion_options(&self, menu: &InsertCodeMenu) -> T::DrawResult {
+        println!("rendering insertion menu");
         let transparent_black = self.transparent_black();
         self.ui_toolkit.draw_all(&[
             &|| {
@@ -467,7 +468,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         match insertion_point {
             InsertionPoint::BeginningOfBlock(_)
             | InsertionPoint::Before(_)
-            | InsertionPoint::After(_) => self.draw_operation_label("New code insert"),
+            | InsertionPoint::After(_) => self.draw_operation_label("\u{f0fe}", "Insert code"),
             InsertionPoint::StructLiteralField(struct_literal_field_id) => {
                 let struct_literal_field = self.code_editor
                                                .code_genie
@@ -480,7 +481,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         .find_struct_and_field(struct_literal_field.struct_field_id)
                         .unwrap();
                 self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| self.draw_operation_label("Struct field insertion"),
+                    &|| self.draw_operation_label("\u{f055}", "Insert struct field"),
                     &|| self.render_struct_identifier(strukt),
                     &|| self.ui_toolkit.draw_text("for"),
                     &|| self.render_struct_literal_field_label(struct_field),
@@ -493,10 +494,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                     .code_genie
                                     .find_node(edited_code_node_id)
                                     .unwrap();
-                self.ui_toolkit
-                    .draw_all_on_same_line(&[&|| self.draw_operation_label("Edit"), &|| {
-                                               self.render_code(code_node)
-                                           }])
+                self.ui_toolkit.draw_all_on_same_line(&[&|| {
+                                                            self.draw_operation_label("\u{f14b}",
+                                                                                      "Edit")
+                                                        },
+                                                        &|| self.render_code(code_node)])
             }
             InsertionPoint::ListLiteralElement { list_literal_id,
                                                  pos, } => {
@@ -505,7 +507,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                     .find_node(list_literal_id)
                                     .unwrap();
                 self.ui_toolkit.draw_all_on_same_line(&[
-                    &|| self.draw_operation_label("Insertion into list"),
+                    &|| self.draw_operation_label("\u{f055}", "Insert into list"),
                     &|| self.render_list_literal_label(code_node),
                     &|| self.ui_toolkit.draw_text("at position"),
                     &|| self.render_list_literal_position(pos),
@@ -517,11 +519,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                    .find_node(code_node_being_replaced_id)
                                                    .unwrap();
                 self.ui_toolkit
-                    .draw_all_on_same_line(&[
-                        &|| self.draw_operation_label("Replace operation"),
-                        &|| self.ui_toolkit.draw_text("replacing"),
-                        &|| self.render_code(code_node_being_replaced),
-                    ])
+                    .draw_all_on_same_line(&[&|| self.draw_operation_label("\u{f0ec}", "Replace"), &|| {
+                                               self.render_code(code_node_being_replaced)
+                                           }])
             }
             InsertionPoint::Wrap(code_node_being_wrapped_id) => {
                 let code_node_being_wrapped = self.code_editor
@@ -530,8 +530,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                   .unwrap();
                 self.ui_toolkit
                     .draw_all_on_same_line(&[
-                        &|| self.draw_operation_label("Wrap operation"),
-                        &|| self.ui_toolkit.draw_text("around"),
+                        &|| self.draw_operation_label("\u{f79c}", "Wrap around"),
                         &|| self.render_code(code_node_being_wrapped)
                     ])
             }
@@ -542,17 +541,24 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                     .unwrap();
                 self.ui_toolkit
                     .draw_all_on_same_line(&[
-                        &|| self.draw_operation_label("Unwrap operation"),
-                        &|| self.ui_toolkit.draw_text("out of"),
+                        &|| self.draw_operation_label("\u{f49e}", "Unwrap out of"),
                         &|| self.render_code(code_node_being_unwrapped)
                     ])
             }
         }
     }
 
-    fn draw_operation_label(&self, text: &str) -> T::DrawResult {
-        self.ui_toolkit
-            .draw_buttony_text(text, colorscheme!(cool_color))
+    fn draw_operation_label(&self, symbol: &str, text: &str) -> T::DrawResult {
+        self.ui_toolkit.draw_all_on_same_line(&[
+            &|| {
+                self.ui_toolkit
+                    .draw_buttony_text(symbol, darken(colorscheme!(cool_color)))
+            },
+            &|| {
+                self.ui_toolkit
+                    .draw_buttony_text(text, colorscheme!(cool_color))
+            },
+        ])
     }
 
     fn render_insertion_options_group(&self,
@@ -800,7 +806,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         }
 
         match self.insertion_point() {
-            Some(InsertionPoint::Replace(id)) | Some(InsertionPoint::Wrap(id))
+            Some(InsertionPoint::Replace(id))
+            | Some(InsertionPoint::Wrap(id))
+            | Some(InsertionPoint::Unwrap(id))
                 if { id == code_node.id() && !self.is_rendering_menu_atm() } =>
             {
                 return self.render_insert_code_node()

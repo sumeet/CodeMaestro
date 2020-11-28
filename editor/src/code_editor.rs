@@ -139,6 +139,9 @@ impl CodeEditor {
             (false, Key::W, true, false) => {
                 self.try_enter_wrap_for_selected_node();
             }
+            (false, Key::U, true, false) => {
+                self.try_enter_unwrap_for_selected_node();
+            }
             (false, Key::R, false, false) => {
                 self.try_enter_replace_edit_for_selected_node();
             }
@@ -259,6 +262,10 @@ impl CodeEditor {
         self.mark_as_editing(InsertionPoint::Wrap(node_id));
     }
 
+    pub fn enter_unwrap_for_node(&mut self, node_id: lang::ID) {
+        self.mark_as_editing(InsertionPoint::Unwrap(node_id));
+    }
+
     pub fn enter_replace_for_node(&mut self, node_id: lang::ID) {
         let insertion_point = self.insertion_point_for_replace(node_id).unwrap();
         self.mark_as_editing(insertion_point);
@@ -354,6 +361,11 @@ impl CodeEditor {
 
     pub fn try_enter_wrap_for_selected_node(&mut self) -> Option<()> {
         self.enter_wrap_for_node(self.get_last_selected_node_id()?);
+        Some(())
+    }
+
+    pub fn try_enter_unwrap_for_selected_node(&mut self) -> Option<()> {
+        self.enter_unwrap_for_node(self.get_last_selected_node_id()?);
         Some(())
     }
 
