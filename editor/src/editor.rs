@@ -56,7 +56,8 @@ use cs::{await_eval_result, EnvGenie};
 pub mod drag_drop;
 pub mod value_renderer;
 use crate::code_editor::CodeLocation;
-use crate::code_editor_renderer::BLACK_COLOR;
+use crate::code_editor_renderer::{BLACK_COLOR, PLACEHOLDER_ICON};
+use crate::code_rendering::darken;
 use crate::schema_builder::{FieldIdentifier, Schema};
 use cs::validation::{find_problems_for_code, ProblemPreventingRun};
 use std::hash::{Hash, Hasher};
@@ -710,14 +711,36 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     }
 
     fn render_main_menu_bar(&self) -> T::DrawResult {
-        self.ui_toolkit.draw_main_menu_bar(&[&|| {
-                                                 self.ui_toolkit
-                                                     .draw_menu("File", &|| self.render_file_menu())
-                                             },
-                                             &|| {
-                                                 self.ui_toolkit
-                                                     .draw_menu("View", &|| self.render_view_menu())
-                                             }])
+        self.ui_toolkit.draw_main_menu_bar(&[
+            &|| {
+                self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| {
+                        self.ui_toolkit
+                            .draw_buttony_text("\u{f8ed}", darken(colorscheme!(cool_color)))
+                    },
+                    &|| {
+                        self.ui_toolkit
+                            .draw_buttony_text("CodeMaestro", colorscheme!(cool_color))
+                    },
+                    &|| {
+                        self.ui_toolkit.draw_buttony_text(PLACEHOLDER_ICON,
+                                                          darken(colorscheme!(warning_color)))
+                    },
+                    &|| {
+                        self.ui_toolkit
+                            .draw_buttony_text("Heavy WIP", colorscheme!(warning_color))
+                    },
+                ])
+            },
+            &|| {
+                self.ui_toolkit
+                    .draw_menu("File", &|| self.render_file_menu())
+            },
+            &|| {
+                self.ui_toolkit
+                    .draw_menu("View", &|| self.render_view_menu())
+            },
+        ])
     }
 
     fn render_file_menu(&self) -> T::DrawResult {
@@ -2389,7 +2412,25 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
     // TODO: gotta redo this... it needs to know what's focused and stuff :/
     fn render_status_bar(&self) -> T::DrawResult {
         self.ui_toolkit.draw_statusbar(&|| {
-                           self.ui_toolkit.draw_text("")
+                           self.ui_toolkit.draw_all_on_same_line(&[
+                &|| self.ui_toolkit.draw_text("Now working on "),
+                &|| {
+                    self.ui_toolkit
+                        .draw_buttony_text("\u{f7a7}", darken(colorscheme!(action_color)))
+                },
+                &|| {
+                    self.ui_toolkit
+                        .draw_buttony_text("Advent of Code 2020", colorscheme!(action_color))
+                },
+                &|| {
+                    self.ui_toolkit
+                        .draw_buttony_text("\u{f783}", darken(colorscheme!(adding_color)))
+                },
+                &|| {
+                    self.ui_toolkit
+                        .draw_buttony_text("Day 1", colorscheme!(adding_color))
+                },
+            ])
                            //            if let Some(node) = self.controller.get_selected_node() {
                            //                self.ui_toolkit.draw_text(
                            //                    &format!("SELECTED: {}", node.description())

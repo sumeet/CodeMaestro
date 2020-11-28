@@ -523,6 +523,14 @@ impl CodeEditor {
             .is_some()
     }
 
+    pub fn can_be_unwrapped(&self, id: lang::ID) -> bool {
+        self.code_genie
+            .find_node(id)
+            .unwrap()
+            .as_function_call()
+            .is_ok()
+    }
+
     pub fn delete_node_ids(&mut self, ids: impl ExactSizeIterator<Item = lang::ID>) -> Option<()> {
         let mutation_result = self.mutation_master.delete_code(ids,
                                                                self.code_genie.clone(),

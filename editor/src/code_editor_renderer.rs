@@ -1068,6 +1068,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         self.ui_toolkit.draw_all(&[])
                     }
                 },
+                               &|| {
+                                   if self.code_editor.can_be_unwrapped(code_node_id_to_act_on) {
+                                       let cmd_buffer = Rc::clone(&self.command_buffer);
+                                       self.ui_toolkit.draw_menu_item("Unwrap...", move || {
+                                           cmd_buffer.borrow_mut().add_editor_command(move |editor| {
+                                               editor.enter_wrap_for_node(code_node_id_to_act_on);
+                                           })
+                                       })
+                                   } else {
+                                       self.ui_toolkit.draw_all(&[])
+                                   }
+                               }
                            ])
                        })
     }

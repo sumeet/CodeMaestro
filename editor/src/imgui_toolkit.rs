@@ -1661,7 +1661,12 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn draw_main_menu_bar(&self, draw_menus: &[DrawFnRef<Self>]) {
-        self.ui.main_menu_bar(&|| self.draw_all(draw_menus))
+        self.ui.main_menu_bar(&|| {
+                   // the default main menu bar starts out padded to the right a little bit.. let's reset it
+                   let cursor_pos = self.ui.cursor_pos();
+                   self.ui.set_cursor_pos([cursor_pos[0] - 8., cursor_pos[1]]);
+                   self.draw_all(draw_menus)
+               });
     }
 
     fn draw_menu(&self, label: &str, draw_menu_items: &dyn Fn()) {

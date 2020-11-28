@@ -156,7 +156,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                                                          rasterizer_multiply: 1.75,
                                                          glyph_ranges:
                                                              FontGlyphRanges::from_slice(&[0xf000,
-                                                                                           0xf72f, // the range for font awesome solid 900
+                                                                                           0xf8ed, // the range for font awesome solid 900 // XXX: only up to the violin, it probably goes higher
                                                                                            0]),
                                                          pixel_snap_h: true,
                                                          oversample_h: 1,
