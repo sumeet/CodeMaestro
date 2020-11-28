@@ -543,7 +543,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 self.ui_toolkit
                     .draw_all_on_same_line(&[
                         &|| self.draw_operation_label("Unwrap operation"),
-                        &|| self.ui_toolkit.draw_text("from"),
+                        &|| self.ui_toolkit.draw_text("out of"),
                         &|| self.render_code(code_node_being_unwrapped)
                     ])
             }

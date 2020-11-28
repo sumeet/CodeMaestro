@@ -1727,7 +1727,7 @@ pub fn get_type_from_list(mut typ: lang::Type) -> Option<lang::Type> {
         return None;
     }
     if typ.params.len() != 1 {
-        return None;
+        panic!("this is a problem, list type contained more than one param")
     }
     Some(typ.params.remove(0))
 }

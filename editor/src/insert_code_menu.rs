@@ -188,57 +188,34 @@ impl InsertCodeMenu {
             | InsertionPoint::BeginningOfBlock(_) => self.new_params(None),
             InsertionPoint::StructLiteralField(field_id) => {
                 let node = code_genie.find_node(field_id).unwrap();
-                let exact_type = code_genie.guess_type(node, env_genie).unwrap();
-                self.new_params(Some(exact_type))
+                self.new_params(figure_out_return_typ_for_insertion(node, location, env_genie,
+                                                                    code_genie))
             }
             InsertionPoint::Replace(node_id_to_replace) => {
                 let node = code_genie.find_node(node_id_to_replace).unwrap();
-                let exact_type = code_genie.guess_type(node, env_genie).unwrap();
-                let ts = env_genie.find_typespec(exact_type.typespec_id).unwrap();
-                if lang::is_generic(ts.as_ref()) {
-                    return self.new_params(None);
-                }
-                match code_genie.find_parent(node.id()) {
-                    Some(lang::CodeNode::Assignment(assignment))
-                        if !code_genie.any_variable_referencing_assignment(assignment.id) =>
-                    {
-                        self.new_params(None)
-                    }
-                    Some(lang::CodeNode::EarlyReturn(_)) => {
-                        self.new_params(required_return_type(location, env_genie))
-                    }
-                    _ => self.new_params(Some(exact_type)),
-                }
+                self.new_params(figure_out_return_typ_for_insertion(node, location, env_genie,
+                                                                    code_genie))
             }
             InsertionPoint::Wrap(node_id_to_wrap) => {
                 let node = code_genie.find_node(node_id_to_wrap).unwrap();
                 let wrapped_node_type = code_genie.guess_type(node, env_genie).unwrap();
-                let exact_type = code_genie.guess_type(node, env_genie).unwrap();
-                let parent = code_genie.find_parent(node.id());
-                if let Some(lang::CodeNode::Assignment(assignment)) = &parent {
-                    // if we're replacing the value of an assignment statement, and that assignment
-                    // isn't being used anywhere, then we could change the type to anything. so don't
-                    // require a type when searching for nodes
-                    if !code_genie.any_variable_referencing_assignment(assignment.id) {
-                        return self.new_params(None).wraps_type(wrapped_node_type);
-                    }
-                }
-                // block expressions (TODO??: except unless they're the last method) can safely be
-                // replaced by any type because it's impossible for them to be referenced by anything
-                if code_genie.is_block_expression(node_id_to_wrap) {
-                    return self.new_params(None).wraps_type(wrapped_node_type);
-                }
-                self.new_params(Some(exact_type))
-                    .wraps_type(wrapped_node_type)
+                let return_typ =
+                    figure_out_return_typ_for_insertion(node, location, env_genie, code_genie);
+                self.new_params(return_typ).wraps_type(wrapped_node_type)
+            }
+            InsertionPoint::Unwrap(node_id_to_unwrap) => {
+                let node_to_unwrap = code_genie.find_node(node_id_to_unwrap).unwrap();
+                let return_typ = figure_out_return_typ_for_insertion(node_to_unwrap,
+                                                                     location,
+                                                                     env_genie,
+                                                                     code_genie);
+                self.new_params(return_typ).unwraps_code(node_id_to_unwrap)
             }
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
                 let list_literal = code_genie.find_node(list_literal_id).unwrap();
-                match list_literal {
-                    lang::CodeNode::ListLiteral(list_literal) => {
-                        self.new_params(Some(list_literal.element_type.clone()))
-                    }
-                    _ => panic!("should always be a list literal... ugh"),
-                }
+                let guessed_typ = code_genie.guess_type(list_literal, env_genie).unwrap();
+                let element_type = get_type_from_list(guessed_typ).unwrap();
+                self.new_params(Some(element_type))
             }
             InsertionPoint::Editing(_) => panic!("shouldn't have gotten here"),
         }
@@ -249,7 +226,39 @@ impl InsertCodeMenu {
         CodeSearchParams { input_str: self.input_str.clone(),
                            insertion_point: self.insertion_point,
                            return_type,
+                           unwraps_code_id: None,
                            wraps_type: None }
+    }
+}
+
+fn figure_out_return_typ_for_insertion(node: &lang::CodeNode,
+                                       location: CodeLocation,
+                                       env_genie: &EnvGenie,
+                                       code_genie: &CodeGenie)
+                                       -> Option<lang::Type> {
+    let exact_type = code_genie.guess_type(node, env_genie).unwrap();
+    if env_genie.is_generic(exact_type.typespec_id) {
+        return None;
+    }
+
+    // TODO: will probably need to see if this is the last expression of the block, and in that case
+    // use the required return type
+    //
+    // the previous comment, and oldie, but a goodie:
+    // block expressions (TODO??: except unless they're the last method) can safely be
+    // replaced by any type because it's impossible for them to be referenced by anything
+    if code_genie.is_block_expression(node.id()) {
+        return None;
+    }
+
+    match code_genie.find_parent(node.id()) {
+        Some(lang::CodeNode::Assignment(assignment))
+            if !code_genie.any_variable_referencing_assignment(assignment.id) =>
+        {
+            None
+        }
+        Some(lang::CodeNode::EarlyReturn(_)) => required_return_type(location, env_genie),
+        _ => Some(exact_type),
     }
 }
 
@@ -258,6 +267,7 @@ impl InsertCodeMenu {
 pub struct CodeSearchParams {
     pub return_type: Option<lang::Type>,
     pub wraps_type: Option<lang::Type>,
+    pub unwraps_code_id: Option<lang::ID>,
     input_str: String,
     insertion_point: InsertionPoint,
 }
@@ -270,6 +280,11 @@ impl CodeSearchParams {
             // if there's no return type being searched for, then we match everything
             true
         }
+    }
+
+    pub fn unwraps_code(mut self, id: lang::ID) -> Self {
+        self.unwraps_code_id = Some(id);
+        self
     }
 
     pub fn wraps_type(mut self, typ: lang::Type) -> Self {
@@ -471,7 +486,7 @@ fn assignment_search_position(insertion_point: InsertionPoint) -> (lang::ID, boo
         InsertionPoint::Editing(id) => (id, false),
         InsertionPoint::Replace(id) => (id, false),
         InsertionPoint::ListLiteralElement { list_literal_id, .. } => (list_literal_id, false),
-        InsertionPoint::Wrap(id) => (id, false),
+        InsertionPoint::Wrap(id) | InsertionPoint::Unwrap(id) => (id, false),
     }
 }
 
@@ -1172,9 +1187,9 @@ pub fn is_inserting_inside_block(insertion_point: InsertionPoint, code_genie: &C
         InsertionPoint::BeginningOfBlock(_)
         | InsertionPoint::Before(_)
         | InsertionPoint::After(_) => true,
-        InsertionPoint::Replace(node_id) | InsertionPoint::Wrap(node_id) => {
-            code_genie.is_block_expression(node_id)
-        }
+        InsertionPoint::Replace(node_id)
+        | InsertionPoint::Wrap(node_id)
+        | InsertionPoint::Unwrap(node_id) => code_genie.is_block_expression(node_id),
         InsertionPoint::StructLiteralField(_)
         | InsertionPoint::Editing(_)
         | InsertionPoint::ListLiteralElement { .. } => false,
