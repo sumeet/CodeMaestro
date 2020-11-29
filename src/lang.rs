@@ -259,7 +259,6 @@ impl AnonymousFunction {
 }
 
 pub fn arg_typ_for_anon_func(mut anon_func_typ: Type) -> Type {
-    println!("trying to pull anon func arg type for {:?}", anon_func_typ);
     anon_func_typ.params.remove(0)
 }
 
