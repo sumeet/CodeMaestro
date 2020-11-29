@@ -63,22 +63,28 @@ fn find_anon_func_args_for<'a>(search_position: SearchPosition,
                                code_genie: &'a CodeGenie,
                                env_genie: &'a EnvGenie)
                                -> impl Iterator<Item = Variable> + 'a {
-    code_genie.find_anon_func_parents(search_position.before_code_id)
-              .map(move |anon_func| {
-                  let arg = &anon_func.as_anon_func().unwrap().takes_arg;
-                  let anon_func_typ = code_genie.guess_type_without_resolving_generics(anon_func,
-                                                                                       env_genie)
-                                                .unwrap();
-                  // println!("arg name: {:?}", arg.short_name);
-                  // println!("guessed typ for anon_func: {:?}", anon_func_typ);
-                  // println!("variable typ: {:?}", anon_func_typ.params[0]);
-                  Variable { variable_type:
+    println!("findind anon func parents");
+    let p = code_genie.find_anon_func_parents(search_position.before_code_id)
+                      .map(move |anon_func| {
+                          let arg = &anon_func.as_anon_func().unwrap().takes_arg;
+                          println!("guessing type without resolving for {:?}", anon_func);
+                          let anon_func_typ =
+                              code_genie.guess_type_without_resolving_generics(anon_func,
+                                                                               env_genie)
+                                        .unwrap();
+                          // println!("arg name: {:?}", arg.short_name);
+                          // println!("guessed typ for anon_func: {:?}", anon_func_typ);
+                          // println!("variable typ: {:?}", anon_func_typ.params[0]);
+                          Variable { variable_type:
                                  VariableAntecedent::AnonFuncArgument { anonymous_function_id:
                                                                             anon_func.id() },
                              locals_id: arg.id,
                              typ: arg_typ_for_anon_func(anon_func_typ),
                              name: arg.short_name.clone() }
-              })
+                      })
+                      .collect::<Vec<_>>();
+    println!("done finding anon func parents");
+    p.into_iter()
 }
 
 #[derive(Copy, Clone)]
@@ -109,7 +115,9 @@ pub fn find_all_locals_preceding_with_resolving_generics<'a>(
     env_genie: &'a EnvGenie)
     -> impl Iterator<Item = Variable> + 'a {
     find_all_locals_preceding_without_resolving_generics(search_position, code_genie, env_genie).map(move |mut var| {
+        println!("found a generic: {:?}", var);
         var.typ = resolve_generics(&var, code_genie, env_genie);
+        println!("done with generic: {:?}", var);
         var
     })
 }

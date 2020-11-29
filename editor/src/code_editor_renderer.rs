@@ -584,9 +584,12 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                option: &'a InsertCodeMenuOption,
                                insertion_point: InsertionPoint)
                                -> T::DrawResult {
+        println!("rendering insertion option {:?}: {:?} to {:?}",
+                 scroll_hash, option, insertion_point);
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let new_code_node = option.new_node.clone();
 
+        println!("a");
         let draw = move || {
             let new_code_node = new_code_node.clone();
             let cmdb = cmd_buffer.clone();
@@ -596,11 +599,26 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                       match &self.help_text(&option.new_node) {
                           Some(help_text) if !help_text.is_empty() => {
                               self.ui_toolkit.draw_all(&[
-                                    &|| self.render_code_for_insertion_menu_preview(option.new_node.clone(), insertion_point),
-                                    &|| self.ui_toolkit.draw_wrapped_text(darken(colorscheme!(text_color)), &help_text),
+                                    &|| {
+                                        println!("e");
+                                        let x = self.render_code_for_insertion_menu_preview(option.new_node.clone(), insertion_point);
+                                        println!("f");
+                                        x
+                                    },
+                                    &|| {
+                                        println!("g");
+                                        let x= self.ui_toolkit.draw_wrapped_text(darken(colorscheme!(text_color)), &help_text);
+                                        println!("h");
+                                        x
+                                    },
                               ])
                           }
-                          _ => self.render_code_for_insertion_menu_preview(option.new_node.clone(), insertion_point),
+                          _ => {
+                              println!("i");
+                              let x = self.render_code_for_insertion_menu_preview(option.new_node.clone(), insertion_point);
+                              println!("j");
+                              x
+                          },
                       }
                   })
                                       },
@@ -615,9 +633,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             )
         };
         if option.is_selected {
+            println!("b");
             self.draw_selected(scroll_hash, &draw)
         } else {
-            draw()
+            println!("c");
+            let x = draw();
+            println!("d");
+            x
         }
     }
 
@@ -632,7 +654,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                    &new_editor,
                                                    command_buffer_that_does_nothing,
                                                    self.env_genie);
-        new_renderer.render_code(&new_node)
+        println!("k, rendering: {:?}", new_node);
+        let x = new_renderer.render_code(&new_node);
+        println!("l");
+        x
     }
 
     fn insertion_option_menu_hash(&self,
@@ -802,10 +827,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
+        println!("m");
+
         // TODO: lots of is_rendering_menu_atm() checks... how can we clean it up?
         if self.is_editing(code_node.id()) && !self.is_rendering_menu_atm() {
             return self.draw_inline_editor(code_node);
         }
+
+        println!("n");
 
         match self.insertion_point() {
             Some(InsertionPoint::Replace(id))
@@ -818,7 +847,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             _ => {}
         }
 
+        println!("o");
+
         let draw = || {
+            println!("t: {:?}", code_node);
             match code_node {
                 CodeNode::FunctionCall(function_call) => self.render_function_call(&function_call),
                 CodeNode::StringLiteral(string_literal) => {
@@ -834,7 +866,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 }
                 CodeNode::Block(block) => self.render_block(&block),
                 CodeNode::VariableReference(variable_reference) => {
-                    self.render_variable_reference(&variable_reference)
+                    println!("u");
+                    let x = self.render_variable_reference(&variable_reference);
+                    println!("v");
+                    x
                 }
                 CodeNode::FunctionReference(function_reference) => {
                     self.render_function_reference(&function_reference)
@@ -872,7 +907,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             }
         };
 
+        println!("p");
+
         let draw = || self.render_context_menu(code_node, &draw);
+
+        println!("q");
 
         let draw_fn = &|| {
             if self.is_part_of_selection(code_node.id()) {
@@ -887,7 +926,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         //     .draw_all_on_same_line(&[draw_fn, &|| {
         //                                self.ui_toolkit.draw_text(&format!("{:?}", code_node.id()))
         //                            }])
-        draw_fn()
+        println!("r");
+        let x = draw_fn();
+        println!("s");
+        x
     }
 
     pub fn render_try(&self, trai: &lang::Try) -> T::DrawResult {
@@ -1155,14 +1197,21 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  variable_reference: &lang::VariableReference)
                                  -> T::DrawResult {
         let draw = &|| {
+            println!("about to look up name and type");
             if let Some((name, typ)) = self.lookup_variable_name_and_type(variable_reference) {
-                self.render_name_with_type_definition(&name, colorscheme!(variable_color), &typ)
+                println!("m");
+                let x = self.render_name_with_type_definition(&name,
+                                                              colorscheme!(variable_color),
+                                                              &typ);
+                println!("n");
+                x
             } else {
                 self.draw_button("Variable reference not found",
                                  colorscheme!(danger_color),
                                  &|| {})
             }
         };
+        println!("about to do code handle");
         self.code_handle(draw, variable_reference.id)
     }
 
@@ -1213,8 +1262,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn lookup_variable_name_and_type(&self,
                                      variable_reference: &lang::VariableReference)
                                      -> Option<(String, lang::Type)> {
+        println!("with resolving generics");
         let var = find_all_locals_preceding_with_resolving_generics(SearchPosition::not_inclusive(variable_reference.id),
             &self.code_editor.code_genie, self.env_genie).find(|var| var.locals_id == variable_reference.assignment_id)?;
+        println!("done resolving generics");
         Some((var.name, var.typ))
     }
 

@@ -798,7 +798,7 @@ impl CodeGenie {
         let mut should_try_to_resolve_generics = true;
         while should_try_to_resolve_generics {
             let outer_typ = typ.clone();
-            for path in paths_to_generics(&typ, env_genie) {
+            for path in dbg!(paths_to_generics(&typ, env_genie)) {
                 {
                     let generic_typ = typ.get_param_using_path_mut(&path);
                     *generic_typ =
@@ -810,6 +810,7 @@ impl CodeGenie {
                 should_try_to_resolve_generics = false;
             }
         }
+        println!("resolved and done");
         typ
     }
 
@@ -846,11 +847,16 @@ impl CodeGenie {
                 if block.expressions.len() > 0 {
                     let last_expression_in_block = &block.expressions[block.expressions.len() - 1];
                     if last_expression_in_block.as_variable_reference().is_some() {
-                        // XXX: this is terrible, we return null here. figure out how to infer this position
-                        // properly BIG HAX
                         // this might save me
                         return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
                     }
+                    println!("last expression in block is: {:?}",
+                             last_expression_in_block);
+                    let x = self.guess_type_without_resolving_generics(last_expression_in_block,
+                                                                       env_genie);
+                    println!("returned type guess for expression in block: {:?} (didn't think we actually got here)",
+                             last_expression_in_block);
+                    x
                 } else {
                     // TODO: this should probably be a generic, or ANY instead of Null... shoudl really
                     // be using type inference here
@@ -940,8 +946,10 @@ impl CodeGenie {
                 //                panic!(format!("couldn't extract list element from {:?}", list_typ))
             }
             CodeNode::AnonymousFunction(anon_func) => {
+                println!("i think it's getting stuck here");
                 let guessed_typ_from_anon_func_block =
                     self.guess_type_without_resolving_generics(&anon_func.block, env_genie);
+                println!("i think it got stuck here");
                 Ok(typ_for_anonymous_function(anon_func.takes_arg.arg_type.clone(),
                                               guessed_typ_from_anon_func_block?))
                 // self.guess_type_without_resolving_generics(&anon_func.block, env_genie)
@@ -1020,7 +1028,10 @@ impl CodeGenie {
                                       node_id: lang::ID)
                                       -> impl Iterator<Item = &'a lang::CodeNode> + 'a {
         self.all_parents_of(node_id)
+            // XXX: this used to find all parents, but now only finds the most immediate one
+            // shouldn't go too far up the stack
             .filter(|code| code.as_anon_func().is_ok())
+        // .into_iter()
     }
 
     #[allow(unused)]
