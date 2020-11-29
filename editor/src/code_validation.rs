@@ -6,8 +6,8 @@ use cs::env_genie;
 use cs::lang;
 use cs::lang::Function;
 
+use crate::code_editor::locals::{find_all_locals_preceding, SearchPosition};
 use crate::code_editor::{required_return_type, CodeLocation};
-use crate::insert_code_menu::{find_all_locals_preceding, SearchPosition};
 use cs::env_genie::EnvGenie;
 use gen_iter::GenIter;
 use std::iter::once;

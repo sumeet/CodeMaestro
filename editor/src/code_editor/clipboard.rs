@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::code_editor::find_assignment_ids_referenced_in_codes;
-use crate::insert_code_menu::Variable;
+use crate::code_editor::locals::Variable;
 use std::collections::HashMap;
 use std::sync::Mutex;
 

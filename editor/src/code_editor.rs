@@ -13,7 +13,6 @@ use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
 use crate::code_generation;
 use crate::editor::Controller;
-use crate::insert_code_menu::{find_all_locals_preceding, SearchPosition};
 use cs::builtins::{
     get_ok_type_from_result_type, get_some_type_from_option_type, new_result,
     new_result_with_null_error,
@@ -26,9 +25,11 @@ use cs::lang;
 use cs::lang::{typ_for_anonymous_function, CodeNode, Function};
 use cs::{builtins, env};
 use lazy_static::lazy_static;
+use locals::{find_all_locals_preceding, SearchPosition};
 use objekt::private::collections::HashSet;
 
 mod clipboard;
+pub(crate) mod locals;
 
 #[derive(Clone)]
 pub struct CodeEditor {
