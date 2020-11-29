@@ -11,6 +11,7 @@ use super::editor;
 use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
+use crate::code_editor::locals::find_all_locals_preceding_without_resolving_generics;
 use crate::code_generation;
 use crate::editor::Controller;
 use cs::builtins::{
@@ -25,7 +26,7 @@ use cs::lang;
 use cs::lang::{typ_for_anonymous_function, CodeNode, Function};
 use cs::{builtins, env};
 use lazy_static::lazy_static;
-use locals::{find_all_locals_preceding, SearchPosition};
+use locals::{find_all_locals_preceding_with_resolving_generics, SearchPosition};
 use objekt::private::collections::HashSet;
 
 mod clipboard;
@@ -578,8 +579,9 @@ impl CodeEditor {
                              is_search_inclusive: false };
         // TODO: this could be pruned down to locals that are referenced in the code
         let env_genie = EnvGenie::new(&env);
-        let preceding_locals =
-            find_all_locals_preceding(search_position, &self.code_genie, &env_genie);
+        let preceding_locals = find_all_locals_preceding_with_resolving_generics(search_position,
+                                                                                 &self.code_genie,
+                                                                                 &env_genie);
         let copied_codes = self.selected_node_ids
                                .iter()
                                .map(|node_id| self.code_genie.find_node(*node_id).unwrap())
@@ -784,23 +786,19 @@ impl CodeGenie {
             .filter(move |vr| vr.assignment_id == assignment_id)
     }
 
-    pub fn guess_type(&self,
-                      code_node: &lang::CodeNode,
-                      env_genie: &EnvGenie)
-                      -> Result<lang::Type, &'static str> {
-        let typ = self.guess_type_without_resolving_generics(code_node, env_genie);
-        if typ.is_err() {
-            return typ;
-        }
-
-        let mut typ = typ.unwrap();
+    pub fn try_to_resolve_all_generics(&self,
+                                       at_code_node: &lang::CodeNode,
+                                       mut typ: lang::Type,
+                                       env_genie: &EnvGenie)
+                                       -> lang::Type {
         let mut should_try_to_resolve_generics = true;
         while should_try_to_resolve_generics {
             'inner: for path in paths_to_generics(&typ, env_genie) {
                 let outer_typ = typ.clone();
                 {
                     let generic_typ = typ.get_param_using_path_mut(&path);
-                    *generic_typ = self.try_to_resolve_generic(code_node, &generic_typ, env_genie);
+                    *generic_typ =
+                        self.try_to_resolve_generic(at_code_node, &generic_typ, env_genie);
                 }
                 if outer_typ != typ {
                     // if the type is changed, then let's start the search for generics again from the beginning
@@ -810,8 +808,15 @@ impl CodeGenie {
             // if we got all the way here, then there's no way anything changed, let's stop looking
             should_try_to_resolve_generics = false;
         }
+        typ
+    }
 
-        Ok(typ)
+    pub fn guess_type(&self,
+                      code_node: &lang::CodeNode,
+                      env_genie: &EnvGenie)
+                      -> Result<lang::Type, &'static str> {
+        let typ = self.guess_type_without_resolving_generics(code_node, env_genie);
+        Ok(self.try_to_resolve_all_generics(code_node, typ?, env_genie))
     }
 
     fn guess_type_without_resolving_generics(&self,
@@ -848,9 +853,9 @@ impl CodeGenie {
             CodeNode::VariableReference(vr) => {
                 // TODO: seems like find_all_locals_preceeding calls into guess_type which resolves generics, but we're not suppoed to be doing that here...
                 // seems fishy
-                Ok(find_all_locals_preceding(SearchPosition::not_inclusive(vr.id),
-                                                     self,
-                                                     env_genie).find(|var| {
+                Ok(find_all_locals_preceding_without_resolving_generics(SearchPosition::not_inclusive(vr.id),
+                                                                     self,
+                                                                     env_genie).find(|var| {
                                                                    var.locals_id == vr.assignment_id
                                                                })
                                                                .unwrap()
@@ -1011,6 +1016,7 @@ impl CodeGenie {
             .filter(|code| code.as_anon_func().is_ok())
     }
 
+    #[allow(unused)]
     pub fn find_enum_variant_preceding_by_assignment_id<'a>(&'a self,
                                                             behind_id: lang::ID,
                                                             assignment_id: lang::ID,

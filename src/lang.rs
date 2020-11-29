@@ -258,6 +258,11 @@ impl AnonymousFunction {
     }
 }
 
+pub fn arg_typ_for_anon_func(mut anon_func_typ: Type) -> Type {
+    println!("trying to pull anon func arg type for {:?}", anon_func_typ);
+    anon_func_typ.params.remove(0)
+}
+
 pub fn typ_for_anonymous_function(argument_typ: Type, return_typ: Type) -> Type {
     Type::with_params(&*ANON_FUNC_TYPESPEC, vec![argument_typ, return_typ])
 }

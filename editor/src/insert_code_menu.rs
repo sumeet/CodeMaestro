@@ -8,7 +8,6 @@ use cs::{enums, lang};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
-use serde_derive::{Deserialize, Serialize};
 
 use crate::code_editor::{
     get_result_type_from_indexing_into_list, get_type_from_list, locals, required_return_type,
@@ -510,9 +509,9 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             return vec![];
         }
 
-        let variables = locals::find_all_locals_preceding(search_params.insertion_point.into(),
-                                                          code_genie,
-                                                          env_genie).filter(|variable| {
+        let variables = locals::find_all_locals_preceding_with_resolving_generics(search_params.insertion_point.into(),
+                                                                                  code_genie,
+                                                                                  env_genie).filter(|variable| {
                             search_params.search_matches_type(&variable.typ, env_genie)
                             && search_params.search_matches_identifier(&variable.name)
                         });
@@ -845,9 +844,10 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         //            return vec![];
         //        }
 
-        locals::find_all_locals_preceding(search_params.insertion_point.into(),
-                                          code_genie,
-                                          env_genie).filter_map(|variable| {
+        locals::find_all_locals_preceding_with_resolving_generics(search_params.insertion_point
+                                                                               .into(),
+                                                                  code_genie,
+                                                                  env_genie).filter_map(|variable| {
             self.new_option_if_enum(env_genie, &variable.typ, || {
                     code_generation::new_variable_reference(variable.locals_id)
                 })
@@ -982,9 +982,9 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
             return vec![];
         }
 
-        let optionss = locals::find_all_locals_preceding(search_params.insertion_point.into(),
-                                                         code_genie,
-                                                         env_genie).filter_map(|variable| {
+        let optionss = locals::find_all_locals_preceding_with_resolving_generics(search_params.insertion_point.into(),
+                                                                                 code_genie,
+                                                                                 env_genie).filter_map(|variable| {
                            let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
 
                            Some(strukt.fields.iter().filter_map(move |struct_field| {
@@ -1024,7 +1024,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        locals::find_all_locals_preceding(
+        locals::find_all_locals_preceding_with_resolving_generics(
             search_params.insertion_point.into(), code_genie, env_genie)
             .filter_map(|variable| {
                 let list_elem_result_typ = get_result_type_from_indexing_into_list(variable.typ.clone())?;
