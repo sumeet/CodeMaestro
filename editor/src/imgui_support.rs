@@ -109,18 +109,18 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
                     oversample_h: 1,
                     ..FontConfig::default() },
         ) },
-         FontSource::TtfData { data: include_bytes!("../../fonts/fontcustom.ttf"),
-                               size_pixels: font_size,
-                               config: Some(FontConfig { glyph_offset:
-                                                             [0.0, custom_icon_y_offset],
-                                                         rasterizer_multiply: 1.75,
-                                                         glyph_ranges:
-                                                             FontGlyphRanges::from_slice(&[0xf100,
-                                                                                           0xf104, // the range for custom fonts, small because it's only the ones we use
-                                                                                           0]),
-                                                         pixel_snap_h: true,
-                                                         oversample_h: 1,
-                                                         ..FontConfig::default() }) },
+         // FontSource::TtfData { data: include_bytes!("../../fonts/fontcustom.ttf"),
+         //                       size_pixels: font_size,
+         //                       config: Some(FontConfig { glyph_offset:
+         //                                                     [0.0, custom_icon_y_offset],
+         //                                                 rasterizer_multiply: 1.75,
+         //                                                 glyph_ranges:
+         //                                                     FontGlyphRanges::from_slice(&[0xf100,
+         //                                                                                   0xf104, // the range for custom fonts, small because it's only the ones we use
+         //                                                                                   0]),
+         //                                                 pixel_snap_h: true,
+         //                                                 oversample_h: 1,
+         //                                                 ..FontConfig::default() }) },
          FontSource::TtfData { data: include_bytes!("../../fonts/NanumGothic.ttf"),
                                size_pixels: font_size,
                                config: Some(FontConfig { rasterizer_multiply: 1.75,

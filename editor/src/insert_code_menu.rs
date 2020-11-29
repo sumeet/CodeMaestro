@@ -31,6 +31,7 @@ lazy_static! {
         Box::new(InsertFunctionOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
         Box::new(InsertWhileOptionGenerator {}),
+        Box::new(InsertForLoopOptionGenerator {}),
         Box::new(InsertMatchOptionGenerator {}),
         Box::new(InsertAssignmentOptionGenerator {}),
         Box::new(InsertReassignmentOptionGenerator {}),
@@ -809,6 +810,48 @@ impl InsertCodeMenuOptionGenerator for InsertWhileOptionGenerator {
         let mut options = vec![];
         let search_str = search_params.lowercased_trimmed_search_str();
         if "while".contains(&search_str) {
+            options.push(Self::generate_option())
+        }
+        options
+    }
+}
+
+#[derive(Clone)]
+struct InsertForLoopOptionGenerator {}
+
+impl InsertForLoopOptionGenerator {
+    fn generate_option() -> InsertCodeMenuOption {
+        InsertCodeMenuOption { sort_key: "for".to_string(),
+                               group_name: CONTROL_FLOW_GROUP,
+                               is_selected: false,
+                               new_node: lang::CodeNode::ForLoop(code_generation::new_for_loop()) }
+    }
+}
+
+impl InsertCodeMenuOptionGenerator for InsertForLoopOptionGenerator {
+    fn options(&self,
+               search_params: &CodeSearchParams,
+               code_genie: &CodeGenie,
+               _env_genie: &EnvGenie)
+               -> Vec<InsertCodeMenuOption> {
+        if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
+            return vec![];
+        }
+
+        if let Some(wraps_type) = search_params.wraps_type.as_ref() {
+            // if wrapping a boolean, then we should suggest creating a for loop.
+            //
+            // TODO: this needs to actually put the list expression inside...
+            return if wraps_type.matches_spec(&*lang::LIST_TYPESPEC) {
+                vec![Self::generate_option()]
+            // otherwise we shouldn't pop up in the suggestions
+            } else {
+                vec![]
+            };
+        }
+
+        let mut options = vec![];
+        if search_params.search_matches_identifier("while") {
             options.push(Self::generate_option())
         }
         options

@@ -164,6 +164,17 @@ pub fn new_block(inside_block: Vec<lang::CodeNode>) -> lang::Block {
     block
 }
 
+pub fn new_for_loop() -> lang::ForLoop {
+    lang::ForLoop { id: lang::new_id(),
+                    // really needs to be fixed
+                    variable_name: "for_var".to_string(),
+                    list_expression: Box::new(new_placeholder("List".into(), 
+                    lang::Type::from_spec_id(lang::LIST_TYPESPEC.id,
+                    vec![lang::Type::from_spec(&*lang::ANY_TYPESPEC)])
+                    )),
+                    body: Box::new(lang::CodeNode::Block(new_block(vec![]))) }
+}
+
 pub fn new_anon_func(takes_arg: lang::ArgumentDefinition, returns: lang::Type) -> lang::CodeNode {
     lang::CodeNode::AnonymousFunction(AnonymousFunction::new(takes_arg, returns))
 }

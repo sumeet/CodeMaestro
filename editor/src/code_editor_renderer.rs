@@ -1707,7 +1707,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_for_loop(&self, for_loop: &lang::ForLoop) -> T::DrawResult {
         self.render_control_flow("\u{f101}",
-                                 "For for_var in",
+                                 &format!("For {} in", for_loop.variable_name),
                                  for_loop.id,
                                  Some(&for_loop.list_expression),
                                  0,
