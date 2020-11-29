@@ -7,7 +7,7 @@ use cs::lang;
 use cs::lang::Function;
 
 use crate::code_editor::locals::{
-    find_all_locals_preceding_with_resolving_generics, SearchPosition,
+    find_all_locals_preceding_with_resolving_generics, LocalsSearchParams, SearchPosition,
 };
 use crate::code_editor::{required_return_type, CodeLocation};
 use cs::env_genie::EnvGenie;
@@ -237,9 +237,7 @@ impl<'a> FixableProblemFinder<'a> {
         var_refs.filter_map(move |var_ref| {
             let search_position = SearchPosition { before_code_id: var_ref.id,
                 is_search_inclusive: false };
-            if find_all_locals_preceding_with_resolving_generics(search_position, &code_genie, self.env_genie).find(|variable| {
-                variable.locals_id == var_ref.assignment_id
-            }).is_none() {
+            if find_all_locals_preceding_with_resolving_generics(search_position, LocalsSearchParams::LocalsID(var_ref.assignment_id), &code_genie, self.env_genie).next().is_none() {
                 let code_node = lang::CodeNode::VariableReference(var_ref.clone());
                 Some(FixableProblem::MissingVariableReference {
                     location,

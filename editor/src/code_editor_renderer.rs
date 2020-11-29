@@ -10,7 +10,7 @@ use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
 use crate::code_editor::locals::{
-    find_all_locals_preceding_with_resolving_generics, SearchPosition,
+    find_all_locals_preceding_with_resolving_generics, LocalsSearchParams, SearchPosition,
 };
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
@@ -1214,7 +1214,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                      variable_reference: &lang::VariableReference)
                                      -> Option<(String, lang::Type)> {
         let var = find_all_locals_preceding_with_resolving_generics(SearchPosition::not_inclusive(variable_reference.id),
-            &self.code_editor.code_genie, self.env_genie).find(|var| var.locals_id == variable_reference.assignment_id)?;
+            LocalsSearchParams::LocalsID(variable_reference.assignment_id),
+            &self.code_editor.code_genie, self.env_genie).next()?;
         Some((var.name, var.typ))
     }
 

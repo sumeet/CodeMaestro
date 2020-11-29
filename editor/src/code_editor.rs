@@ -11,7 +11,9 @@ use super::editor;
 use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
-use crate::code_editor::locals::find_all_locals_preceding_without_resolving_generics;
+use crate::code_editor::locals::{
+    find_all_locals_preceding_without_resolving_generics, LocalsSearchParams,
+};
 use crate::code_generation;
 use crate::editor::Controller;
 use cs::builtins::{
@@ -579,9 +581,11 @@ impl CodeEditor {
                              is_search_inclusive: false };
         // TODO: this could be pruned down to locals that are referenced in the code
         let env_genie = EnvGenie::new(&env);
-        let preceding_locals = find_all_locals_preceding_with_resolving_generics(search_position,
-                                                                                 &self.code_genie,
-                                                                                 &env_genie);
+        let preceding_locals =
+            find_all_locals_preceding_with_resolving_generics(search_position,
+                                                              LocalsSearchParams::NoFilter,
+                                                              &self.code_genie,
+                                                              &env_genie);
         let copied_codes = self.selected_node_ids
                                .iter()
                                .map(|node_id| self.code_genie.find_node(*node_id).unwrap())
@@ -862,6 +866,7 @@ impl CodeGenie {
                 // TODO: seems like find_all_locals_preceeding calls into guess_type which resolves generics, but we're not suppoed to be doing that here...
                 // seems fishy
                 Ok(find_all_locals_preceding_without_resolving_generics(SearchPosition::not_inclusive(vr.id),
+                                                                     LocalsSearchParams::LocalsID(vr.assignment_id),
                                                                      self,
                                                                      env_genie).find(|var| {
                                                                    var.locals_id == vr.assignment_id
