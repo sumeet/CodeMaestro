@@ -545,14 +545,19 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
 
 fn find_anon_func_args_for<'a>(search_position: SearchPosition,
                                code_genie: &'a CodeGenie,
-                               _env_genie: &'a EnvGenie)
+                               env_genie: &'a EnvGenie)
                                -> impl Iterator<Item = Variable> + 'a {
-    code_genie.find_anon_funcs_preceding(search_position.before_code_id)
-              .map(|anon_func| {
-                  let arg = &anon_func.takes_arg;
+    code_genie.find_anon_func_parents(search_position.before_code_id)
+              .map(move |anon_func| {
+                  let arg = &anon_func.as_anon_func().unwrap().takes_arg;
+                  let anon_func_typ = code_genie.guess_type(anon_func, env_genie).unwrap();
+                  println!("arg name: {:?}", arg.short_name);
+                  println!("guessed typ for anon_func: {:?}", anon_func_typ);
+                  println!("variable typ: {:?}", anon_func_typ.params[0]);
                   Variable { variable_type: VariableType::Argument,
                              locals_id: arg.id,
-                             typ: arg.arg_type.clone(),
+                             // TODO: clean up this magic number
+                             typ: anon_func_typ.params[0].clone(),
                              name: arg.short_name.clone() }
               })
 }
@@ -561,6 +566,13 @@ fn find_anon_func_args_for<'a>(search_position: SearchPosition,
 pub struct SearchPosition {
     pub before_code_id: lang::ID,
     pub is_search_inclusive: bool,
+}
+
+impl SearchPosition {
+    pub fn not_inclusive(before_id: lang::ID) -> Self {
+        Self { before_code_id: before_id,
+               is_search_inclusive: false }
+    }
 }
 
 impl From<InsertionPoint> for SearchPosition {

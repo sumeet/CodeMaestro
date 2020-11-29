@@ -845,25 +845,34 @@ impl CodeGenie {
                 }
             }
             CodeNode::VariableReference(vr) => {
-                if let Some(assignment) = self.find_node(vr.assignment_id) {
-                    self.guess_type_without_resolving_generics(assignment, env_genie)
-                } else {
-                    // couldn't find assignment with that variable name, looking for function args
-                    let typ = env_genie.get_type_for_arg(vr.assignment_id);
-                    if typ.is_some() {
-                        Ok(typ.unwrap())
-                    } else {
-                        let match_variant =
-                            self.find_enum_variant_preceding_by_assignment_id(vr.id,
-                                                                              vr.assignment_id,
-                                                                              env_genie);
-                        if match_variant.is_some() {
-                            Ok(match_variant.unwrap().typ)
-                        } else {
-                            Err("unable to guess type for variable by assignment ID")
-                        }
-                    }
-                }
+                // TODO: seems like find_all_locals_preceeding calls into guess_type which resolves generics, but we're not suppoed to be doing that here...
+                // seems fishy
+                Ok(find_all_locals_preceding(SearchPosition::not_inclusive(vr.id),
+                                                     self,
+                                                     env_genie).find(|var| {
+                                                                   var.locals_id == vr.assignment_id
+                                                               })
+                                                               .unwrap()
+                                                               .typ)
+                // if let Some(assignment) = self.find_node(vr.assignment_id) {
+                //     self.guess_type_without_resolving_generics(assignment, env_genie)
+                // } else {
+                //     // couldn't find assignment with that variable name, looking for function args
+                //     let typ = env_genie.get_type_for_arg(vr.assignment_id);
+                //     if typ.is_some() {
+                //         Ok(typ.unwrap())
+                //     } else {
+                //         let match_variant =
+                //             self.find_enum_variant_preceding_by_assignment_id(vr.id,
+                //                                                               vr.assignment_id,
+                //                                                               env_genie);
+                //         if match_variant.is_some() {
+                //             Ok(match_variant.unwrap().typ)
+                //         } else {
+                //             Err("unable to guess type for variable by assignment ID")
+                //         }
+                //     }
+                // }
             }
             CodeNode::FunctionReference(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::Argument(arg) => env_genie.get_type_for_arg(arg.argument_definition_id)
@@ -994,12 +1003,11 @@ impl CodeGenie {
         })
     }
 
-    pub fn find_anon_funcs_preceding<'a>(
-        &'a self,
-        node_id: lang::ID)
-        -> impl Iterator<Item = &'a lang::AnonymousFunction> + 'a {
+    pub fn find_anon_func_parents<'a>(&'a self,
+                                      node_id: lang::ID)
+                                      -> impl Iterator<Item = &'a lang::CodeNode> + 'a {
         self.all_parents_of(node_id)
-            .filter_map(|code| code.as_anon_func().ok())
+            .filter(|code| code.as_anon_func().is_ok())
     }
 
     pub fn find_enum_variant_preceding_by_assignment_id<'a>(&'a self,
