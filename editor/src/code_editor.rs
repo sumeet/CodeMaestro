@@ -851,6 +851,7 @@ impl CodeGenie {
                         // this might save me
                         return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
                     }
+                    self.guess_type_without_resolving_generics(last_expression_in_block, env_genie)
                 } else {
                     // TODO: this should probably be a generic, or ANY instead of Null... shoudl really
                     // be using type inference here
