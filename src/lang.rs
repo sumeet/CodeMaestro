@@ -22,7 +22,7 @@ lazy_static! {
         readable_name: "Null".to_string(),
         description: "Null: Represents nothing".into(),
         id: uuid::Uuid::parse_str(&"daa07233-b887-4512-b06e-d6a53d415213").unwrap(),
-        symbol: "\u{f192}".to_string(),
+        symbol: "\u{f656}".to_string(),
         num_params: 0,
     };
     pub static ref BOOLEAN_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {

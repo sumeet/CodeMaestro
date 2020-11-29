@@ -665,6 +665,10 @@ impl CodeGenie {
                     //     }
                     // }
                 }
+
+                // only go to the next parent function call... don't go up further, that's somebody
+                // else's business
+                break;
             }
         }
         typ_of_generic.clone()
@@ -841,7 +845,12 @@ impl CodeGenie {
             CodeNode::Block(block) => {
                 if block.expressions.len() > 0 {
                     let last_expression_in_block = &block.expressions[block.expressions.len() - 1];
-                    self.guess_type_without_resolving_generics(last_expression_in_block, env_genie)
+                    if last_expression_in_block.as_variable_reference().is_some() {
+                        // XXX: this is terrible, we return null here. figure out how to infer this position
+                        // properly BIG HAX
+                        // this might save me
+                        return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
+                    }
                 } else {
                     // TODO: this should probably be a generic, or ANY instead of Null... shoudl really
                     // be using type inference here
