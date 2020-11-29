@@ -12,7 +12,8 @@ use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
 use crate::code_editor::locals::{
-    find_all_locals_preceding_without_resolving_generics, LocalsSearchParams,
+    find_all_locals_preceding_without_resolving_generics, find_assignments_preceding,
+    LocalsSearchParams,
 };
 use crate::code_generation;
 use crate::editor::Controller;
@@ -627,13 +628,30 @@ impl CodeGenie {
         &self.code
     }
 
-    fn try_to_resolve_generic(&self,
-                              code_node: &lang::CodeNode,
-                              typ_of_generic: &lang::Type,
-                              // outer_type: &lang::Type,
-                              // path_to_generic: &[usize],
-                              env_genie: &EnvGenie)
-                              -> lang::Type {
+    fn try_to_resolve_generic<'a>(&'a self,
+                                  mut code_node: &'a lang::CodeNode,
+                                  typ_of_generic: &lang::Type,
+                                  // outer_type: &lang::Type,
+                                  // path_to_generic: &[usize],
+                                  env_genie: &EnvGenie)
+                                  -> lang::Type {
+        // TODO: not sure if this is actually used...
+        if let Some(variable_reference) = code_node.as_variable_reference() {
+            println!("trying to resolve generic for var ref {:?}",
+                     variable_reference);
+            if let Some(var) = find_assignments_preceding(SearchPosition::not_inclusive(variable_reference.assignment_id),
+                                       LocalsSearchParams::LocalsID(variable_reference.assignment_id),
+                self, env_genie).next() {
+                if let Some(found_assignment) = self.find_node(var.locals_id) {
+                    code_node = &found_assignment.as_assignment().unwrap().expression;
+                    println!("found assignment, and mutated: {:?}", code_node);
+                } else {
+                    println!("didn't found, so it's still: {:?}", code_node);
+                }
+            }
+        }
+        // TODO: do an audit of the part above and make sure it's being used ^^^^^
+
         for parent in self.all_parents_including_node(code_node.id()) {
             // if let CodeNode::Argument(arg) = parent {
             //     let func_call = self.find_parent(arg.id)

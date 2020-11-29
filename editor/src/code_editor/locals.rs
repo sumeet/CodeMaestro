@@ -26,9 +26,21 @@ pub fn resolve_generics(variable: &Variable,
                         env_genie: &EnvGenie)
                         -> lang::Type {
     match variable.variable_type {
+        // TODO: this is highly duped with stuff in try_to_resolve_generic
+        //
+        // i'm getting the feeling that this entire file shouldn't deal with types and instead the
+        // callers to this should make their own call to look up the types if they want to
         VariableAntecedent::Assignment { assignment_id } => {
-            let code_node = code_genie.find_node(assignment_id).unwrap();
-            code_genie.try_to_resolve_all_generics(code_node, variable.typ.clone(), env_genie)
+            let assignment = code_genie.find_node(assignment_id)
+                                       .unwrap()
+                                       .as_assignment()
+                                       .unwrap();
+            let guessed = code_genie.try_to_resolve_all_generics(&assignment.expression,
+                                                                 variable.typ.clone(),
+                                                                 env_genie);
+            println!("guessed type for {:?}-----\n\n{:?}\n----------",
+                     assignment.expression, guessed);
+            guessed
         }
         VariableAntecedent::AnonFuncArgument { anonymous_function_id, } => {
             let anon_func = code_genie.find_node(anonymous_function_id).unwrap();
