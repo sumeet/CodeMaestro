@@ -793,20 +793,18 @@ impl CodeGenie {
                                        -> lang::Type {
         let mut should_try_to_resolve_generics = true;
         while should_try_to_resolve_generics {
-            'inner: for path in paths_to_generics(&typ, env_genie) {
-                let outer_typ = typ.clone();
+            let outer_typ = typ.clone();
+            for path in paths_to_generics(&typ, env_genie) {
                 {
                     let generic_typ = typ.get_param_using_path_mut(&path);
                     *generic_typ =
                         self.try_to_resolve_generic(at_code_node, &generic_typ, env_genie);
                 }
-                if outer_typ != typ {
-                    // if the type is changed, then let's start the search for generics again from the beginning
-                    break 'inner;
-                }
             }
-            // if we got all the way here, then there's no way anything changed, let's stop looking
-            should_try_to_resolve_generics = false;
+            // if we got all the way here, and nothing changed there, let's stop looking
+            if outer_typ == typ {
+                should_try_to_resolve_generics = false;
+            }
         }
         typ
     }
