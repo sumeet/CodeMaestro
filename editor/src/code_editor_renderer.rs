@@ -9,6 +9,9 @@ use super::code_editor::InsertionPoint;
 use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
+use crate::code_editor::locals::{
+    find_all_locals_preceding_with_resolving_generics, SearchPosition,
+};
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
@@ -1210,40 +1213,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn lookup_variable_name_and_type(&self,
                                      variable_reference: &lang::VariableReference)
                                      -> Option<(String, lang::Type)> {
-        let assignment = self.code_editor
-                             .code_genie
-                             .find_node(variable_reference.assignment_id);
-        if let Some(CodeNode::Assignment(assignment)) = assignment {
-            return Some((assignment.name.clone(),
-                         self.code_editor
-                             .code_genie
-                             .guess_type(assignment.expression.as_ref(), self.env_genie)
-                             .unwrap()));
-        }
-        // TODO: this searches all functions, but we could be smarter here because we already know which
-        //       function we're inside
-        if let Some(arg) = self.env_genie
-                               .get_arg_definition(variable_reference.assignment_id)
-        {
-            return Some((arg.short_name, arg.arg_type));
-        }
-        // variables can also refer to enum variants
-        if let Some(match_variant) =
-            self.code_editor
-                .code_genie
-                .find_enum_variant_by_assignment_id(variable_reference.assignment_id,
-                                                    self.env_genie)
-        {
-            return Some((match_variant.enum_variant.name, match_variant.typ));
-        }
-
-        // anonymous function arguments
-        self.code_editor
-            .code_genie
-            .find_all_anon_funcs()
-            .map(|anon_func| &anon_func.takes_arg)
-            .find(|arg_def| arg_def.id == variable_reference.assignment_id)
-            .map(|arg_def| (arg_def.short_name.clone(), arg_def.arg_type.clone()))
+        let var = find_all_locals_preceding_with_resolving_generics(SearchPosition::not_inclusive(variable_reference.id),
+            &self.code_editor.code_genie, self.env_genie).find(|var| var.locals_id == variable_reference.assignment_id)?;
+        Some((var.name, var.typ))
     }
 
     // TODO: combine the insertion point stuff with the insertion point stuff elsewhere, mainly
