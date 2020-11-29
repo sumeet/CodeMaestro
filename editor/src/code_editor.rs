@@ -306,7 +306,8 @@ impl CodeEditor {
             | CodeNode::WhileLoop(_)
             | CodeNode::EnumVariantLiteral(_)
             | CodeNode::EarlyReturn(_)
-            | CodeNode::Try(_) => false,
+            | CodeNode::Try(_)
+            | CodeNode::ForLoop(_) => false,
         }
     }
 
@@ -335,7 +336,8 @@ impl CodeEditor {
             | CodeNode::WhileLoop(_)
             | CodeNode::EnumVariantLiteral(_)
             | CodeNode::EarlyReturn(_)
-            | CodeNode::Try(_) => unimplemented!(),
+            | CodeNode::Try(_)
+            | CodeNode::ForLoop(_) => unimplemented!(),
         }
     }
 
@@ -995,6 +997,7 @@ impl CodeGenie {
                     Err("invalid node inside of try")
                 }
             }
+            CodeNode::ForLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
         }
     }
 

@@ -189,6 +189,7 @@ pub enum CodeNode {
     StringLiteral(StringLiteral),
     NullLiteral(ID),
     Assignment(Assignment),
+    ForLoop(ForLoop),
     Reassignment(Reassignment),
     Block(Block),
     AnonymousFunction(AnonymousFunction),
@@ -712,6 +713,7 @@ impl CodeNode {
             CodeNode::EnumVariantLiteral(evl) => format!("Enum variant literal: {:?}", evl.id),
             CodeNode::EarlyReturn(early_return) => format!("Early return: {:?}", early_return.id),
             CodeNode::Try(trai) => format!("Try: {:?}", trai.id),
+            CodeNode::ForLoop(for_loop) => format!("For loop: {:?}", for_loop.id),
         }
     }
 
@@ -743,6 +745,7 @@ impl CodeNode {
             CodeNode::EnumVariantLiteral(evl) => evl.id,
             CodeNode::EarlyReturn(evl) => evl.id,
             CodeNode::Try(trai) => trai.id,
+            CodeNode::ForLoop(for_loop) => for_loop.id,
         }
     }
 
@@ -840,6 +843,10 @@ impl CodeNode {
             CodeNode::Try(trai) => {
                 Box::new(std::iter::once(trai.maybe_error_expr.as_ref()).chain(std::iter::once(trai.or_else_return_expr.as_ref())))
             }
+            CodeNode::ForLoop(for_loop) => {
+                Box::new(std::iter::once(for_loop.list_expression.as_ref())
+                    .chain(std::iter::once(for_loop.body.as_ref())))
+            }
         }
     }
 
@@ -902,6 +909,8 @@ impl CodeNode {
             CodeNode::EarlyReturn(early_return) => vec![early_return.code.borrow_mut()],
             CodeNode::Try(trai) => vec![trai.maybe_error_expr.borrow_mut(),
                                         trai.or_else_return_expr.borrow_mut()],
+            CodeNode::ForLoop(for_loop) => vec![for_loop.list_expression.borrow_mut(),
+                                                for_loop.body.borrow_mut(),],
         }
     }
 
@@ -1009,6 +1018,7 @@ impl FunctionCall {
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct Assignment {
+    // should there be a VariableName code node?
     pub name: String,
     // TODO: consider differentiating between CodeNodes and Expressions.
     pub expression: Box<CodeNode>,
@@ -1021,6 +1031,15 @@ pub struct Reassignment {
     pub assignment_id: ID,
     // TODO: consider differentiating between CodeNodes and Expressions.
     pub expression: Box<CodeNode>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct ForLoop {
+    pub id: ID,
+    // should there be a VariableName code node? would also be used in Assignment, and AnonymousFunction...
+    pub variable_name: String,
+    pub list_expression: Box<CodeNode>,
+    pub body: Box<CodeNode>,
 }
 
 impl Into<CodeNode> for Reassignment {

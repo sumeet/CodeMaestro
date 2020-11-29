@@ -300,6 +300,22 @@ impl Interpreter {
                     }
                 })
             }
+            CodeNode::ForLoop(for_loop) => {
+                let mut interp = self.clone();
+                Box::pin(async move {
+                    let list =
+                        await_eval_result!(interp.evaluate(&for_loop.list_expression)).into_vec()
+                                                                                      .unwrap();
+                    for v in list {
+                        interp.set_local_variable(for_loop.id, v);
+                        let result = await_eval_result!(interp.evaluate(&for_loop.body));
+                        if result.is_early_return() {
+                            return result;
+                        }
+                    }
+                    lang::Value::Null
+                })
+            }
         };
         let env = Rc::clone(&self.env);
         async move {

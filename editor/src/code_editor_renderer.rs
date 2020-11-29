@@ -788,6 +788,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::WhileLoop(_) => {
                 Some("Run code again and again until the condition is false".into())
             }
+            CodeNode::ForLoop(_) => {
+               Some("Do something with each element of the list".into()) 
+            }
             CodeNode::EnumVariantLiteral(evl) => {
                 let (eneom, variant) = self.env_genie.find_enum_variant(evl.variant_id).unwrap();
                 Some(format!("A variant of {}: {}", eneom.name, variant.name))
@@ -869,6 +872,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 }
                 CodeNode::EarlyReturn(early_return) => self.render_early_return(early_return),
                 CodeNode::Try(trai) => self.render_try(trai),
+                CodeNode::ForLoop(for_loop) => self.render_for_loop(for_loop),
             }
         };
 
@@ -998,7 +1002,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::ListIndex(_)
             | CodeNode::EnumVariantLiteral(_)
             | CodeNode::EarlyReturn(_)
-            | CodeNode::Try(_) => self.render_general_code_context_menu(draw_code_fn, code_node_id),
+            | CodeNode::Try(_)
+            | CodeNode::ForLoop(_) => {
+                self.render_general_code_context_menu(draw_code_fn, code_node_id)
+            }
             CodeNode::FunctionCall(_)
             | CodeNode::Block(_)
             | CodeNode::Argument(_)
@@ -1696,6 +1703,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                            .as_ref()
                                                                            .unwrap())
                                    }])
+    }
+
+    fn render_for_loop(&self, for_loop: &lang::ForLoop) -> T::DrawResult {
+        self.render_control_flow("\u{f101}",
+                                 "For for_var in",
+                                 for_loop.id,
+                                 Some(&for_loop.list_expression),
+                                 0,
+                                 &for_loop.body)
     }
 
     fn render_while_loop(&self, while_loop: &lang::WhileLoop) -> T::DrawResult {
