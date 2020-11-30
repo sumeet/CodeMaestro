@@ -17,18 +17,20 @@ enum VariableAntecedent {
     AnonFuncArgument {
         anonymous_function_id: lang::ID,
     },
-    Argument,
+    Argument {
+        argument_id: lang::ID,
+    },
     MatchVariant {
         match_statement_id: lang::ID,
         variant_id: lang::ID,
     },
 }
 
-pub fn resolve_generics(variable: &Variable,
-                        code_genie: &CodeGenie,
-                        env_genie: &EnvGenie)
-                        -> lang::Type {
-    match variable.variable_type {
+pub fn get_type_from_variable(antecedent: VariableAntecedent,
+                              code_genie: &CodeGenie,
+                              env_genie: &EnvGenie)
+                              -> &lang::Type {
+    match antecedent {
         // TODO: this is highly duped with stuff in try_to_resolve_generic
         //
         // i'm getting the feeling that this entire file shouldn't deal with types and instead the
@@ -75,7 +77,7 @@ pub fn resolve_generics(variable: &Variable,
                 code_genie.try_to_resolve_all_generics(anon_func, full_unresolved_typ, env_genie);
             arg_typ_for_anon_func(resolved_anon_func_typ)
         }
-        VariableAntecedent::Argument => {
+        VariableAntecedent::Argument { .. } => {
             // unhandled so far
             variable.typ.clone()
         }
@@ -91,7 +93,7 @@ pub fn resolve_generics(variable: &Variable,
 pub struct Variable {
     variable_type: VariableAntecedent,
     pub locals_id: lang::ID,
-    pub(crate) typ: lang::Type,
+    // pub(crate) typ: lang::Type,
     pub(crate) name: String,
 }
 
@@ -127,9 +129,9 @@ pub fn find_all_locals_preceding_with_resolving_generics<'a>(
                                                          locals_search_params,
                                                          code_genie,
                                                          env_genie).map(move |mut var| {
-        var.typ = resolve_generics(&var, code_genie, env_genie);
-        var
-    })
+                                                                       // var.typ = resolve_generics(&var, code_genie, env_genie);
+                                                                       var
+                                                                   })
 }
 
 pub fn find_all_locals_preceding_without_resolving_generics<'a>(
@@ -178,7 +180,7 @@ pub fn find_assignments_preceding<'a>(search_position: SearchPosition,
                                             env_genie);
                   Some(Variable { locals_id: assignment.id,
                              variable_type: VariableAntecedent::Assignment { assignment_id: assignment.id },
-                             typ: guessed_type.unwrap(),
+                             // typ: guessed_type.unwrap(),
                              name: assignment.name.clone() })
               })
 }
@@ -194,8 +196,9 @@ pub fn find_function_args_preceding<'a>(_search_position: SearchPosition,
                      return None;
                  }
                  Some(Variable { locals_id: arg.id,
-                                 variable_type: VariableAntecedent::Argument,
-                                 typ: arg.arg_type,
+                                 variable_type: VariableAntecedent::Argument { argument_id:
+                                                                                   arg.id },
+                                 // typ: arg.arg_type,
                                  name: arg.short_name })
              })
 }
@@ -218,7 +221,7 @@ fn find_enum_variants_preceding<'a>(search_position: SearchPosition,
                                                                     variant_id:
                                                                         match_variant.enum_variant
                                                                                      .id },
-                             typ: match_variant.typ,
+                             // typ: match_variant.typ,
                              name: match_variant.enum_variant.name })
               })
 }
@@ -244,7 +247,7 @@ fn find_anon_func_args_for<'a>(search_position: SearchPosition,
                       variable_type:
                                  VariableAntecedent::AnonFuncArgument { anonymous_function_id:
                                                                             anon_func.id() },
-                             typ: arg_typ_for_anon_func(anon_func_typ),
+                             // typ: arg_typ_for_anon_func(anon_func_typ),
                              name: arg.short_name.clone() })
               })
 }
@@ -274,7 +277,7 @@ pub fn find_for_loop_assignments_preceding<'a>(search_position: SearchPosition,
                   Some(Variable { variable_type: VariableAntecedent::ForLoop { for_loop_id:
                                                                                    for_loop.id },
                                   locals_id: for_loop.id,
-                                  typ,
+                                  // typ,
                                   name: for_loop.variable_name.clone() })
               })
 }
