@@ -1002,7 +1002,6 @@ impl InsertCodeMenuOptionGenerator for InsertReassignmentOptionGenerator {
                 var.name.contains(lowercased_trimmed_search_str)
             })
             .map(|var| {
-                let typ = locals::resolve_generics(&var, code_genie, env_genie);
                 InsertCodeMenuOption {
                     sort_key: format!("{}changevariable{}", sort_key_prefix, var.name),
                     new_node: code_generation::new_reassignment(var.locals_id,

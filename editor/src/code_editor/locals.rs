@@ -16,8 +16,9 @@ enum VariableAntecedent {
     },
     AnonFuncArgument {
         anonymous_function_id: lang::ID,
+        argument_id: lang::ID,
     },
-    Argument {
+    FunctionArgument {
         argument_id: lang::ID,
     },
     MatchVariant {
@@ -26,68 +27,135 @@ enum VariableAntecedent {
     },
 }
 
-pub fn get_type_from_variable(antecedent: VariableAntecedent,
-                              code_genie: &CodeGenie,
-                              env_genie: &EnvGenie)
-                              -> &lang::Type {
-    match antecedent {
-        // TODO: this is highly duped with stuff in try_to_resolve_generic
-        //
-        // i'm getting the feeling that this entire file shouldn't deal with types and instead the
-        // callers to this should make their own call to look up the types if they want to
-        VariableAntecedent::Assignment { assignment_id } => {
-            let assignment = code_genie.find_node(assignment_id)
-                                       .unwrap()
-                                       .as_assignment()
-                                       .unwrap();
-            let guessed = code_genie.try_to_resolve_all_generics(&assignment.expression,
-                                                                 variable.typ.clone(),
-                                                                 env_genie);
-            // println!("guessed type for {:?}-----\n\n{:?}\n----------",
-            //          assignment.expression, guessed);
-            guessed
-        }
-        // TODO: this is highly duped with stuff in try_to_resolve_generic
-        //
-        // i'm getting the feeling that this entire file shouldn't deal with types and instead the
-        // callers to this should make their own call to look up the types if they want to
-        VariableAntecedent::ForLoop { for_loop_id } => {
-            let for_loop = code_genie.find_node(for_loop_id)
-                                     .unwrap()
-                                     .as_for_loop()
-                                     .unwrap();
-            // println!("old type: {:?}", variable.typ);
-            let guessed =
-                code_genie.try_to_resolve_all_generics(&for_loop.list_expression,
-                                                       lang::Type::list_of(variable.typ.clone()),
-                                                       env_genie);
-            // println!("list_expression: {:?}", for_loop.list_expression);
-            // println!("guessed: {:?}", guessed);
-            get_type_from_list(guessed).unwrap()
-            // println!("guessed type for {:?}-----\n\n{:?}\n----------",
-            //          assignment.expression, guessed);
-            // guessed
-        }
-        VariableAntecedent::AnonFuncArgument { anonymous_function_id, } => {
-            let anon_func = code_genie.find_node(anonymous_function_id).unwrap();
-            let full_unresolved_typ = code_genie.guess_type_without_resolving_generics(anon_func,
-                                                                                       env_genie)
-                                                .unwrap();
-            let resolved_anon_func_typ =
-                code_genie.try_to_resolve_all_generics(anon_func, full_unresolved_typ, env_genie);
-            arg_typ_for_anon_func(resolved_anon_func_typ)
-        }
-        VariableAntecedent::Argument { .. } => {
-            // unhandled so far
-            variable.typ.clone()
-        }
-
-        VariableAntecedent::MatchVariant { .. } => {
-            // also unhandled
-            variable.typ.clone()
+impl VariableAntecedent {
+    fn assignment_id(&self) -> lang::ID {
+        match self {
+            VariableAntecedent::Assignment { assignment_id } => *assignment_id,
+            VariableAntecedent::ForLoop { for_loop_id } => *for_loop_id,
+            VariableAntecedent::AnonFuncArgument { argument_id, .. } => *argument_id,
+            VariableAntecedent::FunctionArgument { argument_id } => *argument_id,
+            VariableAntecedent::MatchVariant { match_statement_id,
+                                               variant_id, } => {
+                lang::Match::make_variable_id(*match_statement_id, *variant_id)
+            }
         }
     }
 }
+
+pub fn find_all_referencable_variables<'a>(search_position: SearchPosition,
+                                           code_genie: &'a CodeGenie,
+                                           env_genie: &'a EnvGenie)
+                                           -> impl Iterator<Item = VariableAntecedent> + 'a {
+    let assignments =
+        code_genie.find_assignments_that_come_before_code(search_position.before_code_id,
+                                                          search_position.is_search_inclusive)
+                  .map(|assignment| VariableAntecedent::Assignment { assignment_id:
+                                                                         assignment.id });
+    let func_args = env_genie.code_takes_args(code_genie.root().id())
+                             .map(|argument_definition| {
+                                 VariableAntecedent::FunctionArgument { argument_id:
+                                                                            argument_definition.id }
+                             });
+    let anon_func_args =
+        code_genie.find_anon_func_parents(search_position.before_code_id)
+                  .map(|anon_func| {
+                      let anon_func = anon_func.as_anon_func().unwrap();
+                      // TODO: anon funcs will later take more than one arg... of course
+                      let anon_func_arg = &anon_func.takes_arg;
+                      VariableAntecedent::AnonFuncArgument { anonymous_function_id: anon_func.id,
+                                                             argument_id: anon_func_arg.id }
+                  });
+
+    let match_statement_variants =
+        code_genie.find_enum_variants_preceding_iter(search_position.before_code_id)
+                  .map(|(match_id, variant_id)| {
+                      VariableAntecedent::MatchVariant { match_statement_id: match_id,
+                                                         variant_id }
+                  });
+
+    let for_loop_variables =
+        code_genie.find_for_loops_scopes_preceding(search_position.before_code_id)
+                  .map(|for_loop| VariableAntecedent::ForLoop { for_loop_id: for_loop.id() });
+
+    assignments.chain(func_args)
+               .chain(anon_func_args)
+               .chain(match_statement_variants)
+               .chain(for_loop_variables)
+}
+
+pub fn find_antecedent_for_variable_reference(vr: &lang::VariableReference,
+                                              is_inclusive: bool,
+                                              code_genie: &CodeGenie,
+                                              env_genie: &EnvGenie)
+                                              -> Option<VariableAntecedent> {
+    find_all_referencable_variables(SearchPosition { before_code_id: vr.assignment_id,
+                                                     is_search_inclusive: is_inclusive },
+                                    code_genie,
+                                    env_genie).find(|antecedent| {
+                                                  antecedent.assignment_id() == vr.assignment_id
+                                              })
+}
+
+// pub fn get_type_from_variable(antecedent: VariableAntecedent,
+//                               code_genie: &CodeGenie,
+//                               env_genie: &EnvGenie)
+//                               -> &lang::Type {
+//     match antecedent {
+//         // TODO: this is highly duped with stuff in try_to_resolve_generic
+//         //
+//         // i'm getting the feeling that this entire file shouldn't deal with types and instead the
+//         // callers to this should make their own call to look up the types if they want to
+//         VariableAntecedent::Assignment { assignment_id } => {
+//             let assignment = code_genie.find_node(assignment_id)
+//                                        .unwrap()
+//                                        .as_assignment()
+//                                        .unwrap();
+//             let guessed = code_genie.try_to_resolve_all_generics(&assignment.expression,
+//                                                                  variable.typ.clone(),
+//                                                                  env_genie);
+//             // println!("guessed type for {:?}-----\n\n{:?}\n----------",
+//             //          assignment.expression, guessed);
+//             guessed
+//         }
+//         // TODO: this is highly duped with stuff in try_to_resolve_generic
+//         //
+//         // i'm getting the feeling that this entire file shouldn't deal with types and instead the
+//         // callers to this should make their own call to look up the types if they want to
+//         VariableAntecedent::ForLoop { for_loop_id } => {
+//             let for_loop = code_genie.find_node(for_loop_id)
+//                                      .unwrap()
+//                                      .as_for_loop()
+//                                      .unwrap();
+//             // println!("old type: {:?}", variable.typ);
+//             let guessed =
+//                 code_genie.try_to_resolve_all_generics(&for_loop.list_expression,
+//                                                        lang::Type::list_of(variable.typ.clone()),
+//                                                        env_genie);
+//             // println!("list_expression: {:?}", for_loop.list_expression);
+//             // println!("guessed: {:?}", guessed);
+//             get_type_from_list(guessed).unwrap()
+//             // println!("guessed type for {:?}-----\n\n{:?}\n----------",
+//             //          assignment.expression, guessed);
+//             // guessed
+//         }
+//         VariableAntecedent::AnonFuncArgument { anonymous_function_id, } => {
+//             let anon_func = code_genie.find_node(anonymous_function_id).unwrap();
+//             let full_unresolved_typ = code_genie.guess_type(anon_func, env_genie).unwrap();
+//             let resolved_anon_func_typ =
+//                 code_genie.try_to_resolve_all_generics(anon_func, full_unresolved_typ, env_genie);
+//             arg_typ_for_anon_func(resolved_anon_func_typ)
+//         }
+//         VariableAntecedent::Argument { .. } => {
+//             // unhandled so far
+//             variable.typ.clone()
+//         }
+//
+//         VariableAntecedent::MatchVariant { .. } => {
+//             // also unhandled
+//             variable.typ.clone()
+//         }
+//     }
+// }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Variable {
@@ -172,16 +240,18 @@ pub fn find_assignments_preceding<'a>(search_position: SearchPosition,
               .into_iter()
               .filter_map(move |assignment| {
                   if !locals_search_params.matches(assignment.id) {
-                      return None
+                      return None;
                   }
                   let assignment_clone: lang::Assignment = (*assignment).clone();
                   let guessed_type =
-                      code_genie.guess_type_without_resolving_generics(&lang::CodeNode::Assignment(assignment_clone),
+                      code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone),
                                             env_genie);
                   Some(Variable { locals_id: assignment.id,
-                             variable_type: VariableAntecedent::Assignment { assignment_id: assignment.id },
-                             // typ: guessed_type.unwrap(),
-                             name: assignment.name.clone() })
+                                  variable_type:
+                                      VariableAntecedent::Assignment { assignment_id:
+                                                                           assignment.id },
+                                  // typ: guessed_type.unwrap(),
+                                  name: assignment.name.clone() })
               })
 }
 
@@ -196,8 +266,8 @@ pub fn find_function_args_preceding<'a>(_search_position: SearchPosition,
                      return None;
                  }
                  Some(Variable { locals_id: arg.id,
-                                 variable_type: VariableAntecedent::Argument { argument_id:
-                                                                                   arg.id },
+                                 variable_type:
+                                     VariableAntecedent::FunctionArgument { argument_id: arg.id },
                                  // typ: arg.arg_type,
                                  name: arg.short_name })
              })
@@ -237,9 +307,7 @@ fn find_anon_func_args_for<'a>(search_position: SearchPosition,
                   if !locals_search_params.matches(arg.id) {
                       return None;
                   }
-                  let anon_func_typ = code_genie.guess_type_without_resolving_generics(anon_func,
-                                                                                       env_genie)
-                                                .unwrap();
+                  let anon_func_typ = code_genie.guess_type(anon_func, env_genie).unwrap();
                   // println!("arg name: {:?}", arg.short_name);
                   // println!("guessed typ for anon_func: {:?}", anon_func_typ);
                   // println!("variable typ: {:?}", anon_func_typ.params[0]);
@@ -267,11 +335,8 @@ pub fn find_for_loop_assignments_preceding<'a>(search_position: SearchPosition,
                   }
                   println!("didn't give up: {:?}", locals_search_params);
                   println!("guessing type for {:?}", for_loop.list_expression);
-                  let typ =
-                      code_genie.guess_type_without_resolving_generics(for_loop.list_expression
-                                                                               .as_ref(),
-                                                                       env_genie)
-                                .unwrap();
+                  let typ = code_genie.guess_type(for_loop.list_expression.as_ref(), env_genie)
+                                      .unwrap();
                   println!("guessed type: {:?}", typ);
                   let typ = get_type_from_list(typ).unwrap();
                   Some(Variable { variable_type: VariableAntecedent::ForLoop { for_loop_id:
