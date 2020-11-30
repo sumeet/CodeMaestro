@@ -208,7 +208,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_assignment(&self, assignment: &lang::Assignment) -> T::DrawResult {
-        println!("trying to render assignment: {:?}", assignment);
         let type_of_assignment = self.code_editor
                                      .code_genie
                                      .guess_type(assignment.expression.as_ref(), self.env_genie)

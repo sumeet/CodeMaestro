@@ -61,7 +61,7 @@ pub fn find_all_referencable_variables<'a>(search_position: SearchPosition,
                   .map(|assignment| {
                       VariableAntecedent {
                           name: assignment.name.clone(),
-                          place: VariableAntecedentPlace::Assignment { assignment_id:assignment.id },
+                          place: VariableAntecedentPlace::Assignment { assignment_id: assignment.id },
                       }
                   });
     let func_args = env_genie.code_takes_args(code_genie.root().id())
@@ -122,7 +122,7 @@ pub fn find_antecedent_for_variable_reference(vr: &lang::VariableReference,
                                               code_genie: &CodeGenie,
                                               env_genie: &EnvGenie)
                                               -> Option<VariableAntecedent> {
-    find_all_referencable_variables(SearchPosition { before_code_id: vr.assignment_id,
+    find_all_referencable_variables(SearchPosition { before_code_id: vr.id,
                                                      is_search_inclusive: is_inclusive },
                                     code_genie,
                                     env_genie).find(|antecedent| {

@@ -243,7 +243,7 @@ impl<'a> FixableProblemFinder<'a> {
                     location,
                     block: block.clone(),
                     variable_reference_id: var_ref.id,
-                    typ: code_genie.guess_type(&code_node, self.env_genie).ok()?,
+                    typ: code_genie.guess_type(&code_node, self.env_genie).unwrap(),
                 })
                     } else {
                         None

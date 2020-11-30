@@ -910,7 +910,6 @@ impl CodeGenie {
                 }
                 let antecedent = antecedent.unwrap();
                 self.guess_type_for_variable(antecedent.place, env_genie)
-                    .into()
                 // if let Some(assignment) = self.find_node(vr.assignment_id) {
                 //     self.guess_type_without_resolving_generics(assignment, env_genie)
                 // } else {
@@ -932,8 +931,10 @@ impl CodeGenie {
                 // }
             }
             CodeNode::FunctionReference(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
-            CodeNode::Argument(arg) => env_genie.get_type_for_arg(arg.argument_definition_id)
-                                                .ok_or("couldn't find type to this argument"),
+            CodeNode::Argument(arg) => {
+                env_genie.get_type_for_arg(arg.argument_definition_id)
+                         .ok_or("couldn't find type to this argument".into())
+            }
             CodeNode::Placeholder(placeholder) => Ok(placeholder.typ.clone()),
             CodeNode::NullLiteral(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::StructLiteral(struct_literal) => {
@@ -949,7 +950,7 @@ impl CodeGenie {
                 strukt.field_by_id()
                       .get(&struct_literal_field.struct_field_id)
                       .map(|field| field.field_type.clone())
-                      .ok_or("unable to guess type")
+                      .ok_or("unable to guess type".into())
             }
             CodeNode::ListLiteral(list_literal) => {
                 Ok(lang::Type::list_of(list_literal.element_type.clone()))
@@ -970,7 +971,7 @@ impl CodeGenie {
             }
             CodeNode::StructFieldGet(sfg) => {
                 env_genie.find_struct_field(sfg.struct_field_id)
-                         .ok_or("unable to guess type")
+                         .ok_or("unable to guess type".into())
                          .map(|struct_field| struct_field.field_type.clone())
             }
             CodeNode::ListIndex(list_index) => {
@@ -1005,7 +1006,7 @@ impl CodeGenie {
                 {
                     Ok(option_some_typ.clone())
                 } else {
-                    Err("invalid node inside of try")
+                    Err("invalid node inside of try".into())
                 }
             }
             // for loops don't really have a return type
@@ -1016,7 +1017,7 @@ impl CodeGenie {
     pub fn guess_type_for_variable(&self,
                                    antecedent_place: locals::VariableAntecedentPlace,
                                    env_genie: &EnvGenie)
-                                   -> Result<lang::Type, &'static str> {
+                                   -> Result<lang::Type, String> {
         match antecedent_place {
             VariableAntecedentPlace::Assignment { assignment_id } => {
                 self.guess_type(self.find_node(assignment_id).unwrap(), env_genie)
@@ -1025,7 +1026,14 @@ impl CodeGenie {
                 let for_loop = self.find_node(for_loop_id).unwrap().as_for_loop().unwrap();
                 let typ = self.guess_type(&for_loop.list_expression, env_genie)
                               .unwrap();
-                Ok(get_type_from_list(typ).unwrap())
+                // Ok(get_type_from_list(typ).unwrap())
+                // TODO: definitely need to fix this place... probably need some advanced validation to
+                // get ahead of this oddness... cry
+                Ok(get_type_from_list(typ).unwrap_or_else(|| {
+                                              println!("unable to guess list from inside of {:?}",
+                                                       for_loop.list_expression);
+                                              lang::Type::from_spec(&*lang::NULL_TYPESPEC)
+                                          }))
             }
             VariableAntecedentPlace::AnonFuncArgument { anonymous_function_id,
                                                         argument_id: _, } => {
