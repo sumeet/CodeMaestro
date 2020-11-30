@@ -8,6 +8,7 @@ use cs::{enums, lang};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
+use serde_derive::{Deserialize, Serialize};
 
 use crate::code_editor::locals::LocalsSearchParams;
 use crate::code_editor::{
@@ -45,6 +46,28 @@ lazy_static! {
     static ref UNWRAP_OPTIONS_GENERATORS : Vec<Box<dyn InsertCodeMenuOptionGenerator + Send + Sync>> = vec![
         Box::new(InsertUnwrapFromFunctionCallOptionGenerator {}),
     ];
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Variable {
+    antecedent: locals::VariableAntecedent,
+    pub locals_id: lang::ID,
+    pub typ: lang::Type,
+    pub name: String,
+}
+
+fn find_all_locals_preceding<'a>(search_position: locals::SearchPosition,
+                                 code_genie: &'a CodeGenie,
+                                 env_genie: &'a EnvGenie)
+                                 -> impl Iterator<Item = Variable> + 'a {
+    locals::find_all_referencable_variables(search_position, code_genie, env_genie).map(|antecedent| {
+        Variable {
+            antecedent,
+            locals_id: antecedent.assignment_id(),
+            typ: code_genie.guess_type_for_variable(antecedent)
+            name: "".to_string()
+        }
+    })
 }
 
 const FUNCTION_CALL_GROUP: &str = "Functions";

@@ -581,6 +581,12 @@ impl Type {
 }
 
 impl CodeNode {
+    pub fn as_match(&self) -> Result<&Match, Box<dyn std::error::Error>> {
+        match self {
+            Self::Match(mach) => Ok(mach),
+            otherwise => Err(format!("expected Match but got {:?}", otherwise).into()),
+        }
+    }
     pub fn as_for_loop(&self) -> Result<&ForLoop, Box<dyn std::error::Error>> {
         match self {
             CodeNode::ForLoop(ref fl) => Ok(fl),

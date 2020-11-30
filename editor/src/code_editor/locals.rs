@@ -7,7 +7,7 @@ use serde_derive::{Deserialize, Serialize};
 
 // just need this for debugging, tho maybe i'll keep it around, it's probably good to have
 #[derive(Serialize, Deserialize, Debug)]
-enum VariableAntecedent {
+pub enum VariableAntecedent {
     Assignment {
         assignment_id: lang::ID,
     },
@@ -19,7 +19,27 @@ enum VariableAntecedent {
         argument_id: lang::ID,
     },
     FunctionArgument {
+        argument_definition_id: lang::ID,
+    },
+    MatchVariant {
+        match_statement_id: lang::ID,
+        variant_id: lang::ID,
+    },
+}
+
+pub enum VariableAntecedentPlace {
+    Assignment {
+        assignment_id: lang::ID,
+    },
+    ForLoop {
+        for_loop_id: lang::ID,
+    },
+    AnonFuncArgument {
+        anonymous_function_id: lang::ID,
         argument_id: lang::ID,
+    },
+    FunctionArgument {
+        argument_definition_id: lang::ID,
     },
     MatchVariant {
         match_statement_id: lang::ID,
@@ -28,12 +48,14 @@ enum VariableAntecedent {
 }
 
 impl VariableAntecedent {
-    fn assignment_id(&self) -> lang::ID {
+    pub fn assignment_id(&self) -> lang::ID {
         match self {
             VariableAntecedent::Assignment { assignment_id } => *assignment_id,
             VariableAntecedent::ForLoop { for_loop_id } => *for_loop_id,
             VariableAntecedent::AnonFuncArgument { argument_id, .. } => *argument_id,
-            VariableAntecedent::FunctionArgument { argument_id } => *argument_id,
+            VariableAntecedent::FunctionArgument { argument_definition_id, } => {
+                *argument_definition_id
+            }
             VariableAntecedent::MatchVariant { match_statement_id,
                                                variant_id, } => {
                 lang::Match::make_variable_id(*match_statement_id, *variant_id)
@@ -53,7 +75,7 @@ pub fn find_all_referencable_variables<'a>(search_position: SearchPosition,
                                                                          assignment.id });
     let func_args = env_genie.code_takes_args(code_genie.root().id())
                              .map(|argument_definition| {
-                                 VariableAntecedent::FunctionArgument { argument_id:
+                                 VariableAntecedent::FunctionArgument { argument_definition_id:
                                                                             argument_definition.id }
                              });
     let anon_func_args =
@@ -157,14 +179,6 @@ pub fn find_antecedent_for_variable_reference(vr: &lang::VariableReference,
 //     }
 // }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Variable {
-    variable_type: VariableAntecedent,
-    pub locals_id: lang::ID,
-    // pub(crate) typ: lang::Type,
-    pub(crate) name: String,
-}
-
 #[derive(Copy, Clone)]
 pub struct SearchPosition {
     pub before_code_id: lang::ID,
@@ -186,163 +200,163 @@ impl From<InsertionPoint> for SearchPosition {
     }
 }
 
-// TODO: this should probably go near the code genie
-pub fn find_all_locals_preceding_with_resolving_generics<'a>(
-    search_position: SearchPosition,
-    locals_search_params: LocalsSearchParams,
-    code_genie: &'a CodeGenie,
-    env_genie: &'a EnvGenie)
-    -> impl Iterator<Item = Variable> + 'a {
-    find_all_locals_preceding_without_resolving_generics(search_position,
-                                                         locals_search_params,
-                                                         code_genie,
-                                                         env_genie).map(move |mut var| {
-                                                                       // var.typ = resolve_generics(&var, code_genie, env_genie);
-                                                                       var
-                                                                   })
-}
+// // TODO: this should probably go near the code genie
+// pub fn find_all_locals_preceding_with_resolving_generics<'a>(
+//     search_position: SearchPosition,
+//     locals_search_params: LocalsSearchParams,
+//     code_genie: &'a CodeGenie,
+//     env_genie: &'a EnvGenie)
+//     -> impl Iterator<Item = Variable> + 'a {
+//     find_all_locals_preceding_without_resolving_generics(search_position,
+//                                                          locals_search_params,
+//                                                          code_genie,
+//                                                          env_genie).map(move |mut var| {
+//                                                                        // var.typ = resolve_generics(&var, code_genie, env_genie);
+//                                                                        var
+//                                                                    })
+// }
 
-pub fn find_all_locals_preceding_without_resolving_generics<'a>(
-    search_position: SearchPosition,
-    locals_search_params: LocalsSearchParams,
-    code_genie: &'a CodeGenie,
-    env_genie: &'a EnvGenie)
-    -> impl Iterator<Item = Variable> + 'a {
-    find_assignments_preceding(search_position, locals_search_params, code_genie, env_genie)
-        .chain(find_function_args_preceding(search_position, locals_search_params, code_genie, env_genie))
-        .chain(find_enum_variants_preceding(search_position, locals_search_params, code_genie, env_genie))
-        .chain(find_anon_func_args_for(search_position, locals_search_params, code_genie, env_genie))
-        .chain(find_for_loop_assignments_preceding(search_position, locals_search_params, code_genie, env_genie))
-}
+// pub fn find_all_locals_preceding_without_resolving_generics<'a>(
+//     search_position: SearchPosition,
+//     locals_search_params: LocalsSearchParams,
+//     code_genie: &'a CodeGenie,
+//     env_genie: &'a EnvGenie)
+//     -> impl Iterator<Item = Variable> + 'a {
+//     find_assignments_preceding(search_position, locals_search_params, code_genie, env_genie)
+//         .chain(find_function_args_preceding(search_position, locals_search_params, code_genie, env_genie))
+//         .chain(find_enum_variants_preceding(search_position, locals_search_params, code_genie, env_genie))
+//         .chain(find_anon_func_args_for(search_position, locals_search_params, code_genie, env_genie))
+//         .chain(find_for_loop_assignments_preceding(search_position, locals_search_params, code_genie, env_genie))
+// }
 
-#[derive(Debug, Clone, Copy)]
-pub enum LocalsSearchParams {
-    NoFilter,
-    LocalsID(lang::ID),
-}
-
-impl LocalsSearchParams {
-    pub fn matches(&self, locals_id: lang::ID) -> bool {
-        match self {
-            Self::NoFilter => true,
-            Self::LocalsID(id) => id == &locals_id,
-        }
-    }
-}
-
-pub fn find_assignments_preceding<'a>(search_position: SearchPosition,
-                                      locals_search_params: LocalsSearchParams,
-                                      code_genie: &'a CodeGenie,
-                                      env_genie: &'a EnvGenie)
-                                      -> impl Iterator<Item = Variable> + 'a {
-    code_genie.find_assignments_that_come_before_code(search_position.before_code_id,
-                                                      search_position.is_search_inclusive)
-              .into_iter()
-              .filter_map(move |assignment| {
-                  if !locals_search_params.matches(assignment.id) {
-                      return None;
-                  }
-                  let assignment_clone: lang::Assignment = (*assignment).clone();
-                  let guessed_type =
-                      code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone),
-                                            env_genie);
-                  Some(Variable { locals_id: assignment.id,
-                                  variable_type:
-                                      VariableAntecedent::Assignment { assignment_id:
-                                                                           assignment.id },
-                                  // typ: guessed_type.unwrap(),
-                                  name: assignment.name.clone() })
-              })
-}
-
-pub fn find_function_args_preceding<'a>(_search_position: SearchPosition,
-                                        locals_search_params: LocalsSearchParams,
-                                        code_genie: &'a CodeGenie,
-                                        env_genie: &'a EnvGenie)
-                                        -> impl Iterator<Item = Variable> + 'a {
-    env_genie.code_takes_args(code_genie.root().id())
-             .filter_map(move |arg| {
-                 if !locals_search_params.matches(arg.id) {
-                     return None;
-                 }
-                 Some(Variable { locals_id: arg.id,
-                                 variable_type:
-                                     VariableAntecedent::FunctionArgument { argument_id: arg.id },
-                                 // typ: arg.arg_type,
-                                 name: arg.short_name })
-             })
-}
-
-fn find_enum_variants_preceding<'a>(search_position: SearchPosition,
-                                    locals_search_params: LocalsSearchParams,
-                                    code_genie: &'a CodeGenie,
-                                    env_genie: &'a EnvGenie)
-                                    -> impl Iterator<Item = Variable> + 'a {
-    code_genie.find_enum_variants_preceding_iter(search_position.before_code_id, env_genie)
-              .filter_map(move |match_variant| {
-                  let assignment_id = match_variant.assignment_id();
-                  if !locals_search_params.matches(assignment_id) {
-                      return None;
-                  }
-                  Some(Variable { locals_id: assignment_id,
-                             variable_type:
-                                 VariableAntecedent::MatchVariant { match_statement_id:
-                                                                        match_variant.match_id,
-                                                                    variant_id:
-                                                                        match_variant.enum_variant
-                                                                                     .id },
-                             // typ: match_variant.typ,
-                             name: match_variant.enum_variant.name })
-              })
-}
-
-fn find_anon_func_args_for<'a>(search_position: SearchPosition,
-                               locals_search_params: LocalsSearchParams,
-                               code_genie: &'a CodeGenie,
-                               env_genie: &'a EnvGenie)
-                               -> impl Iterator<Item = Variable> + 'a {
-    code_genie.find_anon_func_parents(search_position.before_code_id)
-              .filter_map(move |anon_func| {
-                  let arg = &anon_func.as_anon_func().unwrap().takes_arg;
-                  if !locals_search_params.matches(arg.id) {
-                      return None;
-                  }
-                  let anon_func_typ = code_genie.guess_type(anon_func, env_genie).unwrap();
-                  // println!("arg name: {:?}", arg.short_name);
-                  // println!("guessed typ for anon_func: {:?}", anon_func_typ);
-                  // println!("variable typ: {:?}", anon_func_typ.params[0]);
-                  Some(Variable { locals_id: arg.id,
-                      variable_type:
-                                 VariableAntecedent::AnonFuncArgument { anonymous_function_id:
-                                                                            anon_func.id() },
-                             // typ: arg_typ_for_anon_func(anon_func_typ),
-                             name: arg.short_name.clone() })
-              })
-}
-
-pub fn find_for_loop_assignments_preceding<'a>(search_position: SearchPosition,
-                                               locals_search_params: LocalsSearchParams,
-                                               code_genie: &'a CodeGenie,
-                                               env_genie: &'a EnvGenie)
-                                               -> impl Iterator<Item = Variable> + 'a {
-    code_genie.find_for_loops_scopes_preceding(search_position.before_code_id)
-              .filter_map(move |for_loop| {
-                  println!("found one: {:?}", for_loop);
-                  let for_loop = for_loop.as_for_loop().unwrap();
-                  if !locals_search_params.matches(for_loop.id) {
-                      println!("gave up on: {:?}", locals_search_params);
-                      return None;
-                  }
-                  println!("didn't give up: {:?}", locals_search_params);
-                  println!("guessing type for {:?}", for_loop.list_expression);
-                  let typ = code_genie.guess_type(for_loop.list_expression.as_ref(), env_genie)
-                                      .unwrap();
-                  println!("guessed type: {:?}", typ);
-                  let typ = get_type_from_list(typ).unwrap();
-                  Some(Variable { variable_type: VariableAntecedent::ForLoop { for_loop_id:
-                                                                                   for_loop.id },
-                                  locals_id: for_loop.id,
-                                  // typ,
-                                  name: for_loop.variable_name.clone() })
-              })
-}
+// #[derive(Debug, Clone, Copy)]
+// pub enum LocalsSearchParams {
+//     NoFilter,
+//     LocalsID(lang::ID),
+// }
+//
+// impl LocalsSearchParams {
+//     pub fn matches(&self, locals_id: lang::ID) -> bool {
+//         match self {
+//             Self::NoFilter => true,
+//             Self::LocalsID(id) => id == &locals_id,
+//         }
+//     }
+// }
+//
+// pub fn find_assignments_preceding<'a>(search_position: SearchPosition,
+//                                       locals_search_params: LocalsSearchParams,
+//                                       code_genie: &'a CodeGenie,
+//                                       env_genie: &'a EnvGenie)
+//                                       -> impl Iterator<Item = Variable> + 'a {
+//     code_genie.find_assignments_that_come_before_code(search_position.before_code_id,
+//                                                       search_position.is_search_inclusive)
+//               .into_iter()
+//               .filter_map(move |assignment| {
+//                   if !locals_search_params.matches(assignment.id) {
+//                       return None;
+//                   }
+//                   let assignment_clone: lang::Assignment = (*assignment).clone();
+//                   let guessed_type =
+//                       code_genie.guess_type(&lang::CodeNode::Assignment(assignment_clone),
+//                                             env_genie);
+//                   Some(Variable { locals_id: assignment.id,
+//                                   variable_type:
+//                                       VariableAntecedent::Assignment { assignment_id:
+//                                                                            assignment.id },
+//                                   // typ: guessed_type.unwrap(),
+//                                   name: assignment.name.clone() })
+//               })
+// }
+//
+// pub fn find_function_args_preceding<'a>(_search_position: SearchPosition,
+//                                         locals_search_params: LocalsSearchParams,
+//                                         code_genie: &'a CodeGenie,
+//                                         env_genie: &'a EnvGenie)
+//                                         -> impl Iterator<Item = Variable> + 'a {
+//     env_genie.code_takes_args(code_genie.root().id())
+//              .filter_map(move |arg| {
+//                  if !locals_search_params.matches(arg.id) {
+//                      return None;
+//                  }
+//                  Some(Variable { locals_id: arg.id,
+//                                  variable_type:
+//                                      VariableAntecedent::FunctionArgument { argument_definition_id: arg.id },
+//                                  // typ: arg.arg_type,
+//                                  name: arg.short_name })
+//              })
+// }
+//
+// fn find_enum_variants_preceding<'a>(search_position: SearchPosition,
+//                                     locals_search_params: LocalsSearchParams,
+//                                     code_genie: &'a CodeGenie,
+//                                     env_genie: &'a EnvGenie)
+//                                     -> impl Iterator<Item = Variable> + 'a {
+//     code_genie.find_enum_variants_preceding_iter(search_position.before_code_id, env_genie)
+//               .filter_map(move |match_variant| {
+//                   let assignment_id = match_variant.assignment_id();
+//                   if !locals_search_params.matches(assignment_id) {
+//                       return None;
+//                   }
+//                   Some(Variable { locals_id: assignment_id,
+//                              variable_type:
+//                                  VariableAntecedent::MatchVariant { match_statement_id:
+//                                                                         match_variant.match_id,
+//                                                                     variant_id:
+//                                                                         match_variant.enum_variant
+//                                                                                      .id },
+//                              // typ: match_variant.typ,
+//                              name: match_variant.enum_variant.name })
+//               })
+// }
+//
+// fn find_anon_func_args_for<'a>(search_position: SearchPosition,
+//                                locals_search_params: LocalsSearchParams,
+//                                code_genie: &'a CodeGenie,
+//                                env_genie: &'a EnvGenie)
+//                                -> impl Iterator<Item = Variable> + 'a {
+//     code_genie.find_anon_func_parents(search_position.before_code_id)
+//               .filter_map(move |anon_func| {
+//                   let arg = &anon_func.as_anon_func().unwrap().takes_arg;
+//                   if !locals_search_params.matches(arg.id) {
+//                       return None;
+//                   }
+//                   let anon_func_typ = code_genie.guess_type(anon_func, env_genie).unwrap();
+//                   // println!("arg name: {:?}", arg.short_name);
+//                   // println!("guessed typ for anon_func: {:?}", anon_func_typ);
+//                   // println!("variable typ: {:?}", anon_func_typ.params[0]);
+//                   Some(Variable { locals_id: arg.id,
+//                       variable_type:
+//                                  VariableAntecedent::AnonFuncArgument { anonymous_function_id:
+//                                                                             anon_func.id() },
+//                              // typ: arg_typ_for_anon_func(anon_func_typ),
+//                              name: arg.short_name.clone() })
+//               })
+// }
+//
+// pub fn find_for_loop_assignments_preceding<'a>(search_position: SearchPosition,
+//                                                locals_search_params: LocalsSearchParams,
+//                                                code_genie: &'a CodeGenie,
+//                                                env_genie: &'a EnvGenie)
+//                                                -> impl Iterator<Item = Variable> + 'a {
+//     code_genie.find_for_loops_scopes_preceding(search_position.before_code_id)
+//               .filter_map(move |for_loop| {
+//                   println!("found one: {:?}", for_loop);
+//                   let for_loop = for_loop.as_for_loop().unwrap();
+//                   if !locals_search_params.matches(for_loop.id) {
+//                       println!("gave up on: {:?}", locals_search_params);
+//                       return None;
+//                   }
+//                   println!("didn't give up: {:?}", locals_search_params);
+//                   println!("guessing type for {:?}", for_loop.list_expression);
+//                   let typ = code_genie.guess_type(for_loop.list_expression.as_ref(), env_genie)
+//                                       .unwrap();
+//                   println!("guessed type: {:?}", typ);
+//                   let typ = get_type_from_list(typ).unwrap();
+//                   Some(Variable { variable_type: VariableAntecedent::ForLoop { for_loop_id:
+//                                                                                    for_loop.id },
+//                                   locals_id: for_loop.id,
+//                                   // typ,
+//                                   name: for_loop.variable_name.clone() })
+//               })
+// }

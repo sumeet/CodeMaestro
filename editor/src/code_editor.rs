@@ -12,7 +12,7 @@ use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
 use crate::code_editor::locals::{
-    find_all_locals_preceding_without_resolving_generics, LocalsSearchParams,
+    find_all_locals_preceding_without_resolving_generics, LocalsSearchParams, VariableAntecedent,
 };
 use crate::code_generation;
 use crate::editor::Controller;
@@ -25,7 +25,7 @@ use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
 use cs::env_genie::{paths_to_generics, EnvGenie};
 use cs::lang;
-use cs::lang::{typ_for_anonymous_function, CodeNode, Function};
+use cs::lang::{arg_typ_for_anon_func, typ_for_anonymous_function, CodeNode, Function};
 use cs::{builtins, env};
 use lazy_static::lazy_static;
 use locals::{find_all_locals_preceding_with_resolving_generics, SearchPosition};
@@ -906,14 +906,13 @@ impl CodeGenie {
                 }
             }
             CodeNode::VariableReference(vr) => {
-                // TODO: seems like find_all_locals_preceeding calls into guess_type which resolves generics, but we're not suppoed to be doing that here...
-                // seems fishy
-                Ok(find_all_locals_preceding_without_resolving_generics(SearchPosition::not_inclusive(vr.id),
-                                                                     LocalsSearchParams::LocalsID(vr.assignment_id),
-                                                                     self,
-                                                                     env_genie).next()
-                                                               .unwrap()
-                                                               .typ)
+                let antecedent =
+                    locals::find_antecedent_for_variable_reference(vr, false, self, env_genie);
+                if antecedent.is_none() {
+                    return Err("unable to find antecedent for variable reference");
+                }
+                let antecedent = antecedent.unwrap();
+                self.guess_type_for_variable(antecedent, env_genie)
                 // if let Some(assignment) = self.find_node(vr.assignment_id) {
                 //     self.guess_type_without_resolving_generics(assignment, env_genie)
                 // } else {
@@ -1013,6 +1012,42 @@ impl CodeGenie {
             }
             // for loops don't really have a return type
             CodeNode::ForLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+        }
+    }
+
+    pub fn guess_type_for_variable(&self,
+                                   antecedent: locals::VariableAntecedent,
+                                   env_genie: &EnvGenie)
+                                   -> Result<lang::Type, &'static str> {
+        match antecedent {
+            VariableAntecedent::Assignment { assignment_id } => {
+                self.guess_type(self.find_node(assignment_id).unwrap(), env_genie)
+            }
+            VariableAntecedent::ForLoop { for_loop_id } => {
+                let for_loop = self.find_node(for_loop_id).unwrap().as_for_loop().unwrap();
+                let typ = self.guess_type(&for_loop.list_expression, env_genie)
+                              .unwrap();
+                Ok(get_type_from_list(typ).unwrap())
+            }
+            VariableAntecedent::AnonFuncArgument { anonymous_function_id,
+                                                   argument_id: _, } => {
+                let anon_func = self.find_node(anonymous_function_id).unwrap();
+                let typ = self.guess_type(anon_func, env_genie).unwrap();
+                Ok(arg_typ_for_anon_func(typ))
+            }
+            VariableAntecedent::FunctionArgument { argument_definition_id, } => {
+                Ok(env_genie.get_type_for_arg(argument_definition_id).unwrap())
+            }
+            VariableAntecedent::MatchVariant { match_statement_id,
+                                               variant_id, } => {
+                let match_statement = self.find_node(match_statement_id)
+                                          .unwrap()
+                                          .as_match()
+                                          .unwrap();
+                let mut match_variant_by_variant_id =
+                    self.match_variant_by_variant_id(match_statement, env_genie);
+                Ok(match_variant_by_variant_id.remove(&variant_id).unwrap().typ)
+            }
         }
     }
 
