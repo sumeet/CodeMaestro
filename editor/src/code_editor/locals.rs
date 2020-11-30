@@ -256,16 +256,21 @@ pub fn find_for_loop_assignments_preceding<'a>(search_position: SearchPosition,
                                                -> impl Iterator<Item = Variable> + 'a {
     code_genie.find_for_loops_scopes_preceding(search_position.before_code_id)
               .filter_map(move |for_loop| {
+                  println!("found one: {:?}", for_loop);
                   let for_loop = for_loop.as_for_loop().unwrap();
                   if !locals_search_params.matches(for_loop.id) {
+                      println!("gave up on: {:?}", locals_search_params);
                       return None;
                   }
+                  println!("didn't give up: {:?}", locals_search_params);
+                  println!("guessing type for {:?}", for_loop.list_expression);
                   let typ =
                       code_genie.guess_type_without_resolving_generics(for_loop.list_expression
                                                                                .as_ref(),
                                                                        env_genie)
                                 .unwrap();
-                  let typ = get_type_from_list(typ)?;
+                  println!("guessed type: {:?}", typ);
+                  let typ = get_type_from_list(typ).unwrap();
                   Some(Variable { variable_type: VariableAntecedent::ForLoop { for_loop_id:
                                                                                    for_loop.id },
                                   locals_id: for_loop.id,

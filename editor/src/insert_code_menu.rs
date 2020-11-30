@@ -1189,11 +1189,12 @@ impl InsertCodeMenuOptionGenerator for InsertAnonFuncOptionGenerator {
             return vec![];
         }
         let return_type = search_params.return_type.as_ref().unwrap();
-        if !return_type.matches_spec(&*lang::ANON_FUNC_TYPESPEC) {
+        if return_type.typespec_id != lang::ANON_FUNC_TYPESPEC.id {
             return vec![];
         }
 
         // TODO: fix magic number
+        println!("return type: {:?}", return_type);
         let anon_func_arg_type = &return_type.params[0];
 
         // TODO: takes_arg is hardcoded to string, how can this be a configurable type?

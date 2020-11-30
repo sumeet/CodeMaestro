@@ -209,6 +209,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_assignment(&self, assignment: &lang::Assignment) -> T::DrawResult {
+        println!("trying to render assignment: {:?}", assignment);
         let type_of_assignment = self.code_editor
                                      .code_genie
                                      .guess_type(assignment.expression.as_ref(), self.env_genie)
@@ -1232,13 +1233,20 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_for_loop_variable(&self, for_loop: &lang::ForLoop) -> T::DrawResult {
+        println!("trying to draw for loop variable");
         let var = find_for_loop_assignments_preceding(SearchPosition::not_inclusive(for_loop.body
                                                                                             .id()),
                                                       LocalsSearchParams::LocalsID(for_loop.id),
                                                       &self.code_editor.code_genie,
-                                                      self.env_genie).next()
-                                                                     .unwrap();
-        self.render_variable_appearance(&var.name, &var.typ)
+                                                      self.env_genie).next();
+        if let Some(var) = var {
+            println!("able to draw: {:?}", var);
+            self.render_variable_appearance(&var.name, &var.typ)
+        } else {
+            println!("wasn't able to draw, failed attempt");
+            self.ui_toolkit
+                .draw_text("Unable to find variable for for loop")
+        }
     }
 
     // TODO: combine the insertion point stuff with the insertion point stuff elsewhere, mainly
