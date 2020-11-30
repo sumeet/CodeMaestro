@@ -11,11 +11,10 @@ use super::editor;
 use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
-use crate::code_editor::locals::{
-    find_all_locals_preceding_without_resolving_generics, LocalsSearchParams, VariableAntecedent,
-};
+use crate::code_editor::locals::{VariableAntecedent, VariableAntecedentPlace};
 use crate::code_generation;
 use crate::editor::Controller;
+use crate::insert_code_menu::find_all_variables_preceding;
 use cs::builtins::{
     get_ok_type_from_result_type, get_some_type_from_option_type, new_result,
     new_result_with_null_error,
@@ -28,8 +27,8 @@ use cs::lang;
 use cs::lang::{arg_typ_for_anon_func, typ_for_anonymous_function, CodeNode, Function};
 use cs::{builtins, env};
 use lazy_static::lazy_static;
-use locals::{find_all_locals_preceding_with_resolving_generics, SearchPosition};
-use objekt::private::collections::HashSet;
+use locals::SearchPosition;
+use std::collections::HashSet;
 
 mod clipboard;
 pub(crate) mod locals;
@@ -585,10 +584,7 @@ impl CodeEditor {
         // TODO: this could be pruned down to locals that are referenced in the code
         let env_genie = EnvGenie::new(&env);
         let preceding_locals =
-            find_all_locals_preceding_with_resolving_generics(search_position,
-                                                              LocalsSearchParams::NoFilter,
-                                                              &self.code_genie,
-                                                              &env_genie);
+            find_all_variables_preceding(search_position, &self.code_genie, &env_genie);
         let copied_codes = self.selected_node_ids
                                .iter()
                                .map(|node_id| self.code_genie.find_node(*node_id).unwrap())
@@ -873,7 +869,7 @@ impl CodeGenie {
     pub fn guess_type(&self,
                       code_node: &CodeNode,
                       env_genie: &EnvGenie)
-                      -> Result<lang::Type, &'static str> {
+                      -> Result<lang::Type, String> {
         match code_node {
             CodeNode::FunctionCall(function_call) => {
                 let func_id = function_call.function_reference().function_id;
@@ -909,10 +905,12 @@ impl CodeGenie {
                 let antecedent =
                     locals::find_antecedent_for_variable_reference(vr, false, self, env_genie);
                 if antecedent.is_none() {
-                    return Err("unable to find antecedent for variable reference");
+                    return Err(format!("unable to find antecedent for variable reference {:?}",
+                                       vr));
                 }
                 let antecedent = antecedent.unwrap();
-                self.guess_type_for_variable(antecedent, env_genie)
+                self.guess_type_for_variable(antecedent.place, env_genie)
+                    .into()
                 // if let Some(assignment) = self.find_node(vr.assignment_id) {
                 //     self.guess_type_without_resolving_generics(assignment, env_genie)
                 // } else {
@@ -1016,30 +1014,30 @@ impl CodeGenie {
     }
 
     pub fn guess_type_for_variable(&self,
-                                   antecedent: locals::VariableAntecedent,
+                                   antecedent_place: locals::VariableAntecedentPlace,
                                    env_genie: &EnvGenie)
                                    -> Result<lang::Type, &'static str> {
-        match antecedent {
-            VariableAntecedent::Assignment { assignment_id } => {
+        match antecedent_place {
+            VariableAntecedentPlace::Assignment { assignment_id } => {
                 self.guess_type(self.find_node(assignment_id).unwrap(), env_genie)
             }
-            VariableAntecedent::ForLoop { for_loop_id } => {
+            VariableAntecedentPlace::ForLoop { for_loop_id } => {
                 let for_loop = self.find_node(for_loop_id).unwrap().as_for_loop().unwrap();
                 let typ = self.guess_type(&for_loop.list_expression, env_genie)
                               .unwrap();
                 Ok(get_type_from_list(typ).unwrap())
             }
-            VariableAntecedent::AnonFuncArgument { anonymous_function_id,
-                                                   argument_id: _, } => {
+            VariableAntecedentPlace::AnonFuncArgument { anonymous_function_id,
+                                                        argument_id: _, } => {
                 let anon_func = self.find_node(anonymous_function_id).unwrap();
                 let typ = self.guess_type(anon_func, env_genie).unwrap();
                 Ok(arg_typ_for_anon_func(typ))
             }
-            VariableAntecedent::FunctionArgument { argument_definition_id, } => {
+            VariableAntecedentPlace::FunctionArgument { argument_definition_id, } => {
                 Ok(env_genie.get_type_for_arg(argument_definition_id).unwrap())
             }
-            VariableAntecedent::MatchVariant { match_statement_id,
-                                               variant_id, } => {
+            VariableAntecedentPlace::MatchVariant { match_statement_id,
+                                                    variant_id, } => {
                 let match_statement = self.find_node(match_statement_id)
                                           .unwrap()
                                           .as_match()
@@ -1119,15 +1117,15 @@ impl CodeGenie {
                                     })
     }
 
-    #[allow(unused)]
-    pub fn find_enum_variant_preceding_by_assignment_id<'a>(&'a self,
-                                                            behind_id: lang::ID,
-                                                            assignment_id: lang::ID,
-                                                            env_genie: &'a EnvGenie)
-                                                            -> Option<MatchVariant> {
-        self.find_enum_variants_preceding_iter(behind_id, env_genie)
-            .find(|match_variant| match_variant.assignment_id() == assignment_id)
-    }
+    // #[allow(unused)]
+    // pub fn find_enum_variant_preceding_by_assignment_id<'a>(&'a self,
+    //                                                         behind_id: lang::ID,
+    //                                                         assignment_id: lang::ID,
+    //                                                         env_genie: &'a EnvGenie)
+    //                                                         -> Option<MatchVariant> {
+    //     self.find_enum_variants_preceding_iter(behind_id, env_genie)
+    //         .find(|match_variant| match_variant.assignment_id() == assignment_id)
+    // }
 
     // pub fn find_enum_variant_by_assignment_id(&self,
     //                                           assignment_id: lang::ID,
@@ -1417,10 +1415,10 @@ impl MutationMaster {
         let needed_variables = clipboard_contents.variables_referenced_in_code()
                                                  .map(|var| {
                                                      let placeholder =
-                                      code_generation::new_placeholder(var.name.to_string(),
+                                      code_generation::new_placeholder(var.name().to_string(),
                                                                        var.typ.clone());
                                                      lang::CodeNode::Assignment(lang::Assignment {
-                                      name: var.name.to_string(),
+                                      name: var.name().to_string(),
                                       expression: Box::new(placeholder),
                                       id: var.locals_id,
                                   })

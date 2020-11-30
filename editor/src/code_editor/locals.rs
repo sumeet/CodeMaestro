@@ -1,32 +1,19 @@
-use crate::code_editor::{get_type_from_list, CodeGenie, InsertionPoint};
+use crate::code_editor::{CodeGenie, InsertionPoint};
 use crate::insert_code_menu;
 use cs::{lang, EnvGenie};
 
-use cs::lang::arg_typ_for_anon_func;
 use serde_derive::{Deserialize, Serialize};
 
-// just need this for debugging, tho maybe i'll keep it around, it's probably good to have
-#[derive(Serialize, Deserialize, Debug)]
-pub enum VariableAntecedent {
-    Assignment {
-        assignment_id: lang::ID,
-    },
-    ForLoop {
-        for_loop_id: lang::ID,
-    },
-    AnonFuncArgument {
-        anonymous_function_id: lang::ID,
-        argument_id: lang::ID,
-    },
-    FunctionArgument {
-        argument_definition_id: lang::ID,
-    },
-    MatchVariant {
-        match_statement_id: lang::ID,
-        variant_id: lang::ID,
-    },
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct VariableAntecedent {
+    pub place: VariableAntecedentPlace,
+    // TODO: i don't think we actually need to Clone this string... this could probably be a reference
+    // (yeah i know that would give this entire struct a lifetime... i think it would still work because
+    // every place we use this has code genie and env genie in scope while iterating
+    pub name: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum VariableAntecedentPlace {
     Assignment {
         assignment_id: lang::ID,
@@ -49,15 +36,15 @@ pub enum VariableAntecedentPlace {
 
 impl VariableAntecedent {
     pub fn assignment_id(&self) -> lang::ID {
-        match self {
-            VariableAntecedent::Assignment { assignment_id } => *assignment_id,
-            VariableAntecedent::ForLoop { for_loop_id } => *for_loop_id,
-            VariableAntecedent::AnonFuncArgument { argument_id, .. } => *argument_id,
-            VariableAntecedent::FunctionArgument { argument_definition_id, } => {
+        match &self.place {
+            VariableAntecedentPlace::Assignment { assignment_id } => *assignment_id,
+            VariableAntecedentPlace::ForLoop { for_loop_id } => *for_loop_id,
+            VariableAntecedentPlace::AnonFuncArgument { argument_id, .. } => *argument_id,
+            VariableAntecedentPlace::FunctionArgument { argument_definition_id, } => {
                 *argument_definition_id
             }
-            VariableAntecedent::MatchVariant { match_statement_id,
-                                               variant_id, } => {
+            VariableAntecedentPlace::MatchVariant { match_statement_id,
+                                                    variant_id, } => {
                 lang::Match::make_variable_id(*match_statement_id, *variant_id)
             }
         }
@@ -71,33 +58,58 @@ pub fn find_all_referencable_variables<'a>(search_position: SearchPosition,
     let assignments =
         code_genie.find_assignments_that_come_before_code(search_position.before_code_id,
                                                           search_position.is_search_inclusive)
-                  .map(|assignment| VariableAntecedent::Assignment { assignment_id:
-                                                                         assignment.id });
+                  .map(|assignment| {
+                      VariableAntecedent {
+                          name: assignment.name.clone(),
+                          place: VariableAntecedentPlace::Assignment { assignment_id:assignment.id },
+                      }
+                  });
     let func_args = env_genie.code_takes_args(code_genie.root().id())
                              .map(|argument_definition| {
-                                 VariableAntecedent::FunctionArgument { argument_definition_id:
-                                                                            argument_definition.id }
+                                 VariableAntecedent {
+                                     name: argument_definition.short_name.to_string(),
+                                     place: VariableAntecedentPlace::FunctionArgument {
+                                         argument_definition_id: argument_definition.id
+                                     }
+                                 }
                              });
-    let anon_func_args =
-        code_genie.find_anon_func_parents(search_position.before_code_id)
-                  .map(|anon_func| {
-                      let anon_func = anon_func.as_anon_func().unwrap();
-                      // TODO: anon funcs will later take more than one arg... of course
-                      let anon_func_arg = &anon_func.takes_arg;
-                      VariableAntecedent::AnonFuncArgument { anonymous_function_id: anon_func.id,
-                                                             argument_id: anon_func_arg.id }
-                  });
+    let anon_func_args = code_genie.find_anon_func_parents(search_position.before_code_id)
+                                   .map(|anon_func| {
+                                       let anon_func = anon_func.as_anon_func().unwrap();
+                                       // TODO: anon funcs will later take more than one arg... of course
+                                       let anon_func_arg = &anon_func.takes_arg;
+                                       VariableAntecedent {
+                          name: anon_func_arg.short_name.clone(),
+                          place: VariableAntecedentPlace::AnonFuncArgument {
+                              anonymous_function_id: anon_func.id,
+                              argument_id: anon_func_arg.id }
+                      }
+                                   });
 
     let match_statement_variants =
         code_genie.find_enum_variants_preceding_iter(search_position.before_code_id)
                   .map(|(match_id, variant_id)| {
-                      VariableAntecedent::MatchVariant { match_statement_id: match_id,
-                                                         variant_id }
+                      VariableAntecedent {
+                          // TODO: this should be definable at the code level... we're missing an AST node for this
+                          // looks like there's a huge need for a "VariableDefinition" node or something like that
+                          // maybe VariableName
+                          // 
+                          // for now, takes a LOLs placeholder
+                          name: "variant".to_string(),
+                          place: VariableAntecedentPlace::MatchVariant { match_statement_id: match_id,
+                              variant_id }
+                      }
                   });
 
     let for_loop_variables =
         code_genie.find_for_loops_scopes_preceding(search_position.before_code_id)
-                  .map(|for_loop| VariableAntecedent::ForLoop { for_loop_id: for_loop.id() });
+                  .map(|for_loop| {
+                      let for_loop = for_loop.as_for_loop().unwrap();
+                      VariableAntecedent {
+                          name: for_loop.variable_name.to_string(),
+                          place: VariableAntecedentPlace::ForLoop { for_loop_id: for_loop.id }
+                      }
+                  });
 
     assignments.chain(func_args)
                .chain(anon_func_args)

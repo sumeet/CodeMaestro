@@ -10,7 +10,6 @@ use lazy_static::lazy_static;
 use objekt::clone_trait_object;
 use serde_derive::{Deserialize, Serialize};
 
-use crate::code_editor::locals::LocalsSearchParams;
 use crate::code_editor::{
     get_result_type_from_indexing_into_list, get_type_from_list, locals, required_return_type,
     CodeLocation,
@@ -50,22 +49,28 @@ lazy_static! {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Variable {
-    antecedent: locals::VariableAntecedent,
+    pub antecedent: locals::VariableAntecedent,
     pub locals_id: lang::ID,
     pub typ: lang::Type,
-    pub name: String,
 }
 
-fn find_all_locals_preceding<'a>(search_position: locals::SearchPosition,
-                                 code_genie: &'a CodeGenie,
-                                 env_genie: &'a EnvGenie)
-                                 -> impl Iterator<Item = Variable> + 'a {
-    locals::find_all_referencable_variables(search_position, code_genie, env_genie).map(|antecedent| {
+impl Variable {
+    pub(crate) fn name(&self) -> &str {
+        &self.antecedent.name
+    }
+}
+
+pub fn find_all_variables_preceding<'a>(search_position: locals::SearchPosition,
+                                        code_genie: &'a CodeGenie,
+                                        env_genie: &'a EnvGenie)
+                                        -> impl Iterator<Item = Variable> + 'a {
+    locals::find_all_referencable_variables(search_position, code_genie, env_genie).map(move |antecedent| {
+        let locals_id = antecedent.assignment_id();
+        let place = antecedent.place;
         Variable {
             antecedent,
-            locals_id: antecedent.assignment_id(),
-            typ: code_genie.guess_type_for_variable(antecedent)
-            name: "".to_string()
+            locals_id,
+            typ: code_genie.guess_type_for_variable(place, env_genie).unwrap(),
         }
     })
 }
@@ -534,12 +539,11 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
             return vec![];
         }
 
-        let variables = locals::find_all_locals_preceding_with_resolving_generics(search_params.insertion_point.into(),
-                                                                                  LocalsSearchParams::NoFilter,
-                                                                                  code_genie,
-                                                                                  env_genie).filter(|variable| {
+        let variables = find_all_variables_preceding(search_params.insertion_point.into(),
+                                                     code_genie,
+                                                     env_genie).filter(|variable| {
                             search_params.search_matches_type(&variable.typ, env_genie)
-                            && search_params.search_matches_identifier(&variable.name)
+                            && search_params.search_matches_identifier(variable.name())
                         });
 
         variables.map(|variable| {
@@ -912,9 +916,8 @@ impl InsertCodeMenuOptionGenerator for InsertMatchOptionGenerator {
         //            return vec![];
         //        }
 
-        locals::find_all_locals_preceding_with_resolving_generics(search_params.insertion_point
+        find_all_variables_preceding(search_params.insertion_point
                                                                                .into(),
-                                                                  LocalsSearchParams::NoFilter,
                                                                   code_genie,
                                                                   env_genie).filter_map(|variable| {
             self.new_option_if_enum(env_genie, &variable.typ, || {
@@ -1017,18 +1020,18 @@ impl InsertCodeMenuOptionGenerator for InsertReassignmentOptionGenerator {
         let lowercased_trimmed_search_str =
             lowercased_trimmed_search_str.trim_end_matches(|c| c == '=' || c == ' ');
 
-        locals::find_assignments_preceding(search_params.insertion_point.into(), LocalsSearchParams::NoFilter, code_genie, env_genie)
+        find_all_variables_preceding(search_params.insertion_point.into(), code_genie, env_genie)
             .filter(|var| {
                 if lowercased_trimmed_search_str.is_empty() {
                     return true
                 }
-                var.name.contains(lowercased_trimmed_search_str)
+                var.name().contains(lowercased_trimmed_search_str)
             })
             .map(|var| {
                 InsertCodeMenuOption {
-                    sort_key: format!("{}changevariable{}", sort_key_prefix, var.name),
+                    sort_key: format!("{}changevariable{}", sort_key_prefix, var.name()),
                     new_node: code_generation::new_reassignment(var.locals_id,
-                                                                code_generation::new_placeholder(var.name, typ)).into(),
+                                                                code_generation::new_placeholder(var.name().into(), var.typ)).into(),
                     is_selected: false,
                     group_name: LOCALS_GROUP,
                 }
@@ -1051,16 +1054,15 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
             return vec![];
         }
 
-        let optionss = locals::find_all_locals_preceding_with_resolving_generics(search_params.insertion_point.into(),
-                                                                                 LocalsSearchParams::NoFilter,
-                                                                                 code_genie,
-                                                                                 env_genie).filter_map(|variable| {
+        let optionss = find_all_variables_preceding(search_params.insertion_point.into(),
+                                                    code_genie,
+                                                    env_genie).filter_map(|variable| {
                            let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
 
                            Some(strukt.fields.iter().filter_map(move |struct_field| {
-                    let dotted_name = format!("{}.{}", variable.name, struct_field.name);
+                    let dotted_name = format!("{}.{}", variable.name(), struct_field.name);
 
-                    if !(search_params.search_matches_identifier(&variable.name) ||
+                    if !(search_params.search_matches_identifier(&variable.name()) ||
                          search_params.search_matches_identifier(&struct_field.name) ||
                          search_params.search_matches_identifier(&dotted_name)) {
                         return None
@@ -1094,8 +1096,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        locals::find_all_locals_preceding_with_resolving_generics(
-            search_params.insertion_point.into(), LocalsSearchParams::NoFilter, code_genie, env_genie)
+        find_all_variables_preceding(search_params.insertion_point.into(),  code_genie, env_genie)
             .filter_map(|variable| {
                 let list_elem_result_typ = get_result_type_from_indexing_into_list(variable.typ.clone())?;
                 // if let Some(search_type) = &search_params.return_type {
@@ -1103,7 +1104,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                 //         return None
                 //     }
                 // }
-                if search_params.search_matches_type(&list_elem_result_typ, env_genie) && search_params.search_matches_identifier(&variable.name) {
+                if search_params.search_matches_type(&list_elem_result_typ, env_genie) && search_params.search_matches_identifier(&variable.name()) {
                     Some(InsertCodeMenuOption {
                         group_name: LOCALS_GROUP,
                         sort_key: format!("listindex{}", variable.locals_id),
@@ -1114,6 +1115,8 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                 } else {
                     // also
 
+                    let name = variable.name().to_string();
+
                     let list_elem_result_typ = get_type_from_list(variable.typ)?;
                     if let Some(search_type) = &search_params.return_type {
                         // TODO: this should probably call the search_params.matches_type func or whatever it's called
@@ -1122,7 +1125,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                             return None
                         }
                     }
-                    if !search_params.search_matches_identifier(&variable.name) {
+                    if !search_params.search_matches_identifier(&name) {
                         return None
                     }
                     Some(InsertCodeMenuOption {
@@ -1151,11 +1154,17 @@ impl InsertCodeMenuOptionGenerator for InsertReassignListIndexOfLocalVariable {
             return vec![];
         }
 
-        locals::find_assignments_preceding(
-            search_params.insertion_point.into(), LocalsSearchParams::NoFilter, code_genie, env_genie)
+        // TODO: not sure if it's an issue we'll be able to reassign anything
+        find_all_variables_preceding(
+            search_params.insertion_point.into(), code_genie, env_genie)
             .filter_map(|variable| {
+                // TODO: for now let's block anything not a plain ol' assignment
+                if let locals::VariableAntecedentPlace::Assignment {.. } = variable.antecedent.place {
+                } else {
+                    return None;
+                }
 
-                if !search_params.search_matches_identifier(&variable.name) {
+                if !search_params.search_matches_identifier(&variable.name()) {
                     return None
                 }
 

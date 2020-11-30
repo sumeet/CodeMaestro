@@ -10,8 +10,7 @@ use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
 use crate::code_editor::locals::{
-    find_all_locals_preceding_with_resolving_generics, find_for_loop_assignments_preceding,
-    LocalsSearchParams, SearchPosition,
+    find_antecedent_for_variable_reference, SearchPosition, VariableAntecedentPlace,
 };
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
@@ -1226,26 +1225,28 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn lookup_variable_reference(&self,
                                  variable_reference: &lang::VariableReference)
                                  -> Option<(String, lang::Type)> {
-        let var = find_all_locals_preceding_with_resolving_generics(SearchPosition::not_inclusive(variable_reference.id),
-            LocalsSearchParams::LocalsID(variable_reference.assignment_id),
-            &self.code_editor.code_genie, self.env_genie).next()?; //?;
-        Some((var.name, var.typ))
+        let antecedent = find_antecedent_for_variable_reference(variable_reference,
+                                                                false,
+                                                                &self.code_editor.code_genie,
+                                                                self.env_genie)?;
+        let typ = self.code_editor
+                      .code_genie
+                      .guess_type_for_variable(antecedent.place, self.env_genie)
+                      .unwrap();
+        Some((antecedent.name, typ))
     }
 
     fn render_for_loop_variable(&self, for_loop: &lang::ForLoop) -> T::DrawResult {
-        println!("trying to draw for loop variable");
-        let var = find_for_loop_assignments_preceding(SearchPosition::not_inclusive(for_loop.body
-                                                                                            .id()),
-                                                      LocalsSearchParams::LocalsID(for_loop.id),
-                                                      &self.code_editor.code_genie,
-                                                      self.env_genie).next();
-        if let Some(var) = var {
-            println!("able to draw: {:?}", var);
-            self.render_variable_appearance(&var.name, &var.typ)
+        let typ = self.code_editor
+                      .code_genie
+                      .guess_type_for_variable(VariableAntecedentPlace::ForLoop { for_loop_id:
+                                                                                      for_loop.id },
+                                               self.env_genie);
+        if let Ok(typ) = typ {
+            self.render_variable_appearance(&for_loop.variable_name, &typ)
         } else {
-            println!("wasn't able to draw, failed attempt");
             self.ui_toolkit
-                .draw_text("Unable to find variable for for loop")
+                .draw_text("Unable to find type for for loop variable")
         }
     }
 

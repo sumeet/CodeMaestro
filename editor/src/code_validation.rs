@@ -6,9 +6,7 @@ use cs::env_genie;
 use cs::lang;
 use cs::lang::Function;
 
-use crate::code_editor::locals::{
-    find_all_locals_preceding_with_resolving_generics, LocalsSearchParams, SearchPosition,
-};
+use crate::code_editor::locals::{find_antecedent_for_variable_reference, SearchPosition};
 use crate::code_editor::{required_return_type, CodeLocation};
 use cs::env_genie::EnvGenie;
 use gen_iter::GenIter;
@@ -235,20 +233,23 @@ impl<'a> FixableProblemFinder<'a> {
                                             _ => None,
                                         });
         var_refs.filter_map(move |var_ref| {
-            let search_position = SearchPosition { before_code_id: var_ref.id,
-                is_search_inclusive: false };
-            if find_all_locals_preceding_with_resolving_generics(search_position, LocalsSearchParams::LocalsID(var_ref.assignment_id), &code_genie, self.env_genie).next().is_none() {
-                let code_node = lang::CodeNode::VariableReference(var_ref.clone());
-                Some(FixableProblem::MissingVariableReference {
+                    if find_antecedent_for_variable_reference(var_ref,
+                                                              false,
+                                                              &code_genie,
+                                                              self.env_genie).is_none()
+                    {
+                        let code_node = lang::CodeNode::VariableReference(var_ref.clone());
+                        Some(FixableProblem::MissingVariableReference {
                     location,
                     block: block.clone(),
                     variable_reference_id: var_ref.id,
-                    typ: code_genie.guess_type(&code_node, self.env_genie).unwrap(),
+                    typ: code_genie.guess_type(&code_node, self.env_genie).ok()?,
                 })
-            } else {
-                None
-            }
-        }).collect()
+                    } else {
+                        None
+                    }
+                })
+                .collect()
     }
 
     fn returned_type(&self, block: &lang::Block) -> lang::Type {
