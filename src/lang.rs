@@ -581,6 +581,13 @@ impl Type {
 }
 
 impl CodeNode {
+    pub fn as_for_loop(&self) -> Result<&ForLoop, Box<dyn std::error::Error>> {
+        match self {
+            CodeNode::ForLoop(ref fl) => Ok(fl),
+            _ => Err(format!("expected for loop, got {:?} instead", self).into()),
+        }
+    }
+
     pub fn as_anon_func(&self) -> Result<&AnonymousFunction, Box<dyn std::error::Error>> {
         match self {
             CodeNode::AnonymousFunction(ref af) => Ok(af),

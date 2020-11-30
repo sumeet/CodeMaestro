@@ -9,7 +9,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
 
-use crate::code_editor::locals::{resolve_generics, LocalsSearchParams};
+use crate::code_editor::locals::LocalsSearchParams;
 use crate::code_editor::{
     get_result_type_from_indexing_into_list, get_type_from_list, locals, required_return_type,
     CodeLocation,
@@ -842,16 +842,16 @@ impl InsertCodeMenuOptionGenerator for InsertForLoopOptionGenerator {
             // if wrapping a boolean, then we should suggest creating a for loop.
             //
             // TODO: this needs to actually put the list expression inside...
-            return if wraps_type.matches_spec(&*lang::LIST_TYPESPEC) {
-                vec![Self::generate_option()]
+            if wraps_type.matches_spec(&*lang::LIST_TYPESPEC) {
+                return vec![Self::generate_option()];
             // otherwise we shouldn't pop up in the suggestions
             } else {
-                vec![]
+                return vec![];
             };
         }
 
         let mut options = vec![];
-        if search_params.search_matches_identifier("while") {
+        if search_params.search_matches_identifier("for") {
             options.push(Self::generate_option())
         }
         options

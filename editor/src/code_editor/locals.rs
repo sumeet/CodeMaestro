@@ -1,4 +1,4 @@
-use crate::code_editor::{CodeGenie, InsertionPoint};
+use crate::code_editor::{get_type_from_list, CodeGenie, InsertionPoint};
 use crate::insert_code_menu;
 use cs::{lang, EnvGenie};
 
@@ -10,6 +10,9 @@ use serde_derive::{Deserialize, Serialize};
 enum VariableAntecedent {
     Assignment {
         assignment_id: lang::ID,
+    },
+    ForLoop {
+        for_loop_id: lang::ID,
     },
     AnonFuncArgument {
         anonymous_function_id: lang::ID,
@@ -38,9 +41,30 @@ pub fn resolve_generics(variable: &Variable,
             let guessed = code_genie.try_to_resolve_all_generics(&assignment.expression,
                                                                  variable.typ.clone(),
                                                                  env_genie);
-            println!("guessed type for {:?}-----\n\n{:?}\n----------",
-                     assignment.expression, guessed);
+            // println!("guessed type for {:?}-----\n\n{:?}\n----------",
+            //          assignment.expression, guessed);
             guessed
+        }
+        // TODO: this is highly duped with stuff in try_to_resolve_generic
+        //
+        // i'm getting the feeling that this entire file shouldn't deal with types and instead the
+        // callers to this should make their own call to look up the types if they want to
+        VariableAntecedent::ForLoop { for_loop_id } => {
+            let for_loop = code_genie.find_node(for_loop_id)
+                                     .unwrap()
+                                     .as_for_loop()
+                                     .unwrap();
+            // println!("old type: {:?}", variable.typ);
+            let guessed =
+                code_genie.try_to_resolve_all_generics(&for_loop.list_expression,
+                                                       lang::Type::list_of(variable.typ.clone()),
+                                                       env_genie);
+            // println!("list_expression: {:?}", for_loop.list_expression);
+            // println!("guessed: {:?}", guessed);
+            get_type_from_list(guessed).unwrap()
+            // println!("guessed type for {:?}-----\n\n{:?}\n----------",
+            //          assignment.expression, guessed);
+            // guessed
         }
         VariableAntecedent::AnonFuncArgument { anonymous_function_id, } => {
             let anon_func = code_genie.find_node(anonymous_function_id).unwrap();
@@ -118,9 +142,10 @@ pub fn find_all_locals_preceding_without_resolving_generics<'a>(
         .chain(find_function_args_preceding(search_position, locals_search_params, code_genie, env_genie))
         .chain(find_enum_variants_preceding(search_position, locals_search_params, code_genie, env_genie))
         .chain(find_anon_func_args_for(search_position, locals_search_params, code_genie, env_genie))
+        .chain(find_for_loop_assignments_preceding(search_position, locals_search_params, code_genie, env_genie))
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum LocalsSearchParams {
     NoFilter,
     LocalsID(lang::ID),
@@ -221,5 +246,30 @@ fn find_anon_func_args_for<'a>(search_position: SearchPosition,
                                                                             anon_func.id() },
                              typ: arg_typ_for_anon_func(anon_func_typ),
                              name: arg.short_name.clone() })
+              })
+}
+
+pub fn find_for_loop_assignments_preceding<'a>(search_position: SearchPosition,
+                                               locals_search_params: LocalsSearchParams,
+                                               code_genie: &'a CodeGenie,
+                                               env_genie: &'a EnvGenie)
+                                               -> impl Iterator<Item = Variable> + 'a {
+    code_genie.find_for_loops_scopes_preceding(search_position.before_code_id)
+              .filter_map(move |for_loop| {
+                  let for_loop = for_loop.as_for_loop().unwrap();
+                  if !locals_search_params.matches(for_loop.id) {
+                      return None;
+                  }
+                  let typ =
+                      code_genie.guess_type_without_resolving_generics(for_loop.list_expression
+                                                                               .as_ref(),
+                                                                       env_genie)
+                                .unwrap();
+                  let typ = get_type_from_list(typ)?;
+                  Some(Variable { variable_type: VariableAntecedent::ForLoop { for_loop_id:
+                                                                                   for_loop.id },
+                                  locals_id: for_loop.id,
+                                  typ,
+                                  name: for_loop.variable_name.clone() })
               })
 }

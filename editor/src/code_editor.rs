@@ -358,7 +358,8 @@ impl CodeEditor {
             | lang::CodeNode::WhileLoop(_)
             | lang::CodeNode::EnumVariantLiteral(_)
             | lang::CodeNode::EarlyReturn(_)
-            | lang::CodeNode::Try(_) => Some(InsertionPoint::Replace(node_id)),
+            | lang::CodeNode::Try(_)
+            | lang::CodeNode::ForLoop(_) => Some(InsertionPoint::Replace(node_id)),
             otherwise => {
                 println!("tried to replace node with parent {:?}", otherwise);
                 None
@@ -677,8 +678,8 @@ impl CodeGenie {
                 for arg in func_call.args() {
                     let arg_def_id = arg.argument_definition_id;
                     let typ_for_arg = env_genie.get_type_for_arg(arg_def_id).unwrap();
-                    println!("typ of generic: {:?}", typ_of_generic.typespec_id);
-                    println!("typ for arg: {:?}", typ_for_arg);
+                    // println!("typ of generic: {:?}", typ_of_generic.typespec_id);
+                    // println!("typ for arg: {:?}", typ_for_arg);
                     for (path, _) in
                         typ_for_arg.find_typespec_id_in_params(typ_of_generic.typespec_id)
                     {
@@ -687,8 +688,8 @@ impl CodeGenie {
                                                                                          .as_ref(),
                                                                                       env_genie)
                                                .unwrap();
-                        println!("arg.expr: {:?}\npath: {:?}\nguessed_type: {:?}",
-                                 arg.expr, path, guessed_type);
+                        // println!("arg.expr: {:?}\npath: {:?}\nguessed_type: {:?}",
+                        //          arg.expr, path, guessed_type);
                         let param_of_guessed_type = guessed_type.get_param_using_path(&path);
                         if !env_genie.is_generic(param_of_guessed_type.typespec_id) {
                             return param_of_guessed_type.clone();
@@ -814,12 +815,12 @@ impl CodeGenie {
             .is_some()
     }
 
-    pub fn find_all_anon_funcs<'a>(&'a self)
-                                   -> impl Iterator<Item = &'a lang::AnonymousFunction> + 'a {
-        self.code
-            .self_with_all_children_dfs()
-            .filter_map(|code_node| code_node.as_anon_func().ok())
-    }
+    // pub fn find_all_anon_funcs<'a>(&'a self)
+    //                                -> impl Iterator<Item = &'a lang::AnonymousFunction> + 'a {
+    //     self.code
+    //         .self_with_all_children_dfs()
+    //         .filter_map(|code_node| code_node.as_anon_func().ok())
+    // }
 
     pub fn find_all_variables_referencing_assignment(
         &self,
@@ -836,8 +837,8 @@ impl CodeGenie {
                                        mut typ: lang::Type,
                                        env_genie: &EnvGenie)
                                        -> lang::Type {
-        println!("start of trying to resolve all generics: {:?}",
-                 at_code_node);
+        // println!("start of trying to resolve all generics: {:?}",
+        //          at_code_node);
         let mut should_try_to_resolve_generics = true;
         while should_try_to_resolve_generics {
             let outer_typ = typ.clone();
@@ -854,7 +855,7 @@ impl CodeGenie {
                         *generic_typ =
                             self.try_to_resolve_generic(at_code_node, &generic_typ, env_genie);
                     }
-                    println!("changed, and outer typ is now {:?}, path: {:?}", typ, path);
+                    // println!("changed, and outer typ is now {:?}, path: {:?}", typ, path);
                 }
             }
             // if we got all the way here, and nothing changed there, let's stop looking
@@ -1076,6 +1077,24 @@ impl CodeGenie {
             .filter(|code| code.as_anon_func().is_ok())
     }
 
+    pub fn find_for_loops_scopes_preceding<'a>(&'a self,
+                                               node_id: lang::ID)
+                                               -> impl Iterator<Item = &'a lang::CodeNode> + 'a
+    {
+        self.all_parents_of(node_id).filter(move |code| {
+                                        if let Ok(true) =
+                                            code.as_for_loop()
+                                                .map(|for_loop| {
+                                                    for_loop.list_expression.id() != node_id
+                                                })
+                                        {
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    })
+    }
+
     #[allow(unused)]
     pub fn find_enum_variant_preceding_by_assignment_id<'a>(&'a self,
                                                             behind_id: lang::ID,
@@ -1086,26 +1105,26 @@ impl CodeGenie {
             .find(|match_variant| match_variant.assignment_id() == assignment_id)
     }
 
-    pub fn find_enum_variant_by_assignment_id(&self,
-                                              assignment_id: lang::ID,
-                                              env_genie: &EnvGenie)
-                                              -> Option<MatchVariant> {
-        self.code
-            .all_children_dfs_iter()
-            .filter_map(|code_node| {
-                if let lang::CodeNode::Match(mach) = code_node {
-                    for (variant_id, _branch) in mach.branch_by_variant_id.iter() {
-                        if mach.variable_id(*variant_id) == assignment_id {
-                            let mut type_and_enum_by_variant_id =
-                                self.match_variant_by_variant_id(mach, env_genie);
-                            return Some(type_and_enum_by_variant_id.remove(variant_id).unwrap());
-                        }
-                    }
-                }
-                None
-            })
-            .next()
-    }
+    // pub fn find_enum_variant_by_assignment_id(&self,
+    //                                           assignment_id: lang::ID,
+    //                                           env_genie: &EnvGenie)
+    //                                           -> Option<MatchVariant> {
+    //     self.code
+    //         .all_children_dfs_iter()
+    //         .filter_map(|code_node| {
+    //             if let lang::CodeNode::Match(mach) = code_node {
+    //                 for (variant_id, _branch) in mach.branch_by_variant_id.iter() {
+    //                     if mach.variable_id(*variant_id) == assignment_id {
+    //                         let mut type_and_enum_by_variant_id =
+    //                             self.match_variant_by_variant_id(mach, env_genie);
+    //                         return Some(type_and_enum_by_variant_id.remove(variant_id).unwrap());
+    //                     }
+    //                 }
+    //             }
+    //             None
+    //         })
+    //         .next()
+    // }
 
     pub fn is_block_expression(&self, node_id: lang::ID) -> bool {
         if let Some(CodeNode::Block(_)) = self.find_parent(node_id) {

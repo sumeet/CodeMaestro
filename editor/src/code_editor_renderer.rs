@@ -10,7 +10,8 @@ use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
 use crate::code_editor::locals::{
-    find_all_locals_preceding_with_resolving_generics, LocalsSearchParams, SearchPosition,
+    find_all_locals_preceding_with_resolving_generics, find_for_loop_assignments_preceding,
+    LocalsSearchParams, SearchPosition,
 };
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
@@ -752,7 +753,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             CodeNode::Reassignment(_) => Some("Change variable to a new value".to_string()),
             CodeNode::Block(_) => None,
             CodeNode::VariableReference(vr) => {
-                let (_name, typ) = self.lookup_variable_name_and_type(vr)?;
+                let (_name, typ) = self.lookup_variable_reference(vr)?;
                 let typespec = self.env_genie.find_typespec(typ.typespec_id)?;
                 Some(typespec.description().to_string())
             }
@@ -805,7 +806,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
-        println!("rendering code node: {:?}", code_node);
         // TODO: lots of is_rendering_menu_atm() checks... how can we clean it up?
         if self.is_editing(code_node.id()) && !self.is_rendering_menu_atm() {
             return self.draw_inline_editor(code_node);
@@ -1109,16 +1109,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
         // TODO: maybe use the traffic cone instead of the exclamation triangle,
         // which is kinda hard to see
-        println!("rendering placeholder: {:?}", placeholder);
-        let x = self.code_handle(&|| {
-                                     self.ui_toolkit.draw_buttony_text(&format!("{} {}",
+        self.code_handle(&|| {
+                             self.ui_toolkit.draw_buttony_text(&format!("{} {}",
                                                                         PLACEHOLDER_ICON,
                                                                         placeholder.description),
-                                                                       colorscheme!(warning_color))
-                                 },
-                                 placeholder.id);
-        println!("done rendering placeholder");
-        x
+                                                               colorscheme!(warning_color))
+                         },
+                         placeholder.id)
     }
 
     fn render_function_reference(&self,
@@ -1166,8 +1163,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  variable_reference: &lang::VariableReference)
                                  -> T::DrawResult {
         let draw = &|| {
-            if let Some((name, typ)) = self.lookup_variable_name_and_type(variable_reference) {
-                self.render_name_with_type_definition(&name, colorscheme!(variable_color), &typ)
+            if let Some((name, typ)) = self.lookup_variable_reference(variable_reference) {
+                self.render_variable_appearance(&name, &typ)
             } else {
                 self.draw_button("Variable reference not found",
                                  colorscheme!(danger_color),
@@ -1175,6 +1172,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             }
         };
         self.code_handle(draw, variable_reference.id)
+    }
+
+    fn render_variable_appearance(&self, name: &str, typ: &lang::Type) -> T::DrawResult {
+        self.render_name_with_type_definition(name, colorscheme!(variable_color), typ)
     }
 
     fn render_function_name(&self, name: &str, color: Color, typ: &lang::Type) -> T::DrawResult {
@@ -1221,13 +1222,23 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     // should we move this into the genie?
-    fn lookup_variable_name_and_type(&self,
-                                     variable_reference: &lang::VariableReference)
-                                     -> Option<(String, lang::Type)> {
+    fn lookup_variable_reference(&self,
+                                 variable_reference: &lang::VariableReference)
+                                 -> Option<(String, lang::Type)> {
         let var = find_all_locals_preceding_with_resolving_generics(SearchPosition::not_inclusive(variable_reference.id),
             LocalsSearchParams::LocalsID(variable_reference.assignment_id),
-            &self.code_editor.code_genie, self.env_genie).next()?;
+            &self.code_editor.code_genie, self.env_genie).next()?; //?;
         Some((var.name, var.typ))
+    }
+
+    fn render_for_loop_variable(&self, for_loop: &lang::ForLoop) -> T::DrawResult {
+        let var = find_for_loop_assignments_preceding(SearchPosition::not_inclusive(for_loop.body
+                                                                                            .id()),
+                                                      LocalsSearchParams::LocalsID(for_loop.id),
+                                                      &self.code_editor.code_genie,
+                                                      self.env_genie).next()
+                                                                     .unwrap();
+        self.render_variable_appearance(&var.name, &var.typ)
     }
 
     // TODO: combine the insertion point stuff with the insertion point stuff elsewhere, mainly
@@ -1387,7 +1398,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_function_call(&self, function_call: &lang::FunctionCall) -> T::DrawResult {
-        println!("rendering function call: {:?}", function_call);
         // XXX: we've gotta have this conditional because of a quirk with the way the imgui
         // toolkit works. if render_function_call_arguments doesn't actually draw anything, it
         // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
@@ -1400,16 +1410,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                            .find_function(function_call.function_reference().function_id)
                            .map(|func| func.clone())
                            .unwrap();
-        let x = match function.style() {
+        match function.style() {
             FunctionRenderingStyle::Default => {
                 self.render_default_function_call_style(&function_call)
             }
             FunctionRenderingStyle::Infix(_, _) => {
                 self.render_infix_function_call_style(&function_call)
             }
-        };
-        println!("done rendering function call: {:?}", function_call);
-        x
+        }
     }
 
     fn render_infix_function_call_style(&self,
@@ -1696,7 +1704,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                        self.render_control_flow("\u{f2fd}",
                                                                 "   If  ",
                                                                 conditional.id,
-                                                                Some(&conditional.condition),
+                                                                Some(&|| self.render_code(&conditional.condition)),
                                                                 0,
                                                                 &conditional.true_branch)
                                    },
@@ -1714,10 +1722,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_for_loop(&self, for_loop: &lang::ForLoop) -> T::DrawResult {
         self.render_control_flow("\u{f101}",
-                                 &format!("For {} in", for_loop.variable_name),
+                                 "For",
                                  for_loop.id,
-                                 Some(&for_loop.list_expression),
-                                 0,
+                                 Some(&|| {
+                                     self.ui_toolkit.draw_all_on_same_line(&[
+                                         &|| self.render_for_loop_variable(for_loop),
+                                         &|| self.ui_toolkit.draw_buttony_text("in", CONTROL_FLOW_GREY_COLOR),
+                                         &|| self.render_code(&for_loop.list_expression)
+                                     ])
+                                 }),
+                                 1,
                                  &for_loop.body)
     }
 
@@ -1725,7 +1739,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         self.render_control_flow("\u{f2f9}",
                                  "While",
                                  while_loop.id,
-                                 Some(&while_loop.condition),
+                                 Some(&|| self.render_code(&while_loop.condition)),
                                  0,
                                  &while_loop.body)
     }
@@ -1733,8 +1747,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_control_flow(&self,
                            symbol: &str,
                            label: &str,
-                           conditional_node_id: lang::ID,
-                           condition_code: Option<&lang::CodeNode>,
+                           control_flow_node_id: lang::ID,
+                           condition_row_draw: Option<DrawFnRef<T>>,
                            x_padding_left_block_hack: u8,
                            body_block: &lang::CodeNode)
                            -> T::DrawResult {
@@ -1746,13 +1760,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                             self.render_control_flow_label(symbol,
                                                                                            label)
                                                         },
-                                                        conditional_node_id)
+                                                        control_flow_node_id)
                                        },
                                        CONTROL_FLOW_GREY_COLOR,
                                        &[
             &|| {
-                if let Some(condition_code) = condition_code {
-                    self.render_code(condition_code)
+                if let Some(condition_row_draw) = condition_row_draw {
+                    condition_row_draw()
                 } else {
                     self.ui_toolkit.draw_all(&[])
                 }
