@@ -805,6 +805,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_code(&self, code_node: &CodeNode) -> T::DrawResult {
+        println!("rendering code node: {:?}", code_node);
         // TODO: lots of is_rendering_menu_atm() checks... how can we clean it up?
         if self.is_editing(code_node.id()) && !self.is_rendering_menu_atm() {
             return self.draw_inline_editor(code_node);
@@ -1108,13 +1109,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
         // TODO: maybe use the traffic cone instead of the exclamation triangle,
         // which is kinda hard to see
-        self.code_handle(&|| {
-                             self.ui_toolkit.draw_buttony_text(&format!("{} {}",
+        println!("rendering placeholder: {:?}", placeholder);
+        let x = self.code_handle(&|| {
+                                     self.ui_toolkit.draw_buttony_text(&format!("{} {}",
                                                                         PLACEHOLDER_ICON,
                                                                         placeholder.description),
-                                                               colorscheme!(warning_color))
-                         },
-                         placeholder.id)
+                                                                       colorscheme!(warning_color))
+                                 },
+                                 placeholder.id);
+        println!("done rendering placeholder");
+        x
     }
 
     fn render_function_reference(&self,
@@ -1383,6 +1387,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_function_call(&self, function_call: &lang::FunctionCall) -> T::DrawResult {
+        println!("rendering function call: {:?}", function_call);
         // XXX: we've gotta have this conditional because of a quirk with the way the imgui
         // toolkit works. if render_function_call_arguments doesn't actually draw anything, it
         // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
@@ -1395,14 +1400,16 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                            .find_function(function_call.function_reference().function_id)
                            .map(|func| func.clone())
                            .unwrap();
-        match function.style() {
+        let x = match function.style() {
             FunctionRenderingStyle::Default => {
                 self.render_default_function_call_style(&function_call)
             }
             FunctionRenderingStyle::Infix(_, _) => {
                 self.render_infix_function_call_style(&function_call)
             }
-        }
+        };
+        println!("done rendering function call: {:?}", function_call);
+        x
     }
 
     fn render_infix_function_call_style(&self,

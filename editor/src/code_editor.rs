@@ -639,16 +639,29 @@ impl CodeGenie {
                                   -> lang::Type {
         // TODO: not sure if this is actually used...
         if let Some(variable_reference) = code_node.as_variable_reference() {
-            println!("trying to resolve generic for var ref {:?}",
-                     variable_reference);
+            // println!("trying to resolve generic for var ref {:?}",
+            //          variable_reference);
             if let Some(var) = find_assignments_preceding(SearchPosition::not_inclusive(variable_reference.assignment_id),
                                        LocalsSearchParams::LocalsID(variable_reference.assignment_id),
                 self, env_genie).next() {
                 if let Some(found_assignment) = self.find_node(var.locals_id) {
                     code_node = &found_assignment.as_assignment().unwrap().expression;
-                    println!("found assignment, and mutated: {:?}", code_node);
+                    // println!("found assignment, and mutated: {:?}", code_node);
                 } else {
-                    println!("didn't found, so it's still: {:?}", code_node);
+                    // println!("didn't found, so it's still: {:?}", code_node);
+                }
+            }
+        } else if let Some(reassignment) = code_node.as_reassignment() {
+            // println!("trying to resolve generic for var ref {:?}",
+            //          variable_reference);
+            if let Some(var) = find_assignments_preceding(SearchPosition::not_inclusive(reassignment.assignment_id),
+                                                          LocalsSearchParams::LocalsID(reassignment.assignment_id),
+                                                          self, env_genie).next() {
+                if let Some(found_assignment) = self.find_node(var.locals_id) {
+                    code_node = &found_assignment.as_assignment().unwrap().expression;
+                    // println!("found assignment, and mutated: {:?}", code_node);
+                } else {
+                    // println!("didn't found, so it's still: {:?}", code_node);
                 }
             }
         }
@@ -664,6 +677,8 @@ impl CodeGenie {
                 for arg in func_call.args() {
                     let arg_def_id = arg.argument_definition_id;
                     let typ_for_arg = env_genie.get_type_for_arg(arg_def_id).unwrap();
+                    println!("typ of generic: {:?}", typ_of_generic.typespec_id);
+                    println!("typ for arg: {:?}", typ_for_arg);
                     for (path, _) in
                         typ_for_arg.find_typespec_id_in_params(typ_of_generic.typespec_id)
                     {
@@ -672,6 +687,8 @@ impl CodeGenie {
                                                                                          .as_ref(),
                                                                                       env_genie)
                                                .unwrap();
+                        println!("arg.expr: {:?}\npath: {:?}\nguessed_type: {:?}",
+                                 arg.expr, path, guessed_type);
                         let param_of_guessed_type = guessed_type.get_param_using_path(&path);
                         if !env_genie.is_generic(param_of_guessed_type.typespec_id) {
                             return param_of_guessed_type.clone();
@@ -819,14 +836,25 @@ impl CodeGenie {
                                        mut typ: lang::Type,
                                        env_genie: &EnvGenie)
                                        -> lang::Type {
+        println!("start of trying to resolve all generics: {:?}",
+                 at_code_node);
         let mut should_try_to_resolve_generics = true;
         while should_try_to_resolve_generics {
             let outer_typ = typ.clone();
+            // let outer_typ_string = format!("{:?}", outer_typ);
+            // if format!("{:?}", typ).len() > 1000 {
+            //     unsafe {
+            //         std::intrinsics::breakpoint();
+            //     }
+            // }
             for path in paths_to_generics(&typ, env_genie) {
                 {
-                    let generic_typ = typ.get_param_using_path_mut(&path);
-                    *generic_typ =
-                        self.try_to_resolve_generic(at_code_node, &generic_typ, env_genie);
+                    {
+                        let generic_typ = typ.get_param_using_path_mut(&path);
+                        *generic_typ =
+                            self.try_to_resolve_generic(at_code_node, &generic_typ, env_genie);
+                    }
+                    println!("changed, and outer typ is now {:?}, path: {:?}", typ, path);
                 }
             }
             // if we got all the way here, and nothing changed there, let's stop looking
@@ -888,9 +916,7 @@ impl CodeGenie {
                 Ok(find_all_locals_preceding_without_resolving_generics(SearchPosition::not_inclusive(vr.id),
                                                                      LocalsSearchParams::LocalsID(vr.assignment_id),
                                                                      self,
-                                                                     env_genie).find(|var| {
-                                                                   var.locals_id == vr.assignment_id
-                                                               })
+                                                                     env_genie).next()
                                                                .unwrap()
                                                                .typ)
                 // if let Some(assignment) = self.find_node(vr.assignment_id) {

@@ -9,7 +9,7 @@ use itertools::Itertools;
 use lazy_static::lazy_static;
 use objekt::clone_trait_object;
 
-use crate::code_editor::locals::LocalsSearchParams;
+use crate::code_editor::locals::{resolve_generics, LocalsSearchParams};
 use crate::code_editor::{
     get_result_type_from_indexing_into_list, get_type_from_list, locals, required_return_type,
     CodeLocation,
@@ -1002,10 +1002,11 @@ impl InsertCodeMenuOptionGenerator for InsertReassignmentOptionGenerator {
                 var.name.contains(lowercased_trimmed_search_str)
             })
             .map(|var| {
+                let typ = locals::resolve_generics(&var, code_genie, env_genie);
                 InsertCodeMenuOption {
                     sort_key: format!("{}changevariable{}", sort_key_prefix, var.name),
                     new_node: code_generation::new_reassignment(var.locals_id,
-                                                                code_generation::new_placeholder(var.name, var.typ)).into(),
+                                                                code_generation::new_placeholder(var.name, typ)).into(),
                     is_selected: false,
                     group_name: LOCALS_GROUP,
                 }

@@ -546,6 +546,7 @@ impl Type {
     }
 
     pub fn paths_to_params_containing_self(&self) -> Vec<Vec<usize>> {
+        // println!("self: {}", format!("{:?}", self).len());
         self.paths_to_params_containing_self_rec(&mut vec![])
     }
 
@@ -665,6 +666,14 @@ impl CodeNode {
     pub fn as_variable_reference(&self) -> Option<&VariableReference> {
         if let CodeNode::VariableReference(vr) = self {
             Some(vr)
+        } else {
+            None
+        }
+    }
+
+    pub fn as_reassignment(&self) -> Option<&Reassignment> {
+        if let CodeNode::Reassignment(reassignment) = self {
+            Some(reassignment)
         } else {
             None
         }
