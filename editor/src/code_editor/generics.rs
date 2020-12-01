@@ -13,8 +13,6 @@ pub fn resolve_generics_for_function_call(func_call: &lang::FunctionCall,
     let original_return_typ = return_typ.clone();
 
     'for_generic: for defined_generic in func.defines_generics() {
-        println!("processing {:?}", defined_generic);
-
         let paths_to_generic_found_in_defined_return_typ =
             original_return_typ.find_typespec_id_in_params(defined_generic.id())
                                .collect::<Vec<_>>();
@@ -39,7 +37,6 @@ pub fn resolve_generics_for_function_call(func_call: &lang::FunctionCall,
                         for (path_to_generic_found_in_defined_return_typ, _) in
                             &paths_to_generic_found_in_defined_return_typ
                         {
-                            println!("doing some fixes");
                             *return_typ.get_param_using_path_mut(&path_to_generic_found_in_defined_return_typ) = possibly_filled_in_generic.clone();
                             continue 'for_generic;
                         }

@@ -44,6 +44,9 @@
     },
     "9072ddc8-3e47-4874-adfd-3d564b4c4430": {
       "type": "LessThan"
+    },
+    "24547ec8-8019-4237-9a4d-c31c3d516648": {
+      "type": "Append"
     }
   },
   "typespecs": {

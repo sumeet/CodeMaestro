@@ -1086,3 +1086,68 @@ impl lang::Function for Slice {
         lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![lang::Type::from_spec(&generic)])
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Append {}
+
+lazy_static! {
+    static ref APPEND_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("2cf3e94e-7256-4c58-b45b-8e2aab0ec8fa").unwrap(),
+         uuid::Uuid::parse_str("dace8bfc-566c-4ab0-8318-98bda9a8f9b0").unwrap()];
+}
+
+#[typetag::serde]
+impl lang::Function for Append {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let mut list = args.remove(&APPEND_ARGS[0]).unwrap();
+        let values = list.as_mut_vec().unwrap();
+        let item_element = args.remove(&SLICE_ARGS[1]).unwrap();
+        values.push(item_element);
+        list
+    }
+
+    fn name(&self) -> &str {
+        "Append"
+    }
+
+    fn description(&self) -> &str {
+        "Adds an element onto the end of a list"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("24547ec8-8019-4237-9a4d-c31c3d516648").unwrap()
+    }
+
+    fn style(&self) -> &FunctionRenderingStyle {
+        lazy_static! {
+            static ref APPEND_RENDERING_STYLE: lang::FunctionRenderingStyle =
+                FunctionRenderingStyle::Infix(vec![], "\u{f300}".to_string());
+        };
+        &*APPEND_RENDERING_STYLE
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("f3193d0f-010b-4cf4-831c-27a2fd80eb5f").unwrap())]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let generic = self.defines_generics().pop().unwrap();
+
+        vec![lang::ArgumentDefinition::new_with_id(SLICE_ARGS[0],
+                                                   lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                                                           vec![lang::Type::from_spec(&generic)]),
+                                                   "List".into()),
+             lang::ArgumentDefinition::new_with_id(SLICE_ARGS[1],
+                                                   lang::Type::from_spec(&generic),
+                                                   "Item".into()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        let generic = self.defines_generics().pop().unwrap();
+        lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![lang::Type::from_spec(&generic)])
+    }
+}
