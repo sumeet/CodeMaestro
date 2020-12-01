@@ -35,7 +35,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     let hidpi_factor = platform.hidpi_factor();
     //let hidpi_factor = 1.0;
 
-    let font_size = (15.0 * hidpi_factor) as f32;
+    let font_size = (17.0 * hidpi_factor) as f32;
     let icon_font_size = font_size / 1.75;
     let fontawesome_icon_y_offset = (-2.0 * hidpi_factor) as f32;
     // let custom_icon_y_offset = 1.; //(-0.25 * hidpi_factor) as f32;
