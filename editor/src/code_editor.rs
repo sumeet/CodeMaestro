@@ -897,7 +897,8 @@ impl CodeGenie {
                         // XXX: this is terrible, we return null here. figure out how to infer this position
                         // properly BIG HAX
                         // this might save me
-                        return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
+                        // return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
+                        return self.guess_type(last_expression_in_block, env_genie);
                     }
                     self.guess_type(last_expression_in_block, env_genie)
                 } else {
