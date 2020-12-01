@@ -1058,10 +1058,7 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
         let optionss = find_all_variables_preceding(search_params.insertion_point.into(),
                                                     code_genie,
                                                     env_genie).filter_map(|variable| {
-                           println!("typespec searched: {:?}",
-                                    env_genie.find_typespec(variable.typ.typespec_id));
                            let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
-                           println!("found strukt: {:?}", strukt);
 
                            Some(strukt.fields.iter().filter_map(move |struct_field| {
                     let dotted_name = format!("{}.{}", variable.name(), struct_field.name);

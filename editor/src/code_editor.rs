@@ -12,7 +12,7 @@ use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
 use crate::code_editor::generics::resolve_generics_for_function_call;
-use crate::code_editor::locals::{VariableAntecedent, VariableAntecedentPlace};
+use crate::code_editor::locals::VariableAntecedentPlace;
 use crate::code_generation;
 use crate::editor::Controller;
 use crate::insert_code_menu::find_all_variables_preceding;
@@ -23,7 +23,7 @@ use cs::builtins::{
 use cs::code_function;
 use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
-use cs::env_genie::{paths_to_generics, EnvGenie};
+use cs::env_genie::EnvGenie;
 use cs::lang;
 use cs::lang::{arg_typ_for_anon_func, typ_for_anonymous_function, CodeNode, Function};
 use cs::{builtins, env};
@@ -788,11 +788,11 @@ impl CodeGenie {
         self.code.find_parent(id)
     }
 
-    pub fn all_parents_including_node(&self, id: lang::ID) -> impl Iterator<Item = &CodeNode> {
-        self.find_node(id)
-            .into_iter()
-            .chain(self.all_parents_of(id))
-    }
+    // pub fn all_parents_including_node(&self, id: lang::ID) -> impl Iterator<Item = &CodeNode> {
+    //     self.find_node(id)
+    //         .into_iter()
+    //         .chain(self.all_parents_of(id))
+    // }
 
     pub fn all_parents_of(&self, mut id: lang::ID) -> impl Iterator<Item = &CodeNode> {
         GenIter(move || {
@@ -1177,11 +1177,11 @@ pub struct MatchVariant {
     pub match_id: lang::ID,
 }
 
-impl MatchVariant {
-    pub fn assignment_id(&self) -> lang::ID {
-        lang::Match::make_variable_id(self.match_id, self.enum_variant.id)
-    }
-}
+// impl MatchVariant {
+//     pub fn assignment_id(&self) -> lang::ID {
+//         lang::Match::make_variable_id(self.match_id, self.enum_variant.id)
+//     }
+// }
 
 pub struct Navigation<'a> {
     code_genie: &'a CodeGenie,

@@ -1151,3 +1151,60 @@ impl lang::Function for Append {
         lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![lang::Type::from_spec(&generic)])
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Length {}
+
+lazy_static! {
+    static ref LENGTH_ARGS: [lang::ID; 1] =
+        [uuid::Uuid::parse_str("5963a4f3-0b66-461f-8d3b-f830b16b51d7").unwrap()];
+}
+
+#[typetag::serde]
+impl lang::Function for Length {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        lang::Value::Number(args.remove(&LENGTH_ARGS[0])
+                                .unwrap()
+                                .as_vec()
+                                .unwrap()
+                                .len() as _)
+        // let mut list = args.remove(&APPEND_ARGS[0]).unwrap();
+        // let values = list.as_mut_vec().unwrap();
+        // let item_element = args.remove(&APPEND_ARGS[1]).unwrap();
+        // values.push(item_element);
+        // list
+    }
+
+    fn name(&self) -> &str {
+        "Length"
+    }
+
+    fn description(&self) -> &str {
+        "Adds an element onto the end of a list"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("31fc6cad-9f38-48e9-bf07-9f3219ba07f3").unwrap()
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("3775a531-fe17-4644-beec-16f5ded5084c").unwrap())]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let generic = self.defines_generics().pop().unwrap();
+
+        vec![lang::ArgumentDefinition::new_with_id(LENGTH_ARGS[0],
+                                                   lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                                                           vec![lang::Type::from_spec(&generic)]),
+                                                   "List".into()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::with_params(&*lang::NUMBER_TYPESPEC, vec![])
+    }
+}

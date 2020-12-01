@@ -197,13 +197,6 @@ pub struct SearchPosition {
     pub is_search_inclusive: bool,
 }
 
-impl SearchPosition {
-    pub fn not_inclusive(before_id: lang::ID) -> Self {
-        Self { before_code_id: before_id,
-               is_search_inclusive: false }
-    }
-}
-
 impl From<InsertionPoint> for SearchPosition {
     fn from(ip: InsertionPoint) -> Self {
         let (insertion_id, is_search_inclusive) = insert_code_menu::assignment_search_position(ip);

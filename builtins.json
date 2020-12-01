@@ -47,6 +47,9 @@
     },
     "24547ec8-8019-4237-9a4d-c31c3d516648": {
       "type": "Append"
+    },
+    "31fc6cad-9f38-48e9-bf07-9f3219ba07f3": {
+      "type": "Length"
     }
   },
   "typespecs": {

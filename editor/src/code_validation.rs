@@ -6,7 +6,7 @@ use cs::env_genie;
 use cs::lang;
 use cs::lang::Function;
 
-use crate::code_editor::locals::{find_antecedent_for_variable_reference, SearchPosition};
+use crate::code_editor::locals::find_antecedent_for_variable_reference;
 use crate::code_editor::{required_return_type, CodeLocation};
 use cs::env_genie::EnvGenie;
 use gen_iter::GenIter;
