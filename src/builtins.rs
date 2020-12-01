@@ -1104,7 +1104,7 @@ impl lang::Function for Append {
             -> lang::Value {
         let mut list = args.remove(&APPEND_ARGS[0]).unwrap();
         let values = list.as_mut_vec().unwrap();
-        let item_element = args.remove(&SLICE_ARGS[1]).unwrap();
+        let item_element = args.remove(&APPEND_ARGS[1]).unwrap();
         values.push(item_element);
         list
     }
@@ -1136,11 +1136,11 @@ impl lang::Function for Append {
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
         let generic = self.defines_generics().pop().unwrap();
 
-        vec![lang::ArgumentDefinition::new_with_id(SLICE_ARGS[0],
+        vec![lang::ArgumentDefinition::new_with_id(APPEND_ARGS[0],
                                                    lang::Type::with_params(&*lang::LIST_TYPESPEC,
                                                                            vec![lang::Type::from_spec(&generic)]),
                                                    "List".into()),
-             lang::ArgumentDefinition::new_with_id(SLICE_ARGS[1],
+             lang::ArgumentDefinition::new_with_id(APPEND_ARGS[1],
                                                    lang::Type::from_spec(&generic),
                                                    "Item".into()),
         ]

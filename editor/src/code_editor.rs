@@ -893,12 +893,12 @@ impl CodeGenie {
             CodeNode::Block(block) => {
                 if block.expressions.len() > 0 {
                     let last_expression_in_block = &block.expressions[block.expressions.len() - 1];
-                    if last_expression_in_block.as_variable_reference().is_some() {
-                        // XXX: this is terrible, we return null here. figure out how to infer this position
-                        // properly BIG HAX
-                        // this might save me
-                        return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
-                    }
+                    // if last_expression_in_block.as_variable_reference().is_some() {
+                    //     // XXX: this is terrible, we return null here. figure out how to infer this position
+                    //     // properly BIG HAX
+                    //     // this might save me
+                    //     return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
+                    // }
                     self.guess_type(last_expression_in_block, env_genie)
                 } else {
                     // TODO: this should probably be a generic, or ANY instead of Null... shoudl really

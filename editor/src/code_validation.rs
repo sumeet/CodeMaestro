@@ -210,6 +210,10 @@ impl<'a> FixableProblemFinder<'a> {
         if !self.env_genie
                 .types_match(&required_return_type, &self.returned_type(block))
         {
+            println!("code was: {:?}", block);
+            println!("found required return type problem, got {:?}, expected {:?}",
+                     self.returned_type(block),
+                     required_return_type);
             Some(FixableProblem::InvalidReturnType { location,
                                                      block: block.clone(),
                                                      required_return_type })
