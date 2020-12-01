@@ -77,7 +77,7 @@ lazy_static! {
         Box::new(ANON_FUNC_TYPESPEC.clone()), Box::new(ANY_TYPESPEC.clone())];
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct GenericParamTypeSpec {
     id: ID,
     // resolved_param: Option<Type>,

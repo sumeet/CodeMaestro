@@ -11,6 +11,7 @@ use super::editor;
 use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
+use crate::code_editor::generics::resolve_generics_for_function_call;
 use crate::code_editor::locals::{VariableAntecedent, VariableAntecedentPlace};
 use crate::code_generation;
 use crate::editor::Controller;
@@ -31,7 +32,8 @@ use locals::SearchPosition;
 use std::collections::HashSet;
 
 mod clipboard;
-pub(crate) mod locals;
+pub mod generics;
+pub mod locals;
 
 #[derive(Clone)]
 pub struct CodeEditor {
@@ -874,7 +876,10 @@ impl CodeGenie {
             CodeNode::FunctionCall(function_call) => {
                 let func_id = function_call.function_reference().function_id;
                 match env_genie.find_function(func_id) {
-                    Some(ref func) => Ok(func.returns().clone()),
+                    Some(_) => Ok(resolve_generics_for_function_call(function_call,
+                                                                     self,
+                                                                     env_genie)),
+                    // Some(ref func) => Ok(func.returns().clone()),
                     // TODO: do we really want to just return Null if we couldn't find the function?
                     None => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
                 }
