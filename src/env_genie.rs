@@ -251,7 +251,7 @@ impl<'a> EnvGenie<'a> {
     pub fn list_public_structs(&self) -> impl Iterator<Item = &structs::Struct> {
         let private_struct_ids = self.private_struct_ids();
         self.list_structs()
-            .filter(move |strukt| private_struct_ids.contains(&strukt.id))
+            .filter(move |strukt| !private_struct_ids.contains(&strukt.id))
     }
 
     pub fn find_public_structs_matching(&'a self,
