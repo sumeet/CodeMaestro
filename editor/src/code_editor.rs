@@ -989,9 +989,11 @@ impl CodeGenie {
                 //                panic!(format!("couldn't extract list element from {:?}", list_typ))
             }
             CodeNode::AnonymousFunction(anon_func) => {
-                let guessed_typ_from_anon_func_block = self.guess_type(&anon_func.block, env_genie);
-                Ok(typ_for_anonymous_function(anon_func.takes_arg.arg_type.clone(),
-                                              guessed_typ_from_anon_func_block?))
+                // let guessed_typ_from_anon_func_block = self.guess_type(&anon_func.block, env_genie);
+                Ok(typ_for_anonymous_function(anon_func.takes_arg
+                                                       .arg_type
+                                                       .clone(),
+                                              anon_func.returns.clone()))
                 // self.guess_type_without_resolving_generics(&anon_func.block, env_genie)
                 // // // TODO: could possibly use type inference here w/ the last element of the block...
                 // // // or should this be definable some other way? or inferred another way?

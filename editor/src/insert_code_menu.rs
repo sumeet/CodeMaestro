@@ -17,7 +17,7 @@ use crate::code_editor::{
 use cs::builtins;
 use cs::chat_program::ChatProgram;
 use cs::code_generation::new_anon_func;
-use cs::lang::{ArgumentDefinition, TypeSpec};
+use cs::lang::{arg_and_return_typs_for_anon_func, ArgumentDefinition, TypeSpec};
 
 lazy_static! {
     // the order is significant here. it defines which order the options appear in (no weighting
@@ -1226,18 +1226,17 @@ impl InsertCodeMenuOptionGenerator for InsertAnonFuncOptionGenerator {
             return vec![];
         }
 
-        // TODO: fix magic number
-        println!("return type: {:?}", return_type);
-        let anon_func_arg_type = &return_type.params[0];
+        let (anon_func_takes_typ, anon_func_return_typ) =
+            arg_and_return_typs_for_anon_func(return_type.clone());
 
         // TODO: takes_arg is hardcoded to string, how can this be a configurable type?
         // how to set the short_name?
-        let takes_arg = ArgumentDefinition::new(anon_func_arg_type.clone(), "var".into());
+        let takes_arg = ArgumentDefinition::new(anon_func_takes_typ, "var".into());
 
         // TODO: this could also return FunctionReferences (doesn't exist yet) in addition to
         // AnonymousFunction
         vec![InsertCodeMenuOption { sort_key: "block".to_string(),
-                                    new_node: new_anon_func(takes_arg, return_type.clone()),
+                                    new_node: new_anon_func(takes_arg, anon_func_return_typ),
                                     is_selected: false,
                                     group_name: "Executable Code" }]
     }

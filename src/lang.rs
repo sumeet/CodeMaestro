@@ -259,6 +259,11 @@ impl AnonymousFunction {
     }
 }
 
+pub fn arg_and_return_typs_for_anon_func(mut anon_func_typ: Type) -> (Type, Type) {
+    let return_typ = anon_func_typ.params.pop().unwrap();
+    (anon_func_typ.params.pop().unwrap(), return_typ)
+}
+
 pub fn arg_typ_for_anon_func(mut anon_func_typ: Type) -> Type {
     anon_func_typ.params.remove(0)
 }

@@ -29,6 +29,7 @@ pub fn resolve_generics_for_function_call(func_call: &lang::FunctionCall,
                 let guessed_typ_from_executing_param =
                     code_genie.guess_type(&func_call.iter_args().nth(i).unwrap().expr, env_genie)
                               .unwrap();
+                dbg!(&guessed_typ_from_executing_param);
                 for (path_to_generic_found_in_defined_arg, _) in
                     paths_to_generic_found_in_defined_arg
                 {
