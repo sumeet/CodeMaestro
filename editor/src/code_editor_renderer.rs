@@ -899,6 +899,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     self.ui_toolkit.draw_all_on_same_line(&[
                     // &|| self.ui_toolkit.draw_all_on_same_line(&[
                     // &|| self.render_control_flow_label(&TRY_ICON, "Try"),
+                    &|| {
+                        let code_node = lang::CodeNode::Try(trai.clone());
+                        let typ = self.code_editor
+                                      .code_genie
+                                      .guess_type(&code_node, self.env_genie)
+                                      .unwrap();
+                        let sym = self.env_genie.get_symbol_for_type(&typ);
+                        self.render_control_flow_symbol(&sym)
+                    },
                     &|| self.render_control_flow_text(&TRY_ICON),
                     &|| self.render_code(&trai.maybe_error_expr),
                     // ]),
