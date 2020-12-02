@@ -36,7 +36,8 @@ pub const PLACEHOLDER_ICON: &str = "\u{f85d}";
 lazy_static! {
     // static ref TRY_ICON: String = format!("\u{f321}");
     static ref TRY_ICON: String = format!("\u{f712}");
-    static ref OR_RETURN_ICON: String = format!("{}{}", ELSE_ICON, EARLY_RETURN_ICON);
+    // static ref OR_RETURN_ICON: String = format!("{}{}", ELSE_ICON, EARLY_RETURN_ICON);
+    static ref OR_RETURN_ICON: String = format!("{}", ELSE_ICON);
 }
 const EARLY_RETURN_ICON: &str = "\u{f151}";
 const ELSE_ICON: &str = "\u{f352}";
@@ -895,30 +896,31 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     pub fn render_try(&self, trai: &lang::Try) -> T::DrawResult {
         let draw_fn = &|| {
             self.draw_nested_borders_around(&|| {
-                self.ui_toolkit.draw_all(&[
-                    &|| self.ui_toolkit.draw_all_on_same_line(&[
-                            &|| self.render_control_flow_label(&TRY_ICON, "Try"),
-                            &|| self.render_code(&trai.maybe_error_expr),
-                        ]),
-                    &|| self.ui_toolkit.draw_all_on_same_line(&[
-                        &|| {
-                            self.render_control_flow_label(&OR_RETURN_ICON, "Return")
-                            // self.ui_toolkit.draw_with_margin((6., 0.), &|| {
-                            //                    self.ui_toolkit.draw_all_on_same_line(&[
-                            //         &|| {
-                            // self.ui_toolkit
-                            //     .draw_buttony_text("\u{f106}", CONTROL_FLOW_GREY_COLOR)
-                        },
-                        &|| {
-                            self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
-                        },
-                        ])
+                    self.ui_toolkit.draw_all_on_same_line(&[
+                    // &|| self.ui_toolkit.draw_all_on_same_line(&[
+                    // &|| self.render_control_flow_label(&TRY_ICON, "Try"),
+                    &|| self.render_control_flow_text(&TRY_ICON),
+                    &|| self.render_code(&trai.maybe_error_expr),
+                    // ]),
+                    // &|| self.ui_toolkit.draw_all_on_same_line(&[
+                    &|| {
+                        self.render_control_flow_text(&OR_RETURN_ICON)
+                        // self.ui_toolkit.draw_with_margin((6., 0.), &|| {
+                        //                    self.ui_toolkit.draw_all_on_same_line(&[
+                        //         &|| {
+                        // self.ui_toolkit
+                        //     .draw_buttony_text("\u{f106}", CONTROL_FLOW_GREY_COLOR)
+                    },
+                    &|| {
+                        self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
+                    },
+                    // ])
                     // &|| self.render_control_flow_label(&ELSE_ICON, "Or"),
                     // ])
                     //            })
                     // },
                 ])
-            })
+                })
         };
         if let Some(value) = self.env_genie
                                  .get_last_executed_result(trai.or_else_return_expr.id())
@@ -1697,11 +1699,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             .draw_buttony_text(symbol, darken(darken(CONTROL_FLOW_GREY_COLOR)))
     }
 
+    fn render_control_flow_text(&self, text: &str) -> T::DrawResult {
+        self.ui_toolkit
+            .draw_buttony_text(text, CONTROL_FLOW_GREY_COLOR)
+    }
+
     fn render_control_flow_label(&self, symbol: &str, label: &str) -> T::DrawResult {
         self.ui_toolkit
             .draw_all_on_same_line(&[&|| self.render_control_flow_symbol(symbol), &|| {
-                                       self.ui_toolkit
-                                           .draw_buttony_text(label, CONTROL_FLOW_GREY_COLOR)
+                                       self.render_control_flow_text(label)
                                    }])
     }
 
