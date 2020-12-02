@@ -1115,15 +1115,24 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_placeholder(&self, placeholder: &lang::Placeholder) -> T::DrawResult {
-        // TODO: maybe use the traffic cone instead of the exclamation triangle,
-        // which is kinda hard to see
-        self.code_handle(&|| {
-                             self.ui_toolkit.draw_buttony_text(&format!("{} {}",
-                                                                        PLACEHOLDER_ICON,
-                                                                        placeholder.description),
-                                                               colorscheme!(warning_color))
+        self.code_handle(
+                         &|| {
+                             self.ui_toolkit.draw_all_on_same_line(&[
+                &|| {
+                    let sym = self.env_genie.get_symbol_for_type(&placeholder.typ);
+                    self.ui_toolkit
+                        .draw_buttony_text(&sym, darken(colorscheme!(warning_color)))
+                },
+                &|| {
+                    self.ui_toolkit
+                        .draw_buttony_text(&format!("{} {}",
+                                                    PLACEHOLDER_ICON, placeholder.description),
+                                           colorscheme!(warning_color))
+                },
+            ])
                          },
-                         placeholder.id)
+                         placeholder.id,
+        )
     }
 
     fn render_function_reference(&self,
