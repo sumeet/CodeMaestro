@@ -232,23 +232,26 @@ impl InsertCodeMenu {
             // but that could be too limiting
             InsertionPoint::Before(_)
             | InsertionPoint::After(_)
-            | InsertionPoint::BeginningOfBlock(_) => self.new_params(None),
+            | InsertionPoint::BeginningOfBlock(_) => self.new_params(None, location),
             InsertionPoint::StructLiteralField(field_id) => {
                 let node = code_genie.find_node(field_id).unwrap();
                 self.new_params(figure_out_return_typ_for_insertion(node, location, env_genie,
-                                                                    code_genie))
+                                                                    code_genie),
+                                location)
             }
             InsertionPoint::Replace(node_id_to_replace) => {
                 let node = code_genie.find_node(node_id_to_replace).unwrap();
                 self.new_params(figure_out_return_typ_for_insertion(node, location, env_genie,
-                                                                    code_genie))
+                                                                    code_genie),
+                                location)
             }
             InsertionPoint::Wrap(node_id_to_wrap) => {
                 let node = code_genie.find_node(node_id_to_wrap).unwrap();
                 let wrapped_node_type = code_genie.guess_type(node, env_genie).unwrap();
                 let return_typ =
                     figure_out_return_typ_for_insertion(node, location, env_genie, code_genie);
-                self.new_params(return_typ).wraps_type(wrapped_node_type)
+                self.new_params(return_typ, location)
+                    .wraps_type(wrapped_node_type)
             }
             InsertionPoint::Unwrap(node_id_to_unwrap) => {
                 let node_to_unwrap = code_genie.find_node(node_id_to_unwrap).unwrap();
@@ -256,22 +259,27 @@ impl InsertCodeMenu {
                                                                      location,
                                                                      env_genie,
                                                                      code_genie);
-                self.new_params(return_typ).unwraps_code(node_id_to_unwrap)
+                self.new_params(return_typ, location)
+                    .unwraps_code(node_id_to_unwrap)
             }
             InsertionPoint::ListLiteralElement { list_literal_id, .. } => {
                 let list_literal = code_genie.find_node(list_literal_id).unwrap();
                 let guessed_typ = code_genie.guess_type(list_literal, env_genie).unwrap();
                 let element_type = get_type_from_list(guessed_typ).unwrap();
-                self.new_params(Some(element_type))
+                self.new_params(Some(element_type), location)
             }
             InsertionPoint::Editing(_) => panic!("shouldn't have gotten here"),
         }
     }
 
     // we don't have to clone that string
-    fn new_params(&self, return_type: Option<lang::Type>) -> CodeSearchParams {
+    fn new_params(&self,
+                  return_type: Option<lang::Type>,
+                  location: CodeLocation)
+                  -> CodeSearchParams {
         CodeSearchParams { input_str: self.input_str.clone(),
                            insertion_point: self.insertion_point,
+                           location,
                            return_type,
                            unwraps_code_id: None,
                            wraps_type: None }
@@ -312,6 +320,7 @@ fn figure_out_return_typ_for_insertion(node: &lang::CodeNode,
 #[derive(Clone, Debug)]
 // TODO: pretty sure these could all be references....
 pub struct CodeSearchParams {
+    pub location: CodeLocation,
     pub return_type: Option<lang::Type>,
     pub wraps_type: Option<lang::Type>,
     pub unwraps_code_id: Option<lang::ID>,
@@ -786,15 +795,23 @@ impl InsertCodeMenuOptionGenerator for InsertEarlyReturnOptionGenerator {
     fn options(&self,
                search_params: &CodeSearchParams,
                code_genie: &CodeGenie,
-               _env_genie: &EnvGenie)
+               env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
         if !is_inserting_inside_block(search_params.insertion_point, code_genie) {
             return vec![];
         }
-        // early return when wrapping doesn't make any sense
-        if let Some(_) = search_params.wraps_type {
-            return vec![];
+
+        if let Some(wraps_typ) = &search_params.wraps_type {
+            // let you early return if you're wrapping the right return type
+            if let Some(required_return_typ_for_context) =
+                required_return_type(search_params.location, env_genie)
+            {
+                if !env_genie.types_match(&required_return_typ_for_context, wraps_typ) {
+                    return vec![];
+                }
+            }
         }
+
         vec![InsertCodeMenuOption { sort_key: "earlyreturn".to_string(),
                                     new_node: code_generation::new_early_return(),
                                     is_selected: false,

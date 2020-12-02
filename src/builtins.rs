@@ -490,10 +490,10 @@ impl lang::Function for SplitString {
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
         vec![lang::ArgumentDefinition::new_with_id(SPLIT_STRING_ARG_IDS[0],
                                                    lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                                                   "String to split".to_string()),
+                                                   "String".to_string()),
              lang::ArgumentDefinition::new_with_id(SPLIT_STRING_ARG_IDS[1],
                                                    lang::Type::from_spec(&*lang::STRING_TYPESPEC),
-                                                   "Delimiter".to_string()),]
+                                                   "By".to_string()),]
     }
 
     fn returns(&self) -> lang::Type {
@@ -567,12 +567,12 @@ impl lang::Function for Map {
                 lang::Type::with_params(&*lang::LIST_TYPESPEC,
                                     // type of source is generic 0
                                     vec![lang::Type::from_spec(&generics[0])]),
-                "Collection".to_string()),
+                "List".to_string()),
             lang::ArgumentDefinition::new_with_id(
                 MAP_ARG_IDS[1],
                 typ_for_anonymous_function(lang::Type::from_spec(&generics[0]),
                                         lang::Type::from_spec(&generics[1])),
-                "Transformation".to_string()),
+                "Map".to_string()),
         ]
     }
 

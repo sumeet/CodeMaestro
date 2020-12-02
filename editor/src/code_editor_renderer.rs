@@ -798,7 +798,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 Some("Exit the function early".into())
             }
             CodeNode::Try(_) => {
-                Some("Either unwraps an error (Result or Option) or exits the function early".into())
+                Some("Try, or fallback if there's an error".into())
             }
         }
     }
