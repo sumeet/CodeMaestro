@@ -1062,7 +1062,6 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
 
                            Some(strukt.fields.iter().filter_map(move |struct_field| {
                     let dotted_name = format!("{}.{}", variable.name(), struct_field.name);
-                               println!("looking at {:?}", dotted_name);
 
                     if !(search_params.search_matches_identifier(&variable.name()) ||
                          search_params.search_matches_identifier(&struct_field.name) ||

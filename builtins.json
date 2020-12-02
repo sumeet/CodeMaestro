@@ -85,7 +85,7 @@
       "name": "Option",
       "description": "Represents either a value or no-value",
       "id": "f580d95e-2b63-4790-a061-4ddc3d6d21b8",
-      "symbol": "\uF059",
+      "symbol": "\uF042",
       "variants": [
         {
           "name": "Some",
@@ -107,7 +107,7 @@
       "name": "Result",
       "description": "Represents either a successful operation or a failure",
       "id": "ffd15538-175e-4f60-8acd-c24222ddd664",
-      "symbol": "",
+      "symbol": "\uF6AD",
       "variants": [
         {
           "name": "Ok",
