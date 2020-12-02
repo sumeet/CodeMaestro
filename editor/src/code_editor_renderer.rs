@@ -1692,17 +1692,17 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         })
     }
 
+    fn render_control_flow_symbol(&self, symbol: &str) -> T::DrawResult {
+        self.ui_toolkit
+            .draw_buttony_text(symbol, darken(darken(CONTROL_FLOW_GREY_COLOR)))
+    }
+
     fn render_control_flow_label(&self, symbol: &str, label: &str) -> T::DrawResult {
-        self.ui_toolkit.draw_all_on_same_line(&[
-            &|| {
-                self.ui_toolkit
-                    .draw_buttony_text(symbol, darken(darken(CONTROL_FLOW_GREY_COLOR)))
-            },
-            &|| {
-                self.ui_toolkit
-                    .draw_buttony_text(label, CONTROL_FLOW_GREY_COLOR)
-            },
-        ])
+        self.ui_toolkit
+            .draw_all_on_same_line(&[&|| self.render_control_flow_symbol(symbol), &|| {
+                                       self.ui_toolkit
+                                           .draw_buttony_text(label, CONTROL_FLOW_GREY_COLOR)
+                                   }])
     }
 
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
