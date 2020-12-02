@@ -1486,7 +1486,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     match self.env_genie
                               .get_arg_definition(argument.argument_definition_id)
                     {
-                        Some(arg_def) => {
+                        Some((_func, arg_def)) => {
                             let typ = self.code_editor
                                           .code_genie
                                           .guess_type(&lang::CodeNode::Argument(argument.clone()),

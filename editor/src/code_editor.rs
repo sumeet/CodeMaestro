@@ -11,7 +11,9 @@ use super::editor;
 use super::insert_code_menu::InsertCodeMenu;
 use super::undo;
 use crate::code_editor::clipboard::ClipboardContents;
-use crate::code_editor::generics::resolve_generics_for_function_call;
+use crate::code_editor::generics::{
+    resolve_generics_for_function_call, resolve_generics_for_function_call_argument,
+};
 use crate::code_editor::locals::VariableAntecedentPlace;
 use crate::code_generation;
 use crate::editor::Controller;
@@ -938,8 +940,9 @@ impl CodeGenie {
             }
             CodeNode::FunctionReference(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::Argument(arg) => {
-                env_genie.get_type_for_arg(arg.argument_definition_id)
-                         .ok_or("couldn't find type to this argument".into())
+                Ok(resolve_generics_for_function_call_argument(arg, self, env_genie))
+                // env_genie.get_type_for_arg(arg.argument_definition_id)
+                //          .ok_or("couldn't find type to this argument".into())
             }
             CodeNode::Placeholder(placeholder) => Ok(placeholder.typ.clone()),
             CodeNode::NullLiteral(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),

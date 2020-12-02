@@ -273,17 +273,16 @@ impl<'a> EnvGenie<'a> {
             .map(|arg_def| arg_def.0)
     }
 
-    pub fn get_arg_definition(&self,
+    pub fn get_arg_definition(&'a self,
                               argument_definition_id: lang::ID)
-                              -> Option<lang::ArgumentDefinition> {
+                              -> Option<(&'a dyn lang::Function, lang::ArgumentDefinition)> {
         self.iterate_all_function_arguments()
-            .find(|(_, arg)| arg.id == argument_definition_id)
-            .map(|arg_def| arg_def.1)
+            .find(|(_func, arg)| arg.id == argument_definition_id)
     }
 
     // TODO: this is the place that needs to be changed
     pub fn get_type_for_arg(&self, argument_definition_id: lang::ID) -> Option<lang::Type> {
-        let argument_definition = self.get_arg_definition(argument_definition_id)?;
+        let (_func, argument_definition) = self.get_arg_definition(argument_definition_id)?;
         Some(argument_definition.arg_type)
     }
 
