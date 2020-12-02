@@ -920,9 +920,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                         // self.ui_toolkit
                         //     .draw_buttony_text("\u{f106}", CONTROL_FLOW_GREY_COLOR)
                     },
-                    &|| {
-                        self.render_without_nesting(&|| self.render_code(&trai.or_else_return_expr))
-                    },
+                    &|| self.render_without_nesting(&|| self.render_code(&trai.or_else_expr)),
                     // ])
                     // &|| self.render_control_flow_label(&ELSE_ICON, "Or"),
                     // ])
@@ -931,13 +929,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 ])
                 })
         };
-        if let Some(value) = self.env_genie
-                                 .get_last_executed_result(trai.or_else_return_expr.id())
-        {
-            self.draw_code_with_output(draw_fn, value)
-        } else {
-            draw_fn()
-        }
+        // TODO: pretty sure i don't need this commented out code anymore since i'm nerfing Try to not
+        // early return
+        // if let Some(value) = self.env_genie
+        //                          .get_last_executed_result(trai.or_else_expr.id())
+        // {
+        //     self.draw_code_with_output(draw_fn, value)
+        // } else {
+        draw_fn()
+        // }
     }
 
     pub fn render_early_return(&self, early_return: &lang::EarlyReturn) -> T::DrawResult {

@@ -294,9 +294,7 @@ impl Interpreter {
                     };
                     match opt {
                         Some(ok_value) => ok_value,
-                        None => {
-                            lang::Value::EarlyReturn(Box::new(await_eval_result!(interp.evaluate(&trai.or_else_return_expr))))
-                        }
+                        None => await_eval_result!(interp.evaluate(&trai.or_else_expr)),
                     }
                 })
             }

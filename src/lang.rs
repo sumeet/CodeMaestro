@@ -868,7 +868,7 @@ impl CodeNode {
                 Box::new(std::iter::once(early_return.code.as_ref()))
             }
             CodeNode::Try(trai) => {
-                Box::new(std::iter::once(trai.maybe_error_expr.as_ref()).chain(std::iter::once(trai.or_else_return_expr.as_ref())))
+                Box::new(std::iter::once(trai.maybe_error_expr.as_ref()).chain(std::iter::once(trai.or_else_expr.as_ref())))
             }
             CodeNode::ForLoop(for_loop) => {
                 Box::new(std::iter::once(for_loop.list_expression.as_ref())
@@ -935,7 +935,7 @@ impl CodeNode {
             CodeNode::EnumVariantLiteral(evl) => vec![evl.variant_value_expr.borrow_mut()],
             CodeNode::EarlyReturn(early_return) => vec![early_return.code.borrow_mut()],
             CodeNode::Try(trai) => vec![trai.maybe_error_expr.borrow_mut(),
-                                        trai.or_else_return_expr.borrow_mut()],
+                                        trai.or_else_expr.borrow_mut()],
             CodeNode::ForLoop(for_loop) => vec![for_loop.list_expression.borrow_mut(),
                                                 for_loop.body.borrow_mut(),],
         }
@@ -1258,5 +1258,5 @@ pub struct EarlyReturn {
 pub struct Try {
     pub id: ID,
     pub maybe_error_expr: Box<CodeNode>,
-    pub or_else_return_expr: Box<CodeNode>,
+    pub or_else_expr: Box<CodeNode>,
 }
