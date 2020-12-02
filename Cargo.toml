@@ -79,3 +79,6 @@ stdweb = {git = "https://github.com/koute/stdweb", features = ["experimental_fea
 #
 #[profile.dev]
 #lto = "thin"
+# for profiling
+[profile.release]
+debug = true
