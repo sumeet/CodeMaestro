@@ -15,6 +15,7 @@ use crate::code_editor::{
     CodeLocation,
 };
 use cs::builtins;
+use cs::builtins::get_success_type_from_option_or_result_typ;
 use cs::chat_program::ChatProgram;
 use cs::code_generation::new_anon_func;
 use cs::lang::{arg_and_return_typs_for_anon_func, ArgumentDefinition, TypeSpec};
@@ -1135,11 +1136,11 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
 
                     let name = variable.name().to_string();
 
-                    let list_elem_result_typ = get_type_from_list(variable.typ)?;
+                    let list_elem_typ = get_type_from_list(variable.typ)?;
                     if let Some(search_type) = &search_params.return_type {
                         // TODO: this should probably call the search_params.matches_type func or whatever it's called
                         // there's another place in this file that does the same thing, should replace that (lazy)
-                        if !env_genie.types_match(&search_type, &list_elem_result_typ) {
+                        if !env_genie.types_match(&search_type, &list_elem_typ) {
                             return None
                         }
                     }
@@ -1150,7 +1151,7 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                         group_name: LOCALS_GROUP,
                         sort_key: format!("listindextry{}", variable.locals_id),
                         new_node: lang::CodeNode::Try(code_generation::new_try(code_generation::new_list_index(code_generation::new_variable_reference(
-                            variable.locals_id)))),
+                            variable.locals_id)), list_elem_typ)),
                         is_selected: false
                     })
                 }
@@ -1271,7 +1272,8 @@ impl InsertCodeMenuOptionGenerator for InsertTryOptionGenerator {
             if [*builtins::RESULT_ENUM_ID, *builtins::OPTION_ENUM_ID].contains(&wraps_type.typespec_id) {
                 let wrapped_node = find_wrapped_node(code_genie, search_params);
                 return vec![InsertCodeMenuOption { sort_key: "tryoption".to_string(),
-                    new_node: lang::CodeNode::Try(code_generation::new_try(wrapped_node.clone())),
+                    new_node: lang::CodeNode::Try(code_generation::new_try(wrapped_node.clone(),
+                                                                           get_success_type_from_option_or_result_typ(wraps_type).unwrap().clone())),
                     is_selected: false,
                     group_name: CONTROL_FLOW_GROUP }];
             }

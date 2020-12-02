@@ -300,10 +300,16 @@ pub fn new_result(ok_type: lang::Type, error_type: lang::Type) -> lang::Type {
                  params: vec![ok_type, error_type] }
 }
 
+pub fn get_success_type_from_option_or_result_typ(option_or_result_typ: &lang::Type)
+                                                  -> Result<&lang::Type, &'static str> {
+    get_some_type_from_option_type(option_or_result_typ)
+        .or_else(|_| get_ok_type_from_result_type(option_or_result_typ))
+}
+
 pub fn get_some_type_from_option_type(option_type: &lang::Type)
                                       -> Result<&lang::Type, &'static str> {
     if option_type.typespec_id != *OPTION_ENUM_ID {
-        Err("wrong typespec ID")
+        Err("wrong typespec ID for option")
     } else {
         Ok(&option_type.params[0])
     }
@@ -311,7 +317,7 @@ pub fn get_some_type_from_option_type(option_type: &lang::Type)
 
 pub fn get_ok_type_from_result_type(result_type: &lang::Type) -> Result<&lang::Type, &'static str> {
     if result_type.typespec_id != *RESULT_ENUM_ID {
-        Err("wrong typespec ID")
+        Err("wrong typespec ID for result")
     } else {
         Ok(&result_type.params[0])
     }

@@ -19,8 +19,7 @@ use crate::code_generation;
 use crate::editor::Controller;
 use crate::insert_code_menu::find_all_variables_preceding;
 use cs::builtins::{
-    get_ok_type_from_result_type, get_some_type_from_option_type, new_result,
-    new_result_with_null_error,
+    get_success_type_from_option_or_result_typ, new_result, new_result_with_null_error,
 };
 use cs::code_function;
 use cs::enums::EnumVariant;
@@ -1011,11 +1010,10 @@ impl CodeGenie {
             CodeNode::EarlyReturn(inner) => self.guess_type(inner.code.as_ref(), env_genie),
             CodeNode::Try(trai) => {
                 let maybe_error_typ = self.guess_type(trai.maybe_error_expr.as_ref(), env_genie)?;
-                if let Ok(result_ok_typ) = get_ok_type_from_result_type(&maybe_error_typ) {
-                    Ok(result_ok_typ.clone())
-                } else if let Ok(option_some_typ) = get_some_type_from_option_type(&maybe_error_typ)
+                if let Ok(success_typ) =
+                    get_success_type_from_option_or_result_typ(&maybe_error_typ)
                 {
-                    Ok(option_some_typ.clone())
+                    Ok(success_typ.clone())
                 } else {
                     Err("invalid node inside of try".into())
                 }

@@ -260,10 +260,8 @@ pub fn new_enum_variant_literal(enum_name: String,
                                                                             variant_type)) }
 }
 
-pub fn new_try(maybe_error_expr: lang::CodeNode) -> lang::Try {
+pub fn new_try(maybe_error_expr: lang::CodeNode, placeholder_typ: lang::Type) -> lang::Try {
     lang::Try { id: lang::new_id(),
                 maybe_error_expr: Box::new(maybe_error_expr),
-                or_else_expr:
-                    Box::new(new_placeholder("Or else".into(),
-                                             lang::Type::from_spec(&*lang::ANY_TYPESPEC))) }
+                or_else_expr: Box::new(new_placeholder("Or else".into(), placeholder_typ)) }
 }
