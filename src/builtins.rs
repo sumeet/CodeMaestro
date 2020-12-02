@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex};
 mod http_request;
 
 use crate::env::ExecutionError;
-use crate::lang::{return_typ_for_anon_func, typ_for_anonymous_function, FunctionRenderingStyle};
+use crate::lang::{typ_for_anonymous_function, FunctionRenderingStyle};
 pub use http_request::HTTPRequest;
 pub use http_request::HTTP_RESPONSE_STRUCT_ID;
 
@@ -536,7 +536,7 @@ impl lang::Function for Map {
                                     }
                                 });
             let joined = join_all(mapped).await;
-            lang::Value::List(return_typ_for_anon_func(map_fn.returns), joined)
+            lang::Value::List(map_fn.returns, joined)
         })
     }
 
