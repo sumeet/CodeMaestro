@@ -698,6 +698,56 @@ impl lang::Function for DivideTemp {
     }
 }
 
+// #[derive(Clone, Serialize, Deserialize)]
+// pub struct Modulus {}
+//
+// lazy_static! {
+//     static ref MODULUS_ARGS: [lang::ID; 2] =
+//         [uuid::Uuid::parse_str("f68f3c43-156f-4214-a2a5-3e04c644762f").unwrap(),
+//          uuid::Uuid::parse_str("b5b89f23-4068-4130-8900-f01faf1cccc3").unwrap(),];
+// }
+//
+// #[typetag::serde]
+// impl lang::Function for DivideTemp {
+//     fn call(&self,
+//             _interpreter: env::Interpreter,
+//             args: HashMap<lang::ID, lang::Value>)
+//             -> lang::Value {
+//         let dividend = args.get(&DIVIDE_ARGS[0]).unwrap().as_i128().unwrap();
+//         let divisor = args.get(&DIVIDE_ARGS[1]).unwrap().as_i128().unwrap();
+//         lang::Value::Number(dividend / divisor)
+//     }
+//
+//     fn style(&self) -> &lang::FunctionRenderingStyle {
+//         &DIVIDE_RENDERING_STYLE
+//     }
+//
+//     fn name(&self) -> &str {
+//         "DivideTemp"
+//     }
+//
+//     fn description(&self) -> &str {
+//         "Does Division"
+//     }
+//
+//     fn id(&self) -> lang::ID {
+//         uuid::Uuid::parse_str("d1943888-27bc-40da-9756-e25da8584f96").unwrap()
+//     }
+//
+//     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+//         vec![lang::ArgumentDefinition::new_with_id(DIVIDE_ARGS[0],
+//                                                    lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+//                                                    "Dividend".into()),
+//              lang::ArgumentDefinition::new_with_id(DIVIDE_ARGS[1],
+//                                                    lang::Type::from_spec(&*lang::NUMBER_TYPESPEC),
+//                                                    "Divisor".into())]
+//     }
+//
+//     fn returns(&self) -> lang::Type {
+//         lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+//     }
+// }
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Subtract {}
 
@@ -1189,7 +1239,7 @@ impl lang::Function for Length {
     }
 
     fn description(&self) -> &str {
-        "Adds an element onto the end of a list"
+        "Returns the size of the list"
     }
 
     fn id(&self) -> lang::ID {
@@ -1214,61 +1264,3 @@ impl lang::Function for Length {
         lang::Type::with_params(&*lang::NUMBER_TYPESPEC, vec![])
     }
 }
-
-// #[derive(Clone, Serialize, Deserialize)]
-// pub struct StringContains {}
-//
-// lazy_static! {
-//     static ref STRING_CONTAINS_ARGS: [lang::ID; 1] =
-//         [uuid::Uuid::parse_str("5963a4f3-0b66-461f-8d3b-f830b16b51d7").unwrap()
-//         uuid::Uuid::parse_str("5963a4f3-0b66-461f-8d3b-f830b16b51d7").unwrap()];
-// }
-//
-// #[typetag::serde]
-// impl lang::Function for StringContains {
-//     fn call(&self,
-//             _interpreter: env::Interpreter,
-//             mut args: HashMap<lang::ID, lang::Value>)
-//             -> lang::Value {
-//         lang::Value::Number(args.remove(&LENGTH_ARGS[0])
-//                                 .unwrap()
-//                                 .as_vec()
-//                                 .unwrap()
-//                                 .len() as _)
-//         // let mut list = args.remove(&APPEND_ARGS[0]).unwrap();
-//         // let values = list.as_mut_vec().unwrap();
-//         // let item_element = args.remove(&APPEND_ARGS[1]).unwrap();
-//         // values.push(item_element);
-//         // list
-//     }
-//
-//     fn name(&self) -> &str {
-//         "Length"
-//     }
-//
-//     fn description(&self) -> &str {
-//         "Adds an element onto the end of a list"
-//     }
-//
-//     fn id(&self) -> lang::ID {
-//         uuid::Uuid::parse_str("31fc6cad-9f38-48e9-bf07-9f3219ba07f3").unwrap()
-//     }
-//
-//     fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
-//         vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("3775a531-fe17-4644-beec-16f5ded5084c").unwrap())]
-//     }
-//
-//     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-//         let generic = self.defines_generics().pop().unwrap();
-//
-//         vec![lang::ArgumentDefinition::new_with_id(LENGTH_ARGS[0],
-//                                                    lang::Type::with_params(&*lang::LIST_TYPESPEC,
-//                                                                            vec![lang::Type::from_spec(&generic)]),
-//                                                    "List".into()),
-//         ]
-//     }
-//
-//     fn returns(&self) -> lang::Type {
-//         lang::Type::with_params(&*lang::NUMBER_TYPESPEC, vec![])
-//     }
-// }
