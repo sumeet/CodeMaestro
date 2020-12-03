@@ -69,9 +69,7 @@ impl Interpreter {
     pub fn evaluate<'a>(&'a mut self,
                         code_node: &'a lang::CodeNode)
                         -> impl Future<Output = lang::Value> + 'a {
-        // let interp_for_saving = self.clone();
-        // let code_node = code_node.clone();
-        // let code_node_id = code_node.id();
+        let prev_eval_result = Rc::clone(&self.env.borrow().prev_eval_result_by_code_id);
         let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
                 // TODO: get rid of the unwrap and bubble up the error
@@ -312,16 +310,18 @@ impl Interpreter {
                 })
             }
         };
-        result
-        // result;
-        // let mut interp = self.clone();
-        // let env = Rc::clone(&self.env);
+        // result
+        // interp runs faster when it doesn't have to copy and clone all the results
+        async move {
+            let result = await_eval_result!(result);
+            prev_eval_result.borrow_mut()
+                            .insert(code_node.id(), result.clone());
+            result
+        }
         // async move {
         //     let result = await_eval_result!(result);
-        //     interp_for_saving.env
-        //                      .borrow_mut()
-        //                      .prev_eval_result_by_code_id
-        //                      .insert(code_node.id(), result.clone());
+        //     prev_eval_result.borrow_mut()
+        //                     .insert(code_node.id(), result.clone());
         //     result
         // }
     }
@@ -411,17 +411,18 @@ impl Interpreter {
 #[derive(Debug, Clone)]
 pub struct ExecutionEnvironment {
     pub console: String,
-    // TODO: lol, this is going to end up being stack frames, or smth like that
-    // pub locals: HashMap<lang::ID, lang::Value>,
     pub functions: HashMap<lang::ID, Box<dyn lang::Function + 'static>>,
     pub typespecs: HashMap<lang::ID, Box<dyn lang::TypeSpec + 'static>>,
-    pub prev_eval_result_by_code_id: HashMap<lang::ID, lang::Value>,
+
+    // TODO: not sure where to put this
+    pub prev_eval_result_by_code_id: Rc<RefCell<HashMap<lang::ID, lang::Value>>>,
 }
 
 impl ExecutionEnvironment {
     pub fn new() -> ExecutionEnvironment {
         return ExecutionEnvironment { console: String::new(),
-                                      prev_eval_result_by_code_id: HashMap::new(),
+                                      prev_eval_result_by_code_id:
+                                          Rc::new(RefCell::new(HashMap::new())),
                                       functions: HashMap::new(),
                                       typespecs: Self::built_in_typespecs() };
     }

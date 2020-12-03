@@ -1327,12 +1327,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_code_line_in_block(&self, code_node: &lang::CodeNode) -> T::DrawResult {
         let draw_code_fn = &|| self.render_code(code_node);
         let draw_code_with_output_if_present = &|| {
-            let value = self.env_genie.get_last_executed_result(code_node.id());
-            if let Some(value) = value {
-                self.draw_code_with_output(draw_code_fn, value)
-            } else {
-                draw_code_fn()
-            }
+            self.env_genie
+                .get_last_executed_result(code_node.id(), |value| {
+                    if let Some(value) = value {
+                        self.draw_code_with_output(draw_code_fn, value)
+                    } else {
+                        draw_code_fn()
+                    }
+                })
         };
 
         let cmd_buffer = Rc::clone(&self.command_buffer);

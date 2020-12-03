@@ -519,8 +519,8 @@ impl CommandBuffer {
         let code = code.clone();
         self.add_integrating_command(move |_controller, interpreter, async_executor, _| {
                 {
-                    let mut env = interpreter.env.borrow_mut();
-                    env.prev_eval_result_by_code_id.clear();
+                    let env = interpreter.env.borrow_mut();
+                    env.prev_eval_result_by_code_id.borrow_mut().clear();
                 }
                 run(interpreter.clone(), async_executor, code, callback);
             })
