@@ -162,9 +162,10 @@ impl JSONHTTPClientBuilder {
             fake_http_client
         };
 
-        let fut = fake_interp.evaluate(&fake_http_client.test_code());
         let mut new_builder = self.clone();
+        let test_code = fake_http_client.test_code();
         async_executor.exec(async move {
+            let fut = fake_interp.evaluate(&test_code);
             await_eval_result!(fut);
             let req =
                 fake_http_client.take_made_request()

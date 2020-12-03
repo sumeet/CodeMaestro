@@ -65,7 +65,9 @@ impl lang::Function for CodeFunction {
         for (id, value) in args {
             interpreter.set_local_variable(id, value);
         }
-        lang::Value::new_future(interpreter.evaluate(&self.code()))
+        // lang::Value::new_future(interpreter.evaluate(&self.code()))
+        let code = self.code();
+        lang::Value::new_future(async move { interpreter.evaluate(&code).await })
     }
 
     fn style(&self) -> &FunctionRenderingStyle {

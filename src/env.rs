@@ -15,7 +15,6 @@ use crate::builtins::{err_result_string, err_result_value};
 use crate::lang::CodeNode;
 use crate::{enums, resolve_all_futures, EnvGenie};
 use failure::_core::fmt::Formatter;
-use futures_util::FutureExt;
 use itertools::Itertools;
 use std::convert::TryInto;
 
@@ -67,9 +66,11 @@ impl Interpreter {
 
     // TODO: this is insane that we have to clone the code just to evaluate it. this is gonna slow
     // down evaluation so much
-    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
-        let code_node = code_node.clone();
-        let code_node_id = code_node.id();
+    pub fn evaluate<'a>(&'a mut self,
+                        code_node: &'a lang::CodeNode)
+                        -> impl Future<Output = lang::Value> + 'a {
+        // let code_node = code_node.clone();
+        // let code_node_id = code_node.id();
         let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
                 // TODO: get rid of the unwrap and bubble up the error
@@ -81,7 +82,7 @@ impl Interpreter {
                 Box::pin(self.evaluate(std::borrow::Borrow::borrow(&argument.expr)))
             }
             lang::CodeNode::StringLiteral(string_literal) => {
-                let val = string_literal.value;
+                let val = string_literal.value.clone();
                 Box::pin(async move { lang::Value::String(val) })
             }
             lang::CodeNode::NumberLiteral(number_literal) => {
@@ -98,8 +99,8 @@ impl Interpreter {
                 let mut interp = self.clone();
                 Box::pin(async move {
                     let mut return_value = lang::Value::Null;
-                    for exp in block.expressions {
-                        return_value = await_eval_result!(interp.evaluate(&exp));
+                    for exp in &block.expressions {
+                        return_value = await_eval_result!(interp.evaluate(exp));
                         if return_value.is_early_return() {
                             break;
                         }
@@ -120,18 +121,12 @@ impl Interpreter {
             lang::CodeNode::Placeholder(_) => Box::pin(async { lang::Value::Null }),
             lang::CodeNode::NullLiteral(_) => Box::pin(async { lang::Value::Null }),
             lang::CodeNode::StructLiteral(struct_literal) => {
-                let value_futures: HashMap<lang::ID, Pin<Box<dyn Future<Output = lang::Value>>>> =
-                    struct_literal.fields()
-                                  .map(|literal_field| {
-                                      (literal_field.struct_field_id,
-                                       self.evaluate(&literal_field.expr).boxed_local())
-                                  })
-                                  .collect();
+                let mut interp = self.clone();
                 Box::pin(async move {
-                    // TODO: use join to await them all at the same time
-                    let mut values = HashMap::new();
-                    for (id, value_future) in value_futures.into_iter() {
-                        values.insert(id, await_eval_result!(value_future));
+                    let mut values = HashMap::with_capacity(struct_literal.fields.len());
+                    for literal_field in struct_literal.fields() {
+                        values.insert(literal_field.struct_field_id,
+                                      await_eval_result!(interp.evaluate(&literal_field.expr)));
                     }
                     lang::Value::Struct { struct_id: struct_literal.struct_id,
                                           values }
@@ -169,31 +164,29 @@ impl Interpreter {
                     lang::Value::Null
                 })
             }
-            lang::CodeNode::Match(mut mach) => {
-                let match_exp_fut = self.evaluate(&mach.match_expression);
-
+            lang::CodeNode::Match(mach) => {
                 let mut new_interp = self.clone();
                 Box::pin(async move {
+                    let match_exp_fut = new_interp.evaluate(&mach.match_expression);
                     let (variant_id, value) =
                         await_eval_result!(match_exp_fut).into_enum().unwrap();
                     let var_id = lang::Match::make_variable_id(mach.id, variant_id);
                     new_interp.set_local_variable(var_id, value);
-                    let branch_code = mach.branch_by_variant_id.remove(&variant_id).unwrap();
+                    let branch_code = mach.branch_by_variant_id.get(&variant_id).unwrap();
                     await_eval_result!(new_interp.evaluate(&branch_code))
                 })
             }
             lang::CodeNode::ListLiteral(list_literal) => {
-                let futures = list_literal.elements
-                                          .iter()
-                                          .map(|e| self.evaluate(e))
-                                          .collect_vec();
-                let mut output_vec = vec![];
+                let mut interp = self.clone();
                 Box::pin(async move {
-                    // TODO: this can be done in parallel
-                    for future in futures.into_iter() {
-                        output_vec.push(await_eval_result!(future))
+                    let mut output_vec = Vec::with_capacity(list_literal.elements.len());
+
+                    for element in &list_literal.elements {
+                        // TODO: these can be awaited in parallel
+                        output_vec.push(await_eval_result!(interp.evaluate(element)));
                     }
-                    lang::Value::List(list_literal.element_type, output_vec)
+
+                    lang::Value::List(list_literal.element_type.clone(), output_vec)
                 })
             }
             lang::CodeNode::StructFieldGet(sfg) => {
@@ -207,13 +200,16 @@ impl Interpreter {
             lang::CodeNode::ListIndex(list_index) => {
                 let mut interp = self.clone();
                 Box::pin(async move {
-                    let list_fut = interp.evaluate(list_index.list_expr.as_ref());
-                    let index_fut = interp.evaluate(list_index.index_expr.as_ref());
-
-                    let index = await_eval_result!(index_fut).as_i128().unwrap();
+                    let index = await_eval_result!(interp.evaluate(list_index.index_expr.as_ref()))
+                                      .as_i128()
+                                      .unwrap();
+                    // let index = await_eval_result!(index_fut).as_i128().unwrap();
                     if index.is_negative() {
                         return err_result_string(format!("can't index into a list with a negative index: {}", index));
                     }
+
+                    let list_fut = interp.evaluate(list_index.list_expr.as_ref());
+
                     let index_usize: Option<usize> = index.try_into().ok();
                     if index_usize.is_none() {
                         return err_result_string(format!("{} isn't a valid index", index));
@@ -230,7 +226,7 @@ impl Interpreter {
                 })
             }
             CodeNode::AnonymousFunction(anon_func) => {
-                Box::pin(async move { lang::Value::AnonymousFunction(anon_func) })
+                Box::pin(async move { lang::Value::AnonymousFunction(anon_func.clone()) })
             }
             // guess_type of this will return Result<Null, Number>
             // here, Number is the index that didn't exist in the list we're changing
@@ -315,14 +311,16 @@ impl Interpreter {
                 })
             }
         };
-        let env = Rc::clone(&self.env);
-        async move {
-            let result = await_eval_result!(result);
-            env.borrow_mut()
-               .prev_eval_result_by_code_id
-               .insert(code_node_id, result.clone());
-            result
-        }
+        result
+        // let env = Rc::clone(&self.env);
+        // async {
+        //     let result = await_eval_result!(result);
+        //     self.env
+        //         .borrow_mut()
+        //         .prev_eval_result_by_code_id
+        //         .insert(code_node_id, result.clone());
+        //     result
+        // }
     }
 
     fn evaluate_assignment(&mut self,
@@ -351,33 +349,39 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_function_call(&mut self,
-                              function_call: &lang::FunctionCall)
-                              -> impl Future<Output = Result<lang::Value, ExecutionError>> {
-        let args_futures =
-            function_call.args
-                         .iter()
-                         .map(|code_node| code_node.into_argument())
-                         .map(|arg| (arg.argument_definition_id, self.evaluate(&arg.expr)))
-                         .collect_vec();
-        let function_id = function_call.function_reference().function_id;
-        let env = self.env();
-        let func = (*env).borrow().find_function(function_id).cloned();
-        let interp = self.new_stack_frame();
+    fn evaluate_function_call<'a>(
+        &'a mut self,
+        function_call: &'a lang::FunctionCall)
+        -> impl Future<Output = Result<lang::Value, ExecutionError>> + 'a {
+        let mut interp = self.clone();
         async move {
-            // TODO: ok, can't pass the env in while we're borrowing the function, so we have to clone
-            // it... figure out how to not do this :/
-
-            let mut args = HashMap::new();
-            for (arg_id, arg_future) in args_futures {
-                let arg_value = await_eval_result!(arg_future);
-                args.insert(arg_id, arg_value);
+            let mut args = HashMap::with_capacity(function_call.args.len());
+            // for (arg_id, arg_value_future) in
+            //     function_call.args
+            //                  .iter()
+            //                  .map(|code_node| code_node.into_argument())
+            //                  .map(|arg| (arg.argument_definition_id, interp.evaluate(&arg.expr)))
+            for function_call_arg in &function_call.args {
+                let function_call_arg = function_call_arg.into_argument();
+                let arg_id = function_call_arg.argument_definition_id;
+                args.insert(arg_id,
+                            await_eval_result!(interp.evaluate(&function_call_arg.expr)));
             }
+
+            let new_stack_frame = interp.new_stack_frame();
+            let function_id = function_call.function_reference().function_id;
+
+            // XXX: CAUTION: this seems fishy to me.... before, we used to clone the function so
+            // we didn't have to keep the env borrowed. pretty sure this means that the function
+            // itself wouldn't be able to borrow_mut the env
+            let env = new_stack_frame.env.borrow();
+            let func = env.find_function(function_id);
+
             match func {
                 Some(function) => {
                     // TODO: need to generate new copy of locals for stack, but rest of env should be the same
 
-                    let returned_val = function.call(interp, args);
+                    let returned_val = function.call(new_stack_frame.clone(), args);
                     Ok(resolve_all_futures(returned_val).await
                                                         .unwrap_early_return())
                     // Ok(returned_val.unwrap_early_return())

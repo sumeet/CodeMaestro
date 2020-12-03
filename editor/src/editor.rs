@@ -522,7 +522,7 @@ impl CommandBuffer {
                     let mut env = interpreter.env.borrow_mut();
                     env.prev_eval_result_by_code_id.clear();
                 }
-                run(interpreter, async_executor, &code, callback);
+                run(interpreter.clone(), async_executor, code, callback);
             })
     }
 
@@ -2534,12 +2534,12 @@ fn save_world(cont: &Controller, env: &env::ExecutionEnvironment) -> code_loadin
                                            .collect() }
 }
 
-pub fn run<F: FnOnce(lang::Value) + 'static>(interpreter: &mut Interpreter,
+pub fn run<F: FnOnce(lang::Value) + 'static>(mut interpreter: Interpreter,
                                              async_executor: &mut async_executor::AsyncExecutor,
-                                             code_node: &lang::CodeNode,
+                                             code_node: lang::CodeNode,
                                              callback: F) {
-    let fut = interpreter.evaluate(code_node);
     async_executor.exec(async move {
+                      let fut = interpreter.evaluate(&code_node);
                       callback(await_eval_result!(fut));
                       let ok: Result<(), ()> = Ok(());
                       ok

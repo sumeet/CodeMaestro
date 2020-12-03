@@ -87,11 +87,12 @@ impl lang::Function for ChatProgram {
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
         // XXX: shouldn't the caller do this???? duped with CodeFunction
-        for (id, value) in args.iter() {
-            interpreter.set_local_variable(*id, value.clone());
+        for (id, value) in args {
+            interpreter.set_local_variable(id, value);
         }
 
-        lang::Value::new_future(interpreter.evaluate(&lang::CodeNode::Block(self.code.clone())))
+        let code = self.code.clone();
+        lang::Value::new_future(async move { interpreter.evaluate(&lang::CodeNode::Block(code)).await })
     }
 
     fn name(&self) -> &str {
