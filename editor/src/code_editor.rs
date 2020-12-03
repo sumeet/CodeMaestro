@@ -1048,6 +1048,7 @@ impl CodeGenie {
                                                         argument_id: _, } => {
                 let anon_func = self.find_node(anonymous_function_id).unwrap();
                 let typ = self.guess_type(anon_func, env_genie).unwrap();
+                println!("guessed type for anon func: {:?}", typ);
                 Ok(arg_typ_for_anon_func(typ))
             }
             VariableAntecedentPlace::FunctionArgument { argument_definition_id, } => {

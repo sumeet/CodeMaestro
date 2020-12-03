@@ -34,6 +34,20 @@ pub fn resolve_generics_for_function_call_argument(argument: &lang::Argument,
                                                   env_genie)
 }
 
+// pub fn resolve_generics_for_anonymous_function_return_typ(original_typ: &lang::Type,
+//                                                           anon_func: &lang::AnonymousFunction,
+//                                                           code_genie: &CodeGenie,
+//                                                           env_genie: &EnvGenie)
+//                                                           -> lang::Type {
+//     let mut paths_and_generic_typs =
+//         original_typ.paths_and_types_containing_self()
+//                     .filter(|(path, typ)| env_genie.is_generic(typ.typespec_id))
+//                     .peekable();
+//     if paths_and_generic_typs.peek().is_none() {
+//         return original_typ.clone();
+//     }
+// }
+
 fn resolve_generic_type_using_function_call_args(original_typ: &lang::Type,
                                                  func: &dyn lang::Function,
                                                  func_call: &lang::FunctionCall,
