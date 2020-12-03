@@ -69,7 +69,7 @@ impl Interpreter {
     pub fn evaluate<'a>(&'a mut self,
                         code_node: &'a lang::CodeNode)
                         -> impl Future<Output = lang::Value> + 'a {
-        let interp_for_saving = self.clone();
+        // let interp_for_saving = self.clone();
         // let code_node = code_node.clone();
         // let code_node_id = code_node.id();
         let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
@@ -312,17 +312,18 @@ impl Interpreter {
                 })
             }
         };
+        result
         // result;
         // let mut interp = self.clone();
         // let env = Rc::clone(&self.env);
-        async move {
-            let result = await_eval_result!(result);
-            interp_for_saving.env
-                             .borrow_mut()
-                             .prev_eval_result_by_code_id
-                             .insert(code_node.id(), result.clone());
-            result
-        }
+        // async move {
+        //     let result = await_eval_result!(result);
+        //     interp_for_saving.env
+        //                      .borrow_mut()
+        //                      .prev_eval_result_by_code_id
+        //                      .insert(code_node.id(), result.clone());
+        //     result
+        // }
     }
 
     fn evaluate_assignment(&mut self,
@@ -376,11 +377,12 @@ impl Interpreter {
             // XXX: CAUTION: this seems fishy to me.... before, we used to clone the function so
             // we didn't have to keep the env borrowed. pretty sure this means that the function
             // itself wouldn't be able to borrow_mut the env
-            let env = new_stack_frame.env
-                                     .borrow()
-                                     .find_function(function_id)
-                                     .clone();
-            // let func = env.find_function(function_id);
+            // let func = new_stack_frame.env
+            //                           .borrow()
+            //                           .find_function(function_id)
+            //                           .cloned();
+            let env = interp.env.borrow();
+            let func = env.find_function(function_id);
 
             match func {
                 Some(function) => {
