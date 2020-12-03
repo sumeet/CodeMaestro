@@ -1068,8 +1068,11 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                -> Vec<InsertCodeMenuOption> {
         // struct field gets are just variables and don't take args or anything, so we can't wrap
         // anything here
-        // TODO: lies... we can totally wrap something if it is the same type as one of our fields
+
+        // TODO: i think rather... if the type we're wrapping is a struct, then we should try to find its fields
         if search_params.wraps_type.is_some() {
+            println!("returning early... wraps type: {:?}",
+                     search_params.wraps_type);
             return vec![];
         }
 
@@ -1080,17 +1083,19 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
 
                            Some(strukt.fields.iter().filter_map(move |struct_field| {
                     let dotted_name = format!("{}.{}", variable.name(), struct_field.name);
+                               println!("encountering {}", dotted_name);
 
                     if !(search_params.search_matches_identifier(&variable.name()) ||
                          search_params.search_matches_identifier(&struct_field.name) ||
                          search_params.search_matches_identifier(&dotted_name)) {
+                        println!("name didn't match");
                         return None
                     }
-                    if let Some(search_type) = &search_params.return_type {
-                        if env_genie.types_match(search_type, &struct_field.field_type) {
-                            return None
-                        }
+
+                    if !search_params.search_matches_type(&struct_field.field_type, env_genie) {
+                        return None
                     }
+
                     Some(InsertCodeMenuOption {
                         group_name: LOCALS_GROUP,
                         sort_key: format!("structfieldget{}", struct_field.id),
