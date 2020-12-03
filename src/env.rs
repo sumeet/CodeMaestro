@@ -67,10 +67,8 @@ impl Interpreter {
 
     // TODO: this is insane that we have to clone the code just to evaluate it. this is gonna slow
     // down evaluation so much
-    pub fn evaluate<'a>(&'a mut self,
-                        code_node: &'a lang::CodeNode)
-                        -> impl Future<Output = lang::Value> + 'a {
-        // let code_node = code_node.clone();
+    pub fn evaluate(&mut self, code_node: &lang::CodeNode) -> impl Future<Output = lang::Value> {
+        let code_node = code_node.clone();
         let code_node_id = code_node.id();
         let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
@@ -83,7 +81,7 @@ impl Interpreter {
                 Box::pin(self.evaluate(std::borrow::Borrow::borrow(&argument.expr)))
             }
             lang::CodeNode::StringLiteral(string_literal) => {
-                let val = string_literal.value.clone();
+                let val = string_literal.value;
                 Box::pin(async move { lang::Value::String(val) })
             }
             lang::CodeNode::NumberLiteral(number_literal) => {
@@ -100,8 +98,8 @@ impl Interpreter {
                 let mut interp = self.clone();
                 Box::pin(async move {
                     let mut return_value = lang::Value::Null;
-                    for exp in &block.expressions {
-                        return_value = await_eval_result!(interp.evaluate(exp));
+                    for exp in block.expressions {
+                        return_value = await_eval_result!(interp.evaluate(&exp));
                         if return_value.is_early_return() {
                             break;
                         }
@@ -124,7 +122,7 @@ impl Interpreter {
             lang::CodeNode::StructLiteral(struct_literal) => {
                 let value_futures: HashMap<lang::ID, Pin<Box<dyn Future<Output = lang::Value>>>> =
                     struct_literal.fields()
-                                  .map(move |literal_field| {
+                                  .map(|literal_field| {
                                       (literal_field.struct_field_id,
                                        self.evaluate(&literal_field.expr).boxed_local())
                                   })
@@ -171,22 +169,23 @@ impl Interpreter {
                     lang::Value::Null
                 })
             }
-            lang::CodeNode::Match(mach) => {
+            lang::CodeNode::Match(mut mach) => {
+                let match_exp_fut = self.evaluate(&mach.match_expression);
+
                 let mut new_interp = self.clone();
                 Box::pin(async move {
-                    let match_exp_fut = new_interp.evaluate(&mach.match_expression);
                     let (variant_id, value) =
                         await_eval_result!(match_exp_fut).into_enum().unwrap();
                     let var_id = lang::Match::make_variable_id(mach.id, variant_id);
                     new_interp.set_local_variable(var_id, value);
-                    let branch_code = mach.branch_by_variant_id.get(&variant_id).unwrap();
+                    let branch_code = mach.branch_by_variant_id.remove(&variant_id).unwrap();
                     await_eval_result!(new_interp.evaluate(&branch_code))
                 })
             }
             lang::CodeNode::ListLiteral(list_literal) => {
                 let futures = list_literal.elements
                                           .iter()
-                                          .map(move |e| self.evaluate(e))
+                                          .map(|e| self.evaluate(e))
                                           .collect_vec();
                 let mut output_vec = vec![];
                 Box::pin(async move {
@@ -194,7 +193,7 @@ impl Interpreter {
                     for future in futures.into_iter() {
                         output_vec.push(await_eval_result!(future))
                     }
-                    lang::Value::List(list_literal.element_type.clone(), output_vec)
+                    lang::Value::List(list_literal.element_type, output_vec)
                 })
             }
             lang::CodeNode::StructFieldGet(sfg) => {
@@ -208,16 +207,13 @@ impl Interpreter {
             lang::CodeNode::ListIndex(list_index) => {
                 let mut interp = self.clone();
                 Box::pin(async move {
-                    let index = await_eval_result!(interp.evaluate(list_index.index_expr.as_ref()))
-                                      .as_i128()
-                                      .unwrap();
-                    // let index = await_eval_result!(index_fut).as_i128().unwrap();
+                    let list_fut = interp.evaluate(list_index.list_expr.as_ref());
+                    let index_fut = interp.evaluate(list_index.index_expr.as_ref());
+
+                    let index = await_eval_result!(index_fut).as_i128().unwrap();
                     if index.is_negative() {
                         return err_result_string(format!("can't index into a list with a negative index: {}", index));
                     }
-
-                    let list_fut = interp.evaluate(list_index.list_expr.as_ref());
-
                     let index_usize: Option<usize> = index.try_into().ok();
                     if index_usize.is_none() {
                         return err_result_string(format!("{} isn't a valid index", index));
@@ -234,7 +230,7 @@ impl Interpreter {
                 })
             }
             CodeNode::AnonymousFunction(anon_func) => {
-                Box::pin(async move { lang::Value::AnonymousFunction(anon_func.clone()) })
+                Box::pin(async move { lang::Value::AnonymousFunction(anon_func) })
             }
             // guess_type of this will return Result<Null, Number>
             // here, Number is the index that didn't exist in the list we're changing
@@ -319,16 +315,14 @@ impl Interpreter {
                 })
             }
         };
-        result
-        // let env = Rc::clone(&self.env);
-        // async {
-        //     let result = await_eval_result!(result);
-        //     self.env
-        //         .borrow_mut()
-        //         .prev_eval_result_by_code_id
-        //         .insert(code_node_id, result.clone());
-        //     result
-        // }
+        let env = Rc::clone(&self.env);
+        async move {
+            let result = await_eval_result!(result);
+            env.borrow_mut()
+               .prev_eval_result_by_code_id
+               .insert(code_node_id, result.clone());
+            result
+        }
     }
 
     fn evaluate_assignment(&mut self,
@@ -357,29 +351,33 @@ impl Interpreter {
         }
     }
 
-    fn evaluate_function_call<'a>(
-        &'a mut self,
-        function_call: &'a lang::FunctionCall)
-        -> impl Future<Output = Result<lang::Value, ExecutionError>> + 'a {
-        let mut interp = self.new_stack_frame();
+    fn evaluate_function_call(&mut self,
+                              function_call: &lang::FunctionCall)
+                              -> impl Future<Output = Result<lang::Value, ExecutionError>> {
+        let args_futures =
+            function_call.args
+                         .iter()
+                         .map(|code_node| code_node.into_argument())
+                         .map(|arg| (arg.argument_definition_id, self.evaluate(&arg.expr)))
+                         .collect_vec();
+        let function_id = function_call.function_reference().function_id;
+        let env = self.env();
+        let func = (*env).borrow().find_function(function_id).cloned();
+        let interp = self.new_stack_frame();
         async move {
-            let args = function_call.args
-                                    .iter()
-                                    .map(|code_node| code_node.into_argument())
-                                    .map(|arg| {
-                                        (arg.argument_definition_id,
-                                         await_eval_result!(interp.evaluate(&arg.expr)))
-                                    })
-                                    .collect::<HashMap<_, _>>();
-            let function_id = function_call.function_reference().function_id;
-            let env = interp.env.borrow();
-            let func = env.find_function(function_id);
+            // TODO: ok, can't pass the env in while we're borrowing the function, so we have to clone
+            // it... figure out how to not do this :/
 
+            let mut args = HashMap::new();
+            for (arg_id, arg_future) in args_futures {
+                let arg_value = await_eval_result!(arg_future);
+                args.insert(arg_id, arg_value);
+            }
             match func {
                 Some(function) => {
                     // TODO: need to generate new copy of locals for stack, but rest of env should be the same
 
-                    let returned_val = function.call(interp.clone(), args);
+                    let returned_val = function.call(interp, args);
                     Ok(resolve_all_futures(returned_val).await
                                                         .unwrap_early_return())
                     // Ok(returned_val.unwrap_early_return())
