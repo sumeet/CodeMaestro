@@ -339,6 +339,14 @@ impl CodeSearchParams {
         }
     }
 
+    pub fn is_wrapping_typ(&self, typ: &lang::Type, env_genie: &EnvGenie) -> bool {
+        if let Some(wraps_typ) = &self.wraps_type {
+            env_genie.types_match(wraps_typ, typ)
+        } else {
+            false
+        }
+    }
+
     pub fn unwraps_code(mut self, id: lang::ID) -> Self {
         self.unwraps_code_id = Some(id);
         self
@@ -1066,45 +1074,84 @@ impl InsertCodeMenuOptionGenerator for InsertStructFieldGetOfLocal {
                code_genie: &CodeGenie,
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
-        // struct field gets are just variables and don't take args or anything, so we can't wrap
-        // anything here
+        let wraps_strukt =
+            search_params.wraps_type
+                         .as_ref()
+                         .and_then(|wraps_typ| env_genie.find_struct(wraps_typ.typespec_id));
 
-        // TODO: i think rather... if the type we're wrapping is a struct, then we should try to find its fields
-        if search_params.wraps_type.is_some() {
-            println!("returning early... wraps type: {:?}",
-                     search_params.wraps_type);
-            return vec![];
-        }
-
-        let optionss = find_all_variables_preceding(search_params.insertion_point.into(),
-                                                    code_genie,
-                                                    env_genie).filter_map(|variable| {
-                           let strukt = env_genie.find_struct(variable.typ.typespec_id)?;
-
-                           Some(strukt.fields.iter().filter_map(move |struct_field| {
-                    let dotted_name = format!("{}.{}", variable.name(), struct_field.name);
-                    if !(search_params.search_matches_identifier(&variable.name()) ||
-                         search_params.search_matches_identifier(&struct_field.name) ||
-                         search_params.search_matches_identifier(&dotted_name)) {
+        if let Some(wraps_strukt) = wraps_strukt {
+            return wraps_strukt.fields
+                               .iter()
+                               .filter_map(move |struct_field| {
+                                   let dotted_name =
+                                       format!("{}.{}", wraps_strukt.name, struct_field.name);
+                                   if !(search_params.search_matches_identifier(&wraps_strukt.name) ||
+                        search_params.search_matches_identifier(&struct_field.name) ||
+                        search_params.search_matches_identifier(&dotted_name)) {
                         return None
                     }
 
-                    if !search_params.search_matches_type(&struct_field.field_type, env_genie) {
-                        return None
-                    }
+                                   if !search_params.search_matches_type(&struct_field.field_type,
+                                                                         env_genie)
+                                   {
+                                       return None;
+                                   }
 
-                    Some(InsertCodeMenuOption {
+                                   let wrapped_node = find_wrapped_node(code_genie, search_params);
+
+                                   Some(InsertCodeMenuOption {
                         group_name: LOCALS_GROUP,
-                        sort_key: format!("structfieldget{}", struct_field.id),
+                        sort_key: format!("00wrappingstructfieldget{}", struct_field.id),
                         new_node: code_generation::new_struct_field_get(
-                            code_generation::new_variable_reference(variable.locals_id),
+                            wrapped_node.clone(),
                             struct_field.id,
                         ),
                         is_selected: false,
                     })
-                }))
-                       });
-        Iterator::flatten(optionss).collect()
+                               })
+                               .collect();
+        }
+
+        let strukt_variables_in_scope =
+            find_all_variables_preceding(search_params.insertion_point.into(),
+                                         code_genie,
+                                         env_genie).filter_map(|variable| {
+                                                       if search_params.wraps_type.is_some()
+                    && !search_params.is_wrapping_typ(&variable.typ, env_genie)
+                {
+                    return None;
+                }
+
+                                                       env_genie.find_struct(variable.typ
+                                                                                     .typespec_id)
+                                                                .map(|strukt| (variable, strukt))
+                                                   });
+
+        strukt_variables_in_scope.flat_map(|(variable, strukt)| {
+                                     strukt.fields.iter().filter_map(move |struct_field| {
+                let dotted_name = format!("{}.{}", variable.name(), struct_field.name);
+                if !(search_params.search_matches_identifier(&variable.name()) ||
+                    search_params.search_matches_identifier(&struct_field.name) ||
+                    search_params.search_matches_identifier(&dotted_name)) {
+                    return None
+                }
+
+                if !search_params.search_matches_type(&struct_field.field_type, env_genie) {
+                    return None
+                }
+
+                Some(InsertCodeMenuOption {
+                    group_name: LOCALS_GROUP,
+                    sort_key: format!("structfieldget{}", struct_field.id),
+                    new_node: code_generation::new_struct_field_get(
+                        code_generation::new_variable_reference(variable.locals_id),
+                        struct_field.id,
+                    ),
+                    is_selected: false,
+                })
+            })
+                                 })
+                                 .collect()
     }
 }
 
