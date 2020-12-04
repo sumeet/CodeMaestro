@@ -55,7 +55,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             Value::Struct { struct_id, values } => self.render_struct(struct_id, values),
             Value::Future(_) => self.draw_buttony_text("Future", BLACK_COLOR),
             Value::EnumVariant { variant_id, value } => self.render_enum(variant_id, value),
-            Value::AnonymousFunction(_) => panic!("don't worry about rendering functions"),
+            Value::AnonymousFunction(_, _) => panic!("don't worry about rendering functions"),
             Value::EarlyReturn(inner) => {
                 self.ui_toolkit.draw_all_on_same_line(&[&|| {
                                                             self.ui_toolkit
@@ -102,7 +102,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             | Value::Number(_)
             | Value::Future(_) => true,
             Value::EnumVariant { .. } | Value::List(_, _) | Value::Struct { .. } => false,
-            Value::AnonymousFunction(_) => {
+            Value::AnonymousFunction(_, _) => {
                 panic!("no value rendering implemented for anonymous functions")
             }
             Value::EarlyReturn(inner) => self.is_scalar(inner.as_ref()),

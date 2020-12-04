@@ -237,7 +237,7 @@ pub enum Value {
     Struct { struct_id: ID, values: StructValues },
     Future(ValueFuture),
     EnumVariant { variant_id: ID, value: Box<Value> },
-    AnonymousFunction(AnonymousFunction),
+    AnonymousFunction(AnonymousFunction, env::SharedLocals),
     EarlyReturn(Box<Value>),
 }
 
@@ -291,9 +291,11 @@ impl Value {
         }
     }
 
-    pub fn into_anon_func(self) -> Result<AnonymousFunction, Box<dyn std::error::Error>> {
+    pub fn into_anon_func(
+        self)
+        -> Result<(AnonymousFunction, env::SharedLocals), Box<dyn std::error::Error>> {
         match self {
-            Value::AnonymousFunction(af) => Ok(af),
+            Value::AnonymousFunction(af, sl) => Ok((af, sl)),
             otherwise => Err(format!("expected AnonFunc but got {:?}", otherwise).into()),
         }
     }
@@ -306,9 +308,11 @@ impl Value {
         ValueFuture(FutureExt::shared(Box::pin(async_fn)))
     }
 
-    pub fn as_anon_func(&self) -> Result<&AnonymousFunction, Box<dyn std::error::Error>> {
+    pub fn as_anon_func(
+        &self)
+        -> Result<(&AnonymousFunction, env::SharedLocals), Box<dyn std::error::Error>> {
         match self {
-            Value::AnonymousFunction(af) => Ok(af),
+            Value::AnonymousFunction(af, sl) => Ok((af, sl.clone())),
             otherwise => Err(format!("expected AnonFunc but got {:?}", otherwise).into()),
         }
     }

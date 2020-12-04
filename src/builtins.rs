@@ -399,8 +399,9 @@ impl lang::Function for ChatReply {
 pub struct JoinString {}
 
 lazy_static! {
-    static ref JOIN_STRING_ARG_IDS: [lang::ID; 1] =
-        [uuid::Uuid::parse_str("78cf269a-2a29-4325-9a18-8d84132485ed").unwrap()];
+    static ref JOIN_STRING_ARG_IDS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("78cf269a-2a29-4325-9a18-8d84132485ed").unwrap(),
+         uuid::Uuid::parse_str("9d1b0aff-5a41-4658-a9d4-227070dce99c").unwrap(),];
 }
 
 #[typetag::serde]
@@ -409,13 +410,15 @@ impl lang::Function for JoinString {
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
+        let sep = args.get(&JOIN_STRING_ARG_IDS[1]).unwrap().as_str().unwrap();
+
         let joined = args.get(&JOIN_STRING_ARG_IDS[0])
                          .unwrap()
                          .as_vec()
                          .unwrap()
                          .iter()
                          .map(|val| val.as_str().unwrap())
-                         .join("");
+                         .join(sep);
         lang::Value::String(joined)
     }
 
@@ -437,6 +440,10 @@ impl lang::Function for JoinString {
                 JOIN_STRING_ARG_IDS[0],
                 lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![lang::Type::from_spec(&*lang::STRING_TYPESPEC)]),
                 "Strings".to_string()),
+            lang::ArgumentDefinition::new_with_id(
+                JOIN_STRING_ARG_IDS[1],
+                lang::Type::from_spec(&*lang::STRING_TYPESPEC),
+                "By".to_string()),
         ]
     }
 
@@ -524,20 +531,25 @@ impl lang::Function for Map {
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
         let what_to_map_over = args.remove(&MAP_ARG_IDS[0]).unwrap().into_vec().unwrap();
-        let map_fn = args.remove(&MAP_ARG_IDS[1])
-                         .unwrap()
-                         .into_anon_func()
-                         .unwrap();
+        let (map_fn, shared_locals) = args.remove(&MAP_ARG_IDS[1])
+                                          .unwrap()
+                                          .into_anon_func()
+                                          .unwrap();
         lang::Value::new_future(async move {
             let mapped =
                 what_to_map_over.into_iter()
                                 .map(|value| {
-                                    let mut interpreter = interpreter.new_stack_frame();
+                                    let mut new_stack_frame = interpreter.new_stack_frame();
+                                    // TODO: quick hack to copy the local variables inside
+                                    for (locals_key, locals_value) in shared_locals.borrow().iter() {
+                                        new_stack_frame.set_local_variable(*locals_key, locals_value.clone());
+                                    }
+
                                     let map_fn = map_fn.clone();
                                     async move {
-                                        interpreter.set_local_variable(map_fn.takes_arg.id,
+                                        new_stack_frame.set_local_variable(map_fn.takes_arg.id,
                                                                        value);
-                                        await_eval_result!(interpreter.evaluate(map_fn.block
+                                        await_eval_result!(new_stack_frame.evaluate(map_fn.block
                                                                                       .as_ref()))
                                     }
                                 });
@@ -1087,9 +1099,10 @@ impl lang::Function for Slice {
         let mut range_lo = args.remove(&SLICE_ARGS[1]).unwrap().as_i128().unwrap();
         let mut range_hi = args.remove(&SLICE_ARGS[2]).unwrap().as_i128().unwrap();
 
+        // TODO: i think this can crash in some cases, what if range_lo is too low... or even range_hi, like really negative
         let len = vec.len();
         if range_lo < 0 {
-            range_lo = len as i128 - range_lo
+            range_lo = len as i128 + range_lo;
         }
         if range_hi < 0 {
             range_hi = len as i128 + range_hi + 1;
@@ -1129,11 +1142,13 @@ impl lang::Function for Slice {
              lang::ArgumentDefinition::new_with_id(SLICE_ARGS[1],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
+                                                   // greater than or equals symbol
                                                    "Low \u{f532}".into()),
              lang::ArgumentDefinition::new_with_id(SLICE_ARGS[2],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
-                                                   "High \u{f536}".into())
+                                                   // less than or equals symbol
+                                                   "High \u{f537}".into())
         ]
     }
 

@@ -25,10 +25,12 @@ macro_rules! await_eval_result {
     };
 }
 
+pub type SharedLocals = Rc<RefCell<HashMap<lang::ID, lang::Value>>>;
+
 #[derive(Clone)]
 pub struct Interpreter {
     pub env: Rc<RefCell<ExecutionEnvironment>>,
-    pub locals: Rc<RefCell<HashMap<lang::ID, lang::Value>>>,
+    pub locals: SharedLocals,
 }
 
 impl Interpreter {
@@ -110,6 +112,7 @@ impl Interpreter {
             lang::CodeNode::VariableReference(variable_reference) => {
                 let interp = self.clone();
                 Box::pin(async move {
+                    println!("evaluating variable reference: {:?}", variable_reference);
                     interp.get_local_variable(variable_reference.assignment_id)
                           .unwrap()
                 })
@@ -224,9 +227,11 @@ impl Interpreter {
                     ok_result_value(vec.remove(index_usize))
                 })
             }
-            CodeNode::AnonymousFunction(anon_func) => {
-                Box::pin(async move { lang::Value::AnonymousFunction(anon_func.clone()) })
-            }
+            CodeNode::AnonymousFunction(anon_func) => Box::pin(async move {
+                lang::Value::AnonymousFunction(anon_func.clone(),
+                                               // TODO: is there be a function that already does this?
+                                               Rc::clone(&self.locals))
+            }),
             // guess_type of this will return Result<Null, Number>
             // here, Number is the index that didn't exist in the list we're changing
             CodeNode::ReassignListIndex(rli) => {
