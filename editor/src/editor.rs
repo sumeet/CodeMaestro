@@ -2299,6 +2299,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let typespecs = self.env_genie
                             .typespecs()
                             .into_iter()
+                            .filter(|ts| !self.env_genie.is_generic(ts.id()))
                             .map(|ts| ts.clone())
                             .collect_vec();
         self.ui_toolkit.draw_combo_box_with_label(label,
