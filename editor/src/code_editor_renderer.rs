@@ -1806,8 +1806,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                            body_block: &lang::CodeNode)
                            -> T::DrawResult {
         let code_body_left_padding = 8;
-        self.ui_toolkit.align_fill_lhs(
-                                       x_padding_left_block_hack,
+        self.ui_toolkit.align_fill_lhs(x_padding_left_block_hack,
                                        &|| {
                                            self.code_handle(&|| {
                                                             self.render_control_flow_label(symbol,
@@ -1816,23 +1815,22 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                         control_flow_node_id)
                                        },
                                        CONTROL_FLOW_GREY_COLOR,
-                                       &[
-            &|| {
-                if let Some(condition_row_draw) = condition_row_draw {
-                    condition_row_draw()
-                } else {
-                    self.ui_toolkit.draw_all(&[])
-                }
-            },
-            &|| {
-                self.ui_toolkit.indent(code_body_left_padding, &|| {
-                                   self.render_block_inside_child_region(body_block
-                        .as_block()
-                        .unwrap(), ChildRegionFrameStyle::NoFrame)
-                               })
-            },
-        ],
-        )
+                                       &[&|| {
+                                             if let Some(condition_row_draw) = condition_row_draw {
+                                                 condition_row_draw()
+                                             } else {
+                                                 self.ui_toolkit.draw_all(&[])
+                                             }
+                                         },
+                                         &|| {
+                                             self.ui_toolkit.indent(code_body_left_padding, &|| {
+                                                                self.render_code(&body_block)
+                                                            })
+                                             //            self.render_block_inside_child_region(body_block
+                                             // .as_block()
+                                             // .unwrap(), ChildRegionFrameStyle::NoFrame)
+                                             //        })
+                                         }])
     }
 
     fn render_match(&self, mach: &lang::Match) -> T::DrawResult {
