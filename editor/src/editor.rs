@@ -1107,7 +1107,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let has_problems = !problems.is_empty();
         self.draw_managed_window(
                                  window,
-                                 &format!("Script: {}###{}", script.name, script.id()),
+                                 &format!("\u{f70e} {}###{}", script.name, script.id()),
                                  &|| {
                                      self.ui_toolkit
                     .draw_layout_with_bottom_bar(&|| {
@@ -1192,14 +1192,16 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
 
     fn render_run_button(&self, code_node: CodeNode, is_enabled: bool) -> T::DrawResult {
         let cmd_buffer = self.command_buffer.clone();
+        // play symbol
+        let label = "\u{f144} Run script";
         if is_enabled {
             self.ui_toolkit
-                .draw_button("Run", colorscheme!(action_color), move || {
+                .draw_button(label, colorscheme!(action_color), move || {
                     cmd_buffer.borrow_mut().run(&code_node, |_| ());
                 })
         } else {
             self.ui_toolkit
-                .draw_disabled_button("Run", colorscheme!(action_color))
+                .draw_disabled_button(label, colorscheme!(action_color))
         }
     }
 
@@ -1210,7 +1212,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         self.draw_managed_window(
                                  window,
                                  &format!(
-            "Edit function: {}###{}",
+            // function symbol
+            "\u{f661} {}###{}",
             code_func.name(),
             code_func.id()
         ),
