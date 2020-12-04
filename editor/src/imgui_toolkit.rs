@@ -268,6 +268,15 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
         let mut app = app.borrow_mut();
         app.flush_commands(&mut async_executor);
         async_executor.turn();
+
+        // TODO: these keypresses are already part of ui.io().keys_down... it would be better
+        // to use that instead of this custom & hacky handling we're doing...
+        let keypress = if ui.io().want_capture_keyboard {
+            None
+        } else {
+            keypress
+        };
+
         let mut toolkit = ImguiToolkit::new(ui, keypress);
         app.draw(&mut toolkit);
 
