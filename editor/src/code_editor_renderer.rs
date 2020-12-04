@@ -10,6 +10,7 @@ use super::editor;
 use super::insert_code_menu::{InsertCodeMenu, InsertCodeMenuOption};
 use super::ui_toolkit::{Color, UiToolkit};
 use crate::code_editor::locals::{find_antecedent_for_variable_reference, VariableAntecedentPlace};
+use crate::code_editor::related_to_assignment_id;
 use crate::code_rendering::{
     darken, draw_nested_borders_around, render_enum_variant_identifier, render_list_literal_label,
     render_list_literal_position, render_list_literal_value, render_name_with_type_definition,
@@ -193,6 +194,15 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             Some(InsertionPoint::After(code_node_id)) if code_node_id == id => true,
             _ => false,
         }
+    }
+
+    // used to color variables references/assignments if a variable is selected
+    fn draw_related_to_selection_highlight(&self,
+                                           draw: &dyn Fn() -> T::DrawResult)
+                                           -> T::DrawResult {
+        let mut overlay_color = colorscheme!(cool_color);
+        overlay_color[3] /= 2.;
+        self.ui_toolkit.draw_box_around(overlay_color, draw)
     }
 
     fn draw_selected(&self,
@@ -873,6 +883,18 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::Try(trai) => self.render_try(trai),
                 CodeNode::ForLoop(for_loop) => self.render_for_loop(for_loop),
             }
+        };
+
+        let draw = || {
+            if let Some(focused_assignment_id) = self.code_editor.focused_assignment_id() {
+                if Some(focused_assignment_id) == related_to_assignment_id(code_node)
+                   && !self.is_part_of_selection(code_node.id())
+                {
+                    println!("rendering related variable hue around {:?}", code_node);
+                    return self.draw_related_to_selection_highlight(&draw);
+                }
+            }
+            draw()
         };
 
         let draw = || self.render_context_menu(code_node, &draw);

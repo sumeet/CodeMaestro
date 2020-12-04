@@ -608,6 +608,30 @@ impl CodeEditor {
         }
         self.paste_over_code(contents, self.selected_node_ids.clone().into_iter())
     }
+
+    pub fn focused_assignment_id(&self) -> Option<lang::ID> {
+        let selected_code = self.code_genie.find_node(self.only_selected_node_id()?)?;
+        related_to_assignment_id(selected_code)
+    }
+
+    fn only_selected_node_id(&self) -> Option<lang::ID> {
+        if self.selected_node_ids.len() == 1 {
+            Some(self.selected_node_ids[0])
+        } else {
+            None
+        }
+    }
+}
+
+// used for highlighting
+pub fn related_to_assignment_id(code_node: &lang::CodeNode) -> Option<lang::ID> {
+    match code_node {
+        lang::CodeNode::Assignment(assignment) => Some(assignment.id),
+        lang::CodeNode::Reassignment(reassignment) => Some(reassignment.assignment_id),
+        lang::CodeNode::VariableReference(vr) => Some(vr.assignment_id),
+        lang::CodeNode::ReassignListIndex(rli) => Some(rli.assignment_id),
+        _ => None,
+    }
 }
 
 // the code genie traverses through the code, giving callers various information
