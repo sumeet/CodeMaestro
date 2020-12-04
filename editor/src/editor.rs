@@ -967,12 +967,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     let options_lister = opener.list_options(self.controller, self.env_genie);
                     let menu_items = options_lister.list().collect_vec();
 
-                    let selectable_items = menu_items.into_iter().map(|menu_item| {
-                                                                     match menu_item {
+                    let mut selectable_items = vec![];
+                    for menu_item in menu_items {
+                        selectable_items.push(match menu_item {
                                                   MenuItem::Heading(heading) => {
-                                                      SelectableItem::GroupHeader(Box::new(|| {
-                                                          self.ui_toolkit.draw_text("hello")
-                                                      }))
+                                                      SelectableItem::GroupHeader(heading)
                                                   }
                                                   MenuItem::Selectable { ref label,
                                                                          is_selected,
@@ -983,27 +982,8 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                                    label,
                                                                                    is_selected }
                                                   }
-                                              }
-                                                                 });
-                    // let mut selectable_items = vec![];
-                    // for menu_item in menu_items {
-                    //     selectable_items.push(match menu_item {
-                    //                               MenuItem::Heading(heading) => {
-                    //                                   SelectableItem::GroupHeader(&|| {
-                    //                                       self.ui_toolkit.draw_text("hello")
-                    //                                   })
-                    //                               }
-                    //                               MenuItem::Selectable { ref label,
-                    //                                                      is_selected,
-                    //                                                      .. } => {
-                    //                                   let label = label.clone();
-                    //                                   SelectableItem::Selectable { item:
-                    //                                                                    menu_item,
-                    //                                                                label,
-                    //                                                                is_selected }
-                    //                               }
-                    //                           });
-                    // }
+                                              });
+                    }
                     let cmd_buffer3 = Rc::clone(&self.command_buffer);
                     self.ui_toolkit
                         .draw_selectables2(selectable_items, move |menu_item| {
