@@ -784,7 +784,9 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
         if let Some(wraps_type) = search_params.wraps_type.as_ref() {
             // if wrapping a boolean, then we should suggest creating a conditional.
             if wraps_type.matches_spec(&*lang::BOOLEAN_TYPESPEC) {
-                return vec![Self::generate_option_with_placeholder(search_params)];
+                let wrapped_node = find_wrapped_node(code_genie, search_params);
+                return vec![Self::generate_option(&search_params.return_type,
+                                                  wrapped_node.clone())];
             // otherwise we shouldn't pop up in the suggestions
             } else {
                 return vec![];
@@ -794,7 +796,7 @@ impl InsertCodeMenuOptionGenerator for InsertConditionalOptionGenerator {
         let mut options = vec![];
         let search_str = search_params.lowercased_trimmed_search_str();
         if "if".contains(&search_str) || "conditional".contains(&search_str) {
-            options.push(Self::generate_option_with_placeholder(search_params))
+            options.push(Self::generate_option_with_placeholder(&search_params.return_type))
         }
         options
     }
@@ -1269,12 +1271,19 @@ pub fn is_inserting_inside_block(insertion_point: InsertionPoint, code_genie: &C
 }
 
 impl InsertConditionalOptionGenerator {
-    fn generate_option_with_placeholder(search_params: &CodeSearchParams) -> InsertCodeMenuOption {
+    fn generate_option_with_placeholder(for_typ: &Option<lang::Type>) -> InsertCodeMenuOption {
+        Self::generate_option(for_typ, code_generation::new_placeholder("Condition".to_string(),
+                                             lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC)))
+    }
+
+    fn generate_option(for_typ: &Option<lang::Type>,
+                       condition_expr: lang::CodeNode)
+                       -> InsertCodeMenuOption {
         InsertCodeMenuOption { sort_key: "conditional".to_string(),
                                group_name: CONTROL_FLOW_GROUP,
                                is_selected: false,
-                               new_node:
-                                   code_generation::new_conditional(&search_params.return_type) }
+                               new_node: code_generation::new_conditional(for_typ,
+                                                                          condition_expr) }
     }
 }
 

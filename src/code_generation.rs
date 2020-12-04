@@ -125,7 +125,9 @@ pub fn new_early_return() -> lang::CodeNode {
                                                     code: Box::new(new_placeholder("Early return".into(), lang::Type::from_spec(&*lang::ANY_TYPESPEC))) })
 }
 
-pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
+pub fn new_conditional(for_type: &Option<lang::Type>,
+                       condition_expr: lang::CodeNode)
+                       -> lang::CodeNode {
     let (true_branch, else_branch) = match for_type {
         Some(for_type) => {
             (new_block(vec![new_placeholder("True branch".to_string(), for_type.clone())]),
@@ -135,10 +137,7 @@ pub fn new_conditional(for_type: &Option<lang::Type>) -> lang::CodeNode {
     };
     lang::CodeNode::Conditional(lang::Conditional {
         id: lang::new_id(),
-        condition: Box::new(new_placeholder(
-            "Condition".to_string(),
-            lang::Type::from_spec(&*lang::BOOLEAN_TYPESPEC),
-        )),
+        condition: Box::new(condition_expr),
         true_branch: Box::new(lang::CodeNode::Block(true_branch)),
         else_branch: Some(Box::new(lang::CodeNode::Block(else_branch))),
     })
