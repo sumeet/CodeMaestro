@@ -1755,7 +1755,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn render_conditional(&self, conditional: &lang::Conditional) -> T::DrawResult {
         self.ui_toolkit.draw_all(&[&|| {
                                        self.render_control_flow("\u{f2fd}",
-                                                                "   If  ",
+                                                                "  If   ",
                                                                 conditional.id,
                                                                 Some(&|| self.render_code(&conditional.condition)),
                                                                 0,
@@ -1766,7 +1766,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                 "Else",
                                                                 conditional.id,
                                                                 None,
-                                                                1,
+                                                                0,
                                                                 conditional.else_branch
                                                                            .as_ref()
                                                                            .unwrap())
@@ -1802,7 +1802,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                            label: &str,
                            control_flow_node_id: lang::ID,
                            condition_row_draw: Option<DrawFnRef<T>>,
-                           x_padding_left_block_hack: u8,
+                           x_padding_left_block_hack: i8,
                            body_block: &lang::CodeNode)
                            -> T::DrawResult {
         let code_body_left_padding = 8;

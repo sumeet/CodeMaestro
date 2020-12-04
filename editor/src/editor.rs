@@ -1107,7 +1107,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let has_problems = !problems.is_empty();
         self.draw_managed_window(
                                  window,
-                                 &format!("Script {}", script.id()),
+                                 &format!("Script: {}###{}", script.name, script.id()),
                                  &|| {
                                      self.ui_toolkit
                     .draw_layout_with_bottom_bar(&|| {
@@ -1209,7 +1209,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                              -> T::DrawResult {
         self.draw_managed_window(
                                  window,
-                                 &format!("Edit function: {}", code_func.id()),
+                                 &format!(
+            "Edit function: {}###{}",
+            code_func.name(),
+            code_func.id()
+        ),
                                  &|| {
                                      self.ui_toolkit.draw_all(&[
                 &|| {
@@ -1419,7 +1423,11 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         let chat_program_id = chat_program.id;
         self.draw_managed_window(
                                  window,
-                                 &format!("Edit chat program: {}", chat_program.id()),
+                                 &format!(
+            "Edit chat program: {}###{}",
+            chat_program.name(),
+            chat_program.id()
+        ),
                                  &|| {
                                      self.ui_toolkit.draw_all(&[
                 &|| {

@@ -903,7 +903,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
 
     // TODO: mostly copy and paste of align()
     fn align_fill_lhs(&self,
-                      x_padding_left_block_hack: u8,
+                      x_padding_left_block_hack: i8,
                       lhs: &dyn Fn() -> Self::DrawResult,
                       lhs_color: Color,
                       rhss: &[&dyn Fn() -> Self::DrawResult])
@@ -918,12 +918,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         let (first_rhs, rest) = rhss.split_first().unwrap();
         let (last_rhs, inner_rhs) = rest.split_last().unwrap();
 
-        let style_var = self.ui.push_style_var(StyleVar::ItemSpacing([0.0, -1.0]));
+        // let style_var = self.ui.push_style_var(StyleVar::ItemSpacing([0.0, -1.0]));
         self.ui.group(|| lhs());
 
         let (lhs_rect_min, lhs_rect_max) = self.get_item_rect();
         let bottom_of_lhs = [lhs_rect_min.x, lhs_rect_max.y];
         let right_of_lhs = lhs_rect_max.x - 1. + x_padding_left_block_hack as f32;
+        // let right_of_lhs = lhs_rect_max.x;
 
         self.ui.same_line_with_spacing(0., 0.);
         let cursor_pos = unsafe { imgui_sys::igGetCursorPosX() };
@@ -934,8 +935,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             unsafe { imgui_sys::igSetCursorPosX(cursor_pos) };
             draw();
         }
-        // this pops the style var
-        style_var.pop(self.ui);
+
+        // style_var.pop(self.ui);
+
         unsafe { imgui_sys::igSetCursorPosX(cursor_pos) };
         self.ui.group(|| last_rhs());
 

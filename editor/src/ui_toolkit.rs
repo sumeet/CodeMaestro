@@ -277,7 +277,7 @@ pub trait UiToolkit {
              rhs: &[&dyn Fn() -> Self::DrawResult])
              -> Self::DrawResult;
     fn align_fill_lhs(&self,
-                      x_padding_left_block_hack: u8,
+                      x_padding_left_block_hack: i8,
                       lhs: &dyn Fn() -> Self::DrawResult,
                       lhs_color: Color,
                       rhs: &[&dyn Fn() -> Self::DrawResult])
