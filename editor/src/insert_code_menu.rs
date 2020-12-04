@@ -515,7 +515,7 @@ impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
                     new_node: code_generation::new_function_call_with_placeholder_args(func),
                     is_selected: false,
                     group_name: FUNCTION_CALL_GROUP,
-                     sort_key: func.id().to_string(),
+                     sort_key: format!("funcs{}", func.id()),
                 }
              })
              .collect()
@@ -567,7 +567,9 @@ impl InsertCodeMenuOptionGenerator for InsertVariableReferenceOptionGenerator {
         variables.map(|variable| {
                      let id = variable.locals_id;
                      InsertCodeMenuOption { new_node: code_generation::new_variable_reference(id),
-                                            sort_key: id.to_string(),
+                                            // TODO: wouldn't it be cool if we also took into account the distance of the
+                                            // last use of the variable, or where it was defined
+                                            sort_key: format!("0vars{}", id),
                                             is_selected: false,
                                             group_name: LOCALS_GROUP }
                  })
@@ -607,9 +609,10 @@ impl InsertLiteralOptionGenerator {
                                new_node: code_generation::new_string_literal(input_str) }
     }
 
-    fn number_literal_option(&self, number: i128) -> InsertCodeMenuOption {
+    fn number_literal_option(&self, number: i128, priority: bool) -> InsertCodeMenuOption {
+        let priority_prefix = if priority { "00" } else { "" };
         InsertCodeMenuOption { is_selected: false,
-                               sort_key: format!("numliteral{}", number),
+                               sort_key: format!("{}numliteral{}", priority_prefix, number),
                                group_name: LITERALS_GROUP,
                                new_node: code_generation::new_number_literal(number) }
     }
@@ -711,9 +714,9 @@ impl InsertLiteralOptionGenerator {
         }
 
         if let Some(number) = search_params.parse_number_input() {
-            options.push(self.number_literal_option(number));
+            options.push(self.number_literal_option(number, true));
         } else if input_str.is_empty() {
-            options.push(self.number_literal_option(0));
+            options.push(self.number_literal_option(0, false));
         }
 
         // TODO: maybe boost string literal if there is something entered?
@@ -740,10 +743,10 @@ impl InsertLiteralOptionGenerator {
         }
         if return_type.matches_spec(&lang::NUMBER_TYPESPEC) {
             if let Some(number) = search_params.parse_number_input() {
-                options.push(self.number_literal_option(number));
+                options.push(self.number_literal_option(number, true));
             }
         } else if return_type.typespec_id == lang::ANY_TYPESPEC.id() {
-            options.push(self.number_literal_option(0));
+            options.push(self.number_literal_option(0, false));
         }
         // TODO: kind of a nasty if check for params.len()... that's to make sure it's not Any
         // TODO: shouldn't there be a way to insert list and then select the type though?
