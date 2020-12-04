@@ -890,7 +890,6 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 if Some(focused_assignment_id) == related_to_assignment_id(code_node)
                    && !self.is_part_of_selection(code_node.id())
                 {
-                    println!("rendering related variable hue around {:?}", code_node);
                     return self.draw_related_to_selection_highlight(&draw);
                 }
             }

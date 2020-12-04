@@ -522,7 +522,14 @@ impl CommandBuffer {
                     let env = interpreter.env.borrow_mut();
                     env.prev_eval_result_by_code_id.borrow_mut().clear();
                 }
-                run(interpreter.clone(), async_executor, code, callback);
+                let start_time = std::time::SystemTime::now();
+                let wrapped_callback = move |value| {
+                    let end_time = std::time::SystemTime::now();
+                    println!("total time: {:?}", end_time.duration_since(start_time));
+                    println!("{:?}", value);
+                    callback(value);
+                };
+                run(interpreter.clone(), async_executor, code, wrapped_callback);
             })
     }
 
@@ -1188,12 +1195,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
         if is_enabled {
             self.ui_toolkit
                 .draw_button("Run", colorscheme!(action_color), move || {
-                    let start_time = std::time::SystemTime::now();
-                    let mut cmd_buffer = cmd_buffer.borrow_mut();
-                    cmd_buffer.run(&code_node, move |_| {
-                                  let end_time = std::time::SystemTime::now();
-                                  println!("total time: {:?}", end_time.duration_since(start_time));
-                              });
+                    cmd_buffer.borrow_mut().run(&code_node, |_| ());
                 })
         } else {
             self.ui_toolkit
