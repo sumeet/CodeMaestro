@@ -227,10 +227,10 @@ pub trait UiToolkit {
               F: Fn(&T) -> () + 'static,
               G: Fn(&T) -> bool,
               H: Fn(&T) -> &str;
-    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self,
-                                                       items: Vec<SelectableItem<T>>,
-                                                       onselect: F)
-                                                       -> Self::DrawResult;
+    fn draw_selectables2<'b, T: 'static, F: Fn(&T) -> () + 'static>(&'b self,
+                                                                    items: impl Iterator<Item = SelectableItem<T, Self>> + 'b,
+                                                                    onselect: F)
+                                                                    -> Self::DrawResult;
     fn draw_checkbox_with_label<F: Fn(bool) + 'static>(&self,
                                                        label: &str,
                                                        value: bool,
@@ -295,8 +295,8 @@ pub trait UiToolkit {
                                     -> Self::DrawResult;
 }
 
-pub enum SelectableItem<T: 'static> {
-    GroupHeader(&'static str),
+pub enum SelectableItem<T: 'static, U: UiToolkit + ?Sized> {
+    GroupHeader(Box<dyn Fn() -> U::DrawResult>),
     Selectable {
         item: T,
         label: String,

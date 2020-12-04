@@ -1634,17 +1634,13 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         }
     }
 
-    fn draw_selectables2<T, F: Fn(&T) -> () + 'static>(&self,
-                                                       items: Vec<SelectableItem<T>>,
-                                                       onselect: F)
-                                                       -> Self::DrawResult {
+    fn draw_selectables2<'b, T: 'static, F: Fn(&T) -> () + 'static>(&'b self,
+                                                                    items: impl Iterator<Item = SelectableItem<T, Self>> + 'b,
+                                                                    onselect: F)
+                                                                    -> Self::DrawResult {
         for selectable in items {
             match selectable {
-                SelectableItem::GroupHeader(label) => {
-                    self.draw_all_on_same_line(&[&|| self.draw_text("-"), &|| {
-                                                   self.draw_text(label)
-                                               }])
-                }
+                SelectableItem::GroupHeader(draw_label) => draw_label(),
                 SelectableItem::Selectable { item,
                                              label,
                                              is_selected, } => {
