@@ -21,7 +21,7 @@ use crate::colorscheme;
 use crate::draw_all_iter;
 use crate::editor::drag_drop::DragDropPayload;
 use crate::editor::value_renderer::ValueRenderer;
-use crate::editor::{CommandBuffer, Keypress};
+use crate::editor::{CommandBuffer, Key, Keypress};
 use crate::insert_code_menu::{CodeSearchParams, InsertCodeMenuOptionsGroup};
 use crate::ui_toolkit::{
     ChildRegionFrameStyle, ChildRegionHeight, ChildRegionStyle, ChildRegionTopPadding,
@@ -318,10 +318,11 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                               .code_genie,
                                                                          self.env_genie, self.code_editor.location.unwrap());
 
+            let cmd_buffer = Rc::clone(&self.command_buffer);
                            self.draw_text_input(
-                                                menu.input_str(),
-                                                false,
-                                                move |input| {
+                               menu.input_str(),
+                               false,
+                               move |input| {
                                                     let input = input.to_string();
                                                     cmdb_1.borrow_mut()
                                                           .add_editor_command(move |editor| {
@@ -332,7 +333,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                     });
                                                           })
                                                 },
-                                                move || {
+                               move || {
                                                     let mut cmdb = cmdb_2.borrow_mut();
                                                     if let Some(ref new_code_node) = new_code_node {
                                                         let new_code_node = new_code_node.clone();
@@ -347,7 +348,36 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                 editor.hide_insert_code_menu();
                                                             });
                                                     }
-                                                },
+                                                }, move |key| {
+                                   match key {
+                                      Keypress {
+                                          key: Key::Escape, ..
+                                      }  => {
+                                          cmd_buffer.borrow_mut().add_editor_command(|editor| {
+                                              editor.escape_out_of_autocomplete_and_undo();
+                                          })
+                                      },
+                                       Keypress {
+                                           key: Key::Tab, shift: false, ..
+                                       } | Keypress { key: Key::DownArrow, .. } => {
+                                           cmd_buffer.borrow_mut().add_editor_command(|editor| {
+                                               editor.insert_code_menu
+                                                   .as_mut()
+                                                   .map(|menu| menu.select_next());
+                                           })
+                                       },
+                                       Keypress {
+                                           key: Key::Tab, shift: true, ..
+                                       } | Keypress { key: Key::UpArrow, .. } => {
+                                           cmd_buffer.borrow_mut().add_editor_command(|editor| {
+                                               editor.insert_code_menu
+                                                   .as_mut()
+                                                   .map(|menu| menu.select_prev());
+                                           })
+                                       }
+                                       _ => (),
+                                   }
+                               },
             )
                        })
     }
@@ -2049,6 +2079,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                              editor.mark_as_not_editing();
                                                          })
                              },
+                             |_| (),
                              // TODO: i think we need another callback for what happens when you CANCEL
         )
     }
@@ -2111,18 +2142,22 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                  existing_value: &str,
                                                                  fit_input_width: bool,
                                                                  onchange: F,
-                                                                 ondone: D)
+                                                                 ondone: D,
+                                                                 onkeypress: impl Fn(Keypress)
+                                                                     + 'static)
                                                                  -> T::DrawResult {
         let onchange_rc = Rc::new(RefCell::new(onchange));
         let ondone_rc = Rc::new(RefCell::new(ondone));
+        let onkeypress_rc = Rc::new(RefCell::new(onkeypress));
         self.draw_nested_borders_around(&|| {
                 let onchange_rc = Rc::clone(&onchange_rc);
                 let ondone_rc = Rc::clone(&ondone_rc);
+                let onkeypress_rc = Rc::clone(&onkeypress_rc);
                 self.ui_toolkit.draw_text_input(existing_value,
                                                 fit_input_width,
                                                 move |v| onchange_rc.borrow()(v),
                                                 move || ondone_rc.borrow()(),
-                                                |_| ())
+                                                move |key| onkeypress_rc.borrow()(key))
             })
     }
 

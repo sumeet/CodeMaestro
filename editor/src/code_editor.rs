@@ -105,9 +105,6 @@ impl CodeEditor {
             (_, Key::V, false, true) => {
                 self.paste_selection();
             }
-            (true, Key::Escape, _, _) => {
-                self.escape_out_of_autocomplete_and_undo();
-            }
             (false, Key::Escape, _, _) => {
                 self.deselect_selected_code();
             }
@@ -164,16 +161,6 @@ impl CodeEditor {
             (false, Key::V, true, false) => {
                 self.select_current_line();
             }
-            (_, Key::Tab, false, false) | (_, Key::DownArrow, _, _) => {
-                self.insert_code_menu
-                    .as_mut()
-                    .map(|menu| menu.select_next());
-            }
-            (_, Key::Tab, true, false) | (_, Key::UpArrow, _, _) => {
-                self.insert_code_menu
-                    .as_mut()
-                    .map(|menu| menu.select_prev());
-            }
             _ => {}
         }
     }
@@ -184,7 +171,7 @@ impl CodeEditor {
     }
 
     // not sure why this is in its own function
-    fn escape_out_of_autocomplete_and_undo(&mut self) {
+    pub fn escape_out_of_autocomplete_and_undo(&mut self) {
         self.editing = false;
         if self.insert_code_menu.is_some() {
             // TODO: oh fuckkkkk the order these things are in... what the hell, and why?
