@@ -1153,20 +1153,27 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             self.ui_toolkit
                 .draw_all_on_same_line(&[&draw_script_name_section,
                                          &|| self.ui_toolkit.draw_text(""),
-                                         &|| {
-                                             let editor = self.controller.code_editor_by_id.get(&script_id).unwrap();
-                                             let cmd_buffer = Rc::clone(&self.command_buffer);
-                                             self.ui_toolkit.draw_checkbox_with_label("Show output",
-                                                                                      editor.show_output,
-                                                                                      move |val| {
-                                                                                          cmd_buffer.borrow_mut().add_editor_command(script_id, move |editor, _| {
-                                                                                              editor.show_output = val
-                                                                                          })
-                                                                                      })
-                                         }])
+                                         &|| self.render_show_output_control_for_code_windows(script_id)])
         } else {
             draw_script_name_section()
         }
+    }
+
+    fn render_show_output_control_for_code_windows(&self,
+                                                   code_editor_id: lang::ID)
+                                                   -> T::DrawResult {
+        let editor = self.controller
+                         .code_editor_by_id
+                         .get(&code_editor_id)
+                         .unwrap();
+        let cmd_buffer = Rc::clone(&self.command_buffer);
+        self.ui_toolkit
+            .draw_checkbox_with_label("Show output", editor.show_output, move |val| {
+                cmd_buffer.borrow_mut()
+                          .add_editor_command(code_editor_id, move |editor, _| {
+                              editor.show_output = val
+                          })
+            })
     }
 
     fn render_warnings_section_in_script_window(&self,
@@ -1219,19 +1226,25 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                  &|| {
                                      self.ui_toolkit.draw_all(&[
                 &|| {
-                    let cont1 = Rc::clone(&self.command_buffer);
-                    let code_func1 = code_func.clone();
-                    self.ui_toolkit.draw_text_input_with_label("Function name",
-                                                               code_func.name(),
-                                                               move |newvalue| {
-                                                                   let mut code_func1 =
-                                                                       code_func1.clone();
-                                                                   code_func1.name =
-                                                                       newvalue.to_string();
-                                                                   cont1.borrow_mut()
-                                                                        .load_function(code_func1);
-                                                               },
-                                                               || {})
+                    let draw_function_name_section = || {
+                        let cont1 = Rc::clone(&self.command_buffer);
+                        let code_func1 = code_func.clone();
+                        self.ui_toolkit.draw_text_input_with_label("Function name",
+                                                                   code_func.name(),
+                                                                   move |newvalue| {
+                                                                       let mut code_func1 =
+                                                                           code_func1.clone();
+                                                                       code_func1.name =
+                                                                           newvalue.to_string();
+                                                                       cont1.borrow_mut()
+                                                                       .load_function(code_func1);
+                                                                   },
+                                                                   || {})
+                    };
+                    self.ui_toolkit.draw_all_on_same_line(&[
+                        &draw_function_name_section,
+                            &|| self.ui_toolkit.draw_text(""),
+                        &|| self.render_show_output_control_for_code_windows(code_func.code_id())])
                 },
                 &|| self.render_arguments_selector(code_func),
                 &|| self.render_code(code_func.code().id()),
