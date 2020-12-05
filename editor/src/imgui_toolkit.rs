@@ -1551,14 +1551,25 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         onenter: E,
         onkeypress: impl Fn(Keypress) + 'static) {
         let mut box_input = buf(existing_value);
-        let button_pressed =
+        let pressed_enter =
             self.ui
                 .input_text_multiline(&self.imlabel(label), &mut box_input, [0., 100.])
                 .flags(ImGuiInputTextFlags::CtrlEnterForNewLine)
                 .enter_returns_true(true)
                 .resize_buffer(true)
                 .build();
-        if button_pressed {
+        // println!("is item active: {:?}", self.ui.is_item_active());
+        // println!("is item focused: {:?}", self.ui.is_item_focused());
+        // println!("is ctrl pressed: {:?}", self.ui.io().key_ctrl);
+        // println!("want capture keyboard: {:?}",
+        //          self.ui.io().want_capture_keyboard);
+        // println!("want text input: {:?}", self.ui.io().want_text_input);
+        // if self.ui.io().keys_down[VirtualKeyCode::Return as usize] {
+        //     println!("-----------------------");
+        //     println!("RETURNN!!!!!!!!!!!");
+        //     println!("-----------------------");
+        // }
+        if pressed_enter {
             return onenter();
         }
         // if self.ui.is_item_active() {

@@ -826,6 +826,10 @@ impl InsertCodeMenuOptionGenerator for InsertEarlyReturnOptionGenerator {
             }
         }
 
+        if !search_params.search_matches_identifier("return") {
+            return vec![];
+        }
+
         vec![InsertCodeMenuOption { sort_key: "earlyreturn".to_string(),
                                     new_node: code_generation::new_early_return(),
                                     is_selected: false,
