@@ -771,6 +771,10 @@ lazy_static! {
 
 #[typetag::serde]
 impl lang::Function for Subtract {
+    fn autocomplete_also_matches(&self) -> &[&'static str] {
+        &["minus", "-"]
+    }
+
     fn style(&self) -> &lang::FunctionRenderingStyle {
         &SUBTRACT_RENDERING_STYLE
     }
@@ -823,6 +827,9 @@ lazy_static! {
 
 #[typetag::serde]
 impl lang::Function for Multiply {
+    fn autocomplete_also_matches(&self) -> &[&'static str] {
+        &["times", "*"]
+    }
     fn style(&self) -> &lang::FunctionRenderingStyle {
         &MULTIPLY_RENDERING_STYLE
     }
@@ -931,6 +938,10 @@ impl lang::Function for Equals {
         lang::Value::Boolean(lhs == rhs)
     }
 
+    fn autocomplete_also_matches(&self) -> &[&'static str] {
+        &["==", "is"]
+    }
+
     fn style(&self) -> &lang::FunctionRenderingStyle {
         &EQUALS_RENDERING_STYLE
     }
@@ -978,6 +989,10 @@ lazy_static! {
 
 #[typetag::serde]
 impl lang::Function for NotEquals {
+    fn autocomplete_also_matches(&self) -> &[&'static str] {
+        &["!="]
+    }
+
     fn call(&self,
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
@@ -1034,6 +1049,10 @@ lazy_static! {
 
 #[typetag::serde]
 impl lang::Function for LessThan {
+    fn autocomplete_also_matches(&self) -> &[&'static str] {
+        &["<"]
+    }
+
     fn call(&self,
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)

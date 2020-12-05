@@ -29,7 +29,7 @@ lazy_static! {
         Box::new(InsertReassignListIndexOfLocalVariable {}),
         Box::new(InsertVariableReferenceOptionGenerator {}),
         Box::new(InsertStructFieldGetOfLocal {}),
-        Box::new(InsertFunctionOptionGenerator {}),
+        Box::new(InsertFunctionCallOptionGenerator {}),
         Box::new(InsertConditionalOptionGenerator {}),
         Box::new(InsertWhileOptionGenerator {}),
         Box::new(InsertForLoopOptionGenerator {}),
@@ -481,7 +481,12 @@ fn find_functions_ignoring_wraps_type<'a>(
                  if input_str.is_empty() {
                      true
                  } else {
-                     search_params.search_matches_identifier(&func.name())
+                     std::iter::once(func.name()).chain(func.autocomplete_also_matches()
+                                                            .iter()
+                                                            .cloned())
+                                                 .any(|name| {
+                                                     search_params.search_matches_identifier(name)
+                                                 })
                  }
              })
              .filter(move |func| {
@@ -498,9 +503,9 @@ fn find_functions_ignoring_wraps_type<'a>(
 }
 
 #[derive(Clone)]
-struct InsertFunctionOptionGenerator {}
+struct InsertFunctionCallOptionGenerator {}
 
-impl InsertCodeMenuOptionGenerator for InsertFunctionOptionGenerator {
+impl InsertCodeMenuOptionGenerator for InsertFunctionCallOptionGenerator {
     fn options(&self,
                search_params: &CodeSearchParams,
                _code_genie: &CodeGenie,
@@ -1002,7 +1007,7 @@ impl InsertCodeMenuOptionGenerator for InsertAssignmentOptionGenerator {
                                          .to_string()
         };
 
-        let sort_key_prefix = if lowercased_trimmed_search_str.contains('=') {
+        let sort_key_prefix = if lowercased_trimmed_search_str.contains("=") {
             // if the user typed a =, then it's very likely they wanted an assignment statement. sort
             // this up to the top, in that case
             "000"

@@ -164,6 +164,9 @@ pub trait Function: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn defines_generics(&self) -> Vec<GenericParamTypeSpec> {
         vec![]
     }
+    fn autocomplete_also_matches(&self) -> &[&str] {
+        &[]
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
