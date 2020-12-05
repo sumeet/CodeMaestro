@@ -1251,32 +1251,30 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let darker_color = darken(darken(color));
 
         self.draw_nested_borders_around(&|| {
-                self.ui_toolkit
-                    .draw_top_border_inside(darker_color, 2, &|| {
-                        self.ui_toolkit
-                            .draw_right_border_inside(darker_color, 1, &|| {
-                                self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
+            self.ui_toolkit.draw_top_border_inside(darker_color, 2, &|| {
+                self.ui_toolkit.draw_right_border_inside(darker_color, 1, &|| {
+                    self.ui_toolkit.draw_left_border_inside(darker_color, 1, &|| {
                         self.ui_toolkit.draw_bottom_border_inside(darker_color, 1, &|| {
                             // don't show the return type if the function returns null. there's no
                             // use in looking at it
                             if typ.matches_spec(&lang::NULL_TYPESPEC) {
                                 self.ui_toolkit.draw_all_on_same_line(&[
-                                    &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),
-                                    &|| self.ui_toolkit.draw_buttony_text(&format!("\u{f152} {}", name), color),
+                                    &|| self.ui_toolkit.draw_buttony_text("", darker_color),
+                                    &|| self.ui_toolkit.draw_buttony_text(name, color),
                                 ])
                             } else {
                                 self.ui_toolkit.draw_all_on_same_line(&[
-                                    &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),
-                                    &|| self.ui_toolkit.draw_buttony_text(&format!("\u{f152} {}", name), color),
+                                    &|| self.ui_toolkit.draw_buttony_text(&format!("\u{f152} {}", sym), darker_color),
+                                    &|| self.ui_toolkit.draw_buttony_text(name, color),
 //                                        &|| self.ui_toolkit.draw_text("  "),
 //                                        &|| self.ui_toolkit.draw_buttony_text(&sym, darker_color),
                                 ])
                             }
                         })
                     })
-                            })
-                    })
+                })
             })
+        })
     }
 
     // this is used for rendering variable references and struct field gets. it displays the type of the
