@@ -1425,7 +1425,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             .draw_all(&[draw_code_fn, &|| {
                 self.ui_toolkit.draw_child_region([0., 0., 0., 0.2], &|| {
                     self.ui_toolkit.draw_box_around([0., 0., 0., 0.2], &|| {
-                        self.ui_toolkit.align(&|| self.ui_toolkit.draw_text("Output          "), &[&|| {
+                        self.ui_toolkit.align(&|| self.ui_toolkit.draw_text("Last result       "), &[&|| {
                             ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(value)
                         }])
                     })
