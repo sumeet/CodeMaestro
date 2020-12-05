@@ -1482,7 +1482,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         // will cause the next drawn thing to appear on the same line. weird i know, maybe we can
         // one day fix this jumbledness
         if function_call.args.is_empty() {
-            return self.render_code(&function_call.function_reference);
+            return self.code_handle(&|| {
+                                        self.render_code(function_call.function_reference.as_ref())
+                                    },
+                                    function_call.id);
         }
 
         let function = self.env_genie
