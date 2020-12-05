@@ -181,7 +181,8 @@ pub trait UiToolkit {
         label: &str,
         existing_value: &str,
         onchange: F,
-        onenter: E)
+        onenter: E,
+        onkeypress: impl Fn(Keypress) + 'static)
         -> Self::DrawResult;
 
     fn draw_form<T: Serialize + DeserializeOwned + 'static, R>(&self,

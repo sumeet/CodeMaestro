@@ -1291,6 +1291,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                                                        .load_function(pyfunc2);
                                                                          },
                                                                          || (),
+                                                                         |_| (),
                     )
                 },
                 &|| {
@@ -1303,7 +1304,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                 let mut pyfunc3 = pyfunc3.clone();
                                 pyfunc3.eval = newvalue.to_string();
                                 cont3.borrow_mut().load_function(pyfunc3);
-                            }, || (),
+                            }, || (), |_| (),
                         )
                 },
                 &|| self.render_return_type_selector(pyfunc),
@@ -1360,6 +1361,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                 cont3.borrow_mut().load_function(jsfunc3);
                             },
                         || (),
+                        |_| (),
                         )
                 },
                 &|| self.render_return_type_selector(jsfunc),

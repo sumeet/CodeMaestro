@@ -2034,6 +2034,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                      -> T::DrawResult {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let cmd_buffer2 = Rc::clone(&self.command_buffer);
+        let cmd_buffer3 = Rc::clone(&self.command_buffer);
         let new_node_fn = Rc::new(new_node_fn);
 
         self.draw_multiline_text_input(
@@ -2051,6 +2052,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                    editor.mark_as_not_editing();
                                                                })
                                    },
+                                   move |key| match key {
+                                       Keypress { key: Key::Escape, .. } => {
+                                           cmd_buffer3.borrow_mut().add_editor_command(|editor| {
+                                               editor.mark_as_not_editing();
+                                           })
+                                       }
+                                       _ => (),
+                                   },
         )
     }
 
@@ -2060,6 +2069,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                   -> T::DrawResult {
         let cmd_buffer = Rc::clone(&self.command_buffer);
         let cmd_buffer2 = Rc::clone(&self.command_buffer);
+        let cmd_buffer3 = Rc::clone(&self.command_buffer);
 
         let new_node_fn = Rc::new(new_node_fn);
 
@@ -2079,8 +2089,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                              editor.mark_as_not_editing();
                                                          })
                              },
-                             |_| (),
-                             // TODO: i think we need another callback for what happens when you CANCEL
+                             move |key| match key {
+                                 Keypress { key: Key::Escape, .. } => {
+                                     cmd_buffer3.borrow_mut().add_editor_command(|editor| {
+                                         editor.mark_as_not_editing();
+                                     })
+                                 }
+                                 _ => (),
+                             },
         )
     }
 
@@ -2122,19 +2138,25 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     fn draw_multiline_text_input<F: Fn(&str) + 'static, E: Fn() + 'static>(&self,
                                                                            existing_value: &str,
                                                                            onchange: F,
-                                                                           onenter: E)
+                                                                           onenter: E,
+                                                                           onkeypress: impl Fn(Keypress) + 'static)
                                                                            -> T::DrawResult {
         let onchange_rc = Rc::new(RefCell::new(onchange));
         let onenter_rc = Rc::new(RefCell::new(onenter));
+        let onkeypress_rc = Rc::new(RefCell::new(onkeypress));
         self.draw_nested_borders_around(&move || {
                 let onchange_rc = Rc::clone(&onchange_rc);
                 let onenter_rc = Rc::clone(&onenter_rc);
+                let onkeypress_rc = Rc::clone(&onkeypress_rc);
                 self.ui_toolkit.draw_multiline_text_input_with_label("",
                                                                      existing_value,
                                                                      move |v| {
                                                                          onchange_rc.borrow()(v)
                                                                      },
-                                                                     move || onenter_rc.borrow()())
+                                                                     move || onenter_rc.borrow()(),
+                                                                     move |key| {
+                                                                         onkeypress_rc.borrow()(key)
+                                                                     })
             })
     }
 

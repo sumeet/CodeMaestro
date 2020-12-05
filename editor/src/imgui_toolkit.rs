@@ -1529,7 +1529,9 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             self.ui.set_next_item_width(text_size[0] + padding);
         }
         self.draw_text_input_with_label("", existing_value, onchange, ondone);
+
         // deactivated after edit means escape was pressed
+        // TODO: duped with draw_multiline_text_input_with_label
         if self.ui.is_item_active()
            || self.ui.is_item_deactivated_after_edit()
            || self.ui.is_item_deactivated()
@@ -1546,7 +1548,8 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         label: &str,
         existing_value: &str,
         onchange: F,
-        onenter: E) {
+        onenter: E,
+        onkeypress: impl Fn(Keypress) + 'static) {
         let mut box_input = buf(existing_value);
         let button_pressed =
             self.ui
@@ -1570,6 +1573,16 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
         // }
         if box_input.as_ref() as &str != existing_value {
             onchange(box_input.as_ref() as &str)
+        }
+
+        // TODO: duped with draw_text_input
+        if self.ui.is_item_active()
+           || self.ui.is_item_deactivated_after_edit()
+           || self.ui.is_item_deactivated()
+        {
+            if let Some(keypress) = self.keypress {
+                onkeypress(keypress)
+            }
         }
     }
 
