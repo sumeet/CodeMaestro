@@ -913,8 +913,6 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
             return self.ui_toolkit.draw_all(&[]);
         }
 
-        let cmd_buffer4 = Rc::clone(&self.command_buffer);
-
         let opener = self.controller.opener.as_ref().unwrap();
         self.ui_toolkit.draw_centered_popup(
                                             &|| {
@@ -923,6 +921,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                     self.ui_toolkit.focused(&|| {
                                        let cmd_buffer1 = Rc::clone(&self.command_buffer);
                                        let cmd_buffer2 = Rc::clone(&self.command_buffer);
+                                       let cmd_buffer4 = Rc::clone(&self.command_buffer);
 
                                        self.ui_toolkit.draw_text_input(
                             &opener.input_str,
@@ -960,7 +959,28 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                     },
                                 )
                             },
-                        )
+                            move |keypress| {
+                                cmd_buffer4
+                                    .borrow_mut()
+                                    .add_controller_command(move |controller| match keypress {
+                                        Keypress { key: Key::DownArrow, .. } |
+                                        Keypress {
+                                            key: Key::Tab,
+                                            ctrl: false,
+                                            shift: false,
+                                        } => controller.opener_select_next(),
+                                        Keypress { key: Key::UpArrow, .. } |
+                                        Keypress {
+                                            key: Key::Tab,
+                                            ctrl: false,
+                                            shift: true,
+                                        } => controller.opener_select_prev(),
+                                        Keypress {
+                                            key: Key::Escape, ..
+                                        } => controller.close_opener(),
+                                        _ => (),
+                                    })
+                            })
                                    })
                 },
                 &move || {
@@ -998,28 +1018,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 },
             ])
                                             },
-                                            Some(move |keypress| {
-                                                cmd_buffer4
-                    .borrow_mut()
-                    .add_controller_command(move |controller| match keypress {
-                        Keypress { key: Key::DownArrow, .. } |
-                        Keypress {
-                            key: Key::Tab,
-                            ctrl: false,
-                            shift: false,
-                        } => controller.opener_select_next(),
-                        Keypress { key: Key::UpArrow, .. } |
-                        Keypress {
-                            key: Key::Tab,
-                            ctrl: false,
-                            shift: true,
-                        } => controller.opener_select_prev(),
-                        Keypress {
-                            key: Key::Escape, ..
-                        } => controller.close_opener(),
-                        _ => (),
-                    })
-                                            }),
+                                            None::<fn(Keypress)>,
         )
     }
 
@@ -1775,7 +1774,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                                        let mut schema = schema2.clone();
                                        schema.field_id = FieldIdentifier::Name(new_field_name.into());
                                        T::change_form(form_id, schema)
-                                   }, || ())
+                                   }, || (), |_| ())
                                })
                            });
 

@@ -2121,7 +2121,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 self.ui_toolkit.draw_text_input(existing_value,
                                                 fit_input_width,
                                                 move |v| onchange_rc.borrow()(v),
-                                                move || ondone_rc.borrow()())
+                                                move || ondone_rc.borrow()(),
+                                                |_| ())
             })
     }
 

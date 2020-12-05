@@ -146,7 +146,9 @@ pub trait UiToolkit {
                                                                  existing_value: &str,
                                                                  fit_input_width: bool,
                                                                  onchange: F,
-                                                                 ondone: D)
+                                                                 ondone: D,
+                                                                 onkeypress: impl Fn(Keypress)
+                                                                     + 'static)
                                                                  -> Self::DrawResult;
     fn callback_when_drag_intersects<F: Fn() + 'static>(&self,
                                                         draw_fn: DrawFnRef<Self>,

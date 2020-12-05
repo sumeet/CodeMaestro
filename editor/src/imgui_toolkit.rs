@@ -269,14 +269,6 @@ pub fn draw_app(app: Rc<RefCell<App>>, mut async_executor: async_executor::Async
         app.flush_commands(&mut async_executor);
         async_executor.turn();
 
-        // TODO: these keypresses are already part of ui.io().keys_down... it would be better
-        // to use that instead of this custom & hacky handling we're doing...
-        let keypress = if ui.io().want_capture_keyboard {
-            None
-        } else {
-            keypress
-        };
-
         let mut toolkit = ImguiToolkit::new(ui, keypress);
         app.draw(&mut toolkit);
 
@@ -311,6 +303,16 @@ pub struct ImguiToolkit<'a> {
 }
 
 impl<'a> ImguiToolkit<'a> {
+    fn get_keypress_when_input_not_active(&self) -> Option<Keypress> {
+        // TODO: these keypresses are already part of ui.io().keys_down... it would be better
+        // to use that instead of this custom & hacky handling we're doing...
+        if self.ui.io().want_capture_keyboard {
+            None
+        } else {
+            self.keypress
+        }
+    }
+
     fn get_current_dragged_rect(&self) -> Option<Rect> {
         let label = self.current_child_window_label()?;
         TkCache::get_child_region_dragged_rect(&label)
@@ -686,7 +688,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
     }
 
     fn handle_global_keypress(&self, handle_keypress: impl Fn(Keypress) + 'static) {
-        if let Some(keypress) = self.keypress {
+        if let Some(keypress) = self.get_keypress_when_input_not_active() {
             handle_keypress(keypress)
         }
     }
@@ -976,7 +978,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
             .build(self.ui, &|| {
                 //unsafe { imgui_sys::igSetWindowFocus() };
                 draw_fn();
-                if let Some(keypress) = self.keypress {
+                if let Some(keypress) = self.get_keypress_when_input_not_active() {
                     if self.ui.is_window_focused() {
                         if let Some(ref handle_keypress) = handle_keypress {
                             handle_keypress(keypress)
@@ -1095,7 +1097,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                           cache.windows
                                .insert(window_name_str.to_string(), drawn_window);
 
-                          if let Some(keypress) = self.keypress {
+                          if let Some(keypress) = self.get_keypress_when_input_not_active() {
                               if self.ui
                        .is_window_focused_with_flags(WindowFocusedFlags::CHILD_WINDOWS)
                 {
@@ -1293,7 +1295,7 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                    let content_size = self.ui.item_rect_size();
                    screen_coords.1 = self.ui.cursor_screen_pos();
 
-                   if let Some(keypress) = self.keypress {
+                   if let Some(keypress) = self.get_keypress_when_input_not_active() {
                        if is_child_focused {
                            if let Some(ref handle_keypress) = handle_keypress {
                                handle_keypress(keypress)
@@ -1517,14 +1519,25 @@ impl<'a> UiToolkit for ImguiToolkit<'a> {
                                                                        existing_value: &str,
                                                                        fit_input_width: bool,
                                                                        onchange: F,
-                                                                       ondone: D) {
+                                                                       ondone: D,
+                                                                       onkeypress: impl Fn(Keypress)
+                                                                           + 'static) {
         if fit_input_width {
             let text_size = self.ui
                                 .calc_text_size(&im_str!("{}", existing_value), false, 0.);
             let padding = 10.;
             self.ui.set_next_item_width(text_size[0] + padding);
         }
-        self.draw_text_input_with_label("", existing_value, onchange, ondone)
+        self.draw_text_input_with_label("", existing_value, onchange, ondone);
+        // deactivated after edit means escape was pressed
+        if self.ui.is_item_active()
+           || self.ui.is_item_deactivated_after_edit()
+           || self.ui.is_item_deactivated()
+        {
+            if let Some(keypress) = self.keypress {
+                onkeypress(keypress)
+            }
+        }
     }
 
     fn draw_multiline_text_input_with_label<F: Fn(&str) -> () + 'static,
