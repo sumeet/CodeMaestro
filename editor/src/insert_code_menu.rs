@@ -607,9 +607,10 @@ impl InsertCodeMenuOptionGenerator for InsertLiteralOptionGenerator {
 }
 
 impl InsertLiteralOptionGenerator {
-    fn string_literal_option(&self, input_str: String) -> InsertCodeMenuOption {
+    fn string_literal_option(&self, input_str: String, priority: bool) -> InsertCodeMenuOption {
+        let priority_prefix = if priority { "00" } else { "" };
         InsertCodeMenuOption { is_selected: false,
-                               sort_key: format!("stringliteral{}", input_str),
+                               sort_key: format!("{}stringliteral{}", priority_prefix, input_str),
                                group_name: LITERALS_GROUP,
                                new_node: code_generation::new_string_literal(input_str) }
     }
@@ -686,7 +687,7 @@ impl InsertLiteralOptionGenerator {
     fn generate_options_when_no_return_type_specified(&self,
                                                       search_params: &CodeSearchParams,
                                                       env_genie: &EnvGenie,
-                                                      input_str: &String)
+                                                      mut input_str: &str)
                                                       -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
 
@@ -726,8 +727,14 @@ impl InsertLiteralOptionGenerator {
 
         // TODO: maybe boost string literal if there is something entered?
         //            if !input_str.is_empty() {
-        options.push(self.string_literal_option(input_str.clone()));
-        //            }
+        // TODO: duped immediately below
+        let mut priority = false;
+        if input_str.starts_with("\"") || input_str.starts_with("'") {
+            input_str = input_str.trim_start_matches(|c| c == '\'' || c == '"');
+            input_str = input_str.trim_end_matches(|c| c == '\'' || c == '"');
+            priority = true;
+        }
+        options.push(self.string_literal_option(input_str.to_string(), priority));
 
         options
     }
@@ -735,13 +742,20 @@ impl InsertLiteralOptionGenerator {
     fn generate_options_for_return_type(&self,
                                         search_params: &CodeSearchParams,
                                         env_genie: &EnvGenie,
-                                        input_str: &String,
+                                        mut input_str: &str,
                                         return_type: &lang::Type)
                                         -> Vec<InsertCodeMenuOption> {
         let mut options = vec![];
 
+        // TODO: duped immediately above
         if return_type.matches_spec(&lang::STRING_TYPESPEC) {
-            options.push(self.string_literal_option(input_str.clone()));
+            let mut priority = false;
+            if input_str.starts_with("\"") || input_str.starts_with("'") {
+                input_str = input_str.trim_start_matches(|c| c == '\'' || c == '"');
+                input_str = input_str.trim_end_matches(|c| c == '\'' || c == '"');
+                priority = true;
+            }
+            options.push(self.string_literal_option(input_str.to_string(), priority));
         }
         if return_type.matches_spec(&lang::NULL_TYPESPEC) {
             options.push(self.null_literal_option());
@@ -767,7 +781,7 @@ impl InsertLiteralOptionGenerator {
         // required for a placeholder node to have a type, meaning we need to know what the
         // type of a placeholder is to create it. under current conditions that's ok, but i
         // think we can make this less restrictive in the future if we need to
-        options.push(self.placeholder_option(input_str.clone(), return_type));
+        options.push(self.placeholder_option(input_str.to_string(), return_type));
 
         options
     }
