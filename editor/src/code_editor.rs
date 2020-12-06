@@ -335,6 +335,7 @@ impl CodeEditor {
                 let id = cn.id;
                 Some(InsertionPoint::StructLiteralField(id))
             }
+            lang::CodeNode::FunctionCall(func_call) => Some(InsertionPoint::Replace(func_call.id)),
             lang::CodeNode::Argument(_)
             | lang::CodeNode::Assignment(_)
             | lang::CodeNode::Reassignment(_)
