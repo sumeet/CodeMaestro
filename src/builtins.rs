@@ -685,11 +685,11 @@ impl lang::Function for DivideTemp {
     }
 
     fn name(&self) -> &str {
-        "DivideTemp"
+        "Divide"
     }
 
     fn description(&self) -> &str {
-        "Does Division"
+        "Divides two numbers, throwing away the remainder and rounding down. For example, 8 ÷ 3 is 2."
     }
 
     fn id(&self) -> lang::ID {
