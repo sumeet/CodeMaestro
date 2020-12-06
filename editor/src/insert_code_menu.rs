@@ -901,11 +901,18 @@ impl InsertCodeMenuOptionGenerator for InsertWhileOptionGenerator {
 struct InsertForLoopOptionGenerator {}
 
 impl InsertForLoopOptionGenerator {
-    fn generate_option() -> InsertCodeMenuOption {
+    fn generate_option_with_placeholder() -> InsertCodeMenuOption {
+        Self::generate_option(code_generation::new_placeholder("List".into(),
+                                              lang::Type::from_spec_id(lang::LIST_TYPESPEC.id,
+                                                                       vec![lang::Type::from_spec(&*lang::ANY_TYPESPEC)])
+        ))
+    }
+
+    fn generate_option(list_expression: lang::CodeNode) -> InsertCodeMenuOption {
         InsertCodeMenuOption { sort_key: "for".to_string(),
                                group_name: CONTROL_FLOW_GROUP,
                                is_selected: false,
-                               new_node: lang::CodeNode::ForLoop(code_generation::new_for_loop()) }
+            new_node: lang::CodeNode::ForLoop(code_generation::new_for_loop(list_expression)) }
     }
 }
 
@@ -924,7 +931,8 @@ impl InsertCodeMenuOptionGenerator for InsertForLoopOptionGenerator {
             //
             // TODO: this needs to actually put the list expression inside...
             if wraps_type.matches_spec(&*lang::LIST_TYPESPEC) {
-                return vec![Self::generate_option()];
+                let wrapped_node = find_wrapped_node(code_genie, search_params);
+                return vec![Self::generate_option(wrapped_node.clone())];
             // otherwise we shouldn't pop up in the suggestions
             } else {
                 return vec![];
@@ -933,7 +941,7 @@ impl InsertCodeMenuOptionGenerator for InsertForLoopOptionGenerator {
 
         let mut options = vec![];
         if search_params.search_matches_identifier("for") {
-            options.push(Self::generate_option())
+            options.push(Self::generate_option_with_placeholder())
         }
         options
     }
