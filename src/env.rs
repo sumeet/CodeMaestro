@@ -124,7 +124,6 @@ impl Interpreter {
             lang::CodeNode::VariableReference(variable_reference) => {
                 let interp = self.clone();
                 Box::pin(async move {
-                    println!("evaluating variable reference: {:?}", variable_reference);
                     interp.get_local_variable(variable_reference.assignment_id)
                           .unwrap()
                 })
