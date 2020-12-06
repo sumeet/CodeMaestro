@@ -671,6 +671,10 @@ lazy_static! {
 
 #[typetag::serde]
 impl lang::Function for DivideTemp {
+    fn autocomplete_also_matches(&self) -> &[&'static str] {
+        &["/"]
+    }
+
     fn call(&self,
             _interpreter: env::Interpreter,
             args: HashMap<lang::ID, lang::Value>)
