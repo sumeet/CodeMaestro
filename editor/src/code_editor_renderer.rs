@@ -1868,7 +1868,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                             self.render_control_flow_label(symbol,
                                                                                            label)
                                                         },
-                                                        "control flow node top label",
+                                                        (label, body_block.id()),
                                                         control_flow_node_id)
                                        },
                                        CONTROL_FLOW_GREY_COLOR,
@@ -2222,7 +2222,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn code_handle(&self,
                    draw_handle_fn: &dyn Fn() -> T::DrawResult,
-                   unique_label_per_code_id: &str,
+                   unique_label_per_code_id: impl std::hash::Hash + Clone + std::fmt::Debug,
                    code_node_id: lang::ID)
                    -> T::DrawResult {
         if self.is_rendering_menu_atm() {
