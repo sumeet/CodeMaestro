@@ -227,6 +227,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                        colorscheme!(variable_color),
                                                                        &type_of_assignment)
                                  },
+                                 "assignment",
                                  assignment.id)
             })
     }
@@ -248,6 +249,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                        colorscheme!(variable_color),
                                                                        &type_of_assignment)
                              },
+                             "reassignment",
                              reassignment.id)
         };
         self.ui_toolkit
@@ -283,7 +285,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 ])
             })
         },
-                         rli.id
+                         "reassign_list_index", rli.id
         )
         };
 
@@ -700,6 +702,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                            -> T::DrawResult {
         let lhs = &|| {
             self.code_handle(&|| self.render_list_literal_label(code_node),
+                             "list_literal_label",
                              list_literal.id)
         };
 
@@ -951,20 +954,32 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     // &|| self.ui_toolkit.draw_all_on_same_line(&[
                     // &|| self.render_control_flow_label(&TRY_ICON, "Try"),
                     &|| {
-                        let code_node = lang::CodeNode::Try(trai.clone());
-                        let typ = self.code_editor
-                                      .code_genie
-                                      .guess_type(&code_node, self.env_genie)
-                                      .unwrap();
-                        let sym = self.env_genie.get_symbol_for_type(&typ);
-                        self.render_control_flow_symbol(&sym)
+                        self.code_handle(
+                                         &|| {
+                                             self.ui_toolkit.draw_all_on_same_line(&[
+                                &|| {
+                                    let code_node = lang::CodeNode::Try(trai.clone());
+                                    let typ = self.code_editor
+                                                  .code_genie
+                                                  .guess_type(&code_node, self.env_genie)
+                                                  .unwrap();
+                                    let sym = self.env_genie.get_symbol_for_type(&typ);
+                                    self.render_control_flow_symbol(&sym)
+                                },
+                                &|| self.render_control_flow_text(&TRY_ICON),
+                            ])
+                                         },
+                                         "try_main_label",
+                                         trai.id,
+                        )
                     },
-                    &|| self.render_control_flow_text(&TRY_ICON),
                     &|| self.render_code(&trai.maybe_error_expr),
                     // ]),
                     // &|| self.ui_toolkit.draw_all_on_same_line(&[
                     &|| {
-                        self.render_control_flow_text(&OR_RETURN_ICON)
+                        self.code_handle(&|| self.render_control_flow_text(&OR_RETURN_ICON),
+                                         "try_else_label",
+                                         trai.id)
                         // self.ui_toolkit.draw_with_margin((6., 0.), &|| {
                         //                    self.ui_toolkit.draw_all_on_same_line(&[
                         //         &|| {
@@ -999,7 +1014,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                         // self.ui_toolkit
                                                         //     .draw_buttony_text(&EARLY_RETURN_ICON, CONTROL_FLOW_GREY_COLOR)
                                                                      },
-                                                                     early_return.id)
+                                                                     "early_return_label", early_return.id)
                                                 },
                                                 &|| self.render_code(early_return.code.as_ref())])
     }
@@ -1162,6 +1177,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn render_null_literal(&self, null_literal_id: &lang::ID) -> T::DrawResult {
         self.code_handle(&|| self.draw_nested_borders_around(&|| render_null(self.ui_toolkit)),
+                         "null_literal_label",
                          *null_literal_id)
     }
 
@@ -1182,6 +1198,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 },
             ])
                          },
+                         "placeholder_main_handle",
                          placeholder.id,
         )
     }
@@ -1239,7 +1256,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  &|| {})
             }
         };
-        self.code_handle(draw, variable_reference.id)
+        self.code_handle(draw, "variable_reference_label", variable_reference.id)
     }
 
     fn render_variable_appearance(&self, name: &str, typ: &lang::Type) -> T::DrawResult {
@@ -1485,6 +1502,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             return self.code_handle(&|| {
                                         self.render_code(function_call.function_reference.as_ref())
                                     },
+                                    "func_call_main_label",
                                     function_call.id);
         }
 
@@ -1514,6 +1532,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                              self.render_code(function_call.function_reference
                                                                            .as_ref())
                                          },
+                                         "func_call_infix_label",
                                          function_call.id)
 
                         // self.code_handle(&|| self.ui_toolkit.draw_text(infix_symbol),
@@ -1543,7 +1562,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                               &|| {
                                   self.code_handle(
                     &|| self.render_code(&function_call.function_reference),
-                    function_call.id)
+                    "func_call_main_label", function_call.id)
                               },
                               &rhs.iter().map(|b| b.as_ref()).collect_vec(),
         )
@@ -1654,6 +1673,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         render_struct_field(self.ui_toolkit,
                             &|| {
                                 self.code_handle(&|| self.render_struct_literal_field_label(field),
+                                                 "struct_literal_field_label",
                                                  literal_field.id)
                             },
                             &|| {
@@ -1713,6 +1733,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                .collect_vec();
         self.ui_toolkit.align(&|| {
                                   self.code_handle(&|| self.render_struct_identifier(strukt),
+                                                   "struct_literal_label",
                                                    struct_literal.id)
                               },
                               &rhs.iter().map(|b| b.as_ref()).collect_vec())
@@ -1727,6 +1748,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                  self.render_code(&list_index.list_expr)
                                              })
                                      },
+                                     "list index label",
                                      list_index.id)
                 },
                 &|| {
@@ -1758,6 +1780,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 ])
                                  })
                          },
+                         "struct field get label",
                          sfg.id,
         )
     }
@@ -1845,6 +1868,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                             self.render_control_flow_label(symbol,
                                                                                            label)
                                                         },
+                                                        "control flow node top label",
                                                         control_flow_node_id)
                                        },
                                        CONTROL_FLOW_GREY_COLOR,
@@ -1925,6 +1949,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                     enum_variant,
                                                                     &typ)
                                  },
+                                 "enum variant identifier label",
                                  evl.id)
             },
             &|| self.render_nested(&|| self.render_code(&evl.variant_value_expr)),
@@ -1940,7 +1965,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                        self.draw_buttony_text(&self.format_string_literal_display(&string_literal.value),
                                                               colorscheme!(literal_bg_color))
                                    },
-                         string_literal.id)
+                         "string literal label", string_literal.id)
     }
 
     fn format_string_literal_display(&self, value: &str) -> String {
@@ -1966,6 +1991,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                              self.draw_buttony_text(&number_literal.value.to_string(),
                                                     colorscheme!(literal_bg_color))
                          },
+                         "number literal label",
                          number_literal.id)
     }
 
@@ -2196,6 +2222,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn code_handle(&self,
                    draw_handle_fn: &dyn Fn() -> T::DrawResult,
+                   unique_label_per_code_id: &str,
                    code_node_id: lang::ID)
                    -> T::DrawResult {
         if self.is_rendering_menu_atm() {
@@ -2218,7 +2245,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let drag_drop_payload = DragDropPayload::new(self.code_editor.id(), code_to_drag_drop);
 
         self.ui_toolkit.drag_drop_source(
-                                         code_node_id,
+                                         (unique_label_per_code_id, code_node_id),
                                          &|| {
                                              let cmd_buffer = Rc::clone(&cmd_buffer);
                                              self.ui_toolkit.buttonize(draw_handle_fn, move || {
