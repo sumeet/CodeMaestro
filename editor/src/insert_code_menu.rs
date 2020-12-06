@@ -1193,45 +1193,57 @@ impl InsertCodeMenuOptionGenerator for InsertListIndexOfLocal {
                env_genie: &EnvGenie)
                -> Vec<InsertCodeMenuOption> {
         find_all_variables_preceding(search_params.insertion_point.into(),  code_genie, env_genie)
-            .filter_map(|variable| {
-                let list_elem_result_typ = get_result_type_from_indexing_into_list(variable.typ.clone())?;
+            .flat_map(|variable| {
+                // TODO: we don't need this allocation here, let's refactor this later to not require it
+                let mut v = vec![];
+
+                let list_elem_result_typ = get_result_type_from_indexing_into_list(variable.typ.clone());
+                if list_elem_result_typ.is_none() {
+                    return v;
+                }
+                let list_elem_result_typ = list_elem_result_typ.unwrap();
                 // if let Some(search_type) = &search_params.return_type {
                 //     if !search_type.matches(&list_elem_result_typ) {
                 //         return None
                 //     }
                 // }
                 if search_params.search_matches_type(&list_elem_result_typ, env_genie) && search_params.search_matches_identifier(&variable.name()) {
-                    Some(InsertCodeMenuOption {
+                    v.push(InsertCodeMenuOption {
                         group_name: LOCALS_GROUP,
                         sort_key: format!("listindex{}", variable.locals_id),
                         new_node: code_generation::new_list_index(code_generation::new_variable_reference(
                             variable.locals_id)),
                         is_selected: false
                     })
-                } else {
+                }
                     // also
 
-                    let name = variable.name().to_string();
+                let name = variable.name().to_string();
 
-                    let list_elem_typ = get_type_from_list(variable.typ)?;
-                    if let Some(search_type) = &search_params.return_type {
-                        // TODO: this should probably call the search_params.matches_type func or whatever it's called
-                        // there's another place in this file that does the same thing, should replace that (lazy)
-                        if !env_genie.types_match(&search_type, &list_elem_typ) {
-                            return None
-                        }
-                    }
-                    if !search_params.search_matches_identifier(&name) {
-                        return None
-                    }
-                    Some(InsertCodeMenuOption {
-                        group_name: LOCALS_GROUP,
-                        sort_key: format!("listindextry{}", variable.locals_id),
-                        new_node: lang::CodeNode::Try(code_generation::new_try(code_generation::new_list_index(code_generation::new_variable_reference(
-                            variable.locals_id)), list_elem_typ)),
-                        is_selected: false
-                    })
+                let list_elem_typ = get_type_from_list(variable.typ);
+                if list_elem_typ.is_none() {
+                    return v;
                 }
+                let list_elem_typ = list_elem_typ.unwrap();
+                if let Some(search_type) = &search_params.return_type {
+                    // TODO: this should probably call the search_params.matches_type func or whatever it's called
+                    // there's another place in this file that does the same thing, should replace that (lazy)
+                    if !env_genie.types_match(&search_type, &list_elem_typ) {
+                        return v;
+                    }
+                }
+                if !search_params.search_matches_identifier(&name) {
+                    return v;
+                }
+                v.push(InsertCodeMenuOption {
+                    group_name: LOCALS_GROUP,
+                    sort_key: format!("listindextry{}", variable.locals_id),
+                    new_node: lang::CodeNode::Try(code_generation::new_try(code_generation::new_list_index(code_generation::new_variable_reference(
+                        variable.locals_id)), list_elem_typ)),
+                    is_selected: false
+                });
+                v
+
             })
             .collect()
     }
