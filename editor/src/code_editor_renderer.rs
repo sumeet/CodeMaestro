@@ -631,6 +631,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let draw = move || {
             let new_code_node = new_code_node.clone();
             let cmdb = cmd_buffer.clone();
+            println!("rendering insertion option {:?}", option);
             self.ui_toolkit.buttonize(
                                       &|| {
                                           self.ui_toolkit.draw_taking_up_full_width(&|| {
@@ -1569,6 +1570,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
+        println!("rendering function call arg (and guessing type for: {:?}",
+                 argument);
         let func = self.env_genie
                        .get_function_containing_arg(argument.argument_definition_id)
                        .unwrap();
@@ -1836,8 +1839,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                  Some(&|| {
                                      self.ui_toolkit.draw_all_on_same_line(&[
                                          &|| self.render_for_loop_variable(for_loop),
-                                         &|| self.ui_toolkit.draw_buttony_text("in", CONTROL_FLOW_GREY_COLOR),
-                                         &|| self.render_code(&for_loop.list_expression)
+                                         &|| self.draw_text("   \u{f30a}   "),
+                                         // &|| self.ui_toolkit.draw_buttony_text("in", CONTROL_FLOW_GREY_COLOR),
+                                         &|| self.render_code(&for_loop.list_expression),
                                      ])
                                  }),
                                  1,
