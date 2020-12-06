@@ -353,7 +353,7 @@ fn serde_value_into_struct(mut value: serde_json::Value,
               })
               .collect();
     Some(lang::Value::Struct { struct_id: strukt.id,
-                               values: values? })
+                               values: lang::StructValues(values?) })
 }
 
 pub async fn fetch_json(request: http::Request<String>) -> Result<serde_json::Value> {
@@ -367,11 +367,13 @@ fn extract_form_params(http_form_params: &lang::Value) -> Vec<(&str, &str)> {
                     .iter()
                     .map(|val| val.as_struct().unwrap())
                     .map(|(_id, struct_values)| {
-                        (struct_values.get(&HTTP_FORM_PARAM_KEY_FIELD_ID)
+                        (struct_values.0
+                                      .get(&HTTP_FORM_PARAM_KEY_FIELD_ID)
                                       .unwrap()
                                       .as_str()
                                       .unwrap(),
-                         struct_values.get(&HTTP_FORM_PARAM_VALUE_FIELD_ID)
+                         struct_values.0
+                                      .get(&HTTP_FORM_PARAM_VALUE_FIELD_ID)
                                       .unwrap()
                                       .as_str()
                                       .unwrap())

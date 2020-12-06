@@ -50,6 +50,9 @@
     },
     "31fc6cad-9f38-48e9-bf07-9f3219ba07f3": {
       "type": "Length"
+    },
+    "af5ea291-398e-46a0-a97f-081ad7a9203b": {
+      "type": "Intersection"
     }
   },
   "typespecs": {

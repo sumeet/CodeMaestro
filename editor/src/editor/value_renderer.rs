@@ -134,7 +134,7 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                },
                strukt.fields.iter().map(|strukt_field| {
                                        move || {
-                                           let value = values.get(&strukt_field.id).unwrap();
+                                           let value = values.0.get(&strukt_field.id).unwrap();
                                            self.render_struct_field_value(strukt_field, value)
                                        }
                                    }))

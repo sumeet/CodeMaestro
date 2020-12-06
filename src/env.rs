@@ -25,7 +25,19 @@ macro_rules! await_eval_result {
     };
 }
 
-pub type SharedLocals = Rc<RefCell<HashMap<lang::ID, lang::Value>>>;
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct SharedLocals(pub Rc<RefCell<HashMap<lang::ID, lang::Value>>>);
+
+use std::collections::BTreeMap;
+impl std::hash::Hash for SharedLocals {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0
+            .borrow()
+            .iter()
+            .collect::<BTreeMap<_, _>>()
+            .hash(state)
+    }
+}
 
 #[derive(Clone)]
 pub struct Interpreter {
@@ -36,30 +48,30 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         Self { env: Rc::new(RefCell::new(ExecutionEnvironment::new())),
-               locals: Rc::new(RefCell::new(HashMap::new())) }
+               locals: SharedLocals(Rc::new(RefCell::new(HashMap::new()))) }
     }
 
     // TODO: instead of setting local variables directly on `env`, set them on a per-interp `locals`
     // object... i think. keep this here like this until we have one
     pub fn set_local_variable(&mut self, id: lang::ID, value: lang::Value) {
-        self.locals.borrow_mut().insert(id, value);
+        self.locals.0.borrow_mut().insert(id, value);
     }
 
     pub fn modify_local_variable<T>(&self,
                                     id: lang::ID,
                                     change_fn: impl FnOnce(&mut lang::Value) -> T)
                                     -> Option<T> {
-        let mut locals = self.locals.borrow_mut();
+        let mut locals = self.locals.0.borrow_mut();
         locals.get_mut(&id).map(change_fn)
     }
 
     pub fn get_local_variable(&self, id: lang::ID) -> Option<lang::Value> {
-        self.locals.borrow().get(&id).cloned()
+        self.locals.0.borrow().get(&id).cloned()
     }
 
     pub fn with_env_and_new_locals(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
         Self { env,
-               locals: Rc::new(RefCell::new(HashMap::new())) }
+               locals: SharedLocals(Rc::new(RefCell::new(HashMap::new()))) }
     }
 
     pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {
@@ -131,7 +143,7 @@ impl Interpreter {
                                       await_eval_result!(interp.evaluate(&literal_field.expr)));
                     }
                     lang::Value::Struct { struct_id: struct_literal.struct_id,
-                                          values }
+                                          values: lang::StructValues(values) }
                 })
             }
             // i think these code nodes will actually never be evaluated, because they get evaluated
@@ -196,7 +208,9 @@ impl Interpreter {
                 let field_id = sfg.struct_field_id;
                 Box::pin(async move {
                     let strukt = await_eval_result!(struct_fut);
-                    strukt.into_struct().unwrap().1.remove(&field_id).unwrap()
+                    (strukt.into_struct().unwrap().1).0
+                                                     .remove(&field_id)
+                                                     .unwrap()
                 })
             }
             lang::CodeNode::ListIndex(list_index) => {
@@ -230,7 +244,7 @@ impl Interpreter {
             CodeNode::AnonymousFunction(anon_func) => Box::pin(async move {
                 lang::Value::AnonymousFunction(anon_func.clone(),
                                                // TODO: is there be a function that already does this?
-                                               Rc::clone(&self.locals))
+                                               SharedLocals(Rc::clone(&self.locals.0)))
             }),
             // guess_type of this will return Result<Null, Number>
             // here, Number is the index that didn't exist in the list we're changing

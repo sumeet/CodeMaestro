@@ -12,7 +12,7 @@ use serde::{
 };
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::sync::{Arc, Mutex};
 
@@ -108,11 +108,11 @@ pub fn new_struct_value(struct_id: lang::ID, values: lang::StructValues) -> lang
 
 pub fn new_message(sender: String, argument_text: String, full_text: String) -> lang::Value {
     new_struct_value(*MESSAGE_STRUCT_ID,
-                     hashmap! {
-                         uuid::Uuid::parse_str("e01e6346-5c8f-4b1b-9723-cde0abf77ec0").unwrap() => lang::Value::String(sender),
-                         uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(argument_text),
-                         uuid::Uuid::parse_str("9a8d9059-a729-4660-b440-8ee7c411e70a").unwrap() => lang::Value::String(full_text),
-                     })
+                     lang::StructValues(hashmap! {
+                                            uuid::Uuid::parse_str("e01e6346-5c8f-4b1b-9723-cde0abf77ec0").unwrap() => lang::Value::String(sender),
+                                            uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(argument_text),
+                                            uuid::Uuid::parse_str("9a8d9059-a729-4660-b440-8ee7c411e70a").unwrap() => lang::Value::String(full_text),
+                                        }))
 }
 
 pub fn some_option_value(value: lang::Value) -> lang::Value {
@@ -541,7 +541,7 @@ impl lang::Function for Map {
                                 .map(|value| {
                                     let mut new_stack_frame = interpreter.new_stack_frame();
                                     // TODO: quick hack to copy the local variables inside
-                                    for (locals_key, locals_value) in shared_locals.borrow().iter() {
+                                    for (locals_key, locals_value) in shared_locals.0.borrow().iter() {
                                         new_stack_frame.set_local_variable(*locals_key, locals_value.clone());
                                     }
 
@@ -658,6 +658,8 @@ lazy_static! {
         lang::FunctionRenderingStyle::Infix(vec![], "\u{f53e}".to_string());
     static ref LESS_THAN_RENDERING_STYLE: lang::FunctionRenderingStyle =
         FunctionRenderingStyle::Infix(vec![], "\u{f536}".to_string());
+    static ref INTERSECTION_RENERING_STYLE: lang::FunctionRenderingStyle =
+        lang::FunctionRenderingStyle::Infix(vec![], "\u{f668}".to_string());
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -1300,5 +1302,77 @@ impl lang::Function for Length {
 
     fn returns(&self) -> lang::Type {
         lang::Type::with_params(&*lang::NUMBER_TYPESPEC, vec![])
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Intersection {}
+
+lazy_static! {
+    static ref INTERSECTION_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("4d981b4b-f627-4827-8de6-1588cd86cd9a").unwrap(),
+         uuid::Uuid::parse_str("7ffcdfe6-0e7a-40bb-b385-fb34f1a2d3c6").unwrap(),];
+}
+
+#[typetag::serde]
+impl lang::Function for Intersection {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let (typ, vec1) = args.remove(&INTERSECTION_ARGS[0])
+                              .unwrap()
+                              .into_vec_with_type()
+                              .unwrap();
+        let (_, vec2) = args.remove(&INTERSECTION_ARGS[1])
+                            .unwrap()
+                            .into_vec_with_type()
+                            .unwrap();
+        let new_vec = vec1.into_iter()
+                          .collect::<HashSet<_>>()
+                          .intersection(&vec2.into_iter().collect())
+                          .cloned()
+                          .collect();
+        lang::Value::List(typ, new_vec)
+    }
+
+    fn name(&self) -> &str {
+        "Intersection"
+    }
+
+    fn description(&self) -> &str {
+        "Removes duplicates from two lists, returning the intersection"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("af5ea291-398e-46a0-a97f-081ad7a9203b").unwrap()
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("23986662-57ee-4df9-8b8d-5bc278197ee8").unwrap())]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let generic = self.defines_generics().pop().unwrap();
+
+        vec![lang::ArgumentDefinition::new_with_id(INTERSECTION_ARGS[0],
+                                                   lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                                                           vec![lang::Type::from_spec(&generic)]),
+                                                   "List A".into()),
+             lang::ArgumentDefinition::new_with_id(INTERSECTION_ARGS[1],
+                                                   lang::Type::with_params(&*lang::LIST_TYPESPEC,
+                                                                           vec![lang::Type::from_spec(&generic)]),
+                                                   // greater than or equals symbol
+                                                   "List B".into()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        let generic = self.defines_generics().pop().unwrap();
+        lang::Type::with_params(&*lang::LIST_TYPESPEC, vec![lang::Type::from_spec(&generic)])
+    }
+
+    fn style(&self) -> &FunctionRenderingStyle {
+        &INTERSECTION_RENERING_STYLE
     }
 }

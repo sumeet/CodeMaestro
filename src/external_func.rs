@@ -52,11 +52,13 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
             }
             lang::Value::Struct { values, struct_id } => {
                 lang::Value::Struct { struct_id,
-                                      values: values.into_iter()
-                                                    .map(|(value_id, value)| {
-                                                        (value_id, resolve_futures(value))
-                                                    })
-                                                    .collect() }
+                                      values: lang::StructValues(values.0
+                                                                       .into_iter()
+                                                                       .map(|(value_id, value)| {
+                                                                           (value_id,
+                                                                            resolve_futures(value))
+                                                                       })
+                                                                       .collect()) }
             }
             lang::Value::EnumVariant { box value,
                                        variant_id, } => {
@@ -91,7 +93,9 @@ fn contains_futures(val: &lang::Value) -> bool {
             true
         }
         lang::Value::List(_typ, v) => v.iter().any(contains_futures),
-        lang::Value::Struct { values, .. } => values.iter().any(|(_id, val)| contains_futures(val)),
+        lang::Value::Struct { values, .. } => {
+            values.0.iter().any(|(_id, val)| contains_futures(val))
+        }
         lang::Value::EnumVariant { box value, .. } => contains_futures(value),
         lang::Value::Null
         | lang::Value::String(_)
