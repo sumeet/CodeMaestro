@@ -47,6 +47,15 @@ pub fn resolve_futures(value: lang::Value) -> lang::Value {
             lang::Value::EarlyReturn(inner) => {
                 lang::Value::EarlyReturn(Box::new(resolve_futures(*inner)))
             }
+            Value::Map { from, to, value: h } => lang::Value::Map { from,
+                                                                    to,
+                                                                    value:
+                                                                        h.into_iter()
+                                                                         .map(|(key, val)| {
+                                                                             (resolve_futures(key),
+                                                                              resolve_futures(val))
+                                                                         })
+                                                                         .collect() },
             lang::Value::List(typ, v) => {
                 lang::Value::List(typ, v.into_iter().map(resolve_futures).collect())
             }
@@ -103,5 +112,12 @@ fn contains_futures(val: &lang::Value) -> bool {
         | lang::Value::Boolean(_)
         | lang::Value::AnonymousFunction(_, _) => false,
         Value::EarlyReturn(inner) => contains_futures(inner),
+        Value::Map { from: _,
+                     to: _,
+                     value, } => {
+            value.iter()
+                 .flat_map(|(k, v)| std::iter::once(k).chain(std::iter::once(v)))
+                 .any(contains_futures)
+        }
     }
 }

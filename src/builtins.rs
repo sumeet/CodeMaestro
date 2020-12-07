@@ -5,7 +5,7 @@ use crate::await_eval_result;
 use futures_util::future::join_all;
 use itertools::Itertools;
 use lazy_static::lazy_static;
-use maplit::hashmap;
+use maplit::btreemap;
 use serde::ser::SerializeStruct;
 use serde::{
     Deserialize as DeserializeTrait, Deserializer, Serialize as SerializeTrait, Serializer,
@@ -108,7 +108,7 @@ pub fn new_struct_value(struct_id: lang::ID, values: lang::StructValues) -> lang
 
 pub fn new_message(sender: String, argument_text: String, full_text: String) -> lang::Value {
     new_struct_value(*MESSAGE_STRUCT_ID,
-                     lang::StructValues(hashmap! {
+                     lang::StructValues(btreemap! {
                                             uuid::Uuid::parse_str("e01e6346-5c8f-4b1b-9723-cde0abf77ec0").unwrap() => lang::Value::String(sender),
                                             uuid::Uuid::parse_str("d0d3b2b3-1d25-4d3d-bdca-fe34022eadf2").unwrap() => lang::Value::String(argument_text),
                                             uuid::Uuid::parse_str("9a8d9059-a729-4660-b440-8ee7c411e70a").unwrap() => lang::Value::String(full_text),

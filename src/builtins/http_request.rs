@@ -4,7 +4,7 @@ use crate::http_client;
 use crate::lang;
 use crate::lang::{ArgumentDefinition, Type, Value, ID};
 use lazy_static::lazy_static;
-use maplit::hashmap;
+use maplit::btreemap;
 use serde_derive::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -52,7 +52,7 @@ impl lang::Function for HTTPRequest {
                     let body = resp.body();
                     // build up the response struct here
                     super::ok_result_value(new_struct_value(*super::HTTP_RESPONSE_STRUCT_ID,
-                                                            lang::StructValues(hashmap! {
+                                                            lang::StructValues(btreemap! {
                                                                                    *HTTP_RESPONSE_BODY_STRING_FIELD_ID => Value::String(body.clone()),
                                                                                    *HTTP_RESPONSE_STATUS_CODE_INT_FIELD_ID => Value::Number(status_code as _),
                                                                                })))

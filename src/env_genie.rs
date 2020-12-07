@@ -85,6 +85,9 @@ impl<'a> EnvGenie<'a> {
                                              anonymous_function.returns.clone(),])
             }
             Value::EarlyReturn(value) => self.guess_type_of_value(&value),
+            Value::Map { from, to, value: _ } => {
+                lang::Type::with_params(&*lang::MAP_TYPESPEC, vec![from.clone(), to.clone()])
+            }
         }
     }
 

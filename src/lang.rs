@@ -53,6 +53,13 @@ lazy_static! {
         symbol: "\u{f03a}".to_string(),
         num_params: 1,
     };
+    pub static ref MAP_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
+        readable_name: "Map".to_string(),
+        description: "An indexed search list from one value to another".into(),
+        id: uuid::Uuid::parse_str("8e4e5264-f8c9-4c3e-871b-81ee3e82ee50").unwrap(),
+        symbol: "\u{f870}".to_string(),
+        num_params: 2,
+    };
     pub static ref ERROR_TYPESPEC: BuiltInTypeSpec = BuiltInTypeSpec {
         readable_name: "Error".to_string(),
         description: "Means there was an error".into(),
@@ -184,7 +191,7 @@ impl fmt::Debug for dyn Function {
 clone_trait_object!(Function);
 impl_downcast!(Function);
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub enum CodeNode {
     FunctionCall(FunctionCall),
     FunctionReference(FunctionReference),
@@ -214,6 +221,7 @@ pub enum CodeNode {
 }
 
 use crate::code_generation::new_block;
+use failure::_core::cmp::Ordering;
 use futures_util::future::Shared;
 use futures_util::FutureExt;
 use std::collections::BTreeMap;
@@ -230,8 +238,18 @@ impl PartialEq for ValueFuture {
 
 impl Eq for ValueFuture {}
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StructValues(pub HashMap<ID, Value>);
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
+pub struct StructValues(pub BTreeMap<ID, Value>);
+
+// impl PartialOrd for StructValues {
+//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+//         // TODO: this will be slow
+//         self.0
+//             .iter()
+//             .collect::<BTreeMap<_, _>>()
+//             .partial_cmp(&other.0.iter().collect::<BTreeMap<_, _>>())
+//     }
+// }
 
 impl std::hash::Hash for StructValues {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -245,7 +263,31 @@ impl std::hash::Hash for ValueFuture {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+impl PartialOrd for ValueFuture {
+    fn partial_cmp(&self, _other: &Self) -> Option<Ordering> {
+        None
+    }
+}
+
+impl Ord for ValueFuture {
+    fn cmp(&self, _: &Self) -> Ordering {
+        panic!("ord doesn't work for futures")
+    }
+}
+
+impl PartialOrd for Value {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (self, other) {
+            (Self::Null, Self::Null) => Some(Ordering::Equal),
+            (Self::Boolean(a), Self::Boolean(b)) => a.partial_cmp(b),
+            (Self::String(a), Self::String(b)) => a.partial_cmp(b),
+            (Self::Number(a), Self::Number(b)) => a.partial_cmp(b),
+            (_, _) => None,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Ord)]
 pub enum Value {
     Null,
     Boolean(bool),
@@ -253,14 +295,25 @@ pub enum Value {
     // TODO: be smarter amount infinite precision ints
     Number(i128),
     List(Type, Vec<Value>),
-    Struct { struct_id: ID, values: StructValues },
+    Struct {
+        struct_id: ID,
+        values: StructValues,
+    },
     Future(ValueFuture),
-    EnumVariant { variant_id: ID, value: Box<Value> },
+    EnumVariant {
+        variant_id: ID,
+        value: Box<Value>,
+    },
     AnonymousFunction(AnonymousFunction, env::SharedLocals),
     EarlyReturn(Box<Value>),
+    Map {
+        from: Type,
+        to: Type,
+        value: BTreeMap<Value, Value>,
+    },
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct AnonymousFunction {
     pub id: ID,
     // TODO: take more than one argument
@@ -491,7 +544,7 @@ impl TypeSpec for BuiltInTypeSpec {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Type {
     pub typespec_id: ID,
     pub params: Vec<Type>,
@@ -1036,13 +1089,13 @@ pub fn new_id() -> ID {
     Uuid::parse_str(&uuid.into_string().unwrap()).unwrap()
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct StringLiteral {
     pub value: String,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct FunctionCall {
     pub function_reference: Box<CodeNode>,
     pub args: Vec<CodeNode>,
@@ -1066,7 +1119,7 @@ impl FunctionCall {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Assignment {
     // should there be a VariableName code node?
     pub name: String,
@@ -1075,7 +1128,7 @@ pub struct Assignment {
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Reassignment {
     pub id: ID,
     pub assignment_id: ID,
@@ -1083,7 +1136,7 @@ pub struct Reassignment {
     pub expression: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ForLoop {
     pub id: ID,
     // should there be a VariableName code node? would also be used in Assignment, and AnonymousFunction...
@@ -1098,7 +1151,7 @@ impl Into<CodeNode> for Reassignment {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ReassignListIndex {
     pub id: ID,
     // this must refer to a list of something, that's the list we'll be mutating
@@ -1108,7 +1161,7 @@ pub struct ReassignListIndex {
     pub set_to_expr: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Block {
     pub expressions: Vec<CodeNode>,
     pub id: ID,
@@ -1125,19 +1178,19 @@ impl Block {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct VariableReference {
     pub assignment_id: ID,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct FunctionReference {
     pub function_id: ID,
     pub id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ArgumentDefinition {
     pub id: ID,
     pub arg_type: Type,
@@ -1156,21 +1209,21 @@ impl ArgumentDefinition {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Argument {
     pub id: ID,
     pub argument_definition_id: ID,
     pub expr: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Placeholder {
     pub id: ID,
     pub description: String,
     pub typ: Type,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct StructLiteral {
     pub id: ID,
     pub struct_id: ID,
@@ -1185,14 +1238,14 @@ impl StructLiteral {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct StructLiteralField {
     pub id: ID,
     pub struct_field_id: ID,
     pub expr: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Conditional {
     pub id: ID,
     // this can be any expression
@@ -1203,7 +1256,7 @@ pub struct Conditional {
     pub else_branch: Option<Box<CodeNode>>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct WhileLoop {
     pub id: ID,
     // this can be any expression returning a boolean
@@ -1212,7 +1265,7 @@ pub struct WhileLoop {
     pub body: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Match {
     pub id: ID,
     pub match_expression: Box<CodeNode>,
@@ -1232,21 +1285,21 @@ impl Match {
     }
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ListLiteral {
     pub id: ID,
     pub element_type: Type,
     pub elements: Vec<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct StructFieldGet {
     pub id: ID,
     pub struct_expr: Box<CodeNode>,
     pub struct_field_id: ID,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct NumberLiteral {
     pub id: ID,
     // TODO: this should be i128 to match Value, but there's some weird serde error in serializing
@@ -1256,14 +1309,14 @@ pub struct NumberLiteral {
     pub value: i64,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct ListIndex {
     pub id: ID,
     pub list_expr: Box<CodeNode>,
     pub index_expr: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct EnumVariantLiteral {
     pub id: ID,
     pub typ: Type,
@@ -1271,13 +1324,13 @@ pub struct EnumVariantLiteral {
     pub variant_value_expr: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct EarlyReturn {
     pub id: ID,
     pub code: Box<CodeNode>,
 }
 
-#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Try {
     pub id: ID,
     pub maybe_error_expr: Box<CodeNode>,

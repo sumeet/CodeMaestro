@@ -25,8 +25,8 @@ macro_rules! await_eval_result {
     };
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct SharedLocals(pub Rc<RefCell<HashMap<lang::ID, lang::Value>>>);
+#[derive(Clone, Debug, PartialEq, Eq, Ord, PartialOrd)]
+pub struct SharedLocals(pub Rc<RefCell<BTreeMap<lang::ID, lang::Value>>>);
 
 use std::collections::BTreeMap;
 impl std::hash::Hash for SharedLocals {
@@ -48,7 +48,7 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new() -> Self {
         Self { env: Rc::new(RefCell::new(ExecutionEnvironment::new())),
-               locals: SharedLocals(Rc::new(RefCell::new(HashMap::new()))) }
+               locals: SharedLocals(Rc::new(RefCell::new(BTreeMap::new()))) }
     }
 
     // TODO: instead of setting local variables directly on `env`, set them on a per-interp `locals`
@@ -71,7 +71,7 @@ impl Interpreter {
 
     pub fn with_env_and_new_locals(env: Rc<RefCell<ExecutionEnvironment>>) -> Self {
         Self { env,
-               locals: SharedLocals(Rc::new(RefCell::new(HashMap::new()))) }
+               locals: SharedLocals(Rc::new(RefCell::new(BTreeMap::new()))) }
     }
 
     pub fn env(&self) -> Rc<RefCell<ExecutionEnvironment>> {
@@ -136,7 +136,8 @@ impl Interpreter {
             lang::CodeNode::StructLiteral(struct_literal) => {
                 let mut interp = self.clone();
                 Box::pin(async move {
-                    let mut values = HashMap::with_capacity(struct_literal.fields.len());
+                    // let mut values = HashMap::with_capacity(struct_literal.fields.len());
+                    let mut values = BTreeMap::new();
                     for literal_field in struct_literal.fields() {
                         values.insert(literal_field.struct_field_id,
                                       await_eval_result!(interp.evaluate(&literal_field.expr)));

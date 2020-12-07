@@ -9,6 +9,7 @@ use crate::code_rendering::{
     render_struct_identifier, NestingRenderer,
 };
 use crate::colorscheme;
+use crate::draw_all_iter;
 use crate::ui_toolkit::{Color, UiToolkit};
 use cs::env::ExecutionEnvironment;
 use cs::lang::{StructValues, Value};
@@ -63,6 +64,20 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
                                                         },
                                                         &|| self.render(inner.as_ref())])
             }
+            Value::Map { from: _,
+                         to: _,
+                         value, } => {
+                // in a rush because of advent of code, will make this prettier later
+                draw_all_iter!(T::self.ui_toolkit,
+                               value.iter().map(|(key, val)| {
+                                               move || {
+                                                   self.ui_toolkit
+                                       .draw_all_on_same_line(&[&|| self.render(key), &|| {
+                                                                  self.render(val)
+                                                              }])
+                                               }
+                                           }))
+            }
         }
     }
 
@@ -101,7 +116,10 @@ impl<'a, T: UiToolkit> ValueRenderer<'a, T> {
             | Value::String(_)
             | Value::Number(_)
             | Value::Future(_) => true,
-            Value::EnumVariant { .. } | Value::List(_, _) | Value::Struct { .. } => false,
+            Value::EnumVariant { .. }
+            | Value::List(_, _)
+            | Value::Struct { .. }
+            | Value::Map { .. } => false,
             Value::AnonymousFunction(_, _) => {
                 panic!("no value rendering implemented for anonymous functions")
             }
