@@ -77,11 +77,15 @@ lazy_static! {
     pub static ref ANY_TYPESPEC: AnyTypeSpec = AnyTypeSpec { };
 
     pub static ref BUILT_IN_TYPESPECS : Vec<Box<dyn TypeSpec>> = vec![
-        Box::new(NULL_TYPESPEC.clone()), Box::new(BOOLEAN_TYPESPEC.clone()),
+        Box::new(NULL_TYPESPEC.clone()),
+        Box::new(BOOLEAN_TYPESPEC.clone()),
         Box::new(STRING_TYPESPEC.clone()),
         Box::new(NUMBER_TYPESPEC.clone()),
-        Box::new(LIST_TYPESPEC.clone()), Box::new(ERROR_TYPESPEC.clone()),
-        Box::new(ANON_FUNC_TYPESPEC.clone()), Box::new(ANY_TYPESPEC.clone())];
+        Box::new(LIST_TYPESPEC.clone()),
+        Box::new(MAP_TYPESPEC.clone()),
+        Box::new(ERROR_TYPESPEC.clone()),
+        Box::new(ANON_FUNC_TYPESPEC.clone()),
+        Box::new(ANY_TYPESPEC.clone())];
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
