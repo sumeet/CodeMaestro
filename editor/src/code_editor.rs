@@ -36,6 +36,29 @@ mod clipboard;
 pub mod generics;
 pub mod locals;
 
+struct TypeResolution<'a> {
+    typ: ResolutionPathNode<'a>,
+    params: Vec<ResolutionPathNode<'a>>,
+}
+
+impl<'a> TypeResolution<'a> {
+    fn resolved(typ: lang::Type) -> Self {
+        TypeResolution { typ: ResolutionPathNode::Resolved(typ),
+                         params: vec![] }
+    }
+
+    fn next(code_node: &'a lang::CodeNode) -> Self {
+        TypeResolution { typ: ResolutionPathNode::Next(code_node),
+                         params: vec![] }
+    }
+}
+
+enum ResolutionPathNode<'a> {
+    Next(&'a lang::CodeNode),
+    Error(Box<dyn std::error::Error>),
+    Resolved(lang::Type),
+}
+
 #[derive(Clone)]
 pub struct CodeEditor {
     pub code_genie: CodeGenie,
@@ -872,6 +895,179 @@ impl CodeGenie {
     //     }
     //     typ
     // }
+
+    #[allow(unused)]
+    fn guess_typ2<'a>(&'a self,
+                      code_node: &'a CodeNode,
+                      env_genie: &'a EnvGenie)
+                      -> Result<lang::Type, String> {
+        Ok(unimplemented!())
+    }
+
+    #[allow(unused)]
+    fn path_to_typ<'a>(&'a self,
+                       code_node: &'a CodeNode,
+                       env_genie: &'a EnvGenie)
+                       -> TypeResolution<'a> {
+        match code_node {
+            CodeNode::FunctionCall(function_call) => {
+                let func_id = function_call.function_reference().function_id;
+                let typ = match env_genie.find_function(func_id) {
+                    Some(_) => resolve_generics_for_function_call(function_call, self, env_genie),
+                    // Some(ref func) => Ok(func.returns().clone()),
+                    // TODO: do we really want to just return Null if we couldn't find the function?
+                    None => lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+                };
+                TypeResolution::resolved(typ)
+            }
+            CodeNode::StringLiteral(_) => {
+                TypeResolution::resolved(lang::Type::from_spec(&*lang::STRING_TYPESPEC))
+            }
+            CodeNode::NumberLiteral(_) => {
+                let typ = lang::Type::from_spec(&*lang::NUMBER_TYPESPEC);
+                TypeResolution::resolved(typ)
+            }
+            CodeNode::Assignment(assignment) => {
+                TypeResolution::next(&*assignment.expression)
+                // self.guess_type(&*assignment.expression, env_genie)
+            }
+            _ => unimplemented!(),
+        }
+        //     CodeNode::Assignment(assignment) => self.guess_type(&*assignment.expression, env_genie),
+        //     CodeNode::Reassignment(reassignment) => {
+        //         self.guess_type(&*reassignment.expression, env_genie)
+        //     }
+        //     CodeNode::Block(block) => {
+        //         if block.expressions.len() > 0 {
+        //             let last_expression_in_block = &block.expressions[block.expressions.len() - 1];
+        //             if last_expression_in_block.as_variable_reference().is_some() {
+        //                 // XXX: this is terrible, we return null here. figure out how to infer this position
+        //                 // properly BIG HAX
+        //                 // this might save me
+        //                 // return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
+        //                 return self.guess_type(last_expression_in_block, env_genie);
+        //             }
+        //             self.guess_type(last_expression_in_block, env_genie)
+        //         } else {
+        //             // TODO: this should probably be a generic, or ANY instead of Null... shoudl really
+        //             // be using type inference here
+        //             Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC))
+        //         }
+        //     }
+        //     CodeNode::VariableReference(vr) => {
+        //         let antecedent =
+        //             locals::find_antecedent_for_variable_reference(vr, false, self, env_genie);
+        //         if antecedent.is_none() {
+        //             return Err(format!("unable to find antecedent for variable reference {:?}",
+        //                                vr));
+        //         }
+        //         let antecedent = antecedent.unwrap();
+        //         self.guess_type_for_variable(antecedent.place, env_genie)
+        //         // if let Some(assignment) = self.find_node(vr.assignment_id) {
+        //         //     self.guess_type_without_resolving_generics(assignment, env_genie)
+        //         // } else {
+        //         //     // couldn't find assignment with that variable name, looking for function args
+        //         //     let typ = env_genie.get_type_for_arg(vr.assignment_id);
+        //         //     if typ.is_some() {
+        //         //         Ok(typ.unwrap())
+        //         //     } else {
+        //         //         let match_variant =
+        //         //             self.find_enum_variant_preceding_by_assignment_id(vr.id,
+        //         //                                                               vr.assignment_id,
+        //         //                                                               env_genie);
+        //         //         if match_variant.is_some() {
+        //         //             Ok(match_variant.unwrap().typ)
+        //         //         } else {
+        //         //             Err("unable to guess type for variable by assignment ID")
+        //         //         }
+        //         //     }
+        //         // }
+        //     }
+        //     CodeNode::FunctionReference(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+        //     CodeNode::Argument(arg) => {
+        //         Ok(resolve_generics_for_function_call_argument(arg, self, env_genie))
+        //         // env_genie.get_type_for_arg(arg.argument_definition_id)
+        //         //          .ok_or("couldn't find type to this argument".into())
+        //     }
+        //     CodeNode::Placeholder(placeholder) => Ok(placeholder.typ.clone()),
+        //     CodeNode::NullLiteral(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+        //     CodeNode::StructLiteral(struct_literal) => {
+        //         let strukt = env_genie.find_struct(struct_literal.struct_id).unwrap();
+        //         Ok(lang::Type::from_spec(strukt))
+        //     }
+        //     CodeNode::StructLiteralField(struct_literal_field) => {
+        //         let strukt_literal = self.find_parent(struct_literal_field.id)
+        //                                  .unwrap()
+        //                                  .into_struct_literal()
+        //                                  .unwrap();
+        //         let strukt = env_genie.find_struct(strukt_literal.struct_id).unwrap();
+        //         strukt.field_by_id()
+        //               .get(&struct_literal_field.struct_field_id)
+        //               .map(|field| field.field_type.clone())
+        //               .ok_or("unable to guess type".into())
+        //     }
+        //     CodeNode::ListLiteral(list_literal) => {
+        //         Ok(lang::Type::list_of(list_literal.element_type.clone()))
+        //     }
+        //     // this means that both branches of a conditional must be of the same type.we need to
+        //     // add a validation for that
+        //     CodeNode::Conditional(conditional) => {
+        //         self.guess_type(&conditional.true_branch, env_genie)
+        //     }
+        //     // need the same validation for match ^
+        //     CodeNode::Match(mach) => {
+        //         let first_variant =
+        //             mach.branch_by_variant_id
+        //                 .values()
+        //                 .next()
+        //                 .expect("match statement must contain at least one variant");
+        //         self.guess_type(first_variant, env_genie)
+        //     }
+        //     CodeNode::StructFieldGet(sfg) => {
+        //         env_genie.find_struct_field(sfg.struct_field_id)
+        //                  .ok_or("unable to guess type".into())
+        //                  .map(|struct_field| struct_field.field_type.clone())
+        //     }
+        //     CodeNode::ListIndex(list_index) => {
+        //         let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie)?;
+        //         Ok(get_result_type_from_indexing_into_list(list_typ).ok_or("unable to guess type")?)
+        //         // debug info that i deleted from the old implementation but might still need later:
+        //         //                let list_typ =
+        //         //                    self.guess_type(list_index.list_expr.as_ref(), env_genie);
+        //         //                panic!(format!("couldn't extract list element from {:?}", list_typ))
+        //     }
+        //     CodeNode::AnonymousFunction(anon_func) => {
+        //         // let guessed_typ_from_anon_func_block = self.guess_type(&anon_func.block, env_genie);
+        //         Ok(typ_for_anonymous_function(anon_func.takes_arg
+        //                                                .arg_type
+        //                                                .clone(),
+        //                                       anon_func.returns.clone()))
+        //         // self.guess_type_without_resolving_generics(&anon_func.block, env_genie)
+        //         // // // TODO: could possibly use type inference here w/ the last element of the block...
+        //         // // // or should this be definable some other way? or inferred another way?
+        //         // // Ok(anon_func.returns.clone())
+        //     }
+        //     CodeNode::ReassignListIndex(_) => {
+        //         Ok(new_result(lang::Type::from_spec(&*lang::NULL_TYPESPEC),
+        //                       lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)))
+        //     }
+        //     CodeNode::WhileLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+        //     CodeNode::EnumVariantLiteral(evl) => Ok(evl.typ.clone()),
+        //     CodeNode::EarlyReturn(inner) => self.guess_type(inner.code.as_ref(), env_genie),
+        //     CodeNode::Try(trai) => {
+        //         let maybe_error_typ = self.guess_type(trai.maybe_error_expr.as_ref(), env_genie)?;
+        //         if let Ok(success_typ) =
+        //             get_success_type_from_option_or_result_typ(&maybe_error_typ)
+        //         {
+        //             Ok(success_typ.clone())
+        //         } else {
+        //             Err("invalid node inside of try".into())
+        //         }
+        //     }
+        //     // for loops don't really have a return type
+        //     CodeNode::ForLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+        // }
+    }
 
     // pub fn guess_type(&self,
     //                   code_node: &lang::CodeNode,
