@@ -1376,3 +1376,85 @@ impl lang::Function for Intersection {
         &INTERSECTION_RENERING_STYLE
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MapInsert {}
+
+lazy_static! {
+    static ref MAP_INSERT_ARGS: [lang::ID; 3] =
+        [uuid::Uuid::parse_str("b8cdb930-16d5-4f65-bc01-1cddd2cf46e3").unwrap(),
+         uuid::Uuid::parse_str("0c52375e-0716-4aa9-96f9-b1e62ade841f").unwrap(),
+         uuid::Uuid::parse_str("2a532b07-82af-4ab0-ad29-b824754fa418").unwrap()];
+}
+
+#[typetag::serde]
+impl lang::Function for MapInsert {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let (from, to, mut map) = args.remove(&MAP_INSERT_ARGS[0])
+                                      .unwrap()
+                                      .into_map_with_type()
+                                      .unwrap();
+        let key = args.remove(&MAP_INSERT_ARGS[1]).unwrap();
+        let value = args.remove(&MAP_INSERT_ARGS[2]).unwrap();
+        map.insert(key, value);
+        lang::Value::Map { from,
+                           to,
+                           value: map }
+    }
+
+    fn name(&self) -> &str {
+        "Map Insert"
+    }
+
+    fn description(&self) -> &str {
+        "Inserts an element into a Map"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("768a5c92-ed44-4246-bbaa-d554b6989d5a").unwrap()
+    }
+
+    fn style(&self) -> &FunctionRenderingStyle {
+        lazy_static! {
+            static ref MAP_INSERT_RENDERING_STYLE: lang::FunctionRenderingStyle =
+                FunctionRenderingStyle::Default;
+        };
+        &*MAP_INSERT_RENDERING_STYLE
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![
+            lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("66227ffb-10c5-4189-9aae-8c8f6d52097d").unwrap()),
+            lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("f13ce249-2090-48f2-bf06-aaebb69a37d0").unwrap()),
+        ]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let generic_value = self.defines_generics().pop().unwrap();
+        let generic_key = self.defines_generics().pop().unwrap();
+
+        vec![lang::ArgumentDefinition::new_with_id(MAP_INSERT_ARGS[0],
+                                                   lang::Type::map(
+                                                      lang::Type::from_spec(&generic_key),
+                                                      lang::Type::from_spec(&generic_value),
+                                                   ),
+                                                   "Map".into()),
+             lang::ArgumentDefinition::new_with_id(MAP_INSERT_ARGS[1],
+                                                   lang::Type::from_spec(&generic_key),
+                                                   "Index".into()),
+             lang::ArgumentDefinition::new_with_id(MAP_INSERT_ARGS[2],
+                                                   lang::Type::from_spec(&generic_value),
+                                                   "Value".into()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        let generic_value = self.defines_generics().pop().unwrap();
+        let generic_key = self.defines_generics().pop().unwrap();
+        lang::Type::map(lang::Type::from_spec(&generic_key),
+                        lang::Type::from_spec(&generic_value))
+    }
+}

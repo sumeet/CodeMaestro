@@ -48,6 +48,9 @@
     "24547ec8-8019-4237-9a4d-c31c3d516648": {
       "type": "Append"
     },
+    "768a5c92-ed44-4246-bbaa-d554b6989d5a": {
+      "type": "MapInsert"
+    },
     "31fc6cad-9f38-48e9-bf07-9f3219ba07f3": {
       "type": "Length"
     },

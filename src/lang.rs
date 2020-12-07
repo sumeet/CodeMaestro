@@ -452,6 +452,15 @@ impl Value {
         }
     }
 
+    pub fn into_map_with_type(
+        self)
+        -> Result<(Type, Type, BTreeMap<Value, Value>), Box<dyn std::error::Error>> {
+        match self {
+            Value::Map { from, to, value } => Ok((from, to, value)),
+            otherwise => Err(format!("expected list but got {:?}", otherwise).into()),
+        }
+    }
+
     pub fn as_i128(&self) -> Option<i128> {
         match self {
             Value::Number(i) => Some(*i),
