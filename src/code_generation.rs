@@ -114,6 +114,13 @@ pub fn new_list_literal(typ: lang::Type) -> lang::CodeNode {
                                                     elements: vec![] })
 }
 
+pub fn new_map_literal(from_type: lang::Type, to_type: lang::Type) -> lang::CodeNode {
+    lang::CodeNode::MapLiteral(lang::MapLiteral { id: lang::new_id(),
+                                                  from_type,
+                                                  to_type,
+                                                  elements: vec![] })
+}
+
 pub fn new_placeholder(description: String, typ: lang::Type) -> lang::CodeNode {
     lang::CodeNode::Placeholder(lang::Placeholder { id: lang::new_id(),
                                                     description,

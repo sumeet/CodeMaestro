@@ -211,6 +211,7 @@ pub enum CodeNode {
     WhileLoop(WhileLoop),
     Match(Match),
     ListLiteral(ListLiteral),
+    MapLiteral(MapLiteral),
     StructFieldGet(StructFieldGet),
     NumberLiteral(NumberLiteral),
     ListIndex(ListIndex),
@@ -225,6 +226,7 @@ use failure::_core::cmp::Ordering;
 use futures_util::future::Shared;
 use futures_util::FutureExt;
 use std::collections::BTreeMap;
+use std::iter::once;
 use std::pin::Pin;
 
 #[derive(Clone, Debug)]
@@ -555,6 +557,10 @@ impl Type {
         Self::with_params(&*LIST_TYPESPEC, vec![typ])
     }
 
+    pub fn map(from_type: Self, to_type: Self) -> Self {
+        Self::with_params(&*MAP_TYPESPEC, vec![from_type, to_type])
+    }
+
     pub fn get_param_using_path(&self, param_path: &[usize]) -> &Self {
         let mut param = self;
         for i in param_path {
@@ -817,6 +823,7 @@ impl CodeNode {
             CodeNode::EarlyReturn(early_return) => format!("Early return: {:?}", early_return.id),
             CodeNode::Try(trai) => format!("Try: {:?}", trai.id),
             CodeNode::ForLoop(for_loop) => format!("For loop: {:?}", for_loop.id),
+            CodeNode::MapLiteral(map_literal) => format!("Map literal: {:?}", map_literal.id),
         }
     }
 
@@ -849,6 +856,7 @@ impl CodeNode {
             CodeNode::EarlyReturn(evl) => evl.id,
             CodeNode::Try(trai) => trai.id,
             CodeNode::ForLoop(for_loop) => for_loop.id,
+            CodeNode::MapLiteral(map_literal) => map_literal.id,
         }
     }
 
@@ -911,6 +919,11 @@ impl CodeNode {
                 }
             }
             CodeNode::ListLiteral(list_literal) => Box::new(list_literal.elements.iter()),
+            CodeNode::MapLiteral(map_literal) => {
+                Box::new(
+                    map_literal.elements.iter().flat_map(|(k, v)| once(k).chain(once(v)))
+                )
+            }
             CodeNode::Match(mach) => Box::new(
                 iter::once(mach.match_expression.borrow())
                     .chain(mach.branch_by_variant_id.values()),
@@ -994,6 +1007,12 @@ impl CodeNode {
                 }
             }
             CodeNode::ListLiteral(list_literal) => list_literal.elements.iter_mut().collect_vec(),
+            CodeNode::MapLiteral(map_literal) => {
+                map_literal.elements
+                           .iter_mut()
+                           .flat_map(|(k, v)| once(k).chain(once(v)))
+                           .collect()
+            }
             CodeNode::Match(mach) => {
                 iter::once(mach.match_expression.borrow_mut()).chain(mach.branch_by_variant_id
                                                                          .values_mut())
@@ -1290,6 +1309,15 @@ pub struct ListLiteral {
     pub id: ID,
     pub element_type: Type,
     pub elements: Vec<CodeNode>,
+}
+
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
+pub struct MapLiteral {
+    pub id: ID,
+    pub from_type: Type,
+    pub to_type: Type,
+    // TODO: this will have stuff in it later
+    pub elements: Vec<(CodeNode, CodeNode)>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]

@@ -697,6 +697,14 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         render_list_literal_position(self.ui_toolkit, pos)
     }
 
+    fn render_map_literal(&self, map_literal: &lang::MapLiteral) -> T::DrawResult {
+        // renders just the handle for now... we eventually need a way to put things in here
+        let typ = lang::Type::map(map_literal.from_type.clone(), map_literal.to_type.clone());
+        self.code_handle(&|| render_list_literal_label(self.ui_toolkit, self.env_genie, &typ),
+                         "map literal handle label",
+                         map_literal.id)
+    }
+
     fn render_list_literal(&self,
                            list_literal: &lang::ListLiteral,
                            code_node: &lang::CodeNode)
@@ -816,6 +824,13 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                     .expect("wtf we couldn't find the type?");
                 Some(format!("A new list of {}", type_name))
             },
+            CodeNode::MapLiteral(map_literal) => {
+                let from_name = self.env_genie.get_name_for_type(&map_literal.from_type)
+                    .expect("wtf we couldn't find the type?");
+                let to_name = self.env_genie.get_name_for_type(&map_literal.to_type)
+                    .expect("wtf we couldn't find the type?");
+                Some(format!("A new mapping from {} to {}", from_name, to_name))
+            },
             CodeNode::StructFieldGet(sfg) => {
                 let struct_field = self.env_genie.find_struct_field(sfg.struct_field_id)?;
                 Some(struct_field.description.clone())
@@ -902,6 +917,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 CodeNode::ListLiteral(list_literal) => {
                     self.render_list_literal(&list_literal, code_node)
                 }
+                CodeNode::MapLiteral(map_literal) => self.render_map_literal(&map_literal),
                 CodeNode::StructFieldGet(sfg) => self.render_struct_field_get(&sfg),
                 CodeNode::ListIndex(list_index) => self.render_list_index(&list_index),
                 CodeNode::AnonymousFunction(anon_func) => self.render_anonymous_function(anon_func),
@@ -1073,6 +1089,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
             | CodeNode::WhileLoop(_)
             | CodeNode::Match(_)
             | CodeNode::ListLiteral(_)
+            | CodeNode::MapLiteral(_)
             | CodeNode::StructFieldGet(_)
             | CodeNode::NumberLiteral(_)
             | CodeNode::ListIndex(_)

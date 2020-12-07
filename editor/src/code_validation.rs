@@ -117,6 +117,10 @@ impl<'a> Validator<'a> {
             // the user keeps changing the list type, they'll end up with a huge stack of unused list
             // literals they'll have to clean up manually.
             code_generation::new_list_literal(required_return_type.params.remove(0))
+        } else if required_return_type.matches_spec(&*lang::MAP_TYPESPEC) {
+            let value_typ = required_return_type.params.pop().unwrap();
+            let key_typ = required_return_type.params.pop().unwrap();
+            code_generation::new_map_literal(key_typ, value_typ)
         } else {
             // TODO: we probably also want something to clean up this "Return value" placeholder in
             // case the preceding line is actually the correct return type. i suppose that would be

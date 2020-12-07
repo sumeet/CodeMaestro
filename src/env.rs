@@ -203,6 +203,26 @@ impl Interpreter {
                     lang::Value::List(list_literal.element_type.clone(), output_vec)
                 })
             }
+            CodeNode::MapLiteral(lang::MapLiteral { id: _,
+                                                    from_type,
+                                                    to_type,
+                                                    elements, }) => {
+                // TODO: need to use the elements from the map literal
+                let mut interp = self.clone();
+                Box::pin(async move {
+                    let mut output = BTreeMap::new();
+
+                    for (key_element, value_element) in elements {
+                        // TODO: these can be awaited in parallel
+                        output.insert(await_eval_result!(interp.evaluate(key_element)),
+                                      await_eval_result!(interp.evaluate(value_element)));
+                    }
+
+                    lang::Value::Map { from: from_type.clone(),
+                                       to: to_type.clone(),
+                                       value: output }
+                })
+            }
             lang::CodeNode::StructFieldGet(sfg) => {
                 let struct_fut = self.evaluate(sfg.struct_expr.as_ref());
                 let field_id = sfg.struct_field_id;

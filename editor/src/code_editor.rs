@@ -295,7 +295,9 @@ impl CodeEditor {
             | CodeNode::EnumVariantLiteral(_)
             | CodeNode::EarlyReturn(_)
             | CodeNode::Try(_)
-            | CodeNode::ForLoop(_) => false,
+            | CodeNode::ForLoop(_)
+            // i believe this is temporary... should probably behave just as ListLiteral
+            | CodeNode::MapLiteral(_) => false,
         }
     }
 
@@ -325,7 +327,9 @@ impl CodeEditor {
             | CodeNode::EnumVariantLiteral(_)
             | CodeNode::EarlyReturn(_)
             | CodeNode::Try(_)
-            | CodeNode::ForLoop(_) => unimplemented!(),
+            | CodeNode::ForLoop(_)
+            // i believe this is temporary... should probably behave just as ListLiteral
+            | CodeNode::MapLiteral(_) => unimplemented!(),
         }
     }
 
@@ -974,6 +978,9 @@ impl CodeGenie {
             }
             CodeNode::ListLiteral(list_literal) => {
                 Ok(lang::Type::list_of(list_literal.element_type.clone()))
+            }
+            CodeNode::MapLiteral(map_literal) => {
+                Ok(lang::Type::map(map_literal.from_type.clone(), map_literal.to_type.clone()))
             }
             // this means that both branches of a conditional must be of the same type.we need to
             // add a validation for that
