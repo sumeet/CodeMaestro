@@ -19,6 +19,7 @@ use cs::builtins::get_success_type_from_option_or_result_typ;
 use cs::chat_program::ChatProgram;
 use cs::code_generation::new_anon_func;
 use cs::lang::{arg_and_return_typs_for_anon_func, ArgumentDefinition, TypeSpec};
+use std::collections::HashSet;
 
 lazy_static! {
     // the order is significant here. it defines which order the options appear in (no weighting
@@ -71,7 +72,7 @@ pub fn find_all_variables_preceding<'a>(search_position: locals::SearchPosition,
         Variable {
             antecedent,
             locals_id,
-            typ: code_genie.guess_type_for_variable(place, env_genie).unwrap(),
+            typ: code_genie.guess_type_for_variable(place, env_genie, HashSet::new()).unwrap(),
         }
     })
 }

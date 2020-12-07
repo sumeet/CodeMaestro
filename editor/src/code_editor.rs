@@ -24,7 +24,7 @@ use cs::builtins::{
 use cs::code_function;
 use cs::enums::EnumVariant;
 use cs::env::ExecutionEnvironment;
-use cs::env_genie::EnvGenie;
+use cs::env_genie::{paths_to_generics, EnvGenie};
 use cs::lang;
 use cs::lang::{arg_typ_for_anon_func, typ_for_anonymous_function, CodeNode, Function};
 use cs::{builtins, env};
@@ -822,13 +822,6 @@ impl CodeGenie {
             .is_some()
     }
 
-    // pub fn find_all_anon_funcs<'a>(&'a self)
-    //                                -> impl Iterator<Item = &'a lang::AnonymousFunction> + 'a {
-    //     self.code
-    //         .self_with_all_children_dfs()
-    //         .filter_map(|code_node| code_node.as_anon_func().ok())
-    // }
-
     pub fn find_all_variables_referencing_assignment(
         &self,
         assignment_id: lang::ID)
@@ -839,59 +832,35 @@ impl CodeGenie {
             .filter(move |vr| vr.assignment_id == assignment_id)
     }
 
-    // pub fn try_to_resolve_all_generics(&self,
-    //                                    at_code_node: &lang::CodeNode,
-    //                                    mut typ: lang::Type,
-    //                                    env_genie: &EnvGenie)
-    //                                    -> lang::Type {
-    //     // println!("start of trying to resolve all generics: {:?}",
-    //     //          at_code_node);
-    //     let mut should_try_to_resolve_generics = true;
-    //     while should_try_to_resolve_generics {
-    //         let outer_typ = typ.clone();
-    //         // let outer_typ_string = format!("{:?}", outer_typ);
-    //         // if format!("{:?}", typ).len() > 1000 {
-    //         //     unsafe {
-    //         //         std::intrinsics::breakpoint();
-    //         //     }
-    //         // }
-    //         for path in paths_to_generics(&typ, env_genie) {
-    //             {
-    //                 {
-    //                     let generic_typ = typ.get_param_using_path_mut(&path);
-    //                     *generic_typ =
-    //                         self.try_to_resolve_generic(at_code_node, &generic_typ, env_genie);
-    //                 }
-    //                 // println!("changed, and outer typ is now {:?}, path: {:?}", typ, path);
-    //             }
-    //         }
-    //         // if we got all the way here, and nothing changed there, let's stop looking
-    //         if outer_typ == typ {
-    //             should_try_to_resolve_generics = false;
-    //         }
-    //     }
-    //     typ
-    // }
-
-    // pub fn guess_type(&self,
-    //                   code_node: &lang::CodeNode,
-    //                   env_genie: &EnvGenie)
-    //                   -> Result<lang::Type, &'static str> {
-    //     let typ = self.guess_type_without_resolving_generics(code_node, env_genie);
-    //     Ok(self.try_to_resolve_all_generics(code_node, typ?, env_genie))
-    // }
-    //
     pub fn guess_type(&self,
                       code_node: &CodeNode,
                       env_genie: &EnvGenie)
                       -> Result<lang::Type, String> {
-        match code_node {
+        self.guess_type_rec(code_node, env_genie, HashSet::new())
+    }
+
+    fn guess_type_rec(&self,
+                      code_node: &CodeNode,
+                      env_genie: &EnvGenie,
+                      mut prev_node_ids: HashSet<lang::ID>)
+                      -> Result<lang::Type, String> {
+        // cowboy short circuit style
+        if prev_node_ids.contains(&code_node.id()) {
+            println!("hallelujauha: cur: {:?}, prev: {:?}",
+                     code_node, prev_node_ids);
+            return Ok(lang::Type::from_spec(&*lang::ANY_TYPESPEC));
+        }
+        prev_node_ids.insert(code_node.id());
+        let prev_node_ids2 = prev_node_ids.clone();
+
+        let pre_resolution = match code_node {
             CodeNode::FunctionCall(function_call) => {
                 let func_id = function_call.function_reference().function_id;
                 match env_genie.find_function(func_id) {
                     Some(_) => Ok(resolve_generics_for_function_call(function_call,
                                                                      self,
-                                                                     env_genie)),
+                                                                     env_genie,
+                                                                     prev_node_ids)),
                     // Some(ref func) => Ok(func.returns().clone()),
                     // TODO: do we really want to just return Null if we couldn't find the function?
                     None => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
@@ -899,9 +868,11 @@ impl CodeGenie {
             }
             CodeNode::StringLiteral(_) => Ok(lang::Type::from_spec(&*lang::STRING_TYPESPEC)),
             CodeNode::NumberLiteral(_) => Ok(lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)),
-            CodeNode::Assignment(assignment) => self.guess_type(&*assignment.expression, env_genie),
+            CodeNode::Assignment(assignment) => {
+                self.guess_type_rec(&*assignment.expression, env_genie, prev_node_ids)
+            }
             CodeNode::Reassignment(reassignment) => {
-                self.guess_type(&*reassignment.expression, env_genie)
+                self.guess_type_rec(&*reassignment.expression, env_genie, prev_node_ids)
             }
             CodeNode::Block(block) => {
                 if block.expressions.len() > 0 {
@@ -911,9 +882,11 @@ impl CodeGenie {
                         // properly BIG HAX
                         // this might save me
                         // return Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC));
-                        return self.guess_type(last_expression_in_block, env_genie);
+                        return self.guess_type_rec(last_expression_in_block,
+                                                   env_genie,
+                                                   prev_node_ids);
                     }
-                    self.guess_type(last_expression_in_block, env_genie)
+                    self.guess_type_rec(last_expression_in_block, env_genie, prev_node_ids)
                 } else {
                     // TODO: this should probably be a generic, or ANY instead of Null... shoudl really
                     // be using type inference here
@@ -928,7 +901,7 @@ impl CodeGenie {
                                        vr));
                 }
                 let antecedent = antecedent.unwrap();
-                self.guess_type_for_variable(antecedent.place, env_genie)
+                self.guess_type_for_variable(antecedent.place, env_genie, prev_node_ids)
                 // if let Some(assignment) = self.find_node(vr.assignment_id) {
                 //     self.guess_type_without_resolving_generics(assignment, env_genie)
                 // } else {
@@ -951,7 +924,10 @@ impl CodeGenie {
             }
             CodeNode::FunctionReference(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::Argument(arg) => {
-                Ok(resolve_generics_for_function_call_argument(arg, self, env_genie))
+                Ok(resolve_generics_for_function_call_argument(arg,
+                                                               self,
+                                                               env_genie,
+                                                               prev_node_ids))
                 // env_genie.get_type_for_arg(arg.argument_definition_id)
                 //          .ok_or("couldn't find type to this argument".into())
             }
@@ -978,7 +954,7 @@ impl CodeGenie {
             // this means that both branches of a conditional must be of the same type.we need to
             // add a validation for that
             CodeNode::Conditional(conditional) => {
-                self.guess_type(&conditional.true_branch, env_genie)
+                self.guess_type_rec(&conditional.true_branch, env_genie, prev_node_ids)
             }
             // need the same validation for match ^
             CodeNode::Match(mach) => {
@@ -987,7 +963,7 @@ impl CodeGenie {
                         .values()
                         .next()
                         .expect("match statement must contain at least one variant");
-                self.guess_type(first_variant, env_genie)
+                self.guess_type_rec(first_variant, env_genie, prev_node_ids)
             }
             CodeNode::StructFieldGet(sfg) => {
                 env_genie.find_struct_field(sfg.struct_field_id)
@@ -995,7 +971,8 @@ impl CodeGenie {
                          .map(|struct_field| struct_field.field_type.clone())
             }
             CodeNode::ListIndex(list_index) => {
-                let list_typ = self.guess_type(list_index.list_expr.as_ref(), env_genie)?;
+                let list_typ =
+                    self.guess_type_rec(list_index.list_expr.as_ref(), env_genie, prev_node_ids)?;
                 Ok(get_result_type_from_indexing_into_list(list_typ).ok_or("unable to guess type")?)
                 // debug info that i deleted from the old implementation but might still need later:
                 //                let list_typ =
@@ -1019,9 +996,12 @@ impl CodeGenie {
             }
             CodeNode::WhileLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
             CodeNode::EnumVariantLiteral(evl) => Ok(evl.typ.clone()),
-            CodeNode::EarlyReturn(inner) => self.guess_type(inner.code.as_ref(), env_genie),
+            CodeNode::EarlyReturn(inner) => {
+                self.guess_type_rec(inner.code.as_ref(), env_genie, prev_node_ids)
+            }
             CodeNode::Try(trai) => {
-                let maybe_error_typ = self.guess_type(trai.maybe_error_expr.as_ref(), env_genie)?;
+                let maybe_error_typ =
+                    self.guess_type_rec(trai.maybe_error_expr.as_ref(), env_genie, prev_node_ids)?;
                 if let Ok(success_typ) =
                     get_success_type_from_option_or_result_typ(&maybe_error_typ)
                 {
@@ -1032,20 +1012,47 @@ impl CodeGenie {
             }
             // for loops don't really have a return type
             CodeNode::ForLoop(_) => Ok(lang::Type::from_spec(&*lang::NULL_TYPESPEC)),
+        };
+        if pre_resolution.is_err() {
+            return pre_resolution;
         }
+        let pre_resolution = pre_resolution.unwrap();
+        let pre_resolution_paths_to_generics = paths_to_generics(&pre_resolution, env_genie);
+        if pre_resolution_paths_to_generics.is_empty() {
+            return Ok(pre_resolution);
+        }
+        let parent = self.find_parent(code_node.id());
+        match parent {
+            Some(lang::CodeNode::Argument(_)) => {
+                let guessed_typ_for_arg =
+                    self.guess_type_rec(parent.unwrap(), env_genie, prev_node_ids2);
+                if let Ok(typ) = guessed_typ_for_arg {
+                    if paths_to_generics(&typ, env_genie).len()
+                       < pre_resolution_paths_to_generics.len()
+                    {
+                        return Ok(typ);
+                    }
+                }
+            }
+            _ => (),
+        }
+        Ok(pre_resolution)
     }
 
     pub fn guess_type_for_variable(&self,
                                    antecedent_place: locals::VariableAntecedentPlace,
-                                   env_genie: &EnvGenie)
+                                   env_genie: &EnvGenie,
+                                   prev_node_ids: HashSet<lang::ID>)
                                    -> Result<lang::Type, String> {
         match antecedent_place {
             VariableAntecedentPlace::Assignment { assignment_id } => {
-                self.guess_type(self.find_node(assignment_id).unwrap(), env_genie)
+                self.guess_type_rec(self.find_node(assignment_id).unwrap(),
+                                    env_genie,
+                                    prev_node_ids)
             }
             VariableAntecedentPlace::ForLoop { for_loop_id } => {
                 let for_loop = self.find_node(for_loop_id).unwrap().as_for_loop().unwrap();
-                let typ = self.guess_type(&for_loop.list_expression, env_genie)
+                let typ = self.guess_type_rec(&for_loop.list_expression, env_genie, prev_node_ids)
                               .unwrap();
                 // Ok(get_type_from_list(typ).unwrap())
                 // TODO: definitely need to fix this place... probably need some advanced validation to

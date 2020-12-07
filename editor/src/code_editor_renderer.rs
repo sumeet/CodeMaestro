@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use itertools::Itertools;
@@ -1317,7 +1317,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                                                                 self.env_genie)?;
         let typ = self.code_editor
                       .code_genie
-                      .guess_type_for_variable(antecedent.place, self.env_genie)
+                      .guess_type_for_variable(antecedent.place, self.env_genie, HashSet::new())
                       .unwrap();
         Some((antecedent.name, typ))
     }
@@ -1327,7 +1327,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                       .code_genie
                       .guess_type_for_variable(VariableAntecedentPlace::ForLoop { for_loop_id:
                                                                                       for_loop.id },
-                                               self.env_genie);
+                                               self.env_genie,
+                                               HashSet::new());
         if let Ok(typ) = typ {
             self.render_variable_appearance(&for_loop.variable_name, &typ)
         } else {
@@ -1570,7 +1571,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
-        println!("rendering function call arg (and guessing type for: {:?}",
+        println!("rendering function call arg and guessing type for: {:?}",
                  argument);
         let func = self.env_genie
                        .get_function_containing_arg(argument.argument_definition_id)

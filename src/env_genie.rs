@@ -14,6 +14,7 @@ use super::structs;
 use crate::lang::{is_generic, TypeSpec, Value};
 use itertools::Itertools;
 
+#[derive(Debug)]
 pub struct TypeDisplayInfo {
     pub name: String,
     pub symbol: String,
