@@ -73,7 +73,6 @@ fn resolve_generic_type_using_function_call_args(original_typ: &lang::Type,
                 let guessed_typ_from_executing_param =
                     code_genie.guess_type(&func_call.iter_args().nth(i).unwrap().expr, env_genie)
                               .unwrap();
-
                 for (path_to_generic_found_in_defined_arg, _typ) in
                     paths_to_generic_found_in_defined_arg
                 {
@@ -92,14 +91,4 @@ fn resolve_generic_type_using_function_call_args(original_typ: &lang::Type,
     }
 
     return_typ
-}
-
-fn get_typ_from_executed_param<'a>(resolving_generic_id: lang::ID,
-                                   guessed_typ: &'a lang::Type,
-                                   env_genie: &'a EnvGenie,
-                                   path: &'a [usize])
-                                   -> &'a lang::Type {
-    if resolving_generic_id != guessed_typ.typespec && env_genie.is_generic(guessed_typ.typespec_id)
-    {
-    }
 }
