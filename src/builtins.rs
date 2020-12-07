@@ -1433,8 +1433,9 @@ impl lang::Function for MapInsert {
     }
 
     fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
-        let generic_value = self.defines_generics().pop().unwrap();
-        let generic_key = self.defines_generics().pop().unwrap();
+        let mut generics = self.defines_generics();
+        let generic_value = generics.pop().unwrap();
+        let generic_key = generics.pop().unwrap();
 
         vec![lang::ArgumentDefinition::new_with_id(MAP_INSERT_ARGS[0],
                                                    lang::Type::map(
@@ -1452,9 +1453,86 @@ impl lang::Function for MapInsert {
     }
 
     fn returns(&self) -> lang::Type {
-        let generic_value = self.defines_generics().pop().unwrap();
-        let generic_key = self.defines_generics().pop().unwrap();
+        let mut generics = self.defines_generics();
+        let generic_value = generics.pop().unwrap();
+        let generic_key = generics.pop().unwrap();
         lang::Type::map(lang::Type::from_spec(&generic_key),
                         lang::Type::from_spec(&generic_value))
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MapGet {}
+
+lazy_static! {
+    static ref MAP_GET_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("87a9a866-9232-476e-9897-87520a7c124f").unwrap(),
+         uuid::Uuid::parse_str("82e5ca49-a988-43b5-802e-c70bf4648308").unwrap(),];
+}
+
+// TODO: panics now when the key isn't in the map, otherwise should return Option type
+#[typetag::serde]
+impl lang::Function for MapGet {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let (_, _, mut map) = args.remove(&MAP_INSERT_ARGS[0])
+                                  .unwrap()
+                                  .into_map_with_type()
+                                  .unwrap();
+        let key = args.remove(&MAP_INSERT_ARGS[1]).unwrap();
+        // TODO: this unwrap needs to be replaced... we shall return an option
+        map.remove(&key).unwrap()
+    }
+
+    fn name(&self) -> &str {
+        "Map Get"
+    }
+
+    fn description(&self) -> &str {
+        "Retrieves an element from a Map"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("98f361fa-9826-4bde-858d-dab2f163a35c").unwrap()
+    }
+
+    fn style(&self) -> &FunctionRenderingStyle {
+        lazy_static! {
+            static ref MAP_GET_RENDERING_STYLE: lang::FunctionRenderingStyle =
+                FunctionRenderingStyle::Default;
+        };
+        &*MAP_GET_RENDERING_STYLE
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![
+            lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("35ce0140-bae8-4275-ae81-dba8e27536ce").unwrap()),
+            lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("01457083-d3e9-4a35-9dd4-2ee9f24b43f5").unwrap()),
+        ]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let mut generics = self.defines_generics();
+        let generic_value = generics.pop().unwrap();
+        let generic_key = generics.pop().unwrap();
+        vec![lang::ArgumentDefinition::new_with_id(MAP_INSERT_ARGS[0],
+                                                   lang::Type::map(
+                                                       lang::Type::from_spec(&generic_key),
+                                                       lang::Type::from_spec(&generic_value),
+                                                   ),
+                                                   "Map".into()),
+             lang::ArgumentDefinition::new_with_id(MAP_INSERT_ARGS[1],
+                                                   lang::Type::from_spec(&generic_key),
+                                                   "Index".into()),
+
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        let mut generics = self.defines_generics();
+        let generic_value = generics.pop().unwrap();
+        lang::Type::from_spec(&generic_value)
     }
 }

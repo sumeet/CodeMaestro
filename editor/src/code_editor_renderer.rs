@@ -1587,8 +1587,8 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
     }
 
     fn render_function_call_argument(&self, argument: &lang::Argument) -> T::DrawResult {
-        println!("rendering function call arg (and guessing type for: {:?}",
-                 argument);
+        // println!("rendering function call arg (and guessing type for: {:?}",
+        //          argument);
         let func = self.env_genie
                        .get_function_containing_arg(argument.argument_definition_id)
                        .unwrap();
