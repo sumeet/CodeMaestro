@@ -122,10 +122,6 @@ impl TypeSpec for GenericParamTypeSpec {
     fn num_params(&self) -> usize {
         return 0;
     }
-
-    fn matches(&self, _: ID) -> bool {
-        return true;
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -151,10 +147,6 @@ impl TypeSpec for AnyTypeSpec {
 
     fn num_params(&self) -> usize {
         return 0;
-    }
-
-    fn matches(&self, _: ID) -> bool {
-        return true;
     }
 }
 
@@ -515,12 +507,6 @@ pub trait TypeSpec: objekt::Clone + downcast_rs::Downcast + Send + Sync {
     fn id(&self) -> ID;
     fn symbol(&self) -> &str;
     fn num_params(&self) -> usize;
-    fn matches(&self, typespec_id: ID) -> bool {
-        if typespec_id == ANY_TYPESPEC.id() {
-            return true;
-        }
-        self.id() == typespec_id
-    }
 }
 
 pub fn is_generic(typespec: &dyn TypeSpec) -> bool {
