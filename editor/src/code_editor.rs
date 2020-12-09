@@ -35,7 +35,6 @@ use std::collections::HashSet;
 mod clipboard;
 pub mod generics;
 pub mod locals;
-pub mod type_inference;
 
 #[derive(Clone)]
 pub struct CodeEditor {
