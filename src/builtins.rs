@@ -120,6 +120,13 @@ pub fn some_option_value(value: lang::Value) -> lang::Value {
                                value: Box::new(value) }
 }
 
+pub fn rust_option_to_lang_option(value: Option<lang::Value>) -> lang::Value {
+    match value {
+        None => none_option_value(),
+        Some(value) => some_option_value(value),
+    }
+}
+
 pub fn none_option_value() -> lang::Value {
     lang::Value::EnumVariant { variant_id: *OPTION_NONE_VARIANT_ID,
                                value: Box::new(lang::Value::Null) }
@@ -1482,8 +1489,7 @@ impl lang::Function for MapGet {
                                   .into_map_with_type()
                                   .unwrap();
         let key = args.remove(&MAP_INSERT_ARGS[1]).unwrap();
-        // TODO: this unwrap needs to be replaced... we shall return an option
-        map.remove(&key).unwrap()
+        rust_option_to_lang_option(map.remove(&key))
     }
 
     fn name(&self) -> &str {
@@ -1533,6 +1539,6 @@ impl lang::Function for MapGet {
     fn returns(&self) -> lang::Type {
         let mut generics = self.defines_generics();
         let generic_value = generics.pop().unwrap();
-        lang::Type::from_spec(&generic_value)
+        new_option(lang::Type::from_spec(&generic_value))
     }
 }

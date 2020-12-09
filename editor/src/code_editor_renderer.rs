@@ -631,7 +631,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let draw = move || {
             let new_code_node = new_code_node.clone();
             let cmdb = cmd_buffer.clone();
-            println!("rendering insertion option {:?}", option);
+            // println!("rendering insertion option {:?}", option);
             self.ui_toolkit.buttonize(
                                       &|| {
                                           self.ui_toolkit.draw_taking_up_full_width(&|| {
