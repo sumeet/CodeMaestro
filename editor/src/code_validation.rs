@@ -1,15 +1,16 @@
 use super::code_editor::CodeGenie;
 use super::code_generation;
 use super::editor;
-use cs::env;
 use cs::env_genie;
 use cs::lang;
 use cs::lang::Function;
+use cs::{env, structs};
 
 use crate::code_editor::locals::find_antecedent_for_variable_reference;
 use crate::code_editor::{required_return_type, CodeLocation};
 use cs::env_genie::EnvGenie;
 use gen_iter::GenIter;
+use std::collections::{HashMap, HashSet};
 use std::iter::once;
 
 // TODO: instead of applying fixes right away, show them in a popup modal and ask the user to either
@@ -52,6 +53,13 @@ enum FixableProblem {
         variable_reference_id: lang::ID,
         typ: lang::Type,
     },
+    FieldsMissingInStructLiteral {
+        location: CodeLocation,
+        block: lang::Block,
+        struct_literal_id: lang::ID,
+        missing_fields: Vec<structs::StructField>,
+        extra_field_ids: HashSet<lang::ID>,
+    },
 }
 
 struct Validator<'a> {
@@ -72,9 +80,14 @@ impl<'a> Validator<'a> {
         let env_genie = env_genie::EnvGenie::new(self.env);
         let problem_finder = FixableProblemFinder::new(&env_genie);
 
-        let problems = all_code(&env_genie).flat_map(|(location, block)| {
-                                               problem_finder.find_problems(location, block)
-                                           });
+        let mut problems = vec![];
+        for (location, block) in all_code(&env_genie) {
+            // TODO: need to get rid of this clone and change this back into an iterator
+            let code_node = lang::CodeNode::Block(block.clone());
+            for problem in problem_finder.find_problems(location, block, &code_node) {
+                problems.push(problem);
+            }
+        }
 
         for problem in problems {
             self.fix(problem)
@@ -98,6 +111,27 @@ impl<'a> Validator<'a> {
                 code.replace_with(variable_reference_id,
                                   code_generation::new_placeholder("Missing variable".into(), typ));
 
+                self.update_code(location, code.as_block().unwrap().clone());
+            }
+            FixableProblem::FieldsMissingInStructLiteral { location,
+                                                           block,
+                                                           struct_literal_id,
+                                                           extra_field_ids,
+                                                           missing_fields, } => {
+                let mut code = lang::CodeNode::Block(block);
+                let mut strukt_literal = code.find_node(struct_literal_id)
+                                             .unwrap()
+                                             .as_struct_literal()
+                                             .unwrap()
+                                             .clone();
+                strukt_literal.fields
+                              .drain_filter(|field| !extra_field_ids.contains(&field.id()));
+                for missing_field in missing_fields {
+                    strukt_literal.fields.push(code_generation::new_struct_literal_field_placeholder(&missing_field));
+                }
+
+                code.replace_with(strukt_literal.id,
+                                  lang::CodeNode::StructLiteral(strukt_literal));
                 self.update_code(location, code.as_block().unwrap().clone());
             }
         };
@@ -194,7 +228,8 @@ impl<'a> FixableProblemFinder<'a> {
 
     fn find_problems(&'a self,
                      location: CodeLocation,
-                     block: &'a lang::Block)
+                     block: &'a lang::Block,
+                     code_node: &'a lang::CodeNode)
                      -> impl Iterator<Item = FixableProblem> + 'a {
         GenIter(move || {
             for prob in self.find_variable_reference_problem(location, block) {
@@ -202,6 +237,59 @@ impl<'a> FixableProblemFinder<'a> {
             }
             if let Some(prob) = self.find_return_type_problem(location, block) {
                 yield prob;
+            }
+            for prob in self.find_missing_struct_literal_field(location, code_node) {
+                yield prob;
+            }
+        })
+    }
+
+    // this would've happened if changing a struct
+    fn find_missing_struct_literal_field(&'a self,
+                                         location: CodeLocation,
+                                         code_node: &'a lang::CodeNode)
+                                         -> impl Iterator<Item = FixableProblem> + 'a {
+        GenIter(move || {
+            // TODO: need to impl Children / CodeIteration / CodeNode for Block and not have to clone
+            for strukt_literal in code_node.all_children_dfs_iter()
+                                           .filter_map(|cn| cn.as_struct_literal().ok())
+            {
+                let field_ids_in_code_literal = strukt_literal.fields()
+                                                              .map(|field| field.struct_field_id)
+                                                              .collect::<HashSet<_>>();
+                let strukt = self.env_genie
+                                 .find_struct(strukt_literal.struct_id)
+                                 .unwrap();
+                let fields_defined_in_struct = strukt.fields
+                                                     .iter()
+                                                     .map(|field| (field.id, field))
+                                                     .collect::<HashMap<_, _>>();
+                let mut fields_not_represented_in_literal =
+                    fields_defined_in_struct.iter()
+                                            .filter_map(|(field_id, field)| {
+                                                if !field_ids_in_code_literal.contains(field_id) {
+                                                    Some(*field)
+                                                } else {
+                                                    None
+                                                }
+                                            })
+                                            .peekable();
+
+                if fields_not_represented_in_literal.peek().is_some() {
+                    let extra_field_ids_in_literal =field_ids_in_code_literal.iter().filter(|field_id| {
+                        !fields_defined_in_struct.contains_key(field_id)
+                    }).cloned();
+                    let missing_fields = fields_not_represented_in_literal.cloned().collect();
+                    yield FixableProblem::FieldsMissingInStructLiteral { location,
+                                                                         block:
+                                                                             code_node.as_block()
+                                                                                      .unwrap()
+                                                                                      .clone(),
+                                                                         struct_literal_id:
+                                                                             strukt_literal.id,
+                                                                         missing_fields,
+                                                                         extra_field_ids: extra_field_ids_in_literal.collect() }
+                }
             }
         })
     }

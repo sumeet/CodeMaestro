@@ -788,7 +788,7 @@ impl CodeGenie {
                          result.push(code.id());
                          None
                      } else {
-                         Some(code.children_iter())
+                         Some(code.immediate_children_iter())
                      }
                  })
                  .flatten()
@@ -1344,7 +1344,7 @@ impl<'a> Navigation<'a> {
 
         let selected_node_id = code_node_id.unwrap();
         let selected_code = self.code_genie.find_node(selected_node_id).unwrap();
-        let children = selected_code.children();
+        let children = selected_code.immediate_children();
         let first_child = children.get(0);
 
         // if the selected node has children, then return the first child. depth first

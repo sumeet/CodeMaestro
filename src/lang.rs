@@ -667,6 +667,13 @@ impl Type {
 }
 
 impl CodeNode {
+    pub fn as_struct_literal(&self) -> Result<&StructLiteral, Box<dyn std::error::Error>> {
+        match self {
+            Self::StructLiteral(sl) => Ok(sl),
+            otherwise => Err(format!("expected Struct Literal but got {:?}", otherwise).into()),
+        }
+    }
+
     pub fn as_match(&self) -> Result<&Match, Box<dyn std::error::Error>> {
         match self {
             Self::Match(mach) => Ok(mach),
@@ -860,7 +867,7 @@ impl CodeNode {
     }
 
     pub fn previous_child(&self, node_id: ID) -> Option<&CodeNode> {
-        let children = self.children();
+        let children = self.immediate_children();
         let position = children.iter().position(|n| n.id() == node_id);
         if let Some(position) = position {
             if position > 0 {
@@ -873,7 +880,7 @@ impl CodeNode {
     }
 
     pub fn next_child(&self, node_id: ID) -> Option<&CodeNode> {
-        let children = self.children();
+        let children = self.immediate_children();
         let position = children.iter().position(|n| n.id() == node_id);
         if let Some(position) = position {
             if let Some(next) = children.get(position + 1) {
@@ -883,11 +890,11 @@ impl CodeNode {
         None
     }
 
-    pub fn children(&self) -> Vec<&CodeNode> {
-        self.children_iter().collect()
+    pub fn immediate_children(&self) -> Vec<&CodeNode> {
+        self.immediate_children_iter().collect()
     }
 
-    pub fn children_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CodeNode> + 'a> {
+    pub fn immediate_children_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CodeNode> + 'a> {
         match self {
             CodeNode::FunctionCall(function_call) => Box::new(
                 iter::once(function_call.function_reference.as_ref())
@@ -970,7 +977,7 @@ impl CodeNode {
     }
 
     pub fn all_children_dfs_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CodeNode> + 'a> {
-        Box::new(self.children_iter()
+        Box::new(self.immediate_children_iter()
                      .flat_map(|child| iter::once(child).chain(child.all_children_dfs_iter())))
     }
 
@@ -1060,7 +1067,7 @@ impl CodeNode {
         if self.id() == id {
             Some(self)
         } else {
-            for child in self.children_iter() {
+            for child in self.immediate_children_iter() {
                 if let Some(found_node) = child.find_node(id) {
                     return Some(found_node);
                 }
@@ -1073,7 +1080,7 @@ impl CodeNode {
         if self.id() == id {
             return None;
         } else {
-            for child in self.children_iter() {
+            for child in self.immediate_children_iter() {
                 if child.id() == id {
                     return Some(self);
                 } else {

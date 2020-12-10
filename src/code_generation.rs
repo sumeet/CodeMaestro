@@ -7,20 +7,22 @@ use std::collections::BTreeMap;
 pub fn new_struct_literal_with_placeholders(strukt: &structs::Struct) -> lang::CodeNode {
     let fields = strukt.fields
                        .iter()
-                       .map(|field| {
-                           lang::CodeNode::StructLiteralField(lang::StructLiteralField {
-                id: lang::new_id(),
-                struct_field_id: field.id,
-                expr: Box::new(new_placeholder(
-                    field.name.to_string(),
-                    field.field_type.clone(),
-                )),
-            })
-                       })
+                       .map(|field| new_struct_literal_field_placeholder(field))
                        .collect();
     lang::CodeNode::StructLiteral(lang::StructLiteral { id: lang::new_id(),
                                                         struct_id: strukt.id,
                                                         fields })
+}
+
+pub fn new_struct_literal_field_placeholder(field: &structs::StructField) -> lang::CodeNode {
+    lang::CodeNode::StructLiteralField(lang::StructLiteralField {
+        id: lang::new_id(),
+        struct_field_id: field.id,
+        expr: Box::new(new_placeholder(
+            field.name.to_string(),
+            field.field_type.clone(),
+        )),
+    })
 }
 
 pub fn new_function_call(func_id: lang::ID, args: Vec<lang::CodeNode>) -> lang::CodeNode {
