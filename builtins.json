@@ -62,6 +62,9 @@
     },
     "92898b5c-33a1-4911-9a1f-f51ff896e386": {
       "type": "MapRemoveKey"
+    },
+    "92898b5c-33a1-4911-9a1f-f51ff896e386": {
+      "type": "MapLength"
     }
   },
   "typespecs": {

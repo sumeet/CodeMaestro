@@ -1620,3 +1620,68 @@ impl lang::Function for MapRemoveKey {
                         lang::Type::from_spec(&generic_value))
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MapLength {}
+
+lazy_static! {
+    static ref MAP_LENGTH_ARGS: [lang::ID; 1] =
+        [uuid::Uuid::parse_str("4e2daea7-ec2b-47b6-b610-5bc0f6cad97e").unwrap()];
+}
+
+#[typetag::serde]
+impl lang::Function for MapLength {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let (_, _, map) = args.remove(&MAP_REMOVE_KEY_ARGS[0])
+                              .unwrap()
+                              .into_map_with_type()
+                              .unwrap();
+        lang::Value::Number(map.len() as _)
+    }
+
+    fn name(&self) -> &str {
+        "Map Length"
+    }
+
+    fn description(&self) -> &str {
+        "Returns the number of keys in a map"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("39b25664-95bb-4a95-9193-821dcb2c1008").unwrap()
+    }
+
+    fn style(&self) -> &FunctionRenderingStyle {
+        lazy_static! {
+            static ref MAP_LENGTH_RENDERING_STYLE: lang::FunctionRenderingStyle =
+                FunctionRenderingStyle::Default;
+        };
+        &*MAP_LENGTH_RENDERING_STYLE
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("dcf90f02-a93c-4eb9-9e49-16cc7149f0db").unwrap()),
+             lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("49b80ff5-f47f-4645-ab74-abab53bebf7e").unwrap()),
+        ]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let mut generics = self.defines_generics();
+        let generic_value = generics.pop().unwrap();
+        let generic_key = generics.pop().unwrap();
+        vec![lang::ArgumentDefinition::new_with_id(MAP_LENGTH_ARGS[0],
+                                                   lang::Type::map(
+                                                       lang::Type::from_spec(&generic_key),
+                                                       lang::Type::from_spec(&generic_value),
+                                                   ),
+                                                   "Map".into()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
+    }
+}
