@@ -520,7 +520,7 @@ impl CommandBuffer {
         self.add_integrating_command(move |_controller, interpreter, async_executor, _| {
                 {
                     let env = interpreter.env.borrow_mut();
-                    env.prev_eval_result_by_code_id.borrow_mut().clear();
+                    env.eval_result_by_code_id.borrow_mut().clear();
                 }
                 let start_time = std::time::SystemTime::now();
                 let wrapped_callback = move |value| {

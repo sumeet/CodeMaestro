@@ -83,7 +83,8 @@ impl Interpreter {
     pub fn evaluate<'a>(&'a mut self,
                         code_node: &'a lang::CodeNode)
                         -> impl Future<Output = lang::Value> + 'a {
-        let prev_eval_result = Rc::clone(&self.env.borrow().prev_eval_result_by_code_id);
+        let start_time = std::time::SystemTime::now();
+        let prev_eval_result = Rc::clone(&self.env.borrow().eval_result_by_code_id);
         let result: Pin<Box<dyn Future<Output = lang::Value>>> = match code_node {
             lang::CodeNode::FunctionCall(function_call) => {
                 // TODO: get rid of the unwrap and bubble up the error
@@ -353,8 +354,12 @@ impl Interpreter {
         // interp runs faster when it doesn't have to copy and clone all the results
         async move {
             let result = await_eval_result!(result);
-            prev_eval_result.borrow_mut()
-                            .insert(code_node.id(), result.clone());
+            let duration = std::time::SystemTime::now().duration_since(start_time)
+                                                       .unwrap();
+            append_result(&mut prev_eval_result.borrow_mut(),
+                          code_node.id(),
+                          duration,
+                          result.clone());
             result
         }
         // async move {
@@ -447,6 +452,27 @@ impl Interpreter {
     }
 }
 
+#[derive(Debug)]
+pub struct EvaluationDebugResult {
+    pub time_elapsed: std::time::Duration,
+    pub last_value: lang::Value,
+}
+
+fn append_result(result_by_code_id: &mut HashMap<lang::ID, EvaluationDebugResult>,
+                 code_id: lang::ID,
+                 time: std::time::Duration,
+                 val: lang::Value) {
+    if result_by_code_id.contains_key(&code_id) {
+        let result = result_by_code_id.get_mut(&code_id).unwrap();
+        result.time_elapsed += time;
+        result.last_value = val;
+    } else {
+        result_by_code_id.insert(code_id,
+                                 EvaluationDebugResult { time_elapsed: time,
+                                                         last_value: val });
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ExecutionEnvironment {
     pub console: String,
@@ -454,13 +480,13 @@ pub struct ExecutionEnvironment {
     pub typespecs: HashMap<lang::ID, Box<dyn lang::TypeSpec + 'static>>,
 
     // TODO: not sure where to put this
-    pub prev_eval_result_by_code_id: Rc<RefCell<HashMap<lang::ID, lang::Value>>>,
+    pub eval_result_by_code_id: Rc<RefCell<HashMap<lang::ID, EvaluationDebugResult>>>,
 }
 
 impl ExecutionEnvironment {
     pub fn new() -> ExecutionEnvironment {
         return ExecutionEnvironment { console: String::new(),
-                                      prev_eval_result_by_code_id:
+                                      eval_result_by_code_id:
                                           Rc::new(RefCell::new(HashMap::new())),
                                       functions: HashMap::new(),
                                       typespecs: Self::built_in_typespecs() };

@@ -1635,7 +1635,7 @@ impl lang::Function for MapLength {
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let (_, _, map) = args.remove(&MAP_REMOVE_KEY_ARGS[0])
+        let (_, _, map) = args.remove(&MAP_LENGTH_ARGS[0])
                               .unwrap()
                               .into_map_with_type()
                               .unwrap();

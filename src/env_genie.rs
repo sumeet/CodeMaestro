@@ -50,16 +50,13 @@ impl<'a> EnvGenie<'a> {
 
     pub fn get_last_executed_result<T>(&self,
                                        code_node_id: lang::ID,
-                                       func: impl FnOnce(Option<&lang::Value>) -> T)
+                                       func: impl FnOnce(Option<&env::EvaluationDebugResult>) -> T)
                                        -> T {
-        func(self.env
-                 .prev_eval_result_by_code_id
-                 .borrow()
-                 .get(&code_node_id))
+        func(self.env.eval_result_by_code_id.borrow().get(&code_node_id))
     }
 
     pub fn has_any_eval_results(&self) -> bool {
-        !self.env.prev_eval_result_by_code_id.borrow().is_empty()
+        !self.env.eval_result_by_code_id.borrow().is_empty()
     }
 
     pub fn guess_type_of_value(&self, value: &lang::Value) -> lang::Type {

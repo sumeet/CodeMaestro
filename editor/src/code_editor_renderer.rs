@@ -1414,9 +1414,9 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
         let draw_code_fn = &|| self.render_code(code_node);
         let draw_code_with_output_if_present = &|| {
             self.env_genie
-                .get_last_executed_result(code_node.id(), |value| {
-                    if let Some(value) = value {
-                        self.draw_code_with_output(draw_code_fn, value)
+                .get_last_executed_result(code_node.id(), |result| {
+                    if let Some(result) = result {
+                        self.draw_code_with_output(draw_code_fn, result)
                     } else {
                         draw_code_fn()
                     }
@@ -1442,7 +1442,7 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
 
     fn draw_code_with_output(&self,
                              draw_code_fn: DrawFnRef<T>,
-                             value: &lang::Value)
+                             result: &env::EvaluationDebugResult)
                              -> T::DrawResult {
         // XXX: really messy :(((( fix this
         // the problem is that we're doing an if check here to see if we should show output, but
@@ -1461,8 +1461,10 @@ impl<'a, T: UiToolkit> CodeEditorRenderer<'a, T> {
                 self.ui_toolkit.draw_child_region([0., 0., 0., 0.2], &|| {
                     self.ui_toolkit.draw_box_around([0., 0., 0., 0.2], &|| {
                         self.ui_toolkit.align(&|| self.ui_toolkit.draw_text("Last result       "), &[&|| {
-                            ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(value)
-                        }])
+                            ValueRenderer::new(&self.env_genie.env, self.ui_toolkit).render(&result.last_value)
+                        },
+                            &|| self.ui_toolkit.draw_text(&format!("{:?}", result.time_elapsed))
+                        ])
                     })
                 }, style,
                                                   None::<DrawFnRef<T>>,
