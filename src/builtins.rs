@@ -1685,3 +1685,71 @@ impl lang::Function for MapLength {
         lang::Type::from_spec(&*lang::NUMBER_TYPESPEC)
     }
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MapKeys {}
+
+lazy_static! {
+    static ref MAP_KEYS_ARGS: [lang::ID; 1] =
+        [uuid::Uuid::parse_str("c8fe8e38-65c4-4495-9b2b-a53258402dd7").unwrap()];
+}
+
+#[typetag::serde]
+impl lang::Function for MapKeys {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let (from, _, map) = args.remove(&MAP_KEYS_ARGS[0])
+                                 .unwrap()
+                                 .into_map_with_type()
+                                 .unwrap();
+        lang::Value::List(from, map.into_iter().map(|(k, _v)| k).collect())
+    }
+
+    fn name(&self) -> &str {
+        "Map Keys"
+    }
+
+    fn description(&self) -> &str {
+        "Returns all the keys in a map"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("f1425018-1b6d-42cb-b516-4b03043e07c5").unwrap()
+    }
+
+    fn style(&self) -> &FunctionRenderingStyle {
+        lazy_static! {
+            static ref MAP_KEYS_RENDERING_STYLE: lang::FunctionRenderingStyle =
+                FunctionRenderingStyle::Default;
+        };
+        &*MAP_KEYS_RENDERING_STYLE
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("b53e12c4-de59-415f-a734-119495e89b16").unwrap()),
+             lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("851a4feb-3bfd-41ad-9677-eba67fd5c88f").unwrap()),
+        ]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let mut generics = self.defines_generics();
+        let generic_value = generics.pop().unwrap();
+        let generic_key = generics.pop().unwrap();
+        vec![lang::ArgumentDefinition::new_with_id(MAP_KEYS_ARGS[0],
+                                                   lang::Type::map(
+                                                       lang::Type::from_spec(&generic_key),
+                                                       lang::Type::from_spec(&generic_value),
+                                                   ),
+                                                   "Map".into()),
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        let mut generics = self.defines_generics();
+        let _generic_value = generics.pop().unwrap();
+        let generic_key = generics.pop().unwrap();
+        lang::Type::list_of(lang::Type::from_spec(&generic_key))
+    }
+}

@@ -65,6 +65,9 @@
     },
     "39b25664-95bb-4a95-9193-821dcb2c1008": {
       "type": "MapLength"
+    },
+    "f1425018-1b6d-42cb-b516-4b03043e07c5": {
+      "type": "MapKeys"
     }
   },
   "typespecs": {

@@ -74,6 +74,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function
         "MapInsert" => Box::new(builtins::MapInsert {}),
         "MapRemoveKey" => Box::new(builtins::MapRemoveKey {}),
         "MapLength" => Box::new(builtins::MapLength {}),
+        "MapKeys" => Box::new(builtins::MapKeys {}),
         "Intersection" => Box::new(builtins::Intersection {}),
         "Append" => Box::new(builtins::Append {}),
         "Length" => Box::new(builtins::Length {}),
