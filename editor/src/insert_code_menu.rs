@@ -665,6 +665,23 @@ impl InsertLiteralOptionGenerator {
         }
     }
 
+    fn map_literal_option(&self, map_literal_type: &lang::Type) -> InsertCodeMenuOption {
+        let key_type = &map_literal_type.params[0];
+        let val_type = &map_literal_type.params[1];
+        InsertCodeMenuOption { group_name: LITERALS_GROUP,
+                               is_selected: false,
+                               sort_key: format!("mapliteral{}{}",
+                                                 key_type.hash(),
+                                                 val_type.hash()),
+                               new_node:
+                                   lang::CodeNode::MapLiteral(lang::MapLiteral { id:
+                                                                                     lang::new_id(),
+                                                                                 from_type:
+                                                                                     key_type.clone(),
+                                                                                 to_type: val_type.clone(),
+                                                                                 elements: vec![] }) }
+    }
+
     fn enum_options<'a>(&'a self,
                         enum_name: &'a str,
                         eneom: &'a enums::Enum,
@@ -771,6 +788,9 @@ impl InsertLiteralOptionGenerator {
         // TODO: shouldn't there be a way to insert list and then select the type though?
         if return_type.matches_spec(&lang::LIST_TYPESPEC) && return_type.params.len() > 0 {
             options.push(self.list_literal_option(&return_type));
+        }
+        if return_type.matches_spec(&lang::MAP_TYPESPEC) && return_type.params.len() == 2 {
+            options.push(self.map_literal_option(&return_type));
         }
         if let Some(strukt) = env_genie.find_struct(return_type.typespec_id) {
             options.push(self.strukt_option(strukt));
