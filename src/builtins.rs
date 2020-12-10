@@ -1179,8 +1179,8 @@ impl lang::Function for Slice {
              lang::ArgumentDefinition::new_with_id(SLICE_ARGS[2],
                                                    lang::Type::with_params(&*lang::NUMBER_TYPESPEC,
                                                                            vec![]),
-                                                   // less than or equals symbol
-                                                   "High \u{f537}".into())
+                                                   // less than symbol
+                                                   "High \u{f536}".into())
         ]
     }
 
