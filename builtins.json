@@ -59,6 +59,9 @@
     },
     "af5ea291-398e-46a0-a97f-081ad7a9203b": {
       "type": "Intersection"
+    },
+    "92898b5c-33a1-4911-9a1f-f51ff896e386": {
+      "type": "MapRemoveKey"
     }
   },
   "typespecs": {

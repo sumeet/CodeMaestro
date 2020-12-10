@@ -1477,18 +1477,17 @@ lazy_static! {
          uuid::Uuid::parse_str("82e5ca49-a988-43b5-802e-c70bf4648308").unwrap(),];
 }
 
-// TODO: panics now when the key isn't in the map, otherwise should return Option type
 #[typetag::serde]
 impl lang::Function for MapGet {
     fn call(&self,
             _interpreter: env::Interpreter,
             mut args: HashMap<lang::ID, lang::Value>)
             -> lang::Value {
-        let (_, _, mut map) = args.remove(&MAP_INSERT_ARGS[0])
+        let (_, _, mut map) = args.remove(&MAP_GET_ARGS[0])
                                   .unwrap()
                                   .into_map_with_type()
                                   .unwrap();
-        let key = args.remove(&MAP_INSERT_ARGS[1]).unwrap();
+        let key = args.remove(&MAP_GET_ARGS[1]).unwrap();
         rust_option_to_lang_option(map.remove(&key))
     }
 
@@ -1523,13 +1522,13 @@ impl lang::Function for MapGet {
         let mut generics = self.defines_generics();
         let generic_value = generics.pop().unwrap();
         let generic_key = generics.pop().unwrap();
-        vec![lang::ArgumentDefinition::new_with_id(MAP_INSERT_ARGS[0],
+        vec![lang::ArgumentDefinition::new_with_id(MAP_GET_ARGS[0],
                                                    lang::Type::map(
                                                        lang::Type::from_spec(&generic_key),
                                                        lang::Type::from_spec(&generic_value),
                                                    ),
                                                    "Map".into()),
-             lang::ArgumentDefinition::new_with_id(MAP_INSERT_ARGS[1],
+             lang::ArgumentDefinition::new_with_id(MAP_GET_ARGS[1],
                                                    lang::Type::from_spec(&generic_key),
                                                    "Index".into()),
 
@@ -1540,5 +1539,84 @@ impl lang::Function for MapGet {
         let mut generics = self.defines_generics();
         let generic_value = generics.pop().unwrap();
         new_option(lang::Type::from_spec(&generic_value))
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct MapRemoveKey {}
+
+lazy_static! {
+    static ref MAP_REMOVE_KEY_ARGS: [lang::ID; 2] =
+        [uuid::Uuid::parse_str("47156b60-633c-4aec-b8ae-2c6d10b41530").unwrap(),
+         uuid::Uuid::parse_str("c46cd209-1095-4c74-97fb-1fb89d5ec174").unwrap(),];
+}
+
+#[typetag::serde]
+impl lang::Function for MapRemoveKey {
+    fn call(&self,
+            _interpreter: env::Interpreter,
+            mut args: HashMap<lang::ID, lang::Value>)
+            -> lang::Value {
+        let (from, to, mut map) = args.remove(&MAP_REMOVE_KEY_ARGS[0])
+                                      .unwrap()
+                                      .into_map_with_type()
+                                      .unwrap();
+        let key = args.remove(&MAP_REMOVE_KEY_ARGS[1]).unwrap();
+        map.remove(&key);
+        lang::Value::Map { from,
+                           to,
+                           value: map }
+    }
+
+    fn name(&self) -> &str {
+        "Map Remove"
+    }
+
+    fn description(&self) -> &str {
+        "Returns the map, with a key removed if it's in the map"
+    }
+
+    fn id(&self) -> lang::ID {
+        uuid::Uuid::parse_str("92898b5c-33a1-4911-9a1f-f51ff896e386").unwrap()
+    }
+
+    fn style(&self) -> &FunctionRenderingStyle {
+        lazy_static! {
+            static ref MAP_REMOVE_RENDERING_STYLE: lang::FunctionRenderingStyle =
+                FunctionRenderingStyle::Default;
+        };
+        &*MAP_REMOVE_RENDERING_STYLE
+    }
+
+    fn defines_generics(&self) -> Vec<lang::GenericParamTypeSpec> {
+        vec![
+            lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("f51fa1ad-c7e2-4560-bd12-c32409f18f24").unwrap()),
+            lang::GenericParamTypeSpec::new(uuid::Uuid::parse_str("b4ca1179-8d5e-42c4-856c-4568e9075be6").unwrap()),
+        ]
+    }
+
+    fn takes_args(&self) -> Vec<lang::ArgumentDefinition> {
+        let mut generics = self.defines_generics();
+        let generic_value = generics.pop().unwrap();
+        let generic_key = generics.pop().unwrap();
+        vec![lang::ArgumentDefinition::new_with_id(MAP_REMOVE_KEY_ARGS[0],
+                                                   lang::Type::map(
+                                                       lang::Type::from_spec(&generic_key),
+                                                       lang::Type::from_spec(&generic_value),
+                                                   ),
+                                                   "Map".into()),
+             lang::ArgumentDefinition::new_with_id(MAP_REMOVE_KEY_ARGS[1],
+                                                   lang::Type::from_spec(&generic_key),
+                                                   "Index".into()),
+
+        ]
+    }
+
+    fn returns(&self) -> lang::Type {
+        let mut generics = self.defines_generics();
+        let generic_value = generics.pop().unwrap();
+        let generic_key = generics.pop().unwrap();
+        lang::Type::map(lang::Type::from_spec(&generic_key),
+                        lang::Type::from_spec(&generic_value))
     }
 }
