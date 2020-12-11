@@ -125,7 +125,7 @@ impl<'a> Validator<'a> {
                                              .unwrap()
                                              .clone();
                 strukt_literal.fields
-                              .drain_filter(|field| !extra_field_ids.contains(&field.id()));
+                              .drain_filter(|field| extra_field_ids.contains(&field.id()));
                 for missing_field in missing_fields {
                     strukt_literal.fields.push(code_generation::new_struct_literal_field_placeholder(&missing_field));
                 }
@@ -276,10 +276,9 @@ impl<'a> FixableProblemFinder<'a> {
                                             .peekable();
 
                 if fields_not_represented_in_literal.peek().is_some() {
-                    let extra_field_ids_in_literal =field_ids_in_code_literal.iter().filter(|field_id| {
+                    let extra_field_ids_in_literal = field_ids_in_code_literal.iter().filter(|field_id| {
                         !fields_defined_in_struct.contains_key(field_id)
                     }).cloned();
-                    let missing_fields = fields_not_represented_in_literal.cloned().collect();
                     yield FixableProblem::FieldsMissingInStructLiteral { location,
                                                                          block:
                                                                              code_node.as_block()
@@ -287,7 +286,7 @@ impl<'a> FixableProblemFinder<'a> {
                                                                                       .clone(),
                                                                          struct_literal_id:
                                                                              strukt_literal.id,
-                                                                         missing_fields,
+                                                                         missing_fields: fields_not_represented_in_literal.cloned().collect(),
                                                                          extra_field_ids: extra_field_ids_in_literal.collect() }
                 }
             }
