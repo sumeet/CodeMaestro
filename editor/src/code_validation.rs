@@ -8,6 +8,7 @@ use cs::{env, structs};
 
 use crate::code_editor::locals::find_antecedent_for_variable_reference;
 use crate::code_editor::{required_return_type, CodeLocation};
+use crate::editor::Controller;
 use cs::env_genie::EnvGenie;
 use gen_iter::GenIter;
 use std::collections::{HashMap, HashSet};
@@ -16,11 +17,13 @@ use std::iter::once;
 // TODO: instead of applying fixes right away, show them in a popup modal and ask the user to either
 // confirm or back out the change that caused it
 pub fn validate_and_fix(env: &mut env::ExecutionEnvironment,
+                        controller: &Controller,
                         cmd_buffer: &mut editor::CommandBuffer) {
-    Validator::new(env, cmd_buffer).validate_and_fix_all_code();
+    Validator::new(env, controller, cmd_buffer).validate_and_fix_all_code();
 }
 
-fn all_code<'a>(env_genie: &'a EnvGenie)
+fn all_code<'a>(env_genie: &'a EnvGenie,
+                controller: &'a Controller)
                 -> impl Iterator<Item = (CodeLocation, &'a lang::Block)> + 'a {
     let chat_programs = env_genie.list_chat_programs()
                                  .map(|cp| (CodeLocation::ChatProgram(cp.id()), &cp.code));
@@ -34,7 +37,10 @@ fn all_code<'a>(env_genie: &'a EnvGenie)
                 .chain(once((CodeLocation::JSONHTTPClientTestSection(json_http_client.id()), &json_http_client.test_code)))
                 .chain(once((CodeLocation::JSONHTTPClientTransform(json_http_client.id()), &json_http_client.transform_code)))
         })
-    )
+    ).chain(
+        controller.list_scripts().map(|script| {
+            (CodeLocation::Script(script.id()), &script.code)
+        }))
 }
 
 // TODO: should we have a warning-style popup (can be a side menu as well) showing if the program
@@ -64,14 +70,19 @@ enum FixableProblem {
 
 struct Validator<'a> {
     env: &'a env::ExecutionEnvironment,
+    controller: &'a Controller,
     env_genie: EnvGenie<'a>,
     cmd_buffer: &'a mut editor::CommandBuffer,
 }
 
 impl<'a> Validator<'a> {
-    fn new(env: &'a env::ExecutionEnvironment, cmd_buffer: &'a mut editor::CommandBuffer) -> Self {
+    fn new(env: &'a env::ExecutionEnvironment,
+           controller: &'a Controller,
+           cmd_buffer: &'a mut editor::CommandBuffer)
+           -> Self {
         let env_genie = EnvGenie::new(env);
         Self { env,
+               controller,
                env_genie,
                cmd_buffer }
     }
@@ -81,7 +92,7 @@ impl<'a> Validator<'a> {
         let problem_finder = FixableProblemFinder::new(&env_genie);
 
         let mut problems = vec![];
-        for (location, block) in all_code(&env_genie) {
+        for (location, block) in all_code(&env_genie, self.controller) {
             // TODO: need to get rid of this clone and change this back into an iterator
             let code_node = lang::CodeNode::Block(block.clone());
             for problem in problem_finder.find_problems(location, block, &code_node) {
@@ -179,7 +190,14 @@ impl<'a> Validator<'a> {
                 code_func.block = block;
                 self.cmd_buffer.load_code_func(code_func)
             }
-            CodeLocation::Script(_) => panic!("we don't check scripts atm"),
+            CodeLocation::Script(script_id) => {
+                self.cmd_buffer.add_controller_command(move |controller| {
+                                   let mut script =
+                                       controller.find_script(script_id).unwrap().clone();
+                                   script.code = block;
+                                   controller.load_script(script);
+                               })
+            }
             CodeLocation::Test(_) => panic!("we don't check tests atm"),
             CodeLocation::JSONHTTPClientURLParams(id) => {
                 let mut json_http_client = self.env_genie.get_json_http_client(id).unwrap().clone();

@@ -449,7 +449,7 @@ impl Value {
         -> Result<(Type, Type, BTreeMap<Value, Value>), Box<dyn std::error::Error>> {
         match self {
             Value::Map { from, to, value } => Ok((from, to, value)),
-            otherwise => Err(format!("expected list but got {:?}", otherwise).into()),
+            otherwise => Err(format!("expected map but got {:?}", otherwise).into()),
         }
     }
 

@@ -78,6 +78,7 @@ impl App {
                                              &mut self.interpreter,
                                              &mut async_executor);
             code_validation::validate_and_fix(&mut self.interpreter.env().borrow_mut(),
+                                              &self.controller,
                                               &mut command_buffer);
         }
     }

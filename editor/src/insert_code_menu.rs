@@ -727,6 +727,24 @@ impl InsertLiteralOptionGenerator {
                      .map(|strukt| self.strukt_option(strukt));
         options.extend(matching_struct_options);
 
+        // enum literals
+        env_genie.list_enums().for_each(|eneom| {
+                                  // don't include enums that have parameterized types, this autocomplete won't support them
+                                  if eneom.variants
+                                          .iter()
+                                          .any(|variant| variant.variant_type.is_none())
+                                  {
+                                      return;
+                                  }
+                                  // TODO: needs to handle generics better
+                                  if search_params.search_matches_identifier(&eneom.name) {
+                                      options.extend(self.enum_options(&eneom.name,
+                                                                       eneom,
+                                                                       &lang::Type::
+                                                                       from_spec(eneom)))
+                                  }
+                              });
+
         // wanna just show all literal options all the time because we want users to be able to
         // discover everything they can do from the menu
 
