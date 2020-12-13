@@ -2464,7 +2464,7 @@ impl<'a, T: UiToolkit> Renderer<'a, T> {
                 },
                 &|| {
                     self.ui_toolkit
-                        .draw_buttony_text("Day 10", colorscheme!(adding_color))
+                        .draw_buttony_text("Day 12", colorscheme!(adding_color))
                 },
             ])
                            //            if let Some(node) = self.controller.get_selected_node() {
