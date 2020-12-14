@@ -35,7 +35,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     let hidpi_factor = platform.hidpi_factor();
     //let hidpi_factor = 1.0;
 
-    let font_size = (15.0 * hidpi_factor) as f32;
+    let font_size = (14.0 * hidpi_factor) as f32;
     let icon_font_size = font_size / 1.75;
     let fontawesome_icon_y_offset = (-2.0 * hidpi_factor) as f32;
     // let custom_icon_y_offset = 1.; //(-0.25 * hidpi_factor) as f32;
@@ -57,9 +57,10 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
     // TODO: also i think you have to add the fonts in such a way that the more specific ranges are
     // listed first... idk, i'm testing it out
     let font_sources =
-        [FontSource::TtfData { data: include_bytes!("../../fonts/calibri.ttf"),
+        [FontSource::TtfData { data: include_bytes!("../../fonts/input-regular-sans.ttf"),
                                size_pixels: font_size,
                                config: Some(FontConfig { rasterizer_multiply: 1.75,
+                                                         glyph_extra_spacing: [-2.3, 0.],
                                                          glyph_ranges:
                                                              FontGlyphRanges::default(),
                                                          pixel_snap_h: true,
