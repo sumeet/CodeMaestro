@@ -60,7 +60,7 @@ pub fn run<F: FnMut(&Ui, Option<Keypress>) -> bool>(title: String, mut run_ui: F
         [FontSource::TtfData { data: include_bytes!("../../fonts/input-regular-sans.ttf"),
                                size_pixels: font_size,
                                config: Some(FontConfig { rasterizer_multiply: 1.75,
-                                                         glyph_extra_spacing: [-2.3, 0.],
+                                                         //glyph_extra_spacing: [-2.3, 0.],
                                                          glyph_ranges:
                                                              FontGlyphRanges::default(),
                                                          pixel_snap_h: true,
