@@ -89,7 +89,7 @@ pub fn deserialize_fn(value: serde_json::Value) -> Result<Box<dyn lang::Function
         "JSONHTTPClient" => Box::new(serde_json::from_value::<JSONHTTPClient>(value)?),
         "ChatProgram" => Box::new(serde_json::from_value::<ChatProgram>(value)?),
         "CodeFunction" => Box::new(serde_json::from_value::<CodeFunction>(value)?),
-        _ => panic!(format!("don't know how to load builtin func type {}", typ)),
+        _ => panic!("don't know how to load builtin func type {}", typ),
     })
 }
 
@@ -102,7 +102,7 @@ pub fn deserialize_typespec(value: serde_json::Value) -> Result<Box<dyn lang::Ty
         "Struct" => Box::new(serde_json::from_value::<Struct>(value)?),
         "Enum" => Box::new(serde_json::from_value::<Enum>(value)?),
         "BuiltInTypeSpec" => Box::new(serde_json::from_value::<BuiltInTypeSpec>(value)?),
-        _ => panic!(format!("don't know how to load typespec type {}", typ)),
+        _ => panic!("don't know how to load typespec type {}", typ),
     })
 }
 

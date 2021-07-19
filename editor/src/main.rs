@@ -1,4 +1,3 @@
-#![feature(const_if_match)]
 #![feature(generators)]
 #![feature(box_patterns)]
 #![feature(drain_filter)]

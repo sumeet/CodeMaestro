@@ -290,9 +290,9 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 use glutin::event::ElementState::Pressed;
 use glutin::event::{Event, WindowEvent};
 use glutin::event_loop::ControlFlow;
+use glutin::platform::run_return::EventLoopExtRunReturn;
 use imgui::{ClipboardBackend, ImStr, ImString};
 use winit::event::VirtualKeyCode;
-use winit::platform::desktop::EventLoopExtDesktop;
 
 pub struct ClipboardSupport(ClipboardContext);
 

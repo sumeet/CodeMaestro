@@ -17,6 +17,7 @@ use crate::{enums, resolve_all_futures, EnvGenie};
 use failure::_core::fmt::Formatter;
 use itertools::Itertools;
 use std::convert::TryInto;
+use std::panic::panic_any;
 
 #[macro_export]
 macro_rules! await_eval_result {
@@ -90,7 +91,7 @@ impl Interpreter {
                 // TODO: get rid of the unwrap and bubble up the error
                 use futures_util::TryFutureExt;
                 Box::pin(self.evaluate_function_call(&function_call)
-                             .unwrap_or_else(|e| panic!(e)))
+                             .unwrap_or_else(|e| panic_any(e)))
             }
             lang::CodeNode::Argument(argument) => {
                 Box::pin(self.evaluate(std::borrow::Borrow::borrow(&argument.expr)))
