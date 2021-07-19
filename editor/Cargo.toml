@@ -31,7 +31,7 @@ indexmap = {version = "1.6.0", features = ["serde-1"]}
 glium = { version = "0.27.0", default-features = true }
 # matching the dep of the glium from above imgui
 glutin = { version = "0.24.1" }
-winit = "0.22.2"
+winit = "0.25.0"
 imgui = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.5.0" }
 imgui-sys = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.5.0" }
 imgui-glium-renderer = {git = "https://github.com/Gekkio/imgui-rs", tag="v0.5.0" }
